@@ -15,7 +15,7 @@ from datetime import datetime
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate Wormability, Blast Radius, and Attacker ROI.")
-    parser.add_argument("--db", type=str, default="npm_ecosystem.db", help="Path to SQLite database")
+    parser.add_argument("--db", type=str, default="data/npm_ecosystem.db", help="Path to SQLite database")
     parser.add_argument("--alpha", type=float, default=0.5, help="Alpha hyperparameter weight for Wormability")
     parser.add_argument("--beta", type=float, default=0.5, help="Beta hyperparameter weight for Blast Radius")
     parser.add_argument("--output-csv", type=str, default="metrics_summary.csv", help="Export summary to a CSV file")

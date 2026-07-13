@@ -21,7 +21,7 @@ import urllib.parse
 from datetime import datetime
 
 # Configurations
-DB_FILE = "npm_ecosystem.db"
+DB_FILE = "data/npm_ecosystem.db"
 DEFAULT_DELAY = 0.2  # Seconds between requests
 LONG_BREAK_INTERVAL = 100  # Number of requests before a long break
 LONG_BREAK_DURATION = 5.0  # Duration of the long break in seconds
