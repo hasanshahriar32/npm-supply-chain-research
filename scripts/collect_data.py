@@ -405,8 +405,12 @@ def run_scraper(conn, batch_size=1000):
     elapsed = time.time() - start_time
     print(f"\n[+] Batch complete. Scraped in {elapsed:.1f}s.")
 
-# Command: --fetch-github (Checks workflow presence)
+# Command: --fetch-github (Checks workflow presence using GraphQL to avoid strict rate limits)
 def fetch_github_workflows(conn, token=None):
+    if not token:
+        print("[!] Error: GITHUB_TOKEN environment variable is required for GraphQL API.")
+        return
+        
     cursor = conn.cursor()
     cursor.execute("""
         SELECT package_name, version, github_owner, github_repo 
@@ -421,38 +425,76 @@ def fetch_github_workflows(conn, token=None):
         print("[+] No pending github workflow checks.")
         return
         
-    print(f"[*] Checking GitHub workflow directories for {len(rows)} packages...")
-    headers = {}
-    if token:
-        headers["Authorization"] = f"token {token}"
-    else:
-        print("[!] Warning: Running without GITHUB_TOKEN. You may quickly hit GitHub rate limits (60/hour).")
-        
+    print(f"[*] Checking GitHub workflow directories for {len(rows)} packages via GraphQL...")
+    headers = {
+        "Authorization": f"bearer {token}",
+        "Content-Type": "application/json"
+    }
+    
     for idx, (pkg_name, ver, owner, repo) in enumerate(rows):
-        print(f"\r[{idx+1}/{len(rows)}] GitHub check: {owner}/{repo:<40}", end="", flush=True)
+        print(f"\r[{idx+1}/{len(rows)}] GraphQL check: {owner}/{repo:<40}", end="", flush=True)
         
-        # Verify workflows folder existence using GitHub content API
-        url = f"https://api.github.com/repos/{owner}/{repo}/contents/.github/workflows"
-        raw_content, code = make_request(url, headers=headers)
+        # Verify workflows folder existence using GitHub GraphQL API
+        query = """
+        query {
+          repository(owner: "%s", name: "%s") {
+            object(expression: "HEAD:.github/workflows") {
+              ... on Tree {
+                entries {
+                  name
+                }
+              }
+            }
+          }
+        }
+        """ % (owner, repo)
+        
+        payload = json.dumps({"query": query}).encode("utf-8")
+        req = urllib.request.Request("https://api.github.com/graphql", data=payload, headers=headers)
         
         has_workflows = 0
-        if code == 200:
-            has_workflows = 1
-        elif code == 404:
-            has_workflows = 0
-        elif code == 403:
-            print("\n[X] GitHub API rate limit exceeded. Set GITHUB_TOKEN environment variable to get 5000 requests/hour.")
-            break
-            
-        cursor.execute("""
-            UPDATE package_versions 
-            SET has_github_workflows = ?, fetched_workflows = 1 
-            WHERE package_name = ? AND version = ?
-        """, (has_workflows, pkg_name, ver))
-        conn.commit()
+        try:
+            with urllib.request.urlopen(req) as response:
+                resp_data = json.loads(response.read().decode("utf-8"))
+                
+                # Check for rate limit errors in GraphQL response
+                if "errors" in resp_data:
+                    for err in resp_data["errors"]:
+                        if err.get("type") == "RATE_LIMITED":
+                            print("\n[X] GitHub GraphQL API rate limit exceeded.")
+                            return
+                
+                repo_data = resp_data.get("data", {}).get("repository", {})
+                if repo_data and repo_data.get("object"):
+                    # If the object is not null, the directory exists
+                    has_workflows = 1
+                    
+            cursor.execute("""
+                UPDATE package_versions 
+                SET has_github_workflows = ?, fetched_workflows = 1 
+                WHERE package_name = ? AND version = ?
+            """, (has_workflows, pkg_name, ver))
+            conn.commit()
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                print("\n[X] Unauthorized. Check your GITHUB_TOKEN.")
+                break
+            elif e.code == 403:
+                print("\n[X] GitHub API rate limit exceeded or forbidden.")
+                break
+            elif e.code == 404:
+                # Repository might be deleted or private
+                cursor.execute("""
+                    UPDATE package_versions 
+                    SET has_github_workflows = 0, fetched_workflows = 1 
+                    WHERE package_name = ? AND version = ?
+                """, (pkg_name, ver))
+                conn.commit()
+        except Exception as e:
+            pass # Network issues, ignore and retry next run
         
         # Sleep to be polite to Github API
-        time.sleep(0.5 if token else 1.0)
+        time.sleep(0.5)
         
     print("\n[+] GitHub workflow checks complete.")
 
