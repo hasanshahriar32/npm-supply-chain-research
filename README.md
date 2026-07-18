@@ -22,17 +22,23 @@ The repository is organized into the following directories:
    ```bash
    python3 scripts/collect_data.py --init
    ```
-2. **Run the Scraper:**
+2. **Run the Scraper (NPM Metadata & Dependencies):**
    ```bash
    python3 scripts/collect_data.py --run --loop
    ```
-3. **Check Status/Stats:**
+3. **Fetch GitHub Workflows (Requires GitHub CLI Token):**
+   This uses the GraphQL API to avoid strict rate limits.
    ```bash
-   python3 scripts/collect_data.py --stats
+   export GITHUB_TOKEN=$(gh auth token)
+   python3 scripts/collect_data.py --fetch-github
    ```
-4. **Calculate Attacker ROI Metrics:**
+4. **Import OSV Advisories:**
    ```bash
-   python3 scripts/calculate_metrics.py --top-k 50
+   python3 scripts/collect_data.py --fetch-advisories
+   ```
+5. **Calculate Attacker ROI Metrics:**
+   ```bash
+   python3 scripts/calculate_metrics.py --top-k 100
    ```
 
 ## Metrics Formulation
