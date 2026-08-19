@@ -15,8 +15,8 @@
 - [x] Add tRPC procedures and database helpers for research and administrative data
 - [x] Add automated tests for public, authenticated, and administrative backend procedures
 - [x] Verify desktop and mobile presentation, protected routing, and data views
-- [ ] Save a final project checkpoint and push the application source to the existing GitHub repository
-- [ ] Verify the pushed GitHub commit includes the synchronized platform source
+- [x] Save a final project checkpoint and push the application source to the existing GitHub repository
+- [x] Verify the pushed GitHub commit includes the synchronized platform source
 - [x] Replace the simplistic Markdown parser with a renderer that preserves tables, references, blockquotes, lists, and in-page navigation
 - [x] Build a structured experiment-results comparison view rather than only planned experiment cards
 - [x] Add tRPC procedure tests for authenticated research reads, admin access control, and admin mutations
