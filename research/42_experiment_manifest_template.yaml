@@ -1,0 +1,84 @@
+schema_version: "1.0"
+experiment_id: "replace-me"
+description: "Short description of the experiment"
+code:
+  repository: "https://github.com/ashik-hstu/npm-supply-chain-research"
+  commit: "replace-me"
+  environment_file: "replace-me"
+  python_version: "replace-me"
+data:
+  snapshot_id: "replace-me"
+  sources:
+    - name: "deps.dev"
+      url: "https://docs.deps.dev/"
+      retrieval_at: "YYYY-MM-DDThh:mm:ssZ"
+      effective_at: "YYYY-MM-DDThh:mm:ssZ"
+      checksum: "replace-me"
+    - name: "npm Registry"
+      url: "https://registry.npmjs.org/"
+      retrieval_at: "YYYY-MM-DDThh:mm:ssZ"
+      effective_at: "YYYY-MM-DDThh:mm:ssZ"
+      checksum: "replace-me"
+    - name: "GitHub GraphQL"
+      url: "https://docs.github.com/en/graphql"
+      retrieval_at: "YYYY-MM-DDThh:mm:ssZ"
+      effective_at: "YYYY-MM-DDThh:mm:ssZ"
+      checksum: "replace-me"
+    - name: "OSV"
+      url: "https://google.github.io/osv.dev/"
+      retrieval_at: "YYYY-MM-DDThh:mm:ssZ"
+      effective_at: "YYYY-MM-DDThh:mm:ssZ"
+      checksum: "replace-me"
+  row_counts: {}
+  missingness_summary: {}
+temporal_protocol:
+  feature_cutoff: "YYYY-MM-DDThh:mm:ssZ"
+  label_window_start: "YYYY-MM-DDThh:mm:ssZ"
+  label_window_end: "YYYY-MM-DDThh:mm:ssZ"
+  split_type: "rolling_origin"
+  leakage_checks: []
+population:
+  sampling_strategy: "replace-me"
+  inclusion_rules: []
+  exclusion_rules: []
+features:
+  feature_table: "replace-me"
+  feature_families:
+    - dependency
+    - maintainer
+    - workflow
+    - popularity
+    - metadata
+  resolution_mode: "exact|source_resolved|approximate"
+labels:
+  label_version: "replace-me"
+  positive_definition: "replace-me"
+  confidence_threshold: "high"
+  positive_count: 0
+  negative_count: 0
+model:
+  name: "replace-me"
+  family: "baseline|tabular|homogeneous_gnn|heterogeneous_gnn"
+  hyperparameters: {}
+  seed: 0
+  training_epochs: 0
+evaluation:
+  primary_metrics:
+    - precision_at_k
+    - recall_at_k
+    - average_precision
+    - ndcg
+    - mrr
+  k_values:
+    - 10
+    - 50
+    - 100
+  confidence_interval: "bootstrap_at_incident_level"
+  calibration: true
+outputs:
+  ranked_packages: "replace-me"
+  metrics: "replace-me"
+  plots: []
+  logs: "replace-me"
+  checksums: {}
+notes: []
