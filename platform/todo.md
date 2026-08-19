@@ -1,0 +1,25 @@
+# Project TODO
+
+- [x] Audit the existing research repository assets and document application-source assumptions
+- [x] Define an extensible research-platform schema for users, documents, benchmark snapshots, incidents, experiments, and editorial content
+- [x] Configure Manus OAuth access controls for private workspace routes
+- [x] Prepare database configuration to accept the user-supplied PostgreSQL connection string via environment variable
+- [x] Build a public editorial demo landing page with research findings and sign-in call-to-action
+- [x] Build the protected dashboard shell with exact sidebar sections: Literature Review, Gap Analysis, Benchmark Findings, Methodology, Incident Labels, Experiment Results
+- [x] Build a filterable and sortable literature-matrix viewer sourced from research/11_literature_matrix.csv
+- [x] Build Markdown research readers sourced from the research directory with in-page navigation
+- [x] Build benchmark snapshot cards and charts for packages, edges, maintainers, and workflow coverage
+- [x] Build an incident-label registry view that includes Shai-Hulud and Axios
+- [x] Build experiment-results comparison and methodology views
+- [x] Build an extensible admin interface for users, research content, blogs, benchmark snapshots, incident labels, and experiments
+- [x] Add tRPC procedures and database helpers for research and administrative data
+- [x] Add automated tests for public, authenticated, and administrative backend procedures
+- [x] Verify desktop and mobile presentation, protected routing, and data views
+- [ ] Save a final project checkpoint and push the application source to the existing GitHub repository
+- [ ] Verify the pushed GitHub commit includes the synchronized platform source
+- [x] Replace the simplistic Markdown parser with a renderer that preserves tables, references, blockquotes, lists, and in-page navigation
+- [x] Build a structured experiment-results comparison view rather than only planned experiment cards
+- [x] Add tRPC procedure tests for authenticated research reads, admin access control, and admin mutations
+- [x] Verify authenticated workspace and administrator views end-to-end before delivery
+- [x] Distinguish repository-planned experiments from measured comparison outputs and render measured results only when evidence exists
+- [x] Verify authenticated tRPC data loading for the literature matrix and administrator overview in addition to server-rendered route access
