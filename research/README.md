@@ -26,6 +26,33 @@ The current working question is:
 
 Subquestions concern the incremental value of maintainer and workflow features, the validity of the proposed Blast Radius and Wormability measures, the need for HGAT over interpretable baselines, and the generalizability of public-repository observations to real downstream infrastructure.
 
+## Document map
+
+| File | Purpose |
+|---|---|
+| `00_research_brief.md` | Initial assessment and research framing |
+| `01_claim_and_implementation_audit.md` | Draft-claim versus implementation audit |
+| `02_source_inventory.csv` | Machine-readable source catalog |
+| `03_definitions_and_notation.md` | Working definitions and mathematical notation |
+| `10_literature_review.md` | Related-work synthesis |
+| `11_literature_matrix.csv` | Study-by-study comparison matrix |
+| `12_research_taxonomy.md` | Separation of detection, propagation, centrality, and ranking tasks |
+| `20_novelty_and_gap_analysis.md` | Conditional novelty and gap assessment |
+| `21_research_questions_and_hypotheses.md` | Falsifiable research questions and hypotheses |
+| `30_proposed_methodology.md` | End-to-end study design |
+| `31_data_dictionary.md` | Proposed schema and feature definitions |
+| `32_labeling_protocol.md` | Historical compromise-labeling procedure |
+| `33_temporal_split_and_leakage_controls.md` | Time-aware evaluation protocol |
+| `34_threats_to_validity.md` | Validity risks and mitigations |
+| `35_ethics_and_responsible_disclosure.md` | Safety and data-minimization policy |
+| `40_reproducibility_roadmap.md` | Reproducibility requirements |
+| `41_repository_change_plan.md` | Implementation milestones |
+| `42_experiment_manifest_template.yaml` | Run-provenance template |
+| `43_data_provenance_and_checksums.md` | Snapshot and artifact provenance |
+| `90_final_research_report.md` | Full synthesis and final assessment |
+| `91_executive_decision_memo.md` | Concise go/no-go decision |
+| `92_priority_backlog.md` | Ordered implementation backlog |
+
 ## Checkpoints
 
 Research work is preserved in phase-based GitHub checkpoints:
