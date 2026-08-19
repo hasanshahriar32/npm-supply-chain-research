@@ -25,15 +25,16 @@ export async function upsertResearchUser(input: {
   openId: string;
   name?: string | null;
   email?: string | null;
+  role?: "admin" | "researcher";
 }) {
   const connection = getResearchDb();
   if (!connection) return null;
   const rows = await connection
     .insert(researchUsers)
-    .values({ ...input, lastSignedIn: new Date() })
+    .values({ ...input, role: input.role ?? "researcher", lastSignedIn: new Date() })
     .onConflictDoUpdate({
       target: researchUsers.openId,
-      set: { name: input.name ?? null, email: input.email ?? null, lastSignedIn: new Date(), updatedAt: new Date() },
+      set: { name: input.name ?? null, email: input.email ?? null, role: input.role ?? "researcher", lastSignedIn: new Date(), updatedAt: new Date() },
     })
     .returning();
   return rows[0] ?? null;

@@ -23,3 +23,12 @@
 - [x] Verify authenticated workspace and administrator views end-to-end before delivery
 - [x] Distinguish repository-planned experiments from measured comparison outputs and render measured results only when evidence exists
 - [x] Verify authenticated tRPC data loading for the literature matrix and administrator overview in addition to server-rendered route access
+- [x] Audit the current Manus OAuth wiring and Clerk integration requirements
+- [x] Replace Manus OAuth routes, session handling, and workspace access checks with Clerk authentication
+- [x] Configure Clerk environment variables and document the minimal user-controlled setup
+- [x] Verify Clerk-protected research workspace and administrator access flows
+- [ ] Save and synchronize the Clerk-authenticated platform revision to GitHub
+- [x] Verify a signed-in Clerk user can load protected workspace and tRPC research data
+- [x] Verify a Clerk user with publicMetadata.role set to admin can access administrator pages and procedures
+- [x] Expand README instructions for Clerk key retrieval and administrator-role assignment
+- [x] Synchronize the resolved Clerk public-metadata role to the PostgreSQL user listing

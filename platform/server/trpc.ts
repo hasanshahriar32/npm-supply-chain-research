@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { initTRPC, TRPCError } from "@trpc/server";
-import { getAuthenticatedUser } from "./nextAuth";
+import { getClerkResearchUser } from "./clerkAuth";
 
 export async function createContext({ req, res }: { req: NextApiRequest; res: NextApiResponse }) {
-  const user = await getAuthenticatedUser(req);
+  const user = await getClerkResearchUser(req);
   return { req, res, user };
 }
 

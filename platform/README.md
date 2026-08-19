@@ -1,13 +1,13 @@
 # Supply Chain Research Hub
 
-This application is a **Next.js 16 research platform** for the `npm-supply-chain-research` repository. It presents a public editorial landing page and a Manus OAuth–protected workspace for reviewing the research corpus, benchmark snapshot, incident labels, and experiment plan.
+This application is a **Next.js 16 research platform** for the `npm-supply-chain-research` repository. It presents a public editorial landing page and a Clerk-protected workspace for reviewing the research corpus, benchmark snapshot, incident labels, and experiment plan.
 
 ## Architecture
 
 | Layer | Implementation |
 |---|---|
 | Public experience | `pages/index.tsx`, an editorial research-preview landing page |
-| Authentication | Manus OAuth routes under `pages/api/auth/*`, with a signed, HTTP-only research session cookie |
+| Authentication | Clerk `ClerkProvider`, `proxy.ts` middleware, and server-side `getAuth()` checks close to protected resources |
 | Workspace | Server-rendered protected routes under `pages/workspace/*` |
 | Data API | tRPC route at `pages/api/trpc/[trpc].ts` backed by `server/researchRouter.ts` |
 | Research corpus | Markdown and CSV files copied from the repository root `research/` directory |
@@ -18,16 +18,23 @@ The exact workspace navigation sections are **Literature Review**, **Gap Analysi
 
 ## Required environment variables
 
-The managed runtime supplies the Manus OAuth variables. The PostgreSQL adapter additionally requires `POSTGRES_DATABASE_URL` with encrypted transport enabled by the server or connection string.
+The application needs two Clerk keys plus the PostgreSQL connection URL. The Clerk keys are available in your Clerk Dashboard under **Configure → API Keys**. The PostgreSQL adapter requires encrypted transport enabled by the server or connection string.
 
 ```text
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
 POSTGRES_DATABASE_URL=postgresql://...
-VITE_APP_ID=...
-VITE_OAUTH_PORTAL_URL=...
-OAUTH_SERVER_URL=...
-JWT_SECRET=...
-OWNER_OPEN_ID=...
 ```
+
+## Clerk administrator access
+
+All signed-in Clerk users may access the research workspace. To grant administration access, open **Clerk Dashboard → Users → select the user → Public metadata** and save the following JSON:
+
+```json
+{ "role": "admin" }
+```
+
+The platform reads this value at sign-in, protects `/workspace/admin` and admin tRPC procedures, and mirrors the resolved role into the local PostgreSQL user record for reporting. Do not grant the administrator role through a browser-visible environment variable.
 
 ## Database setup
 
@@ -48,7 +55,7 @@ pnpm build
 pnpm test
 ```
 
-The targeted tests cover PostgreSQL connectivity, session protection, and the research-source values served by the platform.
+The targeted tests cover Clerk connectivity, PostgreSQL connectivity, route protection, and the research-source values served by the platform.
 
 ## Keeping research current
 

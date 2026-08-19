@@ -1,10 +1,12 @@
 import type { GetServerSidePropsContext } from "next";
+import type { NextApiRequest } from "next";
+import { buildClerkProps } from "@clerk/nextjs/server";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { LiteratureMatrix } from "../../components/LiteratureMatrix";
 import { MarkdownReader } from "../../components/MarkdownReader";
 import { WorkspaceLayout } from "../../components/WorkspaceLayout";
-import { getAuthenticatedUser } from "../../server/nextAuth";
+import { getClerkResearchUser } from "../../server/clerkAuth";
 import { trpc } from "../../lib/trpc";
 import type { ExperimentResult, IncidentLabel } from "../../server/researchTypes";
 
@@ -49,4 +51,4 @@ export default function WorkspacePage({ user }: { user: User }) {
   return <><Head><title>{section.replace(/-/g, " ")} · Supply Chain Research Hub</title></Head><WorkspaceLayout user={user}>{body}</WorkspaceLayout></>;
 }
 
-export async function getServerSideProps(context: GetServerSidePropsContext) { const user = await getAuthenticatedUser(context.req); if (!user) return { redirect: { destination: "/", permanent: false } }; return { props: { user: { name: user.name, role: user.role } } }; }
+export async function getServerSideProps(context: GetServerSidePropsContext) { const user = await getClerkResearchUser(context.req as NextApiRequest); if (!user) return { redirect: { destination: "/", permanent: false } }; return { props: { ...buildClerkProps(context.req as NextApiRequest), user: { name: user.name, role: user.role } } }; }
