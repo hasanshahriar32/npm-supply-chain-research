@@ -5,12 +5,14 @@ const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.me
   scripts: Record<string, string>;
 };
 const productionServer = readFileSync(new URL("./_core/nextProductionServer.ts", import.meta.url), "utf8");
+const runtimeMarker = readFileSync(new URL("../public/__next_runtime_marker__.txt", import.meta.url), "utf8");
 
 describe("managed production packaging", () => {
   it("builds a Node runtime bundle plus a nonempty static-upload marker", () => {
     expect(packageJson.scripts.build).toContain("--outfile=dist/index.js");
     expect(packageJson.scripts.build).toContain("dist/public/__next_runtime_marker__.txt");
     expect(packageJson.scripts.start).toBe("NODE_ENV=production node dist/index.js");
+    expect(runtimeMarker).toBe("Next.js runtime handles dynamic application routes.\n");
   });
 
   it("binds the Next request handler to the deployment-provided port", () => {
