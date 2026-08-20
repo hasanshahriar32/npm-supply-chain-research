@@ -3,7 +3,7 @@ import { claimIngestionRun, createPendingSnapshot, getIngestionRun, recordIngest
 
 const repository = "ashik-hstu/npm-supply-chain-research";
 const archivePath = "data/metrics_summary.csv.zip";
-const manifestPath = "research/benchmark_snapshot_manifest.json";
+const manifestPath = "platform/research/benchmark_snapshot_manifest.json";
 
 function parseCsvLine(line: string) {
   const values: string[] = []; let value = ""; let quoted = false;

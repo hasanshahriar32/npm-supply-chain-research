@@ -48,3 +48,6 @@
 - [ ] Run end-to-end administrator verification for role changes and content approval transitions
 - [ ] Verify the new interactive chart and separate administration console layouts at responsive breakpoints
 - [ ] Correct the React document-title warning in the protected workspace pages
+- [ ] Set the remaining Git commit author to ashikulislamcf2000@gmail.com and repair GitHub push authentication
+- [ ] Retain exactly one Vercel cron invocation per day in the deployment configuration
+- [ ] Correct the daily ingestion manifest source path to match the platform directory in the private GitHub repository
