@@ -61,6 +61,6 @@
 - [x] Assess novelty, feasibility, data requirements, and evaluation risks for prioritized candidate research contributions
 - [x] Execute reproducible analyses on real repository-backed supply-chain data and document results with provenance
 - [x] Write a comprehensive research-gap resolution report, study protocol, and implementation roadmap in the research directory
-- [ ] Publish the new research outputs through the governed platform, validate display, and synchronize source artifacts to GitHub
-- [ ] Synchronize the new research artifacts, source-registry updates, tests, and verification notes to the private GitHub repository and push the commit
+- [x] Publish the new research outputs through the governed platform, validate display, and synchronize source artifacts to GitHub
+- [x] Synchronize the new research artifacts, source-registry updates, tests, and verification notes to the private GitHub repository and push the commit
 - [x] Live-verify the remaining governed workspace sections after the research-source remap
