@@ -56,3 +56,11 @@
 - [ ] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
 - [ ] Resolve the managed-production packaging mismatch so the server-rendered Next.js platform publishes successfully
 - [ ] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts
+- [x] Inventory all existing research claims, data assets, limitations, and stated gaps in the repository
+- [x] Build an evidence-backed related-work map for supply-chain propagation, reach forecasting, exploitability, and temporal evaluation
+- [x] Assess novelty, feasibility, data requirements, and evaluation risks for prioritized candidate research contributions
+- [x] Execute reproducible analyses on real repository-backed supply-chain data and document results with provenance
+- [x] Write a comprehensive research-gap resolution report, study protocol, and implementation roadmap in the research directory
+- [ ] Publish the new research outputs through the governed platform, validate display, and synchronize source artifacts to GitHub
+- [ ] Synchronize the new research artifacts, source-registry updates, tests, and verification notes to the private GitHub repository and push the commit
+- [x] Live-verify the remaining governed workspace sections after the research-source remap

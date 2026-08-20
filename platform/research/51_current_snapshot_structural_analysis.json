@@ -1,0 +1,93 @@
+{
+  "analysisName": "current_snapshot_structural_leverage_audit",
+  "sourceArchive": "metrics_summary.csv.zip",
+  "sourceCsv": "metrics_summary.csv",
+  "sourceSha256": "43e1845a106719ef9fb8c7d72d174959cc25e6f8fe8a3c6bfcd6cb7ca8e90a35",
+  "recordCount": 25228,
+  "generatedAt": "2026-08-20T08:16:39.347Z",
+  "scope": "Cross-sectional descriptive analysis only; it is not a pre-incident prediction evaluation.",
+  "fieldSummary": {
+    "wormability_max": {
+      "min": 0,
+      "p50": 32,
+      "p90": 327,
+      "p99": 967,
+      "max": 967,
+      "mean": 116.35801490407484,
+      "nonzeroCount": 22147
+    },
+    "wormability_sum": {
+      "min": 0,
+      "p50": 50,
+      "p90": 642,
+      "p99": 1314,
+      "max": 2740,
+      "mean": 208.65740447122246,
+      "nonzeroCount": 22147
+    },
+    "blast_radius": {
+      "min": 0,
+      "p50": 0,
+      "p90": 0,
+      "p99": 0,
+      "max": 2,
+      "mean": 0.00114951641033772,
+      "nonzeroCount": 20
+    },
+    "direct_dependents": {
+      "min": 0,
+      "p50": 1,
+      "p90": 6,
+      "p99": 46,
+      "max": 1150,
+      "mean": 3.4926668780719834,
+      "nonzeroCount": 20331
+    },
+    "direct_dependents_with_workflows": {
+      "min": 0,
+      "p50": 0,
+      "p90": 0,
+      "p99": 0,
+      "max": 2,
+      "mean": 0.0006342159505311559,
+      "nonzeroCount": 15
+    },
+    "transitive_dependents": {
+      "min": 0,
+      "p50": 4,
+      "p90": 120,
+      "p99": 1833.569999999996,
+      "max": 4615,
+      "mean": 78.84984937371175,
+      "nonzeroCount": 20328
+    },
+    "attacker_roi": {
+      "min": 0,
+      "p50": 0.016546,
+      "p90": 0.16908,
+      "p99": 0.5,
+      "max": 0.794726,
+      "mean": 0.060451803194854416,
+      "nonzeroCount": 22147
+    }
+  },
+  "correlations": {
+    "spearman_attacker_roi_vs_transitive_dependents": 0.08253406771583102,
+    "spearman_attacker_roi_vs_direct_dependents": 0.15983534033943328,
+    "spearman_attacker_roi_vs_workflow_bearing_direct_dependents": 0.04161605553221594,
+    "spearman_wormability_max_vs_transitive_dependents": 0.08172270310822538
+  },
+  "topOnePercentReviewBudget": 253,
+  "queueOverlap": {
+    "roi_and_reach": 16,
+    "roi_and_workflow_reach": 12,
+    "reach_and_workflow_reach": 15,
+    "all_three": 12
+  },
+  "caveats": [
+    "The archive is a repository snapshot, not a complete npm census.",
+    "The workflow-bearing dependent field is derived from public workflow-directory observations and is not a privilege or compromise measurement.",
+    "Current cross-sectional metrics must not be used as historical features without dated reconstruction.",
+    "The weighted attacker_roi field is retained only to audit the existing implementation; it is reported as a legacy structural score, not attacker utility."
+  ]
+}

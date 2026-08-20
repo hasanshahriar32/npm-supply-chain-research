@@ -35,3 +35,15 @@ The committed `vercel.json` contains precisely one ingestion schedule, `0 3 * * 
 ## Managed production packaging
 
 The legacy full-stack publishing adapter initially expected `dist/public` while the Next.js build emitted only `.next`. The build now bundles a production Next request-handler server to `dist/index.js` and emits the required nonempty `dist/public` marker. The full suite passed with **22 tests across 9 files**, the production build completed, and the bundled server returned HTTP `200` with the landing-page marker when run against the deployment-style `PORT` environment variable.
+
+## Research-gap program publication
+
+On 2026-08-20, an authenticated administrator opened `/workspace/gap-analysis` after the research-source registry was updated. The live workspace rendered the new **“From ‘Attack-ROI Prediction’ to an Auditable npm Defense Benchmark”** report, including its executive assessment, related-work table, real-data audit, incident anchors, separate structural/CI/CD/authority queues, evaluation design, roadmap, references, and in-page navigation. This confirms the completed research artifacts are served through the governed platform rather than only stored in the repository.
+
+The same authenticated session loaded `/workspace/methodology`, which rendered the **“A Multi-Queue, Time-Aware Benchmark for Defensive Prioritization in the npm Supply Chain”** protocol and its research decision, falsifiable questions, feature-availability ledger, distinct review queues, label hierarchy, split controls, and model ladder.
+
+The `/workspace/incident-labels` view remained available in the same session and visibly presented the Shai-Hulud campaign and version-specific Axios anchor, together with the governing rule that all future records retain a package/version or range, incident family, event and detection times, evidence URLs, confidence, and an explicit inclusion or exclusion reason.
+
+The `/workspace/benchmark-findings` section continued to render its authenticated interactive real-data cards and charts for 25,228 packages, 121,885 dependency edges, 12,217 maintainers, and workflow coverage. It displayed the non-predictive caveat that the structural metrics are not model-performance or exploitation claims, consistent with the new research program’s evidence boundary.
+
+Finally, `/workspace/experiment-results` showed the **Current-snapshot interpretable audit** in the measured-comparison table and explicitly labelled it as a cross-sectional descriptive result rather than a temporal compromise prediction. The version-aware graph comparison remained planned and the heterogeneous graph attention model remained blocked until labels, temporal snapshots, and baselines are reproducible.

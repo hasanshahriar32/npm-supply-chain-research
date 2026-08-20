@@ -1,0 +1,73 @@
+{
+  "analysisName": "current_snapshot_ecosystem_structure_and_observability",
+  "archiveName": "npm_ecosystem.db.zip",
+  "archiveSha256": "ab45439cf94cf43f3133b0aaff644557d55e86e99430a0a7937bfd0ce5266315",
+  "generatedAt": "2026-08-20T08:20:37.145256+00:00",
+  "scope": "Current-snapshot aggregate analysis only; package versions lack publication timestamps and therefore cannot support a strict temporal prediction evaluation by themselves.",
+  "rowCounts": {
+    "packages": 25228,
+    "packageMetrics": 25228,
+    "packageVersions": 22340,
+    "dependencies": 121885,
+    "maintainers": 12217,
+    "packageMaintainerRelationships": 79405,
+    "advisories": 153488
+  },
+  "repositoryObservability": {
+    "packageVersionRowsWithRepositoryUrl": 21664,
+    "packageVersionRowsWithGitHubLink": 21527,
+    "workflowFetchStates": [
+      {
+        "hasGithubWorkflows": -1,
+        "fetchedWorkflows": 0,
+        "rowCount": 817
+      },
+      {
+        "hasGithubWorkflows": 0,
+        "fetchedWorkflows": 1,
+        "rowCount": 6223
+      },
+      {
+        "hasGithubWorkflows": 1,
+        "fetchedWorkflows": 1,
+        "rowCount": 15300
+      }
+    ]
+  },
+  "advisoryLabelReadiness": {
+    "distinctAdvisoryPackages": 153009,
+    "metricPackageOverlap": 164,
+    "firstPublishedAt": "2025-09-01T08:05:31Z",
+    "lastPublishedAt": "2026-04-30T21:30:37Z",
+    "classificationCounts": [
+      {
+        "classification": "compromise",
+        "rowCount": 153422
+      },
+      {
+        "classification": "account_takeover",
+        "rowCount": 50
+      },
+      {
+        "classification": "dependency_confusion",
+        "rowCount": 16
+      }
+    ]
+  },
+  "maintainerConcentration": {
+    "topMaintainerPackageCount": 967,
+    "topOnePercentMaintainerCount": 123,
+    "topOnePercentRelationshipCount": 18027,
+    "topOnePercentRelationshipShare": 0.22702600591902272
+  },
+  "structuralAssociations": {
+    "spearman_transitive_dependents_vs_maintainer_count": -0.13608634812671339,
+    "spearman_transitive_dependents_vs_max_maintainer_portfolio": 0.08172270310822538,
+    "spearman_direct_dependents_vs_maintainer_count": 0.03670272103377778
+  },
+  "limitations": [
+    "The advisory table has no affected-version relation in this archive and is unsuitable as a primary compromise-label source without external adjudication.",
+    "The package_versions table has no publication timestamp, so observed repository and workflow fields are current-snapshot observability, not cutoff-valid historical features.",
+    "Maintainer usernames are registry identities and may not map one-to-one to repository, publisher, or organization authority."
+  ]
+}

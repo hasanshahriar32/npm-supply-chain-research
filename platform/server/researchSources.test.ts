@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getExperiments, getIncidents, getLiterature, getSourceSnapshot } from "./researchSources";
+import { getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getSourceSnapshot } from "./researchSources";
 
 describe("repository-backed research sources", () => {
   it("loads the required literature matrix from research/11_literature_matrix.csv", async () => {
@@ -25,5 +25,14 @@ describe("repository-backed research sources", () => {
   it("marks the graph-attention experiment as blocked until prerequisites are met", () => {
     const hgat = getExperiments().find((experiment) => experiment.id === "hgat");
     expect(hgat?.status).toBe("blocked");
+  });
+
+  it("serves the completed evidence-backed gap-resolution artifacts in every governed workspace section", async () => {
+    const documents = await getDocuments();
+    expect(documents.find((document) => document.slug === "gap-analysis")?.sourceFile).toBe("90_gap_resolution_report.md");
+    expect(documents.find((document) => document.slug === "methodology")?.sourceFile).toBe("50_gap_resolution_study_protocol.md");
+    expect(documents.find((document) => document.slug === "incident-labels")?.sourceFile).toBe("52_seed_incident_registry.md");
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ title: "Gap Analysis" });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Auditable npm Defense Benchmark") });
   });
 });

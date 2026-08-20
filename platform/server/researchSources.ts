@@ -6,11 +6,11 @@ const researchRoot = path.join(process.cwd(), "research");
 
 const documents: ResearchDocument[] = [
   { slug: "literature-review", title: "Literature Review", category: "literature", sourceFile: "10_literature_review.md", summary: "Related work across ecosystem structure, propagation, package detection, and CI/CD security." },
-  { slug: "gap-analysis", title: "Gap Analysis", category: "gap", sourceFile: "20_novelty_and_gap_analysis.md", summary: "A conditional novelty assessment and research-gap map." },
-  { slug: "benchmark-findings", title: "Benchmark Findings", category: "benchmark", sourceFile: "90_final_research_report.md", summary: "Current snapshot evidence and the qualified go recommendation." },
-  { slug: "methodology", title: "Methodology", category: "methodology", sourceFile: "30_proposed_methodology.md", summary: "Study design, temporal controls, feature families, and evaluation protocol." },
-  { slug: "incident-labels", title: "Incident Labels", category: "governance", sourceFile: "32_labeling_protocol.md", summary: "High-precision incident-labeling protocol and evidence hierarchy." },
-  { slug: "experiment-results", title: "Experiment Results", category: "benchmark", sourceFile: "92_priority_backlog.md", summary: "The current experiment plan and evidence requirements." },
+  { slug: "gap-analysis", title: "Gap Analysis", category: "gap", sourceFile: "90_gap_resolution_report.md", summary: "Evidence-backed novelty boundaries, a selected contribution, and a staged research roadmap." },
+  { slug: "benchmark-findings", title: "Benchmark Findings", category: "benchmark", sourceFile: "51_current_snapshot_findings.md", summary: "Reproducible current-snapshot leverage findings with strict limits on predictive interpretation." },
+  { slug: "methodology", title: "Methodology", category: "methodology", sourceFile: "50_gap_resolution_study_protocol.md", summary: "Time-aware targets, feature ledger, queue definitions, temporal controls, and evaluation protocol." },
+  { slug: "incident-labels", title: "Incident Labels", category: "governance", sourceFile: "52_seed_incident_registry.md", summary: "A conservative, source-backed seed registry for version-specific temporal labels." },
+  { slug: "experiment-results", title: "Experiment Results", category: "benchmark", sourceFile: "55_current_snapshot_ecosystem_findings.md", summary: "Measured ecosystem structure and observability findings, including temporal-label readiness limits." },
 ];
 
 function parseCsvRow(line: string) {
@@ -58,7 +58,7 @@ export function getIncidents(): IncidentLabel[] { return [
 ]; }
 
 export function getExperiments(): ExperimentResult[] { return [
-  { id: "baseline", model: "Interpretable baseline suite", featureSet: "Popularity, dependency reach, maintainer reach, workflow observability", evaluation: "Rolling-origin ranking benchmark", status: "planned", note: "Must establish incremental value before graph-learning claims." },
+  { id: "baseline", model: "Current-snapshot interpretable audit", featureSet: "Structural leverage, maintainer concentration, repository and workflow observability", evaluation: "Reproducible cross-sectional descriptive analysis", status: "baseline", note: "Completed on 25,228 repository-backed package metrics; this is not a temporal compromise-prediction result." },
   { id: "resolution", model: "Version-aware graph comparison", featureSet: "Resolved versus package-level dependency edges", evaluation: "Rank correlation and incident recall", status: "planned", note: "Tests the impact of npm-specific dependency resolution." },
   { id: "hgat", model: "Heterogeneous graph attention model", featureSet: "Package, maintainer, repository, dependency, workflow relations", evaluation: "Matched temporal split against baselines", status: "blocked", note: "Blocked until labels, temporal snapshots, and baselines are reproducible." },
 ]; }

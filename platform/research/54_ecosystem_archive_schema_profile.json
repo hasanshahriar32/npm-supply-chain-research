@@ -1,0 +1,277 @@
+{
+  "analysisName": "ecosystem_archive_schema_profile",
+  "archiveName": "npm_ecosystem.db.zip",
+  "archiveSha256": "ab45439cf94cf43f3133b0aaff644557d55e86e99430a0a7937bfd0ce5266315",
+  "generatedAt": "2026-08-20T08:18:42.871977+00:00",
+  "tables": [
+    {
+      "name": "advisories",
+      "rowCount": 153488,
+      "columns": [
+        {
+          "name": "id",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "package_name",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "summary",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "details",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "severity",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "published_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "classification",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "dependencies",
+      "rowCount": 121885,
+      "columns": [
+        {
+          "name": "from_package",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "from_version",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "to_package",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "to_version",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "requirement",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "relation",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "maintainers",
+      "rowCount": 12217,
+      "columns": [
+        {
+          "name": "username",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "email_hash",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "package_maintainers",
+      "rowCount": 79405,
+      "columns": [
+        {
+          "name": "package_name",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "maintainer_username",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        }
+      ]
+    },
+    {
+      "name": "package_metrics",
+      "rowCount": 25228,
+      "columns": [
+        {
+          "name": "package_name",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "wormability_max",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "wormability_sum",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "blast_radius",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "direct_dependents",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "direct_dependents_with_workflows",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "transitive_dependents",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "attacker_roi",
+          "type": "REAL",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "calculated_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "package_versions",
+      "rowCount": 22340,
+      "columns": [
+        {
+          "name": "package_name",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "version",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "repository_url",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "github_owner",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "github_repo",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "has_github_workflows",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "fetched_workflows",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    },
+    {
+      "name": "packages",
+      "rowCount": 25228,
+      "columns": [
+        {
+          "name": "name",
+          "type": "TEXT",
+          "notNull": false,
+          "primaryKey": true
+        },
+        {
+          "name": "fetched_registry",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "fetched_dependencies",
+          "type": "INTEGER",
+          "notNull": false,
+          "primaryKey": false
+        },
+        {
+          "name": "created_at",
+          "type": "TIMESTAMP",
+          "notNull": false,
+          "primaryKey": false
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "This profile records only schema and aggregate row counts.",
+    "The SQLite source archive is not copied into the deployable web project.",
+    "Any historical feature claim still requires a dated source and a feature-availability rule."
+  ]
+}
