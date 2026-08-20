@@ -55,8 +55,8 @@
 - [ ] Deploy the updated site to Vercel production, configure required production environment variables, and confirm the single daily cron is active there
 - [ ] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
 - [x] Resolve the managed-production packaging mismatch so the server-rendered Next.js platform publishes successfully
-- [ ] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts
-- [ ] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
+- [x] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts
+- [x] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
 - [x] Inventory all existing research claims, data assets, limitations, and stated gaps in the repository
 - [x] Build an evidence-backed related-work map for supply-chain propagation, reach forecasting, exploitability, and temporal evaluation
 - [x] Assess novelty, feasibility, data requirements, and evaluation risks for prioritized candidate research contributions
