@@ -17,5 +17,7 @@ describe("managed production packaging", () => {
     expect(productionServer).toContain("process.env.PORT");
     expect(productionServer).toContain('next({ dev: false, hostname, port })');
     expect(productionServer).toContain("createServer");
+    expect(productionServer).toContain('"/__next_runtime_marker__.txt"');
+    expect(productionServer).toContain("runtimeMarkerPath");
   });
 });
