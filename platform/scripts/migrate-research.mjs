@@ -76,6 +76,22 @@ const statements = [
     note TEXT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE content_records ADD COLUMN IF NOT EXISTS reviewed_by_open_id VARCHAR(128)`,
+  `ALTER TABLE content_records ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`,
+  `ALTER TABLE benchmark_snapshots ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'published'`,
+  `ALTER TABLE benchmark_snapshots ADD COLUMN IF NOT EXISTS source_ref VARCHAR(255)`,
+  `ALTER TABLE benchmark_snapshots ADD COLUMN IF NOT EXISTS chart_data JSONB`,
+  `ALTER TABLE benchmark_snapshots ADD COLUMN IF NOT EXISTS reviewed_by_open_id VARCHAR(128)`,
+  `ALTER TABLE benchmark_snapshots ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`,
+  `CREATE TABLE IF NOT EXISTS ingestion_runs (
+    id SERIAL PRIMARY KEY,
+    source_ref VARCHAR(255) NOT NULL UNIQUE,
+    status VARCHAR(32) NOT NULL,
+    detail TEXT,
+    snapshot_id INTEGER,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+  )`,
 ];
 
 try {

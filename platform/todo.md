@@ -27,8 +27,24 @@
 - [x] Replace Manus OAuth routes, session handling, and workspace access checks with Clerk authentication
 - [x] Configure Clerk environment variables and document the minimal user-controlled setup
 - [x] Verify Clerk-protected research workspace and administrator access flows
-- [ ] Save and synchronize the Clerk-authenticated platform revision to GitHub
+- [x] Save and synchronize the Clerk-authenticated platform revision to GitHub
 - [x] Verify a signed-in Clerk user can load protected workspace and tRPC research data
 - [x] Verify a Clerk user with publicMetadata.role set to admin can access administrator pages and procedures
 - [x] Expand README instructions for Clerk key retrieval and administrator-role assignment
 - [x] Synchronize the resolved Clerk public-metadata role to the PostgreSQL user listing
+- [x] Audit the current dashboard, database schema, deployment metadata, and reusable workflow requirements
+- [x] Add interactive blast-radius and supply-chain charts using real repository snapshot data
+- [x] Redirect signed-in homepage users to the private research workspace and retain the public landing page for signed-out visitors
+- [x] Create a separate administrator console outside the research-workspace frame
+- [x] Add Clerk user role management so administrators can promote and demote researchers
+- [x] Add a research-content approval workflow with review, approval, publication, and rejection states
+- [x] Implement a scheduled research-ingestion job that creates benchmark snapshots from fresh data
+- [ ] Configure the daily ingestion trigger time and activate it only after the updated production site is deployed
+- [x] Create and validate a reusable supply-chain research platform skill
+- [x] Correct the Git author email configuration for Vercel-compatible GitHub deployments
+- [x] Validate charts, administration, role changes, approvals, ingestion schedule, responsive UI, and deployment readiness
+- [ ] Save and synchronize the enhanced platform to GitHub
+- [ ] Populate fresh snapshot fields from current authoritative data sources and serve published PostgreSQL snapshots in the benchmark overview
+- [ ] Run end-to-end administrator verification for role changes and content approval transitions
+- [ ] Verify the new interactive chart and separate administration console layouts at responsive breakpoints
+- [ ] Correct the React document-title warning in the protected workspace pages

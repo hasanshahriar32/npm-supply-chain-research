@@ -5,6 +5,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import { LiteratureMatrix } from "../../components/LiteratureMatrix";
 import { MarkdownReader } from "../../components/MarkdownReader";
+import { SupplyChainCharts } from "../../components/SupplyChainCharts";
 import { WorkspaceLayout } from "../../components/WorkspaceLayout";
 import { getClerkResearchUser } from "../../server/clerkAuth";
 import { trpc } from "../../lib/trpc";
@@ -17,10 +18,11 @@ function Loading() { return <div className="admin-empty">Loading the repository-
 
 function BenchmarkPanel() {
   const overview = trpc.research.overview.useQuery(undefined, { refetchInterval: 30_000 });
-  if (!overview.data) return <Loading />;
+  const analytics = trpc.research.analytics.useQuery();
+  if (!overview.data || !analytics.data) return <Loading />;
   const { snapshot } = overview.data;
   const coverage = Math.round(snapshot.workflowCoverage * 100);
-  return <><PanelTitle title="Benchmark Findings" note="Current repository snapshot; values are source-backed and refresh through the protected tRPC layer." /><div className="metric-grid"><div className="metric"><label>Packages</label><strong>{snapshot.packages.toLocaleString()}</strong><small>Current package nodes</small></div><div className="metric"><label>Dependency edges</label><strong>{snapshot.dependencyEdges.toLocaleString()}</strong><small>Observed relations</small></div><div className="metric"><label>Maintainers</label><strong>{snapshot.maintainers.toLocaleString()}</strong><small>Associated identities</small></div><div className="metric"><label>Workflow coverage</label><strong>{coverage}%</strong><small>{snapshot.workflowChecks.toLocaleString()} repository checks</small></div></div><div className="split-grid"><section className="data-card"><h3>Snapshot composition</h3><p>The data collection prototype contains package, version, dependency, maintainer, repository, workflow, advisory, and metric records. The benchmark is not yet a finished predictive model.</p><div className="bar-list"><div className="bar-row"><label><span>Repository mappings</span><span>{snapshot.repositoryMappings.toLocaleString()}</span></label><div className="bar"><i style={{ width: `${Math.round(snapshot.repositoryMappings / snapshot.packages * 100)}%` }} /></div></div><div className="bar-row"><label><span>Workflow detections</span><span>{Math.round(snapshot.workflowCoverage * snapshot.workflowChecks).toLocaleString()}</span></label><div className="bar"><i style={{ width: `${coverage}%` }} /></div></div><div className="bar-row"><label><span>Advisory records</span><span>{snapshot.advisoryRecords.toLocaleString()}</span></label><div className="bar"><i style={{ width: "82%" }} /></div></div></div></section><section className="data-card"><h3>Reading the metrics</h3><p>Shared-maintainer reach and public workflow observability are defensive features. They do not prove credential control, infrastructure privilege, exploitability, or attacker optimization.</p><div className="bar-list"><div className="bar-row"><label><span>Package metrics written</span><span>{snapshot.metricsRecords.toLocaleString()}</span></label><div className="bar"><i style={{ width: "100%" }} /></div></div><div className="bar-row"><label><span>Version records</span><span>{snapshot.versions.toLocaleString()}</span></label><div className="bar"><i style={{ width: "89%" }} /></div></div></div></section></div></>;
+  return <><PanelTitle title="Benchmark Findings" note="Current repository snapshot with interactive real-data visualizations. Values refresh through the protected tRPC layer." /><div className="metric-grid"><div className="metric"><label>Packages</label><strong>{snapshot.packages.toLocaleString()}</strong><small>Current package nodes</small></div><div className="metric"><label>Dependency edges</label><strong>{snapshot.dependencyEdges.toLocaleString()}</strong><small>Observed relations</small></div><div className="metric"><label>Maintainers</label><strong>{snapshot.maintainers.toLocaleString()}</strong><small>Associated identities</small></div><div className="metric"><label>Workflow coverage</label><strong>{coverage}%</strong><small>{snapshot.workflowChecks.toLocaleString()} repository checks</small></div></div><SupplyChainCharts data={analytics.data} /><div className="split-grid"><section className="data-card"><h3>Snapshot composition</h3><p>The data collection prototype contains package, version, dependency, maintainer, repository, workflow, advisory, and metric records. The benchmark is not yet a finished predictive model.</p></section><section className="data-card"><h3>Reading the metrics</h3><p>Shared-maintainer reach and public workflow observability are defensive features. They do not prove credential control, infrastructure privilege, exploitability, or attacker optimization.</p></section></div></>;
 }
 
 function IncidentPanel() {
@@ -48,7 +50,7 @@ export default function WorkspacePage({ user }: { user: User }) {
   else if (section === "incident-labels") body = <IncidentPanel />;
   else if (section === "experiment-results") body = <ExperimentPanel />;
   else body = document.data ? <><PanelTitle title={document.data.title} note={document.data.summary} /><MarkdownReader markdown={document.data.markdown} /></> : <Loading />;
-  return <><Head><title>{section.replace(/-/g, " ")} · Supply Chain Research Hub</title></Head><WorkspaceLayout user={user}>{body}</WorkspaceLayout></>;
+  return <><Head><title>{`${section.replace(/-/g, " ")} · Supply Chain Research Hub`}</title></Head><WorkspaceLayout user={user}>{body}</WorkspaceLayout></>;
 }
 
 export async function getServerSideProps(context: GetServerSidePropsContext) { const user = await getClerkResearchUser(context.req as NextApiRequest); if (!user) return { redirect: { destination: "/", permanent: false } }; return { props: { ...buildClerkProps(context.req as NextApiRequest), user: { name: user.name, role: user.role } } }; }

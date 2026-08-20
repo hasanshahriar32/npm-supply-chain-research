@@ -17,9 +17,11 @@ export const contentRecords = pgTable("content_records", {
   title: text("title").notNull(),
   category: varchar("category", { length: 64 }).notNull(),
   sourceFile: varchar("source_file", { length: 256 }),
-  status: varchar("status", { length: 32 }).notNull().default("published"),
+  status: varchar("status", { length: 32 }).notNull().default("pending"),
   summary: text("summary"),
   metadata: jsonb("metadata"),
+  reviewedByOpenId: varchar("reviewed_by_open_id", { length: 128 }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -48,6 +50,21 @@ export const benchmarkSnapshots = pgTable("benchmark_snapshots", {
   advisoryRecords: integer("advisory_records").notNull(),
   metricsRecords: integer("metrics_records").notNull(),
   isCurrent: boolean("is_current").notNull().default(true),
+  status: varchar("status", { length: 32 }).notNull().default("published"),
+  sourceRef: varchar("source_ref", { length: 255 }),
+  chartData: jsonb("chart_data"),
+  reviewedByOpenId: varchar("reviewed_by_open_id", { length: 128 }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+});
+
+export const ingestionRuns = pgTable("ingestion_runs", {
+  id: serial("id").primaryKey(),
+  sourceRef: varchar("source_ref", { length: 255 }).notNull().unique(),
+  status: varchar("status", { length: 32 }).notNull(),
+  detail: text("detail"),
+  snapshotId: integer("snapshot_id"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
 });
 
 export const incidentLabels = pgTable("incident_labels", {

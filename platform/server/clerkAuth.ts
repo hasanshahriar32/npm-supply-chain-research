@@ -29,3 +29,10 @@ export async function getClerkResearchUser(req: NextApiRequest): Promise<ClerkRe
     role,
   };
 }
+
+export async function setClerkResearchUserRole(openId: string, role: "admin" | "researcher") {
+  const client = await clerkClient();
+  const user = await client.users.getUser(openId);
+  await client.users.updateUserMetadata(openId, { publicMetadata: { ...user.publicMetadata, role } });
+  return role;
+}

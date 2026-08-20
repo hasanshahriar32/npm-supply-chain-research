@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getExperiments, getIncidents, getLiterature, getSnapshot } from "./researchSources";
+import { getExperiments, getIncidents, getLiterature, getSourceSnapshot } from "./researchSources";
 
 describe("repository-backed research sources", () => {
   it("loads the required literature matrix from research/11_literature_matrix.csv", async () => {
@@ -8,8 +8,8 @@ describe("repository-backed research sources", () => {
     expect(studies.find((study) => study.study_id === "L15")?.study).toContain("Current project repository");
   });
 
-  it("preserves the current benchmark snapshot values", () => {
-    const snapshot = getSnapshot();
+  it("loads current benchmark snapshot values from the source manifest", async () => {
+    const snapshot = await getSourceSnapshot();
     expect(snapshot.packages).toBe(25228);
     expect(snapshot.dependencyEdges).toBe(121885);
     expect(snapshot.maintainers).toBe(12217);

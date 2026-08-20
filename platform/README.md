@@ -26,6 +26,8 @@ CLERK_SECRET_KEY=sk_...
 POSTGRES_DATABASE_URL=postgresql://...
 ```
 
+For a Vercel deployment, add the same values in **Project Settings → Environment Variables**, plus a server-only `GITHUB_TOKEN` with **Contents: Read** access to `ashik-hstu/npm-supply-chain-research` and a random `CRON_SECRET` with at least 16 characters. The included `vercel.json` runs `GET /api/cron/research-ingestion` daily at **03:00 UTC**. Each execution retrieves the latest committed metrics archive from the private repository, creates a **pending** benchmark snapshot, and requires administrator publication before it becomes current.[1]
+
 ## Clerk administrator access
 
 All signed-in Clerk users may access the research workspace. To grant administration access, open **Clerk Dashboard → Users → select the user → Public metadata** and save the following JSON:
@@ -35,6 +37,10 @@ All signed-in Clerk users may access the research workspace. To grant administra
 ```
 
 The platform reads this value at sign-in, protects `/workspace/admin` and admin tRPC procedures, and mirrors the resolved role into the local PostgreSQL user record for reporting. Do not grant the administrator role through a browser-visible environment variable.
+
+## References
+
+[1]: https://vercel.com/docs/cron-jobs "Vercel Cron Jobs"
 
 ## Database setup
 
