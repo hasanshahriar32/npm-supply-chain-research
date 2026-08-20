@@ -46,9 +46,13 @@
 - [x] Save and synchronize the enhanced platform to GitHub
 - [x] Populate fresh snapshot fields from current authoritative data sources and serve published PostgreSQL snapshots in the benchmark overview
 - [ ] Run end-to-end administrator verification for role changes and content approval transitions
-- [ ] Verify the new interactive chart and separate administration console layouts at responsive breakpoints
+- [x] Verify the new interactive chart and separate administration console layouts at responsive breakpoints
 - [x] Correct the React document-title warning in the protected workspace pages
 - [x] Set the remaining Git commit author to ashikulislamcf2000@gmail.com and repair GitHub push authentication
 - [x] Retain exactly one Vercel cron invocation per day in the deployment configuration
 - [x] Correct the daily ingestion manifest source path to match the platform directory in the private GitHub repository
 - [x] Complete live pending → approved → published validation for a clearly labelled administrator workflow record
+- [ ] Deploy the updated site to Vercel production, configure required production environment variables, and confirm the single daily cron is active there
+- [ ] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
+- [ ] Resolve the managed-production packaging mismatch so the server-rendered Next.js platform publishes successfully
+- [ ] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts

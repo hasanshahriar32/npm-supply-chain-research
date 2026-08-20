@@ -25,3 +25,13 @@ With explicit administrator confirmation, the live Reviews interface accepted th
 The administrator then selected **Approve**; the live interface refreshed to show the record in the separate `approved` state, demonstrating that approval does not automatically publish content.
 
 Finally, the administrator selected **Publish**. The record remained visibly labelled `published` in the Reviews queue, completing a verified `pending → approved → published` transition while leaving the validation record available for later inspection.
+
+## Role, responsive, and deployment readiness
+
+The administrator procedure tests confirm that promotion calls update both Clerk public metadata and PostgreSQL, while rejecting an administrator's attempt to remove their own role. The administrator console and chart suite both include a dedicated `max-width: 900px` layout: chart and console grids collapse to one column, console forms stack, approval actions wrap, and the workspace provides horizontally scrollable mobile navigation.
+
+The committed `vercel.json` contains precisely one ingestion schedule, `0 3 * * *`, for `/api/cron/research-ingestion`. Vercel activates that schedule automatically when this GitHub revision is deployed to its production environment. The production Vercel project must have `CRON_SECRET`, `GITHUB_TOKEN`, `POSTGRES_DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, and `CLERK_SECRET_KEY` configured before its first scheduled run.
+
+## Managed production packaging
+
+The legacy full-stack publishing adapter initially expected `dist/public` while the Next.js build emitted only `.next`. The build now bundles a production Next request-handler server to `dist/index.js` and emits the required nonempty `dist/public` marker. The full suite passed with **22 tests across 9 files**, the production build completed, and the bundled server returned HTTP `200` with the landing-page marker when run against the deployment-style `PORT` environment variable.
