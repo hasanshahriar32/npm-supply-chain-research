@@ -99,3 +99,6 @@
 - [x] Expand reproducible temporal artifacts only if the candidate passes the frozen adjudication protocol
 - [x] Reconcile all temporal diagnostics so total incident-family and exact-snapshot-family counts are explicit and consistent after label-only additions
 - [x] Rerun tests and production build after final artifact and document fixes, then revalidate protected Incident Labels, Gap Analysis, and Methodology pages
+- [x] Identify frozen provider-backed incident-coverage and at-risk-population sources suitable for a cutoff-valid temporal control frame
+- [x] Validate candidate source coverage, timing, sampling semantics, and non-event label boundaries against the temporal protocol
+- [x] Construct and publish a gate-preserving control-frame exclusion because the candidate sources do not satisfy all primary temporal evidence requirements

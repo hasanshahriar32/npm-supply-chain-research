@@ -92,6 +92,12 @@ SafeDep documents the `oob.moika.tech` dependency-confusion campaign, including 
 
 The retained current registry response does not contain a usable pre-anchor version object for this package. The record is therefore admitted as a high-confidence **label-only event** but contributes no source-package metadata, direct declaration, range approximation, or bounded graph root. This is an intentional fidelity result: the expanded ledger reaches ten package-event records and six incident families, while exact reconstruction remains eight source snapshots and the primary baseline remains blocked for lack of cutoff-valid controls.
 
+## Provider-backed control-frame assessment: deps.dev
+
+Open Source Insights documents a public BigQuery dataset with a `Snapshots` table describing full exports, a `PackageVersions` table containing `SnapshotAt` and upstream publication time, and advisory rows containing disclosure and affected/unaffected-version fields. [18] These are potentially useful population-provenance fields. However, the provider's advisory relation is a vulnerability source, not a documented closed-world coverage source for the benchmark's malicious-publication and publisher-compromise targets.
+
+The official documentation requires a Google Cloud account and BigQuery API access. A metadata-only unauthenticated request returned HTTP 401 and retrieved no rows. No provider population was sampled. The assessment also excludes a versioned Figshare/Mendeley malicious/benign source-code release because its landing metadata does not establish row-level package-version identities, collection cutoff, coverage, or outcome horizon. [19] [20] The committed assessment and probe (`81_provider_control_frame_assessment.md`, `81_provider_control_frame_probe.json`) retain the no-control decision and state the gates for future authorized use.
+
 ## References
 
 [1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
@@ -111,3 +117,6 @@ The retained current registry response does not contain a usable pre-anchor vers
 [15]: https://safedep.io/malicious-node-ipc-npm-compromise/ "SafeDep node-ipc compromise report"
 [16]: https://safedep.io/oob-moika-tech-dependency-confusion-campaign/ "SafeDep oob.moika.tech dependency-confusion campaign"
 [17]: https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/%40emcd-vue/auth/MAL-2026-5163.json "OpenSSF MAL-2026-5163 @emcd-vue/auth report"
+[18]: https://docs.deps.dev/bigquery/v1/ "Open Source Insights deps.dev BigQuery dataset"
+[19]: https://doi.org/10.6084/m9.figshare.31451728 "Figshare Malicious NPM Package Detection Dataset"
+[20]: https://doi.org/10.17632/6tc8wrp62g.1 "Mendeley Malicious NPM Package Detection Dataset"

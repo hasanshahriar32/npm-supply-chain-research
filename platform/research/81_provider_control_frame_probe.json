@@ -1,0 +1,26 @@
+{
+  "assessment": "provider-backed-control-frame-probe",
+  "assessedAtUtc": "2026-08-24T09:43:00Z",
+  "candidate": {
+    "provider": "Google Open Source Insights / deps.dev",
+    "documentationUrl": "https://docs.deps.dev/bigquery/v1/",
+    "dataset": "bigquery-public-data.deps_dev_v1",
+    "documentedPopulationFields": ["Snapshots.Time", "PackageVersions.SnapshotAt", "PackageVersions.UpstreamPublishedAt"],
+    "documentedAdvisoryFields": ["Advisories.SnapshotAt", "Advisories.Disclosed", "Advisories.Packages.AffectedVersions", "Advisories.Packages.UnaffectedVersions"]
+  },
+  "accessProbe": {
+    "endpoint": "https://bigquery.googleapis.com/bigquery/v2/projects/bigquery-public-data/datasets/deps_dev_v1",
+    "method": "GET",
+    "credentialsUsed": false,
+    "httpStatus": 401,
+    "outcome": "No provider rows retrieved; official documentation states that a Google Cloud account and the BigQuery API are required."
+  },
+  "controlFrameDecision": "excluded",
+  "blockingConditions": [
+    "No authorized provider query or frozen export was available in the current environment.",
+    "The documented advisory relation covers disclosed vulnerabilities rather than a closed-world malicious-publication or compromise event target.",
+    "No frozen incident-coverage source was joined to the provider snapshot."
+  ],
+  "controlsCreated": 0,
+  "nextDataGate": "Acquire authorized snapshot access and pair a named population snapshot with a frozen malicious-package or compromise incident-coverage source before pre-registering any control sample."
+}

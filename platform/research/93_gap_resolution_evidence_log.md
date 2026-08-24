@@ -203,3 +203,15 @@ The record is admitted as one distinct `moika_dependency_confusion_2026` family 
 
 27. SafeDep, *183 npm Packages Target Cloud and Finance via oob.moika.tech*, 28 May 2026: <https://safedep.io/oob-moika-tech-dependency-confusion-campaign/>.
 28. OpenSSF Malicious Packages, *MAL-2026-5163: Malicious code in @emcd-vue/auth (npm)*: <https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/%40emcd-vue/auth/MAL-2026-5163.json>.
+
+## Provider-backed control-frame assessment — 2026-08-24
+
+Open Source Insights documents the deps.dev BigQuery public dataset as a provider-backed source with full-snapshot timestamps, package-version export timestamps, upstream publication times, and advisory disclosure plus affected/unaffected-version fields. [29] This makes it a plausible future source for freezing an npm package-version population, but it does not by itself provide closed-world coverage for the project's malicious-publication or compromise targets: its documented advisory relation is vulnerability-oriented.
+
+The provider documents a Google Cloud account and enabled BigQuery API as prerequisites. A metadata-only no-credential request to the official dataset endpoint returned `401 UNAUTHENTICATED`; no tables, rows, sample, or population were retrieved. The companion `81_provider_control_frame_probe.json` records the endpoint, status, zero rows, and no secrets. The assessment also excludes a versioned Figshare/Mendeley malicious/benign source-code dataset from the primary control frame because the published landing metadata does not establish row-level package-version identity, collection cutoff, coverage, or outcome horizon. [30] [31]
+
+The valid next step remains provider-authorized snapshot access paired with a separately frozen malicious-package or compromise coverage source. Until then, an advisory absence or catalogue absence is not treated as a benign control.
+
+29. Open Source Insights, *deps.dev BigQuery dataset*: <https://docs.deps.dev/bigquery/v1/>.
+30. Figshare, *Malicious NPM Package Detection Dataset*, DOI 10.6084/m9.figshare.31451728: <https://doi.org/10.6084/m9.figshare.31451728>.
+31. Mendeley Data, *Malicious NPM Package Detection Dataset*, Version 1: <https://doi.org/10.17632/6tc8wrp62g.1>.

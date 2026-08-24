@@ -99,6 +99,19 @@ Registry provenance makes the mismatch more decisive. Of the 1,790 explicit labe
 
 The corpus therefore strengthens the methodological conclusion rather than relaxing it: explicit benign labels alone are insufficient when source construction, timing, and post-publication retention do not support the target causal/temporal question. The provenance ledger and control-frame memorandum preserve the corpus for a future release-classification study in an archival environment, but no result transfers to this study's future-compromise benchmark.
 
+## Provider-backed control-frame assessment
+
+Open Source Insights documents the deps.dev BigQuery dataset as a provider-backed source with full-snapshot timestamps, package-version exports, upstream publication times, and advisory disclosure plus affected/unaffected-version fields. [16] Those fields are technically promising for a future frozen package-version population, but the documented advisory relation is vulnerability-oriented rather than a closed-world record of malicious publication or publisher compromise.
+
+The provider requires a Google Cloud account and enabled BigQuery API. The recorded unauthenticated metadata probe returned HTTP 401 and retrieved no table metadata or rows; consequently, it created **zero controls**. A versioned Figshare/Mendeley malicious-NPM source-code release was also excluded: its public landing metadata does not establish row-level package-version identity, collection cutoff, population coverage, or an outcome horizon. [17] [18]
+
+| Candidate source | Useful documented property | Primary-control decision | Reason |
+|---|---|---|---|
+| deps.dev BigQuery | Snapshot, version, publication, dependency, and advisory fields | Excluded pending authorized, matched access | No rows were accessible; advisory semantics do not cover the target malicious-publication/compromise outcome. |
+| Figshare/Mendeley malicious-NPM source-code release | Versioned public release with labelled folders | Excluded | Landing metadata does not define a temporal package-version population or a valid non-event horizon. |
+
+This assessment is a precise feasibility result, not evidence that either source contains no useful data. It preserves the no-fit gate: absence from an advisory or catalogue is not a benign temporal control. The reproducible assessment and HTTP probe record are `81_provider_control_frame_assessment.md` and `81_provider_control_frame_probe.json`.
+
 ## What the discovered version-resolved dataset changes—and does not change
 
 CHRONO-RESOLUTION is a public, citable dataset designed for dependency resolution at release points. Its authors report 146,651 npm packages and 245,307,373 npm package-dependency interval relationships, and document that the release includes raw and filtered data, scripts, and query examples. [10] [11] It is the appropriate **next source candidate** for target-version and interval-aware direct-edge reconstruction.
@@ -142,3 +155,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [14] [npm, “semver” documentation](https://docs.npmjs.com/cli/v6/using-npm/semver/).
 
 [15] [A. Sejfia and M. Schäfer, “Practical Automated Detection of Malicious npm Packages,” ICSE 2022 artifact repository](https://github.com/githubnext/amalfi-artifact).
+
+[16] [Open Source Insights, “deps.dev BigQuery dataset”](https://docs.deps.dev/bigquery/v1/).
+
+[17] [Figshare, “Malicious NPM Package Detection Dataset,” DOI 10.6084/m9.figshare.31451728](https://doi.org/10.6084/m9.figshare.31451728).
+
+[18] [Mendeley Data, “Malicious NPM Package Detection Dataset,” Version 1](https://doi.org/10.17632/6tc8wrp62g.1).

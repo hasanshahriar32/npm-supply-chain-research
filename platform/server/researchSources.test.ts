@@ -37,6 +37,7 @@ describe("repository-backed research sources", () => {
     expect(documents.find((document) => document.slug === "experiment-results")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ title: "Gap Analysis" });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Provider-backed control-frame assessment") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("ten package-event records") });
   });
 
@@ -107,5 +108,16 @@ describe("repository-backed research sources", () => {
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });
+  });
+
+  it("retains the provider-backed control-frame assessment as an exclusion rather than creating inferred controls", async () => {
+    const probe = await import("node:fs/promises").then((fs) => fs.readFile("research/81_provider_control_frame_probe.json", "utf8")).then(JSON.parse);
+    expect(probe).toMatchObject({
+      candidate: { provider: "Google Open Source Insights / deps.dev", dataset: "bigquery-public-data.deps_dev_v1" },
+      accessProbe: { credentialsUsed: false, httpStatus: 401 },
+      controlFrameDecision: "excluded",
+      controlsCreated: 0,
+    });
+    expect(probe.blockingConditions).toContain("The documented advisory relation covers disclosed vulnerabilities rather than a closed-world malicious-publication or compromise event target.");
   });
 });
