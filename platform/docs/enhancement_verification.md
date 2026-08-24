@@ -135,3 +135,9 @@ The authenticated `/workspace/gap-analysis` page was revalidated after publicati
 The authenticated `/workspace/gap-analysis` page was revalidated after the Original Sin of npm assessment. The rendered comparison identifies the source as an npm-specific OSV/NVD vulnerability-lifecycle and propagation study, not closed-world malicious-publication or maintainer-compromise coverage. It visibly records the live-filtered post-sample population, unavailable row-level custom database, absent non-event horizon, and zero-control/no-model decision.
 
 The authenticated `/workspace/methodology` page was also revalidated. Its temporal implementation amendment renders the Original Sin of npm screen as methodology context only and explicitly retains the mismatch with the benchmark target, no frozen at-risk denominator, no accessible row-level custom release, no declared non-event horizon, and zero-control/no-model outcome.
+
+The authenticated `/workspace/gap-analysis` page was reloaded after publishing the non-executed provider-access specification. The protected source query resolved and the full repository-backed Gap Analysis rendered with its existing no-fit conclusion and cited provider-access material; no unauthenticated or application-rendering error appeared.
+
+An in-page authenticated search then located `90_authorized_npm_control_frame_access_specification.json` in Gap Analysis and displayed its statement that the artifact is a non-executed extraction contract. This verifies that the new zero-control, future-access specification is served through the protected workspace rather than only present in the repository.
+
+The authenticated `/workspace/methodology` page was also reloaded and searched for the same artifact. The rendered amendment describes it as a non-executed reproducibility contract and explicitly states that it creates zero controls, labels, model fits, and metrics.

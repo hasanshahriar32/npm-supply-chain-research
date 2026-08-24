@@ -1,0 +1,123 @@
+{
+  "study": "authorized-npm-control-frame-access-specification",
+  "artifactDate": "2026-08-24",
+  "executionStatus": "not_executed_no_authorized_provider_access_or_target_matched_outcome_manifest",
+  "purpose": "Define the exact future extraction and validation contract for an authorized npm package-version population join. This is a specification, not a data extract, access request, control frame, label set, or model input.",
+  "sourceContext": {
+    "populationProvider": "Google Open Source Insights deps.dev BigQuery public dataset",
+    "providerDocumentation": "https://docs.deps.dev/bigquery/v1/",
+    "documentedPrerequisites": [
+      "Google Cloud account",
+      "BigQuery API enabled",
+      "A user-controlled project or sandbox able to run the bounded query"
+    ],
+    "providerCapabilitiesRelevantToFuturePopulation": [
+      "SnapshotAt-bearing package-version records",
+      "npm package and version identifiers",
+      "Provider-described upstream publication timestamps",
+      "Snapshot-bearing advisory records with affected and unaffected version fields"
+    ],
+    "knownTargetMismatch": "Provider advisory records document disclosed vulnerability information. They must not be used as closed-world evidence of malicious publication or maintainer compromise, and advisory absence must remain unknown."
+  },
+  "requiredInputsBeforeAnyRowProduction": {
+    "populationSnapshot": {
+      "requiredFields": [
+        "provider_dataset_identifier",
+        "named_snapshot_at_utc",
+        "population_query_text",
+        "population_query_sha256",
+        "package_system_equals_NPM",
+        "cutoff_at_utc",
+        "provider_result_export_sha256"
+      ],
+      "selectionRule": "First validate the named snapshot against `Snapshots.Time`; then select only `PackageVersions` rows with `SnapshotAt` equal to that named time and `UpstreamPublishedAt` at or before the frozen feature cutoff. Do not use a Latest view as the historical population."
+    },
+    "independentPositiveCoverageManifest": {
+      "requiredFields": [
+        "manifest_revision_identifier",
+        "manifest_sha256",
+        "source_inventory",
+        "coverage_start_utc",
+        "coverage_end_utc",
+        "package_name",
+        "affected_version",
+        "event_start_utc",
+        "event_family",
+        "evidence_urls",
+        "reviewer_decision",
+        "explicit_coverage_limitations"
+      ],
+      "selectionRule": "The manifest must independently enumerate and adjudicate the future malicious-publication or maintainer-compromise target for the full declared observation horizon. It must not be derived from deps.dev advisory presence or absence."
+    },
+    "observationWindow": {
+      "requiredFields": [
+        "feature_cutoff_at_utc",
+        "horizon_end_at_utc",
+        "horizon_duration",
+        "outcome_freeze_at_utc",
+        "right_censoring_rule",
+        "positive_lag_handling_rule"
+      ],
+      "selectionRule": "Set and publish the interval (cutoff, horizon end] before inspecting candidate labels. Exclude or right-censor a row when its complete horizon cannot be observed under the independently documented coverage manifest."
+    }
+  },
+  "parameterizedPopulationQuerySpecification": {
+    "status": "template_only_not_executed",
+    "logicalTables": [
+      "bigquery-public-data.deps_dev_v1.Snapshots",
+      "bigquery-public-data.deps_dev_v1.PackageVersions"
+    ],
+    "parameters": [
+      "@population_snapshot_at_utc",
+      "@feature_cutoff_at_utc"
+    ],
+    "pseudocode": [
+      "Validate that @population_snapshot_at_utc is present as `Snapshots.Time` in the provider snapshot catalogue before querying package rows.",
+      "Select package-version identifiers only where System = 'NPM', PackageVersions.SnapshotAt = @population_snapshot_at_utc, and PackageVersions.UpstreamPublishedAt <= @feature_cutoff_at_utc.",
+      "Export the minimum necessary fields with deterministic ordering and a content checksum; record row count and query job metadata.",
+      "Do not join PackageVersionsLatest, AdvisoryLatest, or current provider state into a historical feature snapshot."
+    ],
+    "expectedMinimumOutputSchema": [
+      "system",
+      "package_name",
+      "package_version",
+      "provider_snapshot_at_utc",
+      "upstream_published_at_utc",
+      "population_query_sha256",
+      "provider_export_sha256"
+    ]
+  },
+  "independentOutcomeJoinSpecification": {
+    "status": "template_only_not_executed",
+    "joinKey": [
+      "canonical_npm_package_name",
+      "exact_package_version"
+    ],
+    "positiveRule": "A row may be positive only when the independent manifest contains a matching exact package version whose adjudicated event_start_utc lies in (feature_cutoff_at_utc, horizon_end_at_utc]. Package-event rows sharing an incident family remain grouped in all splits and uncertainty calculations.",
+    "nonEventRule": "A row may be assigned a non-event/control label only after the independent manifest explicitly demonstrates coverage of the whole row’s horizon and all registered exclusions are applied. Before that demonstration, the row’s outcome is unknown rather than benign.",
+    "advisoryRule": "deps.dev and OSV advisory fields may support vulnerability provenance checks only. They cannot assign a malicious-publication, maintainer-compromise, or benign outcome."
+  },
+  "mandatoryValidationGates": [
+    "Record the provider identity, snapshot timestamp, exact SQL, parameters, query job metadata, output schema, deterministic order, row count, and SHA-256 before any outcome join.",
+    "Verify one-to-one canonical npm package/version identity after normalization; preserve rejected and ambiguous joins in a separate audit table.",
+    "Prove that every population row precedes its feature cutoff and that no current/latest provider view leaks post-cutoff state.",
+    "Freeze the independent positive-coverage manifest and its stated coverage interval before calculating outcomes.",
+    "Exclude incomplete horizons and outcome-coverage gaps rather than assigning negative labels.",
+    "Audit family overlap so campaign-related package-event rows do not cross train, validation, or test partitions.",
+    "Publish only aggregate counts and checksums until source terms permit release of row-level data."
+  ],
+  "prohibitedActions": [
+    "Do not execute this specification without a user-controlled authorized BigQuery environment.",
+    "Do not treat the specification as proof that a qualified snapshot or target-matched outcome manifest exists.",
+    "Do not derive controls from advisory absence, registry survival, source omission, current package state, or no-known-event assertions.",
+    "Do not compute rankings, calibration, PR-AUC, Recall@K, logistic regression, blast radius, attack return, or predictive metrics from this artifact."
+  ],
+  "currentDecision": {
+    "controlFrameStatus": "blocked",
+    "controlsCreated": 0,
+    "packageVersionRowsRetrieved": 0,
+    "positiveOutcomeRowsJoined": 0,
+    "modelMetricsCreated": 0,
+    "reason": "The available session has neither authorized provider access nor a frozen, target-matched independent outcome-coverage manifest with a non-event horizon."
+  }
+}

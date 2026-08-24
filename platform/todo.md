@@ -126,3 +126,9 @@
 - [x] Identify a further npm-specific public candidate that could document a frozen package-version population, compromise or malicious-publication coverage, and a non-event horizon
 - [x] Validate the selected npm candidate's cutoff, row-level identifiers, outcome coverage, non-event semantics, and bounded reproducible access against the frozen control-frame contract
 - [x] Publish only a supported npm-specific evidence improvement or a precise exclusion, retaining zero inferred benign controls when any gate fails
+- [x] Identify one further bounded-access npm-specific source path that could pair an immutable package-version population with target-matched positive coverage and an observation horizon
+- [x] Validate the candidate’s cutoff, row identity, target alignment, non-event semantics, and reproducible access against the frozen temporal-control contract
+- [x] Publish only a validated addition or a non-redundant gate-preserving exclusion, with zero inferred controls whenever any contract field remains absent
+- [x] Define a machine-readable, non-executed provider-access request specification for a frozen npm package-version population, independently adjudicated positive join, and pre-registered horizon
+- [x] Validate the specification against the existing deps.dev access and target-mismatch findings, making clear that it neither supplies credentials nor creates data rows or controls
+- [x] Publish the access specification in Methodology and Gap Analysis with regression coverage and retain the no-control/no-model result

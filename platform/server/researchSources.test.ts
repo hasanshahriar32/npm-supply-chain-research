@@ -194,6 +194,17 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("Do not treat vulnerability absence as a benign or uncompromised npm control label.");
   });
 
+  it("retains the authorized provider-access specification as a non-executed future contract rather than control data", async () => {
+    const specification = await import("node:fs/promises").then((fs) => fs.readFile("research/90_authorized_npm_control_frame_access_specification.json", "utf8")).then(JSON.parse);
+    expect(specification).toMatchObject({
+      executionStatus: "not_executed_no_authorized_provider_access_or_target_matched_outcome_manifest",
+      currentDecision: { controlFrameStatus: "blocked", controlsCreated: 0, packageVersionRowsRetrieved: 0, positiveOutcomeRowsJoined: 0, modelMetricsCreated: 0 },
+      sourceContext: { populationProvider: "Google Open Source Insights deps.dev BigQuery public dataset" },
+    });
+    expect(specification.independentOutcomeJoinSpecification.nonEventRule).toContain("unknown rather than benign");
+    expect(specification.prohibitedActions).toContain("Do not derive controls from advisory absence, registry survival, source omission, current package state, or no-known-event assertions.");
+  });
+
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/82_shai_hulud_second_coming_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

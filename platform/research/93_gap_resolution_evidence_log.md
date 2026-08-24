@@ -303,3 +303,12 @@ The study does not satisfy the primary npm compromise-control contract. Its repo
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.
+
+## Authorized npm control-frame access specification — 2026-08-24
+
+The next defensible output is not another source exclusion or a fabricated extraction: it is a non-executed access specification for an authorized future population join. The deps.dev documentation confirms that its historical `PackageVersions` records expose `SnapshotAt`, canonical system/name/version fields, and `UpstreamPublishedAt`; its `Snapshots` table identifies full-snapshot times. It also confirms that the provider's advisory records concern security advisories and affected/unaffected versions, while OSV describes its service as an aggregator of vulnerability databases. [48] [49]
+
+The new specification requires a user-controlled BigQuery environment, one named provider snapshot, exact query text and checksums, and an independent frozen positive-coverage manifest that documents malicious-publication or maintainer-compromise coverage for a pre-registered interval. It explicitly forbids `Latest` views and advisory absence as historical or non-event evidence. Because neither authorized provider access nor a target-matched, closed-world outcome-coverage manifest exists in this session, the artifact creates zero package-version rows, controls, joined outcomes, model fits, or metrics.
+
+48. Open Source Insights, “deps.dev BigQuery dataset” documentation: <https://docs.deps.dev/bigquery/v1/>.
+49. Open Source Vulnerabilities, “Introduction to OSV”: <https://google.github.io/osv.dev/>.
