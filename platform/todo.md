@@ -56,7 +56,7 @@
 - [x] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
 - [x] Resolve the managed-production packaging mismatch so the server-rendered Next.js platform publishes successfully
 - [x] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts
-- [ ] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
+- [x] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
 - [x] Inspect the connected Vercel project and production deployment through the Vercel connector, while retaining browser-dashboard evidence for environment readiness and cron configuration
 - [x] Inspect Vercel production environment-variable readiness for the Clerk, database, GitHub, and cron integrations
 - [x] Directly verify that Vercel production has exactly one active daily `0 3 * * *` ingestion schedule
@@ -65,7 +65,7 @@
 - [x] Create an isolated Clerk role-validation researcher, synchronize it to governance records, promote it through the live role path, and preserve the verification account
 - [x] Use the authenticated Clerk Dashboard to verify the isolated validation identity and its final administrator metadata
 - [x] Verify the private GitHub repository’s latest branch and synchronized research artifacts through the connected user browser
-- [ ] Verify the isolated Clerk account’s public role metadata and complete final repository synchronization through authenticated browser sessions
+- [x] Verify the isolated Clerk account’s public role metadata in the authenticated Clerk Dashboard and confirm shell-synchronized GitHub state through the authenticated browser
 - [x] Inventory all existing research claims, data assets, limitations, and stated gaps in the repository
 - [x] Build an evidence-backed related-work map for supply-chain propagation, reach forecasting, exploitability, and temporal evaluation
 - [x] Assess novelty, feasibility, data requirements, and evaluation risks for prioritized candidate research contributions
