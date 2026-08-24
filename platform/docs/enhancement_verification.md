@@ -129,3 +129,5 @@ The authenticated `/workspace/gap-analysis` page was revalidated after the bound
 The authenticated `/workspace/gap-analysis` page was revalidated after publication of the GitHub Advisory Database malware-path assessment. The rendered comparison identifies it as OSV positive-advisory provenance only, explains the lack of a frozen at-risk population and non-event horizon, and retains the zero-control decision.
 
 The authenticated `/workspace/gap-analysis` page was revalidated after publication of the npm-follower access assessment. The rendered comparison identifies the historical npm archive, its greater-than-20-TB public-access boundary, and the absence of a compact filtered export, matched outcome coverage, or non-event horizon; it retains the zero-control decision.
+
+The authenticated `/workspace/gap-analysis` page was revalidated after publication of the SupplyTGN assessment. The rendered comparison identifies the release as a PyPI/OSV methodology reference with explicit leakage and horizon practices, not an npm population or control source, and retains the zero-control decision.

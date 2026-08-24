@@ -43,6 +43,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Figshare replication package") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("GitHub’s public malware-advisory path") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
@@ -171,6 +172,13 @@ describe("repository-backed research sources", () => {
     });
     expect(assessment.blockingConditions).toContain("No compact, reproducible filtered export, query API, or row-addressable historical package-version snapshot was documented on the public access path.");
     expect(assessment.prohibitedInterpretations).toContain("Do not treat npm-follower’s existence as current access to a control population.");
+  });
+
+  it("retains SupplyTGN as a PyPI/OSV methodology reference rather than npm control data", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/88_supplytgn_methodology_transfer_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({ npmControlFrameDecision: "excluded", npmRowsCreated: 0, controlsCreated: 0, candidate: { documentedEcosystem: "PyPI/OSV" } });
+    expect(assessment.blockingConditions).toContain("The disclosed benchmark population is PyPI/OSV component-cutoff instances, not npm package versions.");
+    expect(assessment.prohibitedInterpretations).toContain("Do not transfer reported PyPI/OSV performance results to npm.");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {

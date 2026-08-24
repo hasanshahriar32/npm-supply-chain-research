@@ -120,3 +120,6 @@
 - [x] Identify an additional historical npm population source: npm-follower’s real-time archive of package metadata and code
 - [x] Validate npm-follower against the frozen contract; no compact export, query API, matched outcome coverage, or non-event horizon is documented on the public access path
 - [x] Publish a precise bounded-access and outcome-contract exclusion, retaining zero inferred benign controls because all control-frame requirements remain incomplete
+- [x] Identify a further public temporal benchmark candidate: SupplyTGN’s leakage-safe component–cutoff release
+- [x] Validate SupplyTGN against the npm contract; its population and outcomes are PyPI/OSV rather than npm malicious-publication or compromise evidence
+- [x] Publish a precise methodology-only exclusion, retaining zero inferred benign controls and prohibiting transfer of PyPI/OSV metrics to npm

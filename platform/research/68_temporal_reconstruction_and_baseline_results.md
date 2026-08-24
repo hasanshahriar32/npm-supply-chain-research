@@ -129,6 +129,8 @@ GitHub’s public malware-advisory path is similarly a **positive-provenance lea
 
 The `npm-follower` archive is a more promising historical-population concept but not an accessible control source. Its project documents real-time archiving of npm metadata and code, including deleted versions, at a stated scale above 20 TB. [28] The linked public `dependencies.science` repository is only static website source and exposes no compact release, filtered export, query API, or row-addressable historical snapshot. [29] More importantly, the archive itself does not supply matched malicious-publication or maintainer-compromise outcome coverage or a non-event horizon. It is therefore excluded under the bounded-access and outcome-contract gates; no data rows or controls were created.
 
+SupplyTGN supplies a useful **benchmark-design reference**, not npm control data. Its preprint documents cutoff-safe feature materialization, leakage audits, explicit 30- and 90-day horizons, and released per-instance predictions, but the disclosed benchmark is constructed from PyPI/OSV component–cutoff instances. [30] Its outcomes are therefore outside the npm malicious-publication and maintainer-compromise target contract. The study may inform future npm pre-registration of horizons and leakage checks, but creates **zero npm rows or controls** and cannot transfer PyPI/OSV performance claims to npm.
+
 | Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
 |---|---|---|---|---|
 | Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
@@ -137,6 +139,7 @@ The `npm-follower` archive is a more promising historical-population concept but
 | Guo et al. Figshare detector benchmark | Versioned package/version labels and partial malware timestamps | Retrospective detector corpus; benign list lacks timestamp, cutoff, and horizon | Bounded metadata-only ZIP access works | Excluded as primary temporal control frame. |
 | GitHub Advisory Database malware path | OSV positive-advisory provenance and update/retraction handling | No frozen at-risk population, closed-world compromise coverage, or non-event horizon | Public repository and announcement | Excluded as primary temporal control frame. |
 | npm-follower archive | Real-time historical npm metadata and code archive, including deleted versions | No matched malicious-publication/compromise coverage or non-event horizon | More than 20 TB; no public filtered export or query path documented | Excluded under bounded-access and outcome-contract gates. |
+| SupplyTGN | PyPI/OSV component–cutoff benchmark with explicit horizons and leakage audits | PyPI/OSV vulnerability target, not npm compromise/malicious-publication coverage | Public preprint and described release | Methodology-only; excluded from npm controls. |
 
 ## What the discovered version-resolved dataset changes—and does not change
 
@@ -209,3 +212,5 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [28] [D. Pinckney et al., “npm-follower: A Complete Dataset Tracking the NPM Ecosystem,” project publication page, 2023](https://donaldpinckney.com/publication/npm-follower/).
 
 [29] [D. Pinckney, `dependencies.science` repository](https://github.com/donald-pinckney/dependencies.science).
+
+[30] [T. P. Tran Truong, S. Ha, and X.-B. Le, “SupplyTGN: A Reproducible Leakage-Safe Benchmark for Temporal Software Supply-Chain Risk,” SSRN preprint, 2026](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7194447).

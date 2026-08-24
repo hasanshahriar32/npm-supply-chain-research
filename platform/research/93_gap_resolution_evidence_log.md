@@ -284,6 +284,14 @@ The path is consequently excluded from the current control-frame pipeline. It fa
 44. D. Pinckney et al., “npm-follower: A Complete Dataset Tracking the NPM Ecosystem,” project publication page, 2023: <https://donaldpinckney.com/publication/npm-follower/>.
 45. D. Pinckney, `dependencies.science` repository: <https://github.com/donald-pinckney/dependencies.science>.
 
+## SupplyTGN temporal benchmark screen — 2026-08-24
+
+The SupplyTGN preprint describes a reproducible, leakage-audited temporal benchmark with explicit 30- and 90-day horizons, cutoff-safe feature materialization, and released per-instance predictions. [46] Its disclosed build, however, is based on **PyPI/OSV** component–cutoff instances rather than npm package versions. [46] The public abstract and release description therefore make it a useful methodological reference for pre-registering horizons, leakage audits, and per-instance artifacts, but not a population or outcome source for this npm benchmark.
+
+SupplyTGN creates zero npm rows, controls, labels, incident families, calibration results, or model metrics. Transferring its reported PyPI/OSV performance to npm, or treating its PyPI non-events as npm benign controls, is prohibited. Its role is limited to benchmark-design comparison until an npm-specific source satisfies the frozen population, outcome-coverage, and non-event-horizon contract.
+
+46. T. P. Tran Truong, S. Ha, and X.-B. Le, “SupplyTGN: A Reproducible Leakage-Safe Benchmark for Temporal Software Supply-Chain Risk,” SSRN preprint, 28 July 2026: <https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7194447>.
+
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.
