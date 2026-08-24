@@ -1,12 +1,12 @@
 {
   "study": "direct-range-resolution-descriptive-diagnostic",
-  "generatedAtUtc": "2026-08-24T09:58:54.608Z",
+  "generatedAtUtc": "2026-08-24T10:22:21.988Z",
   "inputArtifact": "70_cutoff_direct_dependency_range_resolution.csv",
   "summary": {
-    "declaredDirectEdges": 24,
-    "isolatedCutoffSemverApproximations": 24,
+    "declaredDirectEdges": 28,
+    "isolatedCutoffSemverApproximations": 28,
     "unresolvedDirectRanges": 0,
-    "sourceRecordsWithDirectEdges": 7,
+    "sourceRecordsWithDirectEdges": 8,
     "computedTransitiveReachValues": 0
   },
   "perRecord": [
@@ -58,12 +58,19 @@
       "declaredEdgeCount": 4,
       "isolatedRangeResolutions": 4,
       "unresolvedRanges": 0
+    },
+    {
+      "recordId": "amapcn-2026-05-19",
+      "sourceNode": "amapcn@0.1.2",
+      "declaredEdgeCount": 4,
+      "isolatedRangeResolutions": 4,
+      "unresolvedRanges": 0
     }
   ],
   "fidelityBoundary": "Target selection is an isolated highest-satisfying SemVer calculation over currently retained registry versions published at or before the cutoff. It is not evidence of the package-manager result that any historical installation actually obtained.",
   "inferenceGate": {
     "temporalRanking": "blocked: no cutoff-valid control population",
-    "probabilityCalibration": "blocked: no evaluation population and only four independent incident families",
+    "probabilityCalibration": "blocked: no cutoff-valid evaluation population; positive-count and family-count floors alone do not permit calibration",
     "blastRadius": "blocked: no transitive traversal or downstream dependency population has been reconstructed"
   }
 }

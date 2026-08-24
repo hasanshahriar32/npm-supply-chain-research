@@ -246,3 +246,15 @@ The documented BigQuery sandbox route was also checked directly in the available
 The Libraries.io public-data route was also screened. Its own documentation characterizes the service as scraped public package metadata, not validated or curated for accuracy, and exposes a current aggregate npm package count rather than a dated release-level snapshot or an outcome-coverage horizon. [36] This is insufficient for a historical non-event denominator and is excluded as a primary temporal control source.
 
 36. Libraries.io, *Data and service description*: <https://libraries.io/data>.
+
+## Mini Shai-Hulud atool candidate screen — 2026-08-24
+
+SafeDep reports that the npm account `atool` was compromised on 19 May 2026 and describes a 22-minute burst that published malicious versions across hundreds of npm packages. Its rendered table contains 318 package rows with version-level entries, including `amapcn` versions `0.2.2` and `0.3.2`. [37] OpenSSF `MAL-2026-4127` independently records the same `amapcn` pair, identifies the event as part of the Mini Shai-Hulud campaign, and preserves independently ingested Amazon Inspector and Google Open Source Security provenance records for those versions. [38]
+
+Socket independently reports a 19 May Mini Shai-Hulud wave with hundreds of affected npm package versions, a timed publication window, and an affected-package table with package-version publication and detection timestamps. [39] This candidate is materially more specific than a campaign headline, but it is not admitted until the official npm registry confirms the earliest selected malicious version timestamp and an exact pre-event source object. The campaign will be treated as one incident family; the SafeDep/Socket lists will not be converted into hundreds of independent families or controls.
+
+The official npm registry returned `amapcn@0.2.2` at `2026-05-19T01:56:40.925Z` and `amapcn@0.3.2` at `2026-05-19T02:05:59.265Z`; `amapcn@0.1.2`, published at `2026-05-18T14:23:03.053Z`, is the latest retained version strictly before the earliest selected affected release. The candidate therefore passed the frozen adjudication protocol and is admitted as **one** `mini_shai_hulud_atool_2026` record with `amapcn@0.1.2` as an exact pre-event source snapshot. The reproducible `84_mini_shai_hulud_atool_candidate_assessment.json` stores source response hashes, version agreement, cutoff, and exclusions. The 318 SafeDep table rows and Socket’s broader campaign list are not converted into independent families, controls, completeness claims, or predictive inputs.
+
+37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
+38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
+39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.

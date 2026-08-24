@@ -1,0 +1,76 @@
+{
+  "study": "mini-shai-hulud-atool-bounded-package-event-assessment",
+  "artifactDate": "2026-08-24",
+  "decision": "admit_one_bounded_package_event_record",
+  "candidateRecord": {
+    "recordId": "amapcn-2026-05-19",
+    "packageName": "amapcn",
+    "affectedVersions": [
+      "0.2.2",
+      "0.3.2"
+    ],
+    "eventFamily": "mini_shai_hulud_atool_2026",
+    "eventStartUtc": "2026-05-19T01:56:40.925Z",
+    "labelClass": "confirmed_targeted_compromise",
+    "primaryPackageTargetEligible": true
+  },
+  "corroboration": {
+    "openssfRecordId": "MAL-2026-4127",
+    "openssfPublishedUtc": "2026-05-19T00:00:00Z",
+    "openssfModifiedUtc": "2026-05-19T17:52:42Z",
+    "retainedIndependentSources": {
+      "safeDep": "https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/",
+      "socket": "https://socket.dev/blog/antv-packages-compromised",
+      "origins": [
+        {
+          "source": "google-open-source-security",
+          "sha256": "847ef6b381d410bf176f7414a6f0fbbcf46a5f39b6d9011e126b279bd2d781df",
+          "import_time": "2026-05-19T05:55:55.089101Z",
+          "modified_time": "2026-05-19T05:36:35Z",
+          "versions": [
+            "0.2.2",
+            "0.3.2"
+          ]
+        },
+        {
+          "source": "amazon-inspector",
+          "sha256": "21013cc6a7de70fe7c078b9cf80bacbde8721bc8c86c40f893a2f5630e52a555",
+          "import_time": "2026-05-19T17:50:22.228792136Z",
+          "modified_time": "2026-05-19T16:47:48Z",
+          "versions": [
+            "0.2.2",
+            "0.3.2"
+          ]
+        }
+      ]
+    },
+    "registryVersionTimesUtc": {
+      "preEvent": "2026-05-18T14:23:03.053Z",
+      "earliestAffected": "2026-05-19T01:56:40.925Z",
+      "laterAffected": "2026-05-19T02:05:59.265Z"
+    },
+    "preEventLatestVersion": "0.1.2",
+    "strictFeatureCutoffUtc": "2026-05-19T01:56:40.924Z"
+  },
+  "sourceProvenance": {
+    "openssfRecord": {
+      "url": "https://raw.githubusercontent.com/ossf/malicious-packages/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json",
+      "commit": "c04e75e38121768f82fef0495de77b68b7054d7c",
+      "responseSha256": "90987b5896edc174f695d202ba7801a26900508dc652f6cda6a0e291f2a2199d"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/amapcn",
+      "responseSha256": "a0b21bba22598a93fdc95c6299b67ecde9910d59b70a7bb0c28b3121d6225d3a"
+    }
+  },
+  "inclusionBoundary": [
+    "This assessment admits only amapcn@0.2.2 and amapcn@0.3.2 after version-level agreement between the inspected SafeDep table and the frozen OpenSSF record.",
+    "The Mini Shai-Hulud atool campaign is one incident family; the hundreds of reported packages are not converted into independent families or control observations.",
+    "The strict feature cutoff is the official registry timestamp of amapcn@0.2.2 minus one millisecond, selecting amapcn@0.1.2 as the latest retained pre-event source object."
+  ],
+  "prohibitedInterpretations": [
+    "This artifact does not establish campaign-wide completeness or independently count the reported package lists.",
+    "This artifact does not create a cutoff-valid control population, benign labels, historical installation trace, dependency reach, or blast-radius estimate.",
+    "This artifact does not license ranking, calibration, PR-AUC, Recall@K, logistic regression, or attack-return claims."
+  ]
+}

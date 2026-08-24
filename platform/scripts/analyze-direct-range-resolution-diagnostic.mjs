@@ -49,7 +49,7 @@ const diagnostic = {
   fidelityBoundary: "Target selection is an isolated highest-satisfying SemVer calculation over currently retained registry versions published at or before the cutoff. It is not evidence of the package-manager result that any historical installation actually obtained.",
   inferenceGate: {
     temporalRanking: "blocked: no cutoff-valid control population",
-    probabilityCalibration: "blocked: no evaluation population and only four independent incident families",
+    probabilityCalibration: "blocked: no cutoff-valid evaluation population; positive-count and family-count floors alone do not permit calibration",
     blastRadius: "blocked: no transitive traversal or downstream dependency population has been reconstructed",
   },
 };

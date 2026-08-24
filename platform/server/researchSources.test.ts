@@ -22,6 +22,7 @@ describe("repository-backed research sources", () => {
     expect(names).toContain("Axios");
     expect(names).toContain("node-ipc 2026");
     expect(names).toContain("@emcd-vue/auth 2026");
+    expect(names).toContain("Mini Shai-Hulud atool 2026");
   });
 
   it("marks the graph-attention experiment as blocked until prerequisites are met", () => {
@@ -39,7 +40,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Provider-backed control-frame assessment") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Control-frame contract and public snapshot access assessment") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("eleven package-event records") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -47,15 +48,16 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 11, exactSourceSnapshots: 9, unavailableSourceSnapshots: 2, declaredDirectEdges: 24, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 12, exactSourceSnapshots: 10, unavailableSourceSnapshots: 2, declaredDirectEdges: 28, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
-    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 24, resolvedIsolatedSemverRanges: 24, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
+    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 28, resolvedIsolatedSemverRanges: 28, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
-    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 24, isolatedCutoffSemverApproximations: 24, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ strictPackageEventRecords: 11, adjudicatedIncidentFamilyCount: 7, exactPreEventSnapshots: 9, exactSnapshotIncidentFamilyCount: 6, calibrationInference: "blocked" });
+    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 28, isolatedCutoffSemverApproximations: 28, computedTransitiveReachValues: 0 } });
+    expect(gate).toMatchObject({ strictPackageEventRecords: 12, adjudicatedIncidentFamilyCount: 8, exactPreEventSnapshots: 10, exactSnapshotIncidentFamilyCount: 7, calibrationInference: "blocked" });
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("moika_dependency_confusion_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("shai_hulud_second_coming_2025");
+    expect(gate.adjudicatedIncidentFamilies).toContain("mini_shai_hulud_atool_2026");
     expect(gate.blockingConditions).toContain("No cutoff-valid, independently adjudicated control population is available.");
   });
 
@@ -87,9 +89,9 @@ describe("repository-backed research sources", () => {
     const fs = await import("node:fs/promises");
     const manifest = JSON.parse(await fs.readFile("research/74_bounded_recursive_registry_semver_graph_manifest.json", "utf8"));
     const diagnostic = JSON.parse(await fs.readFile("research/75_bounded_recursive_registry_graph_diagnostic.json", "utf8"));
-    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 9, reconstructedEdges: 59, unresolvedEdges: 0, maxObservedDepth: 3 });
+    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 10, reconstructedEdges: 63, unresolvedEdges: 0, maxObservedDepth: 3 });
     expect(manifest.prohibitedInterpretations).toContain("This graph is not a package-lock, npm install execution trace, or reproducible historical node_modules tree.");
-    expect(diagnostic.summary).toMatchObject({ boundedEdges: 59, directDepthOneEdges: 24, depthTwoEdges: 18, depthThreeEdges: 17, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
+    expect(diagnostic.summary).toMatchObject({ boundedEdges: 63, directDepthOneEdges: 28, depthTwoEdges: 18, depthThreeEdges: 17, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
     expect(diagnostic.interpretation).toContain("not historical installed-tree size");
   });
 
@@ -106,11 +108,12 @@ describe("repository-backed research sources", () => {
   it("uses the DataDog manifest only as positive-membership corroboration", async () => {
     const fs = await import("node:fs/promises");
     const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
-    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 11, exactAffectedVersionMembership: 2, packagePresentVersionsUnspecified: 2, packageNotPresent: 7, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 12, exactAffectedVersionMembership: 3, packagePresentVersionsUnspecified: 2, packageNotPresent: 7, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "wenk-2025-11-24")).toMatchObject({ positive_membership_status: "package_present_versions_unspecified", permitted_use: "candidate_positive_membership_corroboration_only" });
+    expect(overlap.records.find((record: { record_id: string }) => record.record_id === "amapcn-2026-05-19")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", matching_versions: ["0.2.2", "0.3.2"], permitted_use: "candidate_positive_membership_corroboration_only" });
   });
 
   it("retains the provider-backed control-frame assessment as an exclusion rather than creating inferred controls", async () => {
@@ -143,5 +146,15 @@ describe("repository-backed research sources", () => {
       corroboration: { frozenWizIocRow: "wenk,= 1.0.10 || = 1.0.9", preEventLatestVersion: "1.0.8" },
     });
     expect(assessment.prohibitedInterpretations).toContain("This artifact does not create a control population or benign labels.");
+  });
+
+  it("admits only the bounded and cross-source corroborated amapcn Mini Shai-Hulud record", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/84_mini_shai_hulud_atool_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "admit_one_bounded_package_event_record",
+      candidateRecord: { recordId: "amapcn-2026-05-19", packageName: "amapcn", affectedVersions: ["0.2.2", "0.3.2"], eventFamily: "mini_shai_hulud_atool_2026", eventStartUtc: "2026-05-19T01:56:40.925Z" },
+      corroboration: { openssfRecordId: "MAL-2026-4127", preEventLatestVersion: "0.1.2" },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("This artifact does not create a cutoff-valid control population, benign labels, historical installation trace, dependency reach, or blast-radius estimate.");
   });
 });

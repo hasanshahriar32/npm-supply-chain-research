@@ -108,3 +108,6 @@
 - [x] Define the exact access, population, outcome-coverage, horizon, and exclusion requirements for a cutoff-valid temporal control-frame contract
 - [x] Investigate compact, accessible alternatives to provider-authorized population snapshots and evaluate whether their documented coverage matches malicious-publication or compromise targets
 - [x] Publish a validated control-frame feasibility exclusion, retaining zero inferred benign controls because all assessed paths fail one or more gates
+- [x] Identify a compact, independently documented npm compromise source with explicit version-level identifiers and a strict registry cutoff: the bounded Mini Shai-Hulud atool amapcn record
+- [x] Screen bounded historical-population access paths against the control-frame contract; the existing Zenodo, deps.dev, and Libraries.io exclusions remain unchanged and no valid control population is available
+- [x] Publish the validated bounded amapcn evidence addition while preserving zero inferred controls, no historical installations, and no predictive metrics
