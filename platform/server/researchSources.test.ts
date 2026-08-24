@@ -38,6 +38,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ title: "Gap Analysis" });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Provider-backed control-frame assessment") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Control-frame contract and public snapshot access assessment") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("eleven package-event records") });
   });
 
@@ -121,6 +122,17 @@ describe("repository-backed research sources", () => {
       controlsCreated: 0,
     });
     expect(probe.blockingConditions).toContain("The documented advisory relation covers disclosed vulnerabilities rather than a closed-world malicious-publication or compromise event target.");
+  });
+
+  it("records a required temporal control-frame contract and excludes unmatched public population sources", async () => {
+    const contract = await import("node:fs/promises").then((fs) => fs.readFile("research/83_control_frame_contract_and_access_assessment.md", "utf8"));
+    expect(contract).toContain("zero control observations created");
+    expect(contract).toContain("NPM Registry Dataset 2025 (GitHub Only)");
+    expect(contract).toContain("22.3 GB compressed");
+    expect(contract).toContain("No companion closed-world malicious-publication or compromise coverage source");
+    expect(contract).toContain("redirected to Google sign-in");
+    expect(contract).toContain("Libraries.io public metadata");
+    expect(contract).toContain("zero valid controls");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {

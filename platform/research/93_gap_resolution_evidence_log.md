@@ -232,3 +232,17 @@ The official registry provides `wenk@1.0.9` at `2025-11-24T10:06:12.376Z`, `wenk
 
 33. OpenSSF Malicious Packages, *MAL-2025-191155: Malicious code in wenk (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/wenk/MAL-2025-191155.json>.
 34. Wiz Research IOCs, *shai-hulud-2-packages.csv*, commit `22752e7`: <https://github.com/wiz-sec-public/wiz-research-iocs/blob/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/shai-hulud-2-packages.csv>.
+
+## Control-frame access-path preliminary screen — 2026-08-24
+
+The next investigation is constrained by a five-part contract: a named cutoff population, row-level package-version identity, an independently documented malicious-publication or compromise coverage source, a post-cutoff observation horizon, and an exclusion rule that does not treat missing coverage as benign. A preliminary source screen reaffirms three known paths. deps.dev documents useful snapshot and package-version fields but requires access and does not itself close the target-coverage gap. [29] npm-follower documents historical retention but remains a 20+ TB archive without a bounded public query or filtered export in this environment. [19] [20] npm documents a public registry/CouchDB mirror, but a current or incrementally updated registry endpoint is not a historical frozen population and cannot establish a past non-event horizon by itself. [35]
+
+No control rows, negative labels, or model metrics were created by this screen. The next step is to inspect whether any public provider exposes a compact, frozen, row-addressable export that can satisfy the population side of the contract and can be paired with a separately frozen event-coverage source.
+
+The documented BigQuery sandbox route was also checked directly in the available browser session. The Google Cloud console redirected to the Google Account sign-in page before any project, query, or dataset operation; therefore, no authenticated sandbox or API access exists in this session. This confirms the earlier HTTP 401 API observation and does not justify a retry, a query, or a claimed provider extraction without a separately configured Google Cloud identity and project.
+
+35. npm, *Registry documentation*: <https://docs.npmjs.com/cli/v9/using-npm/registry>.
+
+The Libraries.io public-data route was also screened. Its own documentation characterizes the service as scraped public package metadata, not validated or curated for accuracy, and exposes a current aggregate npm package count rather than a dated release-level snapshot or an outcome-coverage horizon. [36] This is insufficient for a historical non-event denominator and is excluded as a primary temporal control source.
+
+36. Libraries.io, *Data and service description*: <https://libraries.io/data>.

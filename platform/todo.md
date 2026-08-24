@@ -105,3 +105,6 @@
 - [x] Identify the next compact, accessible source path that could strengthen temporal population or outcome provenance without weakening target definitions
 - [x] Validate the selected candidate's access, row-level identifiers, temporal semantics, population coverage, and target alignment
 - [x] Publish only an evidence-supported bounded result with no inferred controls, historical installations, or predictive metrics
+- [x] Define the exact access, population, outcome-coverage, horizon, and exclusion requirements for a cutoff-valid temporal control-frame contract
+- [x] Investigate compact, accessible alternatives to provider-authorized population snapshots and evaluate whether their documented coverage matches malicious-publication or compromise targets
+- [x] Publish a validated control-frame feasibility exclusion, retaining zero inferred benign controls because all assessed paths fail one or more gates

@@ -113,6 +113,20 @@ The provider requires a Google Cloud account and enabled BigQuery API. The recor
 
 This assessment is a precise feasibility result, not evidence that either source contains no useful data. It preserves the no-fit gate: absence from an advisory or catalogue is not a benign temporal control. The reproducible assessment and HTTP probe record are `81_provider_control_frame_assessment.md` and `81_provider_control_frame_probe.json`.
 
+## Control-frame contract and public snapshot access assessment
+
+A valid control frame requires more than a package list. Before extraction, the study now requires a named frozen population, row-level package-version identity, a separately frozen event-coverage source whose documented target includes malicious publication or publisher compromise, a post-cutoff observation horizon, pre-registered exclusions, and a bounded reproducible access path. Missing entries in a source that fails any of these requirements remain **unknown**, not benign.
+
+The Zenodo **NPM Registry Dataset 2025 (GitHub Only)** is a useful population-source lead: it documents a 20 February 2025 snapshot and an explicit GitHub-repository inclusion rule for 1,900,347 package records. [19] Its associated documentation describes registry-style records, but the only release payload is one 22.3 GB gzip file (108 GB uncompressed) with full-stream parsing rather than a row-addressable or filtered export. [19] [20] No payload bytes were retrieved. More decisively, no linked source supplies closed-world malicious-publication or compromise coverage and a horizon for the candidate population. The source is therefore excluded for the present temporal control frame.
+
+Libraries.io is likewise excluded: its public documentation describes scraped, unvalidated package metadata and a current aggregate package count, not an immutable historical package-version population with a documented outcome horizon. [21] Its public data cannot supply a temporal non-event denominator. The new `83_control_frame_contract_and_access_assessment.md` preserves the contract, exact source boundaries, and zero-control decision.
+
+| Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
+|---|---|---|---|---|
+| Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
+| deps.dev BigQuery | Snapshot and package-version fields documented | Advisories are vulnerability-oriented; no authenticated access | Google Cloud account and BigQuery API required | Excluded pending both access and target match. |
+| Libraries.io public metadata | Current scraped package metadata | No frozen historical outcome contract | Public page, but no documented temporal denominator | Excluded. |
+
 ## What the discovered version-resolved dataset changes—and does not change
 
 CHRONO-RESOLUTION is a public, citable dataset designed for dependency resolution at release points. Its authors report 146,651 npm packages and 245,307,373 npm package-dependency interval relationships, and document that the release includes raw and filtered data, scripts, and query examples. [10] [11] It is the appropriate **next source candidate** for target-version and interval-aware direct-edge reconstruction.
@@ -162,3 +176,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [17] [Figshare, “Malicious NPM Package Detection Dataset,” DOI 10.6084/m9.figshare.31451728](https://doi.org/10.6084/m9.figshare.31451728).
 
 [18] [Mendeley Data, “Malicious NPM Package Detection Dataset,” Version 1](https://doi.org/10.17632/6tc8wrp62g.1).
+
+[19] [Zenodo, “NPM Registry Dataset 2025 (GitHub Only),” Version 1.0.0](https://zenodo.org/records/14914149).
+
+[20] [Brittany Reid, “npm-mine” repository and dataset documentation](https://github.com/Brittany-Reid/npm-mine).
+
+[21] [Libraries.io, “Data and service description”](https://libraries.io/data).
