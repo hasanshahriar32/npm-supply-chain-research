@@ -103,6 +103,20 @@ The strict positive-count and family-count floors are met. The remaining gate is
 
 The implementation references group-aware validation only as a future technical pattern: GroupKFold documents non-overlapping groups; GroupShuffleSplit documents randomized group partitions and fixed seeds; and the cross-validation guide states that time-dependent and grouped processes warrant time-aware and group-wise validation. [39] [40] [41] No library splitter was run. The protocol does not supply controls, a train/test split, model fit, uncertainty interval, rank, or predictive metric; it makes future inference more auditable if and only if the separate frozen-population and target-matched outcome gate is later satisfied.
 
+## Strict pre-event release-authority metadata availability
+
+`95_release_authority_metadata_availability_audit.json` performs a bounded **availability audit**, not a release-authority feature extraction. It reads only the official-registry version object already selected strictly before each incident cutoff and its immediate earlier retained version object. The root package document, current dist-tags, current maintainer lists, current repository and workflow state, downloads, and dependency graphs are excluded. The two label-only records remain out of scope because no exact source object exists.
+
+| Availability condition | Exact pre-event source snapshots | Permitted reading |
+|---|---:|---|
+| Immediate earlier retained version object | 12 / 12 | A predecessor object is currently retained for comparison availability only. |
+| Repository-descriptor comparison available | 11 / 12 | Both frozen version objects retain a repository descriptor; no descriptor value or difference is emitted. |
+| `gitHead` comparison available | 9 / 12 | Both frozen version objects retain a `gitHead`; no hash, equality result, or change classification is emitted. |
+| `publishConfig` comparison available | 0 / 12 | No paired retained `publishConfig` field is available under this narrow rule. |
+| Selected `dist.integrity` retained | 12 / 12 | Integrity presence is retained as metadata availability only, not provenance quality or risk evidence. |
+
+The artifact emits booleans, selected/predecessor version identifiers, and registry-response checksums only. It extracts **zero metadata values**, classifies **zero deltas**, computes **zero release-authority scores**, and creates **zero controls, effects, rankings, models, or predictive metrics**. A retained field is not evidence of authority integrity, compromise likelihood, or benign status; a missing field is not a hygiene or outcome label. The audit therefore identifies a future data-availability gate without retroactively reconstructing publisher transitions, repository transfers, provenance changes, or workflow changes.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.

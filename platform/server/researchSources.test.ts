@@ -236,6 +236,29 @@ describe("repository-backed research sources", () => {
     expect(protocol.prohibitedInterpretations).toContain("This protocol is not a model, a model evaluation, a confidence interval, or a predictive result.");
   });
 
+  it("retains strict release-authority metadata as an availability audit rather than a feature or scoring result", async () => {
+    const audit = await import("node:fs/promises").then((fs) => fs.readFile("research/95_release_authority_metadata_availability_audit.json", "utf8")).then(JSON.parse);
+    expect(audit).toMatchObject({
+      executionStatus: "availability_audit_only_no_feature_values_deltas_scores_or_models",
+      input: { exactPreEventSourceSnapshots: 12 },
+      summary: {
+        exactPreEventSourceSnapshots: 12,
+        predecessorAvailable: 12,
+        repositoryDescriptorComparisonAvailable: 11,
+        gitHeadComparisonAvailable: 9,
+        publishConfigComparisonAvailable: 0,
+        featureValuesExtracted: 0,
+        deltasClassified: 0,
+        releaseAuthorityScoresComputed: 0,
+        controlsCreated: 0,
+        modelsFitted: 0,
+        predictiveMetricsComputed: 0,
+      },
+    });
+    expect(audit.scope.nonUseOfCurrentState).toContain("current dist-tags");
+    expect(audit.prohibitedInterpretations).toContain("Do not use repository, gitHead, publishConfig, dist, or embedded-maintainer availability as a release-authority score.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

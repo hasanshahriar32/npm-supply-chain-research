@@ -141,3 +141,6 @@
 - [x] Define a bounded campaign-relatedness inventory for all fourteen ledger records, distinguishing shared-family rows from documented cross-family payload lineage
 - [x] Specify pre-registered grouped split, resampling, and reporting rules that would apply only after a valid control frame and model-eligibility gate are satisfied
 - [x] Publish the grouped-inference protocol with regression coverage while retaining zero fitted models, uncertainty intervals, rankings, or predictive metrics
+- [x] Define the strict retained-metadata boundary for pre-event release-authority availability and explicitly exclude current registry, maintainer, repository, and workflow state
+- [x] Reconstruct a bounded availability audit for only the exact pre-event source snapshots, including predecessor-version and retained metadata fields without deriving a risk score
+- [x] Publish the release-authority availability audit with regression coverage while retaining zero controls, feature-effect claims, rankings, models, or predictive metrics
