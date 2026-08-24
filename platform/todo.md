@@ -144,3 +144,6 @@
 - [x] Define the strict retained-metadata boundary for pre-event release-authority availability and explicitly exclude current registry, maintainer, repository, and workflow state
 - [x] Reconstruct a bounded availability audit for only the exact pre-event source snapshots, including predecessor-version and retained metadata fields without deriving a risk score
 - [x] Publish the release-authority availability audit with regression coverage while retaining zero controls, feature-effect claims, rankings, models, or predictive metrics
+- [x] Define a future-only release-authority delta ontology that separates retained-field availability from qualified predecessor-to-release semantic comparisons
+- [x] Specify eligibility, source-fidelity, and missingness rules that must be satisfied before any authority delta can be classified or used in a future benchmark
+- [x] Publish the delta-semantics protocol with regression coverage while retaining zero observed deltas, scores, controls, models, rankings, or predictive metrics

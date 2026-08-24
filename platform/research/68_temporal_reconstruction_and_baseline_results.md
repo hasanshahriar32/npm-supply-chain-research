@@ -117,6 +117,19 @@ The implementation references group-aware validation only as a future technical 
 
 The artifact emits booleans, selected/predecessor version identifiers, and registry-response checksums only. It extracts **zero metadata values**, classifies **zero deltas**, computes **zero release-authority scores**, and creates **zero controls, effects, rankings, models, or predictive metrics**. A retained field is not evidence of authority integrity, compromise likelihood, or benign status; a missing field is not a hygiene or outcome label. The audit therefore identifies a future data-availability gate without retroactively reconstructing publisher transitions, repository transfers, provenance changes, or workflow changes.
 
+## Future-only release-authority delta semantics
+
+`96_release_authority_delta_semantics_protocol.json` converts the preceding availability audit into a **future-only eligibility contract**, not an observed-delta analysis. It defines six possible review-surface families: repository links, source-revision references, release-manifest publication intent, verifiable provenance attestations, release mediation or publisher authority, and release-bound workflow authority. Each can enter a future benchmark only after a frozen control frame, target-matched horizon, version-specific raw evidence, field semantics, canonicalization policy, source checksums, and the campaign-relatedness registry are all frozen before outcomes are inspected.
+
+| Future comparison type | Minimum evidence boundary | Never infer |
+|---|---|---|
+| Repository or source-revision reference | Two retained version objects, opaque values, versioned canonicalization, and time-valid checksums. | Current repository ownership, code differences, or hostile transfer. |
+| Manifest publication intent | Two immutable release-manifest fragments and a pre-registered allowlist. | Build workflow, actor identity, or attestation status from a missing field. |
+| Provenance attestation | Release-specific signed attestation, verification policy, and immutable transparency-log reference. | Absence of malicious code or a benign outcome. |
+| Publisher/mediation or workflow authority | Version-specific evidence with documented retention and semantics; workflow state must be bound to the release revision. | Account takeover, secrets, cloud scope, or malicious intent. |
+
+The protocol makes `not_eligible_missing_or_ambiguous_evidence` and `not_applicable_to_release_regime` explicit states; neither may fall back to unchanged, safe, benign, or no-known-event. It records **zero raw values, observed comparisons, classified deltas, scores, controls, models, ranks, or predictive metrics**. The design uses Santos-Grueiro’s predecessor-aware release-authority record only as methodological context, retains npm’s explicit warning that provenance does not guarantee malicious-code absence, and does not access provenance data from npm or deps.dev. [42] [43] [44]
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -272,3 +285,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [40] [scikit-learn, “GroupShuffleSplit” documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupShuffleSplit.html).
 
 [41] [scikit-learn, “Cross-validation: evaluating estimator performance”](https://scikit-learn.org/stable/modules/cross_validation.html).
+
+[42] [I. Santos-Grueiro, “On Good Authority: Release-Authority Measurement for Registry-Mediated Package Ecosystems,” arXiv:2606.22593, 2026](https://arxiv.org/abs/2606.22593).
+
+[43] [npm Docs, “Generating provenance statements”](https://docs.npmjs.com/generating-provenance-statements).
+
+[44] [Open Source Insights, “Introducing npm package SLSA provenance support”](https://blog.deps.dev/npm-provenance/).

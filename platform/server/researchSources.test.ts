@@ -259,6 +259,18 @@ describe("repository-backed research sources", () => {
     expect(audit.prohibitedInterpretations).toContain("Do not use repository, gitHead, publishConfig, dist, or embedded-maintainer availability as a release-authority score.");
   });
 
+  it("retains future release-authority delta semantics as a non-executed eligibility contract", async () => {
+    const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/96_release_authority_delta_semantics_protocol.json", "utf8")).then(JSON.parse);
+    expect(protocol).toMatchObject({
+      executionStatus: "protocol_only_no_metadata_values_compared_or_deltas_classified",
+      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 12, predecessorAvailable: 12, repositoryDescriptorComparisonAvailable: 11, gitHeadComparisonAvailable: 9, publishConfigComparisonAvailable: 0 } } },
+      currentDecision: { observedDeltaValuesExtracted: 0, observedDeltasClassified: 0, authorityScoresComputed: 0, controlsCreated: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(protocol.deltaOntology).toHaveLength(6);
+    expect(protocol.eligibilityDecisionVocabulary.prohibitedFallback).toContain("unchanged, safe, benign, or no-known-event");
+    expect(protocol.prohibitedInterpretations).toContain("This protocol does not create a control population, benign label, release-authority score, effect estimate, rank, model, confidence interval, or predictive metric.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
