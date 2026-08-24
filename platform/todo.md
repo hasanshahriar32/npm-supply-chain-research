@@ -163,3 +163,6 @@
 - [x] Specify release classes, small-cell safeguards, revision lineage, and pre-publication gates without computing aggregates or inspecting outcome data
 - [x] Publish the aggregate-release policy with regression safeguards while retaining zero releases, outcomes, controls, scores, models, rankings, intervals, or predictive metrics
 - [x] Restore the private repository-backed workspace after the sandbox reset before validating and synchronizing this research update
+- [x] Define a future aggregate-plan parameter-sealing contract that prohibits setting current thresholds or inspecting data
+- [x] Specify secure parameter custody, opaque commitments, amendment controls, and pre-release checks without creating a parameter record or aggregate
+- [x] Publish the parameter-sealing contract with regression safeguards while retaining zero thresholds, plans, aggregates, releases, outcomes, controls, or model results

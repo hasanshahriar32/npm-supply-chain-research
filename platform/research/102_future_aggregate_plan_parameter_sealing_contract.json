@@ -1,0 +1,184 @@
+{
+  "study": "future-aggregate-plan-parameter-sealing-contract",
+  "artifactVersion": 1,
+  "executionStatus": "future_only_contract_no_parameter_values_records_commitments_aggregates_or_releases_created",
+  "generatedAtUtc": "2026-08-24T13:46:34.899Z",
+  "contractInputs": {
+    "aggregateReleasePolicy": {
+      "path": "research/101_future_public_safe_aggregate_release_policy.json",
+      "sha256": "bd728f29446209b07381bf8a4e4959c3d11ab47d158c461a2ec28c7326c5c37e",
+      "requiredExecutionStatus": "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
+      "policyRequirement": "P2 release requires separately sealed aggregate-plan parameters, including minimum-cell and minimum-distinct-validation-unit controls, without publishing their values in the public policy."
+    },
+    "outcomeManifestSealingProtocol": {
+      "path": "research/100_future_outcome_manifest_sealing_protocol.json",
+      "sha256": "ec286a2304df61c96f9713187c44c1b7dab7f03264af95634a4c6f6178bf4135",
+      "requiredExecutionStatus": "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
+      "independenceRequirement": "Outcome adjudication, coverage assessment, and source collection remain blinded from aggregate parameter selection and release review."
+    }
+  },
+  "purposeAndScope": {
+    "purpose": "Pre-register how a future disclosure authority may securely choose, seal, custody, audit, amend, and verify aggregate-release parameters before any protected evidence, aggregate, outcome, control, score, or model result is inspected or released.",
+    "noCurrentParameterBoundary": "This contract provides parameter names, roles, schemas, and control requirements only. It creates no threshold, stratum, rounding rule, suppression setting, aggregation measure, parameter record, keyed commitment, byte digest tied to a parameter value, or release authorization.",
+    "noDataInspectionBoundary": "Parameter selection must occur before the parameter team accesses any source object, row, label, control, coverage decision, aggregate, cell, prevalence, score, rank, model output, or predictive metric. The present artifact accesses none of them.",
+    "noInferenceBoundary": "A future parameter identifier, commitment, amendment record, or verification status is governance metadata only. It does not establish that a release is safe, non-identifying, complete, representative, target-matched, or statistically valid."
+  },
+  "activationGate": {
+    "allRequiredBeforeAnyParameterValueIsSet": [
+      "The P2 aggregate-release policy is frozen with an immutable revision identifier, and no policy amendment is pending.",
+      "A secure parameter store, key-custody arrangement, append-only audit ledger, access-control policy, retention schedule, and emergency revocation procedure are documented outside the public repository.",
+      "The parameter authority, independent disclosure reviewer, implementation operator, and audit observer roles are assigned with conflict declarations. None may be an outcome adjudicator, source collector, feature collector, population owner, model developer, or model evaluator for the same future release.",
+      "The authority receives only protocol schemas and source-term constraints—not any protected rows, outcome counts, aggregate previews, candidate identities, class prevalence, score distribution, or model result.",
+      "The allowed release class and frozen public-safe disclosure scope are identified before parameter selection; P3 remains disabled under the present release policy."
+    ],
+    "prohibitedActivationFallbacks": [
+      "Do not choose or tune a parameter after inspecting an aggregate, cell, suppression outcome, class prevalence, review queue, score, rank, interval, calibration, or model result.",
+      "Do not use a current public incident ledger, number of known incidents, or absence of public reports as a proxy for the protected population or a disclosure threshold.",
+      "Do not substitute an unenforced configuration default, an undocumented reviewer preference, or a threshold copied from another study for a sealed parameter record."
+    ]
+  },
+  "secureParameterRecordSchema": {
+    "description": "A future secure-only record. The schema defines fields but contains no values, records, thresholds, or commitments in this artifact.",
+    "identityAndLineageFields": [
+      "parameterRecordIdOpaque",
+      "contractVersion",
+      "aggregateReleasePolicyRevisionSha256",
+      "aggregatePlanSchemaRevisionSha256",
+      "sourceTermsConstraintSetRevisionSha256",
+      "publicSafeReleaseClass",
+      "sealedAtUtcSecure",
+      "parentParameterRecordCommitmentOpaqueOrNull",
+      "parameterRecordByteSha256Secure",
+      "appendOnlyLedgerSequenceSecure"
+    ],
+    "parameterFieldsSecureOnly": [
+      "minimumCellThresholdSecure",
+      "minimumDistinctValidationUnitThresholdSecure",
+      "approvedBroadStratumSchemaSecure",
+      "aggregationMeasureAllowlistSecure",
+      "roundingAndTemporalGranularityRuleSecure",
+      "complementarySuppressionStrategySecure",
+      "coarseningFallbackStrategySecure",
+      "differencingComparisonScopeSecure",
+      "externalLinkageReviewScopeSecure",
+      "relatednessPreservationRuleSecure",
+      "maximumReleaseIterationRuleSecure",
+      "revocationAndWithdrawalTriggerRuleSecure"
+    ],
+    "processAndRoleFieldsSecureOnly": [
+      "parameterAuthorityRoleIdentifierOpaque",
+      "independentDisclosureReviewerRoleIdentifierOpaque",
+      "implementationOperatorRoleIdentifierOpaque",
+      "auditObserverRoleIdentifierOpaque",
+      "conflictDecisionReferenceOpaque",
+      "parameterSelectionRationaleCategoryCodes",
+      "preInspectionAttestationReferenceOpaque",
+      "keyCustodyRecordIdentifierOpaque",
+      "accessControlDecisionReferenceOpaque",
+      "verificationDecisionSecure",
+      "verificationReasonCodesSecure"
+    ],
+    "forbiddenFieldsEvenInSecureRecord": [
+      "Raw source objects, raw evidence text, credentials, encryption keys, package payloads, reviewer identities, or personal data beyond the approved role-identifier system.",
+      "Any row-level package/version/source/reviewer identifier, incident label, outcome, control, coverage status, candidate docket, raw aggregate/cell, prevalence, feature value, authority value, score, rank, split, model artifact, interval, calibration result, or predictive metric.",
+      "A parameter value derived from a protected-data preview or a free-text field that reproduces protected data."
+    ]
+  },
+  "publicSafeCommitmentManifestSchema": {
+    "description": "A future public-safe commitment manifest may record only non-reversible, non-dictionary-attackable integrity metadata after the secure record is sealed. No manifest is created here.",
+    "permittedFields": [
+      "parameterCommitmentManifestIdOpaque",
+      "contractVersion",
+      "aggregateReleasePolicyRevisionSha256",
+      "secureParameterSchemaVersion",
+      "publicSafeReleaseClass",
+      "sealedAtUtcRoundedUnderSecureRule",
+      "keyedCommitmentAlgorithmIdentifier",
+      "keyCustodyRecordIdentifierOpaque",
+      "secureRecordCommitmentOpaque",
+      "parentManifestCommitmentOpaqueOrNull",
+      "preInspectionAttestationStatus",
+      "independentVerificationStatus",
+      "publicReleaseEligibilityStatus",
+      "manifestByteSha256"
+    ],
+    "forbiddenFields": [
+      "Parameter values or an unhashed, deterministic, or publicly keyed representation of a parameter value.",
+      "Small-cell thresholds, validation-unit thresholds, strata, aggregation measures, dates, release iterations, suppression rules, reviewer identities, source terms, raw evidence, rows, outcomes, controls, scores, model outputs, or aggregate results.",
+      "A public commitment that can be brute-forced, differenced, joined across releases, or linked to a low-entropy parameter, incident, package, version, source, reviewer, or outcome state."
+    ],
+    "commitmentRule": "Use an access-controlled keyed commitment, key custody distinct from parameter authority, parameter-domain separation, and fresh non-public salt/nonce according to the secure key-custody policy. Public verification must validate authorized process status, not reveal or enable guessing a parameter value."
+  },
+  "selectionAndSealingWorkflow": {
+    "orderedSteps": [
+      "Freeze the contract, release-policy revision, allowed release class, role assignments, conflict policy, and secure-record schema before selecting any parameter value.",
+      "Obtain pre-inspection attestations from the parameter authority and disclosure reviewer that they have received no protected data, previews, counts, outcomes, controls, scores, ranks, or model results.",
+      "Select the complete secure parameter set in the access-controlled store solely from the frozen protocol and source-term constraints.",
+      "Run schema, role-separation, forbidden-field, and commitment-safety checks without passing the secure record to source collection, outcome adjudication, feature collection, population construction, model development, or release implementation.",
+      "Seal the secure record in the append-only ledger, create only the permitted public-safe commitment manifest, and record the independent verification status.",
+      "Allow later protected-data processing only if every upstream seal and the parameter-verification gate pass; a failed verification blocks processing and release rather than triggering parameter tuning."
+    ],
+    "requiredPreInspectionAttestations": [
+      "No protected source, row, label, control, coverage, aggregate, cell, prevalence, score, rank, split, model, interval, calibration, or metric was viewed before sealing.",
+      "No protected-data preview was requested or made available to any parameter-selection or disclosure-review role.",
+      "All selected parameters were finalized as a complete set before any implementation operator received a protected-data access grant.",
+      "No public evidence, current incident count, popular rule of thumb, or inferred non-event rate was treated as a substitute for the frozen policy and source-term constraints."
+    ],
+    "abortConditions": [
+      "Any selection role receives protected data or any preview, count, aggregate, prevalence, score, rank, model result, or direct disclosure-risk feedback before the secure record is sealed.",
+      "Any parameter cannot be represented in the secure schema, is ambiguous, conflicts with source terms, is incompatible with relatedness preservation, or would permit row/family/validation-unit reconstruction.",
+      "The public-safe commitment would expose a low-entropy value, stable identifier, deterministic hash, raw timestamp, key material, or linkable release history.",
+      "A required role-separation, conflict, access-control, custody, or independent-verification check fails."
+    ]
+  },
+  "amendmentAndRevocationRules": {
+    "preDataAmendmentRule": "Before any protected-data access, an amendment requires a new complete secure parameter record, fresh pre-inspection attestations, a parent commitment, and a new independent verification. The prior record remains immutable and revoked for use.",
+    "postDataAccessRule": "After any protected-data access or implementation run begins, do not amend parameter values for that release. Abort the release and start a new protocol instance with a new sealed record and an explicit process-deviation notice if a genuine policy conflict is discovered.",
+    "publicManifestRevisionRule": "Never overwrite a public-safe commitment manifest. Publish only a non-sensitive revision/revocation status and parent linkage after disclosure review; do not reveal the value, reason detail, or complement of a prior parameter.",
+    "prohibitedAmendments": [
+      "Do not tune a threshold or stratum after seeing a cell, suppression decision, aggregate, class balance, outcome, control, score, ranking, model metric, interval, or external request for a more favorable result.",
+      "Do not issue successive releases or commitment manifests that enable differencing, enumeration, or brute-force recovery of a parameter value.",
+      "Do not use amendment or revocation to expose a package, version, source, reviewer, incident family, validation unit, outcome state, or model result."
+    ]
+  },
+  "verificationGate": {
+    "requiredChecks": [
+      "A secure record exists, follows the current schema, and binds to immutable aggregate-release policy and source-term constraint revisions.",
+      "Every required parameter category is present exactly once in the secure record; no extra unreviewed parameter, free-text data field, or data-derived value is present.",
+      "Pre-inspection attestations, access-control logs, role-separation checks, conflict declarations, and key-custody checks pass without exposing sensitive identities or values publicly.",
+      "The public-safe commitment manifest includes only permitted fields and passes non-reversibility, low-entropy, linkage, temporal, and cross-release differencing checks.",
+      "The aggregate implementation rejects access to protected data until this parameter verification, the outcome seal, population seal, authority-evidence quality-control seal, and P2 release gates all pass."
+    ],
+    "prohibitedConclusions": [
+      "Passing this gate does not authorize a release, prove safe disclosure, satisfy a control frame, establish outcome coverage, or make a model eligible.",
+      "A failed gate does not reveal which protected record, parameter, incident, outcome, control, source, or reviewer caused the failure."
+    ]
+  },
+  "currentDecision": {
+    "secureParameterRecordsCreated": 0,
+    "parameterValuesSet": 0,
+    "parameterCommitmentManifestsCreated": 0,
+    "preInspectionAttestationsRecorded": 0,
+    "accessControlReviewsPerformed": 0,
+    "independentVerificationsPerformed": 0,
+    "amendmentsCreated": 0,
+    "protectedDataObjectsInspected": 0,
+    "aggregatePlansCreated": 0,
+    "aggregateCellsComputed": 0,
+    "aggregateCellsReleased": 0,
+    "outcomeRowsCreated": 0,
+    "controlsCreated": 0,
+    "authorityValuesCreated": 0,
+    "modelResultsCreated": 0,
+    "rankingsCreated": 0,
+    "uncertaintyIntervalsCreated": 0,
+    "predictiveMetricsCreated": 0,
+    "status": "blocked_pending_future_authorized_disclosure_authority_secure_parameter_custody_and_all_upstream_evidence_gates"
+  },
+  "prohibitedInterpretations": [
+    "This contract is not a parameter record, an aggregate plan, a data-access approval, a disclosure review, a data release, a control frame, or a benchmark result.",
+    "A future secure parameter record or public-safe commitment is process-integrity metadata only; it is not a threshold value, an aggregate result, proof of safety, proof of non-identification, or evidence of a positive, non-event, benign, trusted, complete, independent, or model-eligible package version.",
+    "No absent, withheld, suppressed, or revoked parameter information may be inferred as an outcome, control, coverage gap, source limitation, safe disclosure decision, or model conclusion.",
+    "No current policy permits a P3 model-result release, and no current artifact creates or reveals a threshold, plan, aggregate, row, label, control, authority value, score, rank, interval, calibration, or predictive metric."
+  ]
+}

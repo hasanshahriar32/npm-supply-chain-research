@@ -329,6 +329,18 @@ describe("repository-backed research sources", () => {
     expect(policy.prohibitedInterpretations).toContain("The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.");
   });
 
+  it("retains the future aggregate-plan parameter contract without thresholds, data access, or releases", async () => {
+    const contract = await import("node:fs/promises").then((fs) => fs.readFile("research/102_future_aggregate_plan_parameter_sealing_contract.json", "utf8")).then(JSON.parse);
+    expect(contract).toMatchObject({
+      executionStatus: "future_only_contract_no_parameter_values_records_commitments_aggregates_or_releases_created",
+      currentDecision: { secureParameterRecordsCreated: 0, parameterValuesSet: 0, parameterCommitmentManifestsCreated: 0, preInspectionAttestationsRecorded: 0, accessControlReviewsPerformed: 0, independentVerificationsPerformed: 0, amendmentsCreated: 0, protectedDataObjectsInspected: 0, aggregatePlansCreated: 0, aggregateCellsComputed: 0, aggregateCellsReleased: 0, outcomeRowsCreated: 0, controlsCreated: 0, authorityValuesCreated: 0, modelResultsCreated: 0, rankingsCreated: 0, uncertaintyIntervalsCreated: 0, predictiveMetricsCreated: 0 },
+    });
+    expect(contract.secureParameterRecordSchema.parameterFieldsSecureOnly).toHaveLength(12);
+    expect(contract.publicSafeCommitmentManifestSchema.permittedFields).toHaveLength(14);
+    expect(contract.activationGate.prohibitedActivationFallbacks).toContain("Do not choose or tune a parameter after inspecting an aggregate, cell, suppression outcome, class prevalence, review queue, score, rank, interval, calibration, or model result.");
+    expect(contract.prohibitedInterpretations).toContain("No current policy permits a P3 model-result release, and no current artifact creates or reveals a threshold, plan, aggregate, row, label, control, authority value, score, rank, interval, calibration, or predictive metric.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

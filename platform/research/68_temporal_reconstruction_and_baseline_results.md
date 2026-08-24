@@ -194,6 +194,19 @@ The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` an
 
 The policy permanently restricts raw source objects, exact protected package/version identities, outcome and control rows, authority values and commitments, reviewer material, feature rows, split membership, scores, rankings, intervals, and predictive metrics. Even a permitted future aggregate must preserve documented related-family clusters, avoid direct and complementary small-cell reconstruction, resist temporal and cross-release differencing, and carry immutable revision and revocation lineage. A release class, digest, gate decision, or suppression decision remains **governance metadata**, not evidence of benignness, coverage, independence, historical fidelity, or model eligibility.
 
+## Future aggregate-plan parameter-sealing contract
+
+`102_future_aggregate_plan_parameter_sealing_contract.json` resolves the release policy’s remaining precondition without choosing a threshold. It specifies how a future, independent disclosure authority must select a complete secure parameter set **before** it receives protected data, preview counts, outcomes, controls, score distributions, rankings, or model results.
+
+| Contract element | Future requirement | Explicit boundary |
+|---|---|---|
+| Secure record | Holds 12 secure-only parameter categories for cell and validation-unit protection, broad strata, rounding, suppression, coarsening, linkage review, relatedness, iteration, and revocation. | No parameter value, threshold, stratum, rule, record, or commitment is set now. |
+| Public commitment | Allows only a keyed, non-reversible, non-dictionary-attackable commitment plus process status after secure sealing. | No value, deterministic hash, stable identifier, raw timestamp, data-derived digest, row, label, outcome, control, or aggregate may be public. |
+| Role separation | Parameter authority, disclosure reviewer, implementation operator, and audit observer must be distinct from outcome, source, feature, population, and model roles. | A passing verification is not a data-access approval, safe-disclosure proof, or release authorization. |
+| Amendment | Before protected-data access, replace the complete record with a new immutable revision and fresh attestations; afterward, abort and restart a new protocol instance. | No threshold tuning after a cell, suppression outcome, prevalence, score, rank, or model result. |
+
+The contract contains zero secure records, parameter values, commitments, attestations, access-control reviews, verifications, amendments, plans, cells, releases, outcomes, controls, authority values, scores, rankings, intervals, or metrics. A withheld or revoked parameter is not evidence about a package, incident, coverage gap, non-event, safe release, or model conclusion.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
