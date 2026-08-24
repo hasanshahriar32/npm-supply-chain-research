@@ -1,0 +1,52 @@
+# Historical Source and Temporal-Pilot Feasibility Audit
+
+## Decision summary
+
+The next study stage can execute a **small, exact direct-metadata temporal pilot** using the official npm registry and the project’s high-confidence Axios anchor labels. It cannot yet support a general claim about historical transitive reach, calibrated compromise probability, or a graph-learning comparison. The current private archive is a single cross-sectional ecosystem snapshot, not a dated series; the registry supports package-version publication times and version-scoped dependency declarations, but its current top-level package fields must not be projected backward without an explicit fidelity warning. [1]
+
+> **Research decision.** The first temporal artifact will reconstruct only version records published at or before a frozen cutoff and will label direct dependency declarations as `registry-reconstructed`. It will treat transitive resolution, dated downloads, historical workflow state, and current maintainer fields as unavailable unless a dated source supplies them.
+
+## Source inventory and admissibility
+
+| Source | What it supplies | Temporal admissibility | Role in the pilot | Limitation |
+|---|---|---|---|---|
+| Existing private SQLite archive and metrics CSV | Current package, maintainer, repository, workflow, and structural summaries | **Cross-sectional only** | Scope-A descriptive reference | No dated snapshots or historical labels |
+| npm registry package metadata endpoint | Package-version metadata, dependency declarations, and a `time` map of version publication timestamps | **Exact for version rows that remain in the endpoint** | Primary direct-metadata reconstruction input | Current top-level metadata and missing/deleted versions are not historical truth [1] |
+| CISA Axios alert | Event date and exact affected Axios and injected dependency versions | **High-confidence label anchor** | Primary positive-label seed | Too few labels for population-level prediction [2] |
+| CISA Shai-Hulud alert | Confirmed campaign date and ecosystem scope | **Campaign-level only** | Candidate-discovery and exclusion evidence | No package-version list in the alert; not a primary package-version label [3] |
+| Datadog malicious package dataset | Human-triaged package samples and npm manifest entries, sometimes with versions | **Candidate source only** | Future label discovery | File dates are discovery dates, not publication dates; selection is rule-set biased [4] |
+| npm-follower | Continuously archived package metadata and code, including later-deleted versions | **Potential high-fidelity external archive** | Future expansion source | Access and coverage must be frozen, versioned, and documented before use [5] |
+| CHRONO-RESOLUTION | Release-point dependency-resolution dataset and construction methodology | **Potential transitive-resolution source** | Future exact-resolution extension | Dataset availability, snapshot coverage, and package join must be validated before inclusion [6] |
+| Zenodo NPM Registry Dataset 2025 | A 2025 GitHub-repository subset of registry data | **One dated snapshot** | Optional sensitivity source | 22.3 GB compressed; not a practical default artifact for this platform [7] |
+
+## Label readiness
+
+The existing seed registry contains two exact affected Axios version labels, `axios@1.14.1` and `axios@0.30.4`, plus `plain-crypto-js@4.2.1`, with an event date of 31 March 2026. CISA’s alert names those versions and states that the affected Axios releases injected the malicious dependency; it is therefore strong evidence for a targeted-compromise target for Axios and a distinct malicious-publication/dependency-injection target for `plain-crypto-js`. [2] The Shai-Hulud row remains `campaign_only` because CISA confirms scale and timing but does not enumerate affected package versions. [3]
+
+The Datadog repository is valuable candidate-discovery evidence because its samples are human triaged and its npm manifest can carry version information. However, its README explicitly describes the date encoded in sample filenames as a **discovery** date rather than a package-publication date. It cannot establish feature availability or event onset alone. [4]
+
+## Feasibility gate
+
+| Capability | Pilot status | Required rule |
+|---|---|---|
+| Version publication cutoff | Ready | Keep only versions whose npm `time[version]` is at or before cutoff |
+| Direct dependency declarations | Ready | Read only the retained version objects; preserve raw semver range and source checksum |
+| Affected-version labels | Ready, sparse | Restrict primary positives to CISA-supported Axios versions; retain `plain-crypto-js` as a separate target class |
+| Negative observations | Ready only as **unlabeled controls** | Do not call them benign; report them as no-known-event observations |
+| Transitive dependency resolution | Not ready | Do not infer from current graph; adopt CHRONO-RESOLUTION or a separately validated resolver snapshot first [6] |
+| Historical workflow/CI exposure | Not ready | Do not use current GitHub workflow presence as a temporal feature |
+| Calibration or learned ranking | Not ready for inference | Compute only feasibility diagnostics until multiple incident families and adequate positive count exist |
+
+## Immediate pilot specification
+
+The reproducible pilot will use the 31 March 2026 cutoff, registry responses for `axios` and `plain-crypto-js`, the CISA labels above, and a fixed 30-day lookback window. It will emit a package-version ledger containing exact publication time, pre-cutoff eligibility, dependency declarations, primary-label class, source retrieval time, and SHA-256 checksum. It will separately report why the sample cannot support calibrated probability estimates: there are too few independent incident families and no defensible labeled-negative population.
+
+## References
+
+[1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
+[2]: https://www.cisa.gov/news-events/alerts/2026/04/20/supply-chain-compromise-impacts-axios-node-package-manager "CISA: Supply Chain Compromise Impacts Axios Node Package Manager"
+[3]: https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem "CISA: Widespread Supply Chain Compromise Impacting npm Ecosystem"
+[4]: https://github.com/datadog/malicious-software-packages-dataset "Datadog Malicious Software Packages Dataset"
+[5]: https://arxiv.org/abs/2308.12545 "Pinckney et al., npm-follower"
+[6]: https://arxiv.org/abs/2607.15315 "Rahman et al., CHRONO-RESOLUTION"
+[7]: https://zenodo.org/records/14914149 "NPM Registry Dataset 2025 (GitHub Only)"

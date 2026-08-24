@@ -115,3 +115,27 @@ These incidents support a **seed label registry**, not a finished prediction ben
 14. CISA, *Widespread Supply Chain Compromise Impacting npm Ecosystem*, 2025: <https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem>.
 15. CISA, *Supply Chain Compromise Impacts Axios Node Package Manager*, 2026: <https://www.cisa.gov/news-events/alerts/2026/04/20/supply-chain-compromise-impacts-axios-node-package-manager>.
 16. CERT/CC, *VU#534320*, 2025: <https://kb.cert.org/vuls/id/534320>.
+
+## Temporal reconstruction checkpoint — 2026-08-24
+
+The temporal reconstruction work located the public CHRONO-RESOLUTION release by Rahman, Marley, Paramitha, and Williams (Zenodo DOI: 10.5281/zenodo.17576373). The accompanying paper reports that the npm relations table records release-point dependency intervals, including resolved dependency versions and the highest available dependency versions. It also documents a public archive containing the raw and filtered datasets, construction scripts, and example queries. The dataset is therefore a high-value candidate source for a future **version-resolved** reconstruction stage. [13][17]
+
+The release was not misrepresented as already ingested. Its single compressed archive is 10.2 GB, the paper reports 245,307,373 npm package-dependency interval relationships, and its registry snapshot is dated August 2024. Accordingly, it cannot cover the 2026 Axios family and must be selectively acquired and validated before use. The completed current artifact remains limited to exact, cutoff-valid source version declarations from official npm registry metadata; target-version resolution and transitive reach remain explicitly unavailable.
+
+| Evidence item | Provenance | Use permitted now | Use not permitted now |
+|---|---|---|---|
+| npm package metadata and version-time maps | Official `registry.npmjs.org/<package>` response, SHA-256 recorded in `65_package_temporal_companion_diagnostics.json` | Select strict pre-event source versions and retain their declared direct dependencies | Infer which dependency version a historical install selected or any transitive reach |
+| CHRONO-RESOLUTION paper | arXiv:2607.15315 | Document the availability and intended semantics of release-point resolution | Treat reported aggregate coverage as event-specific graph evidence |
+| CHRONO-RESOLUTION release | Zenodo DOI 10.5281/zenodo.17576373 | Plan a source-acquisition and validation gate | Claim the archive has been queried, merged, or validated for the pilot |
+
+### Source retained
+
+17. Rahman et al., *CHRONO-RESOLUTION* data release, Zenodo DOI 10.5281/zenodo.17576373: <https://doi.org/10.5281/zenodo.17576373>.
+
+## Isolated range-resolution checkpoint — 2026-08-24
+
+The direct-declaration ledger was extended with a strictly limited target-version approximation. For each of its 20 direct runtime dependency ranges, the maintained `semver` implementation selected the highest non-prerelease target version that both satisfied the recorded range and carried an official registry timestamp at or before that row's cutoff. All 20 direct ranges produced a target approximation; no target was selected after its cutoff. [18]
+
+This result is not represented as a reconstructed historical installation. It is an **isolated cutoff-valid SemVer approximation** and excludes package-lock state, package-manager-version behavior, peer, optional, bundled, workspace, override, nested, cache, and transitive-resolution semantics. The diagnostic stores zero transitive-reach values and keeps model ranking, calibration, and blast-radius inference blocked.
+
+18. npm, *node-semver* reference implementation: <https://github.com/npm/node-semver>.

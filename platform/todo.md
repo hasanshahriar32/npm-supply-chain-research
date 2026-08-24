@@ -74,3 +74,13 @@
 - [x] Publish the new research outputs through the governed platform, validate display, and synchronize source artifacts to GitHub
 - [x] Synchronize the new research artifacts, source-registry updates, tests, and verification notes to the private GitHub repository and push the commit
 - [x] Live-verify the remaining governed workspace sections after the research-source remap
+- [x] Audit trustworthy historical npm dependency, release, and repository-workflow sources suitable for point-in-time reconstruction
+- [x] Define and document independent incident-label adjudication rules, evidence tiers, and temporal availability dates
+- [x] Build reproducible historical package-version metadata snapshots and an evidence-backed temporal label ledger without leaking post-incident information
+- [x] Build and document cutoff-valid declared direct-dependency graph snapshots with direct-declaration fidelity and explicit non-resolution limits
+- [x] Run the real-label temporal baseline-eligibility and calibration-inference gate, preserving the justified no-fit result
+- [x] Resolve cutoff-valid direct dependency ranges as isolated SemVer approximations with an explicit non-lockfile fidelity label
+- [ ] Acquire and validate version-resolved historical dependency inputs before creating transitive graph snapshots
+- [ ] Assemble a cutoff-valid control population and sufficient independent incident families before fitting temporal ranking, calibration, or uncertainty models
+- [x] Publish the temporal reconstruction, label-adjudication, direct-range approximation, and baseline-study outputs in the governed workspace and validate the display
+- [ ] Synchronize the completed temporal research artifacts, platform updates, tests, and documentation to GitHub

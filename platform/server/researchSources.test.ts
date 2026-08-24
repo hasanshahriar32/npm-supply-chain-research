@@ -27,12 +27,27 @@ describe("repository-backed research sources", () => {
     expect(hgat?.status).toBe("blocked");
   });
 
-  it("serves the completed evidence-backed gap-resolution artifacts in every governed workspace section", async () => {
+  it("serves the completed temporal reconstruction and adjudication artifacts in governed workspace sections", async () => {
     const documents = await getDocuments();
-    expect(documents.find((document) => document.slug === "gap-analysis")?.sourceFile).toBe("90_gap_resolution_report.md");
+    expect(documents.find((document) => document.slug === "gap-analysis")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
     expect(documents.find((document) => document.slug === "methodology")?.sourceFile).toBe("50_gap_resolution_study_protocol.md");
-    expect(documents.find((document) => document.slug === "incident-labels")?.sourceFile).toBe("52_seed_incident_registry.md");
+    expect(documents.find((document) => document.slug === "incident-labels")?.sourceFile).toBe("69_temporal_incident_label_adjudication.md");
+    expect(documents.find((document) => document.slug === "experiment-results")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ title: "Gap Analysis" });
-    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Auditable npm Defense Benchmark") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("eight package-event records") });
+  });
+
+  it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
+    const graph = await import("node:fs/promises").then((fs) => fs.readFile("research/67_cutoff_direct_dependency_graph_manifest.json", "utf8")).then(JSON.parse);
+    const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
+    const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
+    const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
+    expect(graph.summary).toMatchObject({ packageEventRecords: 8, exactSourceSnapshots: 7, declaredDirectEdges: 20, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
+    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 20, resolvedIsolatedSemverRanges: 20, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
+    expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
+    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 20, isolatedCutoffSemverApproximations: 20, computedTransitiveReachValues: 0 } });
+    expect(gate).toMatchObject({ exactPreEventSnapshots: 7, calibrationInference: "blocked" });
   });
 });
