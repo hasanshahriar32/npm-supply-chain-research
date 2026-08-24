@@ -151,7 +151,9 @@ The first reconstruction stage is complete. The adjudicated package-event ledger
 
 The initial inference gate remains blocked. The pilot has no cutoff-valid adjudicated control population, only four independent incident families, and no historical transitive dependency traversal. Consequently, it reports no ranking, PR-AUC, Recall@K, calibration, logistic-regression, blast-radius, or attack-return metric. The completed result is a reproducible feasibility finding and fidelity-ledger implementation, not a forecasting result.
 
-The public CHRONO-RESOLUTION archive was selectively inspected through bounded HTTP byte ranges. Its validated relation schema includes package and dependency versions plus interval start/end, but its only relations payload is a 10.23 GB compressed, 138.73 GB uncompressed monolithic SQL member. No rows were ingested. A future transitive stage requires either an approved bulk-compute environment or an upstream filtered export, together with a pre-registered cutoff join and control design. [5]
+The public CHRONO-RESOLUTION archive was selectively inspected through bounded HTTP byte ranges. Its validated relation schema includes package and dependency versions plus interval start/end, but its only relations payload is a 10.23 GB compressed, 138.73 GB uncompressed monolithic SQL member. A one-pass, memory-bounded attempt to stream that member timed out after 1,500 seconds with 7.6569% of the compressed stream received; no candidate rows were retained. A future transitive stage requires either an approved bulk-compute environment or an upstream filtered export, together with a pre-registered cutoff join and control design. [5]
+
+The evaluated npm-follower resource is a relevant future source for version retention and population coverage, but its public project page describes a 20+ TB replica. The present worktree has neither an official query interface nor a frozen filtered export for it. Accordingly, this study does not convert registry rows with no known incident into benign controls. A temporal ranking or calibration stage remains conditional on a frozen incident-coverage source and a documented at-risk population frame. [11]
 
 ## References
 
@@ -165,3 +167,4 @@ The public CHRONO-RESOLUTION archive was selectively inspected through bounded H
 [8]: https://google.github.io/osv.dev/ "OSV documentation"
 [9]: https://arxiv.org/html/2603.27549v1 "Guo et al., Understanding NPM Malicious Package Detection"
 [10]: https://dl.acm.org/doi/abs/10.1145/3510003.3510142 "Liu et al., Demystifying Vulnerability Propagation"
+[11]: https://donaldpinckney.com/publication/npm-follower/ "npm-follower project page"

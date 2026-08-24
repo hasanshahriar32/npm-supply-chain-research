@@ -61,4 +61,17 @@ describe("repository-backed research sources", () => {
     expect(schema).toContain("dependency_version public.semver");
     expect(schema).toContain("interval_start timestamp without time zone");
   });
+
+  it("retains no partial relation rows after the bounded monolithic-stream timeout", async () => {
+    const fs = await import("node:fs/promises");
+    const attempt = JSON.parse(await fs.readFile("research/73_chrono_resolution_streaming_attempt.json", "utf8"));
+    expect(attempt).toMatchObject({
+      result: "incomplete_timeout_no_valid_candidate_artifact",
+      memberCompressedBytes: 10228591413,
+      compressedBytesReceivedBeforeTimeout: 783198932,
+      percentOfCompressedMemberReceived: 7.6569,
+      candidateRowsRetained: 0,
+    });
+    expect(attempt.nextDataGate).toContain("bulk-compute environment");
+  });
 });

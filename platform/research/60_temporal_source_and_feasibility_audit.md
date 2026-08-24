@@ -50,6 +50,18 @@ The project then retrieved only a 1,508-byte range containing the compressed `sc
 
 The selective archive inventory is committed as `72_chrono_resolution_archive_inventory.json`; the extracted source schema is `72_chrono_resolution_schema_relations.sql`. Both artifacts record source provenance and avoid a full data download.
 
+### Bounded full-stream acquisition attempt
+
+The project also made one memory-bounded, single-pass attempt to stream the complete `data-relations.sql` raw-deflate member through a scanner that retained only the seven pre-registered package-version candidates. The HTTP transfer was capped at 1,500 seconds. It received **783,198,932 of 10,228,591,413 compressed bytes (7.6569%)** before the network timeout; the raw-deflate stream necessarily ended incomplete, and the scanner retained **zero** candidate rows. The incomplete output and stale diagnostics were removed rather than being presented as evidence. The committed `73_chrono_resolution_streaming_attempt.json` records this operational limit.
+
+This bounded failure establishes a practical acquisition boundary, not a scientific negative finding about the source data. The remaining valid options are a sanctioned bulk-compute environment, an upstream package-filtered export, or a provider-side query. Until one is available, the project cannot construct a version-resolved transitive graph from this archive.
+
+## npm-follower control-population feasibility
+
+The npm-follower publication confirms that the project archives package metadata and code as packages and versions are published, retains later-deleted versions, and reported more than 35 million package versions in 2023. [5] Its public project page describes the replica as **20+ TB**. [9] This establishes npm-follower as a scientifically relevant source for a future at-risk population and deleted-version recovery, but not as a dataset that can be acquired or sampled defensibly from the present bounded environment without an official query interface, a versioned filtered export, or a bulk-compute allocation.
+
+As a result, the project does not create “no-known-event” package rows from the current registry and label them benign. A cutoff-valid control population remains unassembled rather than fabricated. The next admissible control-design step is to obtain a frozen incident-coverage source and a matching, explicitly sampled at-risk package frame from an authoritative provider; only then may non-event observations be defined relative to documented coverage and horizon.
+
 ## References
 
 [1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
@@ -60,3 +72,4 @@ The selective archive inventory is committed as `72_chrono_resolution_archive_in
 [6]: https://arxiv.org/abs/2607.15315 "Rahman et al., CHRONO-RESOLUTION"
 [7]: https://zenodo.org/records/14914149 "NPM Registry Dataset 2025 (GitHub Only)"
 [8]: https://doi.org/10.5281/zenodo.17576373 "CHRONO-RESOLUTION Zenodo data release"
+[9]: https://donaldpinckney.com/publication/npm-follower/ "npm-follower project page"

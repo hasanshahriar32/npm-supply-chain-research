@@ -145,3 +145,18 @@ This result is not represented as a reconstructed historical installation. It is
 The official CHRONO-RESOLUTION ZIP64 central directory was inspected with a 65,557-byte HTTP range request, and no data-member payload was downloaded. The inventory confirms that the archive has only four members and that its sole relation-data member, `data-relations.sql`, is 10,228,591,413 bytes compressed and 138,731,381,476 bytes uncompressed. It is therefore not a package-selectable or streaming-friendly public source for the current constrained worktree. [17]
 
 A separate 1,508-byte range was used solely to extract and validate `schema-relations.sql` (SHA-256 `57db2833e311390250d1d292247f89573bd320917c4c301b44acb32839294c69`). The schema confirms direct relation fields for package and dependency versions plus interval start/end, supporting the conclusion that the dataset is semantically relevant for future interval-aware resolution. No relations rows were ingested, no historical resolver outputs were attributed to the pilot, and no transitive graph was produced.
+
+## Bounded monolithic-stream attempt — 2026-08-24
+
+To test whether the relation payload could be used without full extraction, the project streamed the archive member directly into a raw-deflate scanner that retained only pre-registered source package-version candidates. The transfer was stopped by its 1,500-second network bound after 783,198,932 of 10,228,591,413 compressed bytes (7.6569%) had arrived. Because a compressed stream cannot be interpreted as complete after timeout, the scanner retained no candidate rows and all incomplete output was deleted. The operational attempt is recorded in `73_chrono_resolution_streaming_attempt.json`.
+
+The result narrows the next actionable data gate to an approved bulk-compute environment, a provider-side filter, or an upstream filtered export. It does not lower the fidelity threshold or justify use of a current graph as a historical substitute.
+
+## Historical control-population source boundary — 2026-08-24
+
+The npm-follower authors report a continuously collected archive of package metadata and code that retains later-deleted versions, with more than 35 million versions reported in 2023. The public project page characterizes the full ecosystem replica as 20+ TB. [19] [20] That scale makes the resource relevant for future event coverage and at-risk-population work, but unsuitable for acquisition in the current bounded sandbox without an official query, a frozen filtered export, or bulk-compute access.
+
+The project therefore retains the no-control conclusion. It does not convert registry rows with no known incident into benign labels. A valid control population must be defined against a frozen incident-coverage source, a documented horizon, and an explicit source population before any temporal ranking or calibration experiment proceeds.
+
+19. Pinckney et al., *npm-follower: A Complete Dataset Tracking the NPM Ecosystem*, arXiv:2308.12545: <https://arxiv.org/abs/2308.12545>.
+20. Pinckney, *npm-follower project page*: <https://donaldpinckney.com/publication/npm-follower/>.
