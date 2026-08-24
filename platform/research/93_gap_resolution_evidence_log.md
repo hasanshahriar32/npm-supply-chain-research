@@ -215,3 +215,20 @@ The valid next step remains provider-authorized snapshot access paired with a se
 29. Open Source Insights, *deps.dev BigQuery dataset*: <https://docs.deps.dev/bigquery/v1/>.
 30. Figshare, *Malicious NPM Package Detection Dataset*, DOI 10.6084/m9.figshare.31451728: <https://doi.org/10.6084/m9.figshare.31451728>.
 31. Mendeley Data, *Malicious NPM Package Detection Dataset*, Version 1: <https://doi.org/10.17632/6tc8wrp62g.1>.
+
+## Shai-Hulud temporal-label candidate screen — 2026-08-24
+
+The official CISA alert establishes that the September 2025 Shai-Hulud incident was a credential-theft and automated npm-republication campaign affecting more than 500 packages, and recommends pinning releases produced before 16 September 2025. [14] The alert itself does not provide package-version identifiers. The CISA-referenced Unit 42 technical report provides operational detail about the campaign and maintains an evolving scope discussion, but the retrieved public page did not supply a frozen, machine-readable affected package-version list in the reviewed material. [32]
+
+This is a **candidate screen only**, not a ledger expansion. Campaign-level confirmation and a broad event window are insufficient for a package-event record under the frozen protocol. Admission would require a dated affected package-version list, independent corroboration of the selected package/version, an earliest malicious publication time from the official registry or primary evidence, and family-level grouping. No labels, controls, source snapshots, dependency edges, or model metrics were added by this screen.
+
+32. Palo Alto Networks Unit 42, *“Shai-Hulud” Worm Compromises npm Ecosystem in Supply Chain Attack*: <https://unit42.paloaltonetworks.com/npm-supply-chain-attack/>.
+
+## Bounded Shai-Hulud second-wave expansion — 2026-08-24
+
+The candidate screen found a compact, version-specific path for one November 2025 second-wave package event without inferring campaign completeness. OpenSSF record `MAL-2025-191155` lists `wenk` versions `1.0.9` and `1.0.10`, was published on 24 November 2025, and retains references to Aikido, Wiz, and StepSecurity campaign reporting. [33] A frozen Wiz IOC CSV at commit `22752e7cc55ece6a053e3277b60b914e0260e65d` independently contains the exact `wenk,= 1.0.10 || = 1.0.9` row; its response SHA-256 is stored by the bounded assessment. [34]
+
+The official registry provides `wenk@1.0.9` at `2025-11-24T10:06:12.376Z`, `wenk@1.0.10` at `2025-11-24T10:23:35.925Z`, and the prior `wenk@1.0.8` at `2018-11-08T06:39:02.210Z`. The ledger therefore admits one `shai_hulud_second_coming_2025` record with the earliest selected malicious publication as cutoff and `wenk@1.0.8` as the exact source snapshot. It does not ingest the 795-row Wiz IOC list as 795 independent events, assert campaign-wide completeness, create controls, or compute predictive metrics. The reproducible `82_shai_hulud_second_coming_candidate_assessment.json` records the frozen identities, cross-source checks, cutoff, and exclusions.
+
+33. OpenSSF Malicious Packages, *MAL-2025-191155: Malicious code in wenk (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/wenk/MAL-2025-191155.json>.
+34. Wiz Research IOCs, *shai-hulud-2-packages.csv*, commit `22752e7`: <https://github.com/wiz-sec-public/wiz-research-iocs/blob/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/shai-hulud-2-packages.csv>.

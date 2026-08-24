@@ -102,3 +102,6 @@
 - [x] Identify frozen provider-backed incident-coverage and at-risk-population sources suitable for a cutoff-valid temporal control frame
 - [x] Validate candidate source coverage, timing, sampling semantics, and non-event label boundaries against the temporal protocol
 - [x] Construct and publish a gate-preserving control-frame exclusion because the candidate sources do not satisfy all primary temporal evidence requirements
+- [x] Identify the next compact, accessible source path that could strengthen temporal population or outcome provenance without weakening target definitions
+- [x] Validate the selected candidate's access, row-level identifiers, temporal semantics, population coverage, and target alignment
+- [x] Publish only an evidence-supported bounded result with no inferred controls, historical installations, or predictive metrics

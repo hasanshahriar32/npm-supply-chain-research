@@ -7,9 +7,9 @@
 
 ## Executive finding
 
-This extension successfully reconstructs **eight exact pre-event package-version metadata snapshots** from ten pre-registered npm package-event records spanning **six incident families**. It produces a reproducible ledger of **24 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **59 bounded edges** across seven roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
+This extension successfully reconstructs **nine exact pre-event package-version metadata snapshots** from eleven pre-registered npm package-event records spanning **seven incident families**. It produces a reproducible ledger of **24 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **59 bounded edges** across seven roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
 
-The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The ten-record and five-family floors are now met, but the pilot has no cutoff-valid adjudicated non-event population and only eight exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
+The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The eleven-record and seven-family floors are now met, but the pilot has no cutoff-valid adjudicated non-event population and only nine exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
 
 > **Historical-fidelity definition.** `registry_reconstructed_exact_direct_declaration` means that the source package version was selected strictly before the event cutoff from the official npm registry's version-time map and that version object's declared `dependencies` map was retained verbatim. It does **not** mean that a declared range was resolved to a target version, installed by npm, or expanded transitively.
 
@@ -21,9 +21,9 @@ For each record, the builder sets the feature cutoff to one millisecond before t
 
 | Reconstruction component | Result | Fidelity and interpretation |
 |---|---:|---|
-| Pre-registered package-event records | 10 | Package-level observations; not ten independent attacks. |
-| Incident families | 6 | `unc3379_2021`, `event_stream_2018`, `eslint_2018`, `axios_2026`, `node_ipc_2026`, and `moika_dependency_confusion_2026`. |
-| Exact source snapshots | 8 | Source package version object selected strictly before its cutoff. |
+| Pre-registered package-event records | 11 | Package-level observations; not eleven independent attacks. |
+| Incident families | 7 | `unc3379_2021`, `event_stream_2018`, `eslint_2018`, `axios_2026`, `node_ipc_2026`, `moika_dependency_confusion_2026`, and `shai_hulud_second_coming_2025`. |
+| Exact source snapshots | 9 | Source package version object selected strictly before its cutoff. |
 | Source snapshot unavailable | 2 | `plain-crypto-js` and `@emcd-vue/auth`; no qualifying pre-event version object was retained by the current registry response. |
 | Declared direct edges | 24 | Exact source declarations, each retaining the original SemVer range. |
 | Isolated target-range approximations | 24 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
@@ -48,14 +48,15 @@ The resolved-target label is **`registry_reconstructed_cutoff_semver_approximati
 | `eslint-scope-2018-07-12` | 4.0.0 | 2 | Exact source declaration + 2 isolated target approximations | No install trace or transitive traversal. |
 | `eslint-config-eslint-2018-07-12` | 5.0.1 | 1 | Exact source declaration + 1 isolated target approximation | No install trace or transitive traversal. |
 | `node-ipc-2026-05-14` | 12.0.0 | 4 | Exact source declaration + 4 isolated target approximations | No install trace or transitive traversal. |
+| `wenk-2025-11-24` | 1.0.8 | 0 | Exact direct declaration | No runtime dependency declarations in the selected version. |
 
-The selected eight exact source snapshots have a mean of **3** declared runtime dependencies, a median of **3**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
+The selected nine exact source snapshots have a mean of **2.66** declared runtime dependencies, a median of **3**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
 
 ## Bounded recursive registry-graph sensitivity
 
 Official npm documentation defines `package-lock.json` as the exact dependency tree generated by an npm operation, while the SemVer reference defines a range as a set of satisfying versions and documents highest-satisfying selection over a supplied version list. [11] [12] The study therefore uses the current registry only for a **bounded sensitivity graph**: it recursively selects the highest retained, non-prerelease package version satisfying each runtime `dependencies` range and published by the root's frozen cutoff. It excludes `devDependencies`, peers, optional and bundled relations, workspaces, overrides, links, git and tarball specifications, as well as all package-manager installation behavior.
 
-The resulting artifact contains **59 edges** and **60 bounded nodes across root graphs** for the seven roots that expose runtime dependencies. The eight-root design is retained: `ua-parser-js@0.7.28` has no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 59 edges distribute as 24 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
+The resulting artifact contains **59 edges** and **60 bounded nodes across the seven root graphs with runtime dependencies**. The nine-root exact-snapshot design also retains `ua-parser-js@0.7.28` and `wenk@1.0.8`, each with no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 59 edges distribute as 24 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
 
 | Pre-event source root | Bounded edges | Bounded nodes including root | Depth 1 / 2 / 3 edges | Interpretation boundary |
 |---|---:|---:|---|---|
@@ -71,7 +72,7 @@ The resulting artifact contains **59 edges** and **60 bounded nodes across root 
 
 ## Temporal baseline and calibration gate
 
-The gate computed descriptive feature summaries rather than a model. Across the eight exact snapshots, package age ranges from 481 to 4,464 days (median 3,374.5); prior version count ranges from 5 to 130 (median 48.5); and the direct-dependency count ranges from 0 to 7 (median 3). All eight retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
+The gate computed descriptive feature summaries rather than a model. Across the nine exact snapshots, package age ranges from 481 to 4,464 days (median 3,372); prior version count ranges from 5 to 130 (median 48); and the direct-dependency count ranges from 0 to 7 (median 3). All nine retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
 
 | Requested analysis | Decision | Evidence-grounded reason |
 |---|---|---|

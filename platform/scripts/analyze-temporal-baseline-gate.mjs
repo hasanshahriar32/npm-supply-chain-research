@@ -43,7 +43,7 @@ const report = {
     direct_dependency_ranking: "not_evaluable_without_cutoff-valid controls",
     package_age_ranking: "not_evaluable_without_cutoff-valid controls",
     multivariate_logistic_regression: "blocked: all retained snapshots are event records, not labeled negatives",
-    probability_calibration: "blocked: no cutoff-valid evaluation population; the strict positive-record threshold is not yet met",
+    probability_calibration: "blocked: no cutoff-valid evaluation population; positive-count and family-count floors alone do not permit calibration",
     pr_auc_and_recall_at_k: "blocked: requires positives and a defensible non-event population",
   },
   calibrationInference: "blocked",
