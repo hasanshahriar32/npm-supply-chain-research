@@ -281,6 +281,17 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("Do not infer that any strict pre-event version lacks an attestation because no metadata-only access path was established.");
   });
 
+  it("retains the full ledger source-object census as current retention rather than historical package evidence", async () => {
+    const census = await import("node:fs/promises").then((fs) => fs.readFile("research/98_full_ledger_source_object_retention_census.json", "utf8")).then(JSON.parse);
+    expect(census).toMatchObject({
+      executionStatus: "current_registry_retention_census_only_no_package_feature_or_outcome_analysis",
+      summary: { incidentRecords: 14, incidentFamilies: 10, currentRegistryResponsesWithProvenance: 14, strictPreEventSourceObjectsRetained: 12, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
+      exceptionCategories: { timeMapSelectionButStrictObjectRetentionFailure: ["plain-crypto-js-2026-03-31"], noPreCutoffVersionSelectionInCurrentResponse: ["emcd-vue-auth-2026-06-01"] },
+      currentDecision: { packageMetadataValuesExtracted: 0, maintainerOrPublisherValuesExtracted: 0, repositoryOrWorkflowValuesExtracted: 0, provenanceOrAttestationStatesClassified: 0, packageFeaturesDerived: 0, controlsCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(census.prohibitedInterpretations).toContain("Do not treat a current registry retention state as a historical package, maintainer, repository, provenance, workflow, or dependency-state observation.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

@@ -150,3 +150,6 @@
 - [x] Identify official npm provenance-attestation documentation and a bounded version-specific metadata access path without retrieving package payloads
 - [x] Screen strict pre-event release objects for provenance-attestation response availability, time semantics, and verification prerequisites without treating absence as unchanged or benign
 - [x] Publish only a bounded availability finding or precise access exclusion, retaining zero provenance-state comparisons, controls, scores, models, rankings, or predictive metrics
+- [x] Define a full-ledger source-object retention census that distinguishes current registry retention from release-time historical evidence and preserves label-only exceptions
+- [x] Reconstruct bounded retention states, response provenance, and exact source-selection eligibility for all fourteen incident records without deriving package features or outcomes
+- [x] Publish the retention census with regression coverage while retaining zero controls, feature values, scores, models, rankings, or predictive metrics

@@ -76,6 +76,13 @@ The authenticated **GitHub** browser then verified the private repository’s `m
 
 ## Temporal reconstruction publication — 2026-08-24
 
+## Full-ledger source-object retention census — 24 August 2026
+
+- `node scripts/build-full-ledger-source-object-retention-census.mjs` completed from the strict fourteen-record companion artifact and produced `research/98_full_ledger_source_object_retention_census.json` with 14 incident records, 10 families, 14 checksum-bound current registry responses, 12 strict retained source objects, and 2 label-only exceptions.
+- `pnpm test` passed all **47 tests**, including the new regression that prohibits treating current retention as historical package evidence and asserts zero extracted feature values, controls, scores, models, ranks, and predictive metrics.
+- `NODE_OPTIONS=--max-old-space-size=1536 pnpm build` passed. The production packaging step retained the Next handler and nonempty runtime marker.
+- An authenticated browser session loaded `/workspace/gap-analysis` successfully after the repository-backed source completed loading. The protected page displayed the new “10 / Full-ledger source-object retention census” in its in-page index, the fourteen-record / ten-family / twelve-exact-snapshot baseline, and the no-fit constraints without an access or rendering regression.
+
 The temporal builders were run against official npm registry metadata and the independently adjudicated package-event ledger. They generated seven strict pre-event source-version snapshots from eight package-event records in four incident families, together with 20 declared runtime direct-dependency edges. The generated graph manifest records **zero** resolved target versions and **zero** computed transitive-reach values; it explicitly prohibits interpreting the artifact as a lockfile, package-manager resolution, transitive graph, historical centrality measure, or blast-radius estimate.
 
 The temporal baseline gate was also executed on the exact snapshots. It records descriptive values only and blocks direct-dependency and package-age ranking, logistic regression, probability calibration, PR-AUC, and Recall@K because no cutoff-valid adjudicated control population exists, only seven exact snapshots are retained, only four independent incident families are represented, and current structural/workflow data cannot be backdated as historical features.

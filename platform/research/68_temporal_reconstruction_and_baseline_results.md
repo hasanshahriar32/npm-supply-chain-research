@@ -143,6 +143,18 @@ The protocol makes `not_eligible_missing_or_ambiguous_evidence` and `not_applica
 
 The decision is an **access-contract exclusion**, not a provenance-state result for any package version. It creates **zero comparisons, controls, release-authority scores, rankings, models, or predictive metrics**. Current badges, current provenance views, current repository state, and current transparency-log search results remain unusable as historical evidence. [45] [46] [47]
 
+## Full-ledger source-object retention census
+
+`98_full_ledger_source_object_retention_census.json` separates the **current registry’s retention of reconstructable source objects** from historical package evidence across every pre-registered ledger record. All fourteen records have a checksum-identified current registry response. Twelve retain a selected pre-cutoff version object that satisfies the strict source-object requirement; two remain label-only exceptions. This is a census of reconstruction eligibility, not a measurement of historical package state.
+
+| Retention state | Records | Consequence |
+|---|---:|---|
+| Current response retains selected pre-event version object | 12 | Eligible for the existing strict source-object reconstruction only. |
+| Time map selects a pre-cutoff version but the selected object fails strict retention | 1 (`plain-crypto-js`) | Remains label-only; no substitute source object, feature, or delta is created. |
+| Current response has no retained pre-cutoff version selection | 1 (`@emcd-vue/auth`) | Remains label-only; no absent-history or benign inference is permitted. |
+
+The census stores only record identifiers, selected version identifiers and timestamps, retention states, and current response provenance. It extracts **zero package metadata, maintainer, publisher, repository, workflow, provenance, or attestation values**; derives **zero features**; and creates **zero controls, scores, models, rankings, or predictive metrics**. Current retention differences do not make campaign rows independent and cannot stand in for any release-time package, authority, dependency, or workflow observation.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
