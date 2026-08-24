@@ -220,6 +220,19 @@ The 2017 `crossenv` typosquatting incident is independently corroborated but **e
 
 `103_crossenv_typosquatting_candidate_assessment.json` preserves the source checksums, exact time-map decision, and retention exception. It adds **zero** primary-ledger records or families, source snapshots, declarations, range approximations, graph edges, validation units, controls, labels, historical installs, reach values, scores, models, rankings, intervals, or metrics. The exclusion does not deny the incident, and it does not turn the unretained predecessor into benign, safe, unchanged, no-known-event, or a control.
 
+## Bounded flatmap-stream package-event screen
+
+The historic `flatmap-stream` package event is independently corroborated but **excluded** from the 14-record primary ledger. npm identifies `flatmap-stream@0.1.1` as the malicious package associated with `event-stream@3.3.6`; Snyk independently records the injected `0.1.1` release timeline; and Microsoft independently identifies `flatmap-stream` as malicious while blocking `0.1.0`, `0.1.1`, and `0.1.2`. [52] [53] [54]
+
+| Eligibility check | Bounded evidence | Strict result |
+|---|---|---|
+| Exact candidate release | npm and Snyk identify `flatmap-stream@0.1.1`; Microsoft’s mitigation includes that version. | Satisfied for candidate screening. |
+| Relatedness | Primary and independent reports connect the package to `event-stream@3.3.6`. | Any future eligible record remains within the existing `event_stream_2018` family; it cannot create a new independent family or validation unit. |
+| Official affected-release time | Current bounded registry metadata has no `0.1.1` time-map entry and no `0.1.x` time-map entries. [55] | **Failed.** No official exact event cutoff exists. |
+| Exact retained pre-event source object | The response retains only unrelated `0.0.1-security` package metadata; none of the relevant `0.1.x` version objects remains. [55] | **Failed.** No source snapshot can be reconstructed. |
+
+`104_flatmap_stream_candidate_assessment.json` preserves source checksums, the related-family boundary, and the dual registry-retention exception. It adds **zero** ledger records, families, validation units, snapshots, declarations, range approximations, graph edges, controls, labels, historical installs, reach values, scores, models, rankings, intervals, or metrics. The exclusion neither disputes the incident nor converts the missing registry history into a benign, safe, unchanged, no-known-event, or control state.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -395,3 +408,11 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [50] [Snyk Vulnerability Database, “Malicious Package Affecting crossenv package,” `npm:crossenv:20170802`](https://security.snyk.io/vuln/npm:crossenv:20170802).
 
 [51] [npm registry metadata, `crossenv`](https://registry.npmjs.org/crossenv).
+
+[52] [npm, “Details about the event-stream incident,” 27 November 2018](https://blog.npmjs.org/post/180565383195/details-about-the-event-stream-incident).
+
+[53] [Snyk, “A post-mortem of the malicious event-stream backdoor,” 6 December 2018](https://snyk.io/blog/a-post-mortem-of-the-malicious-event-stream-backdoor/).
+
+[54] [Microsoft Azure DevOps Blog, “Blocking malicious versions of event-stream and flatmap-stream packages,” 28 November 2018](https://devblogs.microsoft.com/devops/blocking-malicious-versions-of-event-stream-and-flatmap-stream-packages/).
+
+[55] [npm registry metadata, `flatmap-stream`](https://registry.npmjs.org/flatmap-stream).

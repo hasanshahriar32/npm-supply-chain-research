@@ -1,0 +1,93 @@
+{
+  "study": "flatmap-stream-2018-bounded-package-event-candidate-assessment",
+  "artifactVersion": 1,
+  "artifactDate": "2026-08-24",
+  "decision": "exclude_from_primary_temporal_ledger_due_to_no_official_affected_release_timestamp_or_retained_pre_event_source_object",
+  "candidate": {
+    "recordId": "flatmap-stream-2018-10-05",
+    "packageName": "flatmap-stream",
+    "independentlyReportedAffectedVersion": "0.1.1",
+    "independentlyReportedInjectionDate": "2018-10-05",
+    "relatedExistingFamily": "event_stream_2018",
+    "relatednessRule": "If future evidence ever makes this candidate ledger-eligible, it must remain a second package-event record within the existing event_stream_2018 family and must not create a new independent campaign family or validation unit.",
+    "officialAffectedVersionTimeUtc": null,
+    "strictFeatureCutoffUtc": null
+  },
+  "corroboration": {
+    "npmIncidentNotice": {
+      "statement": "npm identifies flatmap-stream@0.1.1 as the malicious package and reports that it was added as a direct dependency of event-stream@3.3.6 on September 9, 2018."
+    },
+    "independentSnykPostmortem": {
+      "statement": "Snyk identifies flatmap-stream@0.1.1 as the injected release and records an October 5, 2018 release timeline."
+    },
+    "independentMicrosoftNotice": {
+      "statement": "Microsoft identifies flatmap-stream as malicious and records blocks for 0.1.0, 0.1.1, and 0.1.2 alongside event-stream@3.3.6."
+    },
+    "officialRegistry": {
+      "boundedMetadataOnly": true,
+      "affectedVersionTimeUtc": null,
+      "blockedVersionTimeRetention": {
+        "0.1.0": null,
+        "0.1.1": null,
+        "0.1.2": null
+      },
+      "blockedVersionObjectRetention": {
+        "0.1.0": false,
+        "0.1.1": false,
+        "0.1.2": false
+      },
+      "retainedVersionObjectKeys": [
+        "0.0.1-security"
+      ],
+      "laterRetainedTimeMapEntry": "2018-11-28T22:09:45.947Z"
+    }
+  },
+  "sourceProvenance": {
+    "npmIncidentNotice": {
+      "url": "https://blog.npmjs.org/post/180565383195/details-about-the-event-stream-incident",
+      "responseSha256": "0385796be8013bde14a50175fb4e3aa2b9f1fb0bad6524550a269578b6660f98"
+    },
+    "independentSnykPostmortem": {
+      "url": "https://snyk.io/blog/a-post-mortem-of-the-malicious-event-stream-backdoor/",
+      "responseSha256": "e9b1899ec2131167b9ac4b0fc3470ef168f86226b7ef8b2a515bc4b0df573f10"
+    },
+    "independentMicrosoftNotice": {
+      "url": "https://devblogs.microsoft.com/devops/blocking-malicious-versions-of-event-stream-and-flatmap-stream-packages/",
+      "responseSha256": "3569791daadacc83e800299413067f999b1125b4d683ff3dbbee9d8dce118b41"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/flatmap-stream",
+      "responseSha256": "34571e8a1f62e1694af0d289487192580fcfcf59ef07349d5276d50f0ead8245"
+    }
+  },
+  "strictExclusionReason": {
+    "requiredRule": "A primary temporal-ledger record requires an official registry timestamp for an independently corroborated affected release and a retained official-registry source object selected strictly before the resulting cutoff.",
+    "observedState": "The bounded current registry response lacks a 0.1.1 time-map entry, lacks all 0.1.x time-map entries, and retains no historically relevant 0.1.x version object. A later security-holder object does not supply event-time or pre-event source evidence. Therefore no official exact cutoff or pre-event source-object selection can be reconstructed.",
+    "consequence": "Do not add flatmap-stream to the 14-record primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, a new campaign family, or a new validation unit from this candidate."
+  },
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 0,
+    "primaryLedgerFamiliesAdded": 0,
+    "primaryLedgerValidationUnitsAdded": 0,
+    "exactPreEventSourceSnapshotsCreated": 0,
+    "packageMetadataValuesExtracted": 0,
+    "dependencyDeclarationsCreated": 0,
+    "resolvedTargetsCreated": 0,
+    "recursiveGraphEdgesCreated": 0,
+    "controlsCreated": 0,
+    "benignLabelsCreated": 0,
+    "historicalInstallTracesCreated": 0,
+    "reachOrBlastRadiusValuesCreated": 0,
+    "scoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "prohibitedInterpretations": [
+    "This exclusion does not dispute the independently corroborated flatmap-stream incident evidence or convert any unretained version into a benign, safe, unchanged, no-known-event, or control row.",
+    "Current registry retention is not historical release evidence and cannot supply a package source, authority, dependency, workflow, provenance, installation, or outcome feature.",
+    "The documented relationship to event-stream is relatedness evidence only; it does not establish a new independent campaign family, validation unit, causal pathway, or campaign-complete census.",
+    "This artifact does not license reach, blast-radius, attack-return, ranking, calibration, PR-AUC, Recall@K, logistic regression, uncertainty, or predictive claims."
+  ]
+}

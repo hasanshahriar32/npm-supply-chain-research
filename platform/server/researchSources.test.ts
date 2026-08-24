@@ -354,6 +354,18 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("This exclusion does not dispute the independently corroborated crossenv incident evidence or convert the candidate into a benign, safe, unchanged, no-known-event, or control row.");
   });
 
+  it("excludes the related flatmap-stream candidate without creating a new family or validation unit", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/104_flatmap_stream_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_official_affected_release_timestamp_or_retained_pre_event_source_object",
+      candidate: { recordId: "flatmap-stream-2018-10-05", packageName: "flatmap-stream", independentlyReportedAffectedVersion: "0.1.1", relatedExistingFamily: "event_stream_2018", officialAffectedVersionTimeUtc: null, strictFeatureCutoffUtc: null },
+      corroboration: { officialRegistry: { affectedVersionTimeUtc: null, blockedVersionTimeRetention: { "0.1.0": null, "0.1.1": null, "0.1.2": null }, blockedVersionObjectRetention: { "0.1.0": false, "0.1.1": false, "0.1.2": false }, retainedVersionObjectKeys: ["0.0.1-security"] } },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, primaryLedgerValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add flatmap-stream to the 14-record primary ledger");
+    expect(assessment.prohibitedInterpretations).toContain("The documented relationship to event-stream is relatedness evidence only; it does not establish a new independent campaign family, validation unit, causal pathway, or campaign-complete census.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
