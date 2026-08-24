@@ -1,0 +1,76 @@
+{
+  "study": "is-package-compromise-bounded-package-event-assessment",
+  "artifactDate": "2026-08-24",
+  "decision": "admit_one_bounded_package_event_record",
+  "candidateRecord": {
+    "recordId": "is-2025-07-19",
+    "packageName": "is",
+    "affectedVersions": [
+      "3.3.1",
+      "5.0.0"
+    ],
+    "eventFamily": "is_maintainer_compromise_2025",
+    "eventStartUtc": "2025-07-19T11:40:30.778Z",
+    "labelClass": "confirmed_targeted_compromise",
+    "primaryPackageTargetEligible": true
+  },
+  "corroboration": {
+    "openssfRecordId": "MAL-2025-6020",
+    "openssfPublishedUtc": "2025-07-22T07:14:14Z",
+    "openssfModifiedUtc": "2025-07-22T07:14:14Z",
+    "independentTechnicalReport": "https://www.stepsecurity.io/blog/another-npm-supply-chain-attack-the-is-package-compromise",
+    "maintainerRemediationCommit": "https://github.com/enricomarino/is/commit/0fe137a5946e4ecb0e649bd7dea48d5415a242fc",
+    "maintainerChangelogStatement": "v3.3.1 (and v5.0.0) were published with malware in them by a hijacked account",
+    "origins": [
+      {
+        "import_time": "2025-07-22T07:14:58.657738Z",
+        "modified_time": "2025-07-22T07:14:14Z",
+        "sha256": "a1baf574e6278b3c20c30fdd7875414ed04c1a695eb226fd43328004c6916873",
+        "source": "google-open-source-security",
+        "versions": [
+          "3.3.1",
+          "5.0.0"
+        ]
+      }
+    ],
+    "registryVersionTimesUtc": {
+      "3.3.1": "2025-07-19T11:40:30.778Z",
+      "5.0.0": "2025-07-19T18:36:23.013Z"
+    },
+    "affectedVersionObjectsRetained": {
+      "3.3.1": false,
+      "5.0.0": false
+    },
+    "preEventLatestVersion": "3.3.0",
+    "strictFeatureCutoffUtc": "2025-07-19T11:40:30.777Z"
+  },
+  "sourceProvenance": {
+    "openssfRecord": {
+      "url": "https://raw.githubusercontent.com/ossf/malicious-packages/063a778886548231828c8e476eecdb5c5c04fbcb/osv/malicious/npm/is/MAL-2025-6020.json",
+      "commit": "063a778886548231828c8e476eecdb5c5c04fbcb",
+      "responseSha256": "25ee575ae0b354373c2eed9fa30d97125f5e13806ce05e21c0ee1764f36d32f5"
+    },
+    "independentTechnicalReport": {
+      "url": "https://www.stepsecurity.io/blog/another-npm-supply-chain-attack-the-is-package-compromise",
+      "responseSha256": "a0f65f0ea8062d910a23bdfdb9eca12b8f81419b03fc74e6a4ffeb39376377ea"
+    },
+    "maintainerRemediationChangelog": {
+      "url": "https://raw.githubusercontent.com/enricomarino/is/0fe137a5946e4ecb0e649bd7dea48d5415a242fc/CHANGELOG.md",
+      "responseSha256": "d9200df1311c77754e712e23233ca6bdad87dd30ed423e109576d72e8d931489"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/is",
+      "responseSha256": "4a664a2379f8e694c84c7c6183d3a00483045143bfa0035d8e15fae140df1869"
+    }
+  },
+  "inclusionBoundary": [
+    "This assessment admits only is@3.3.1 and is@5.0.0 after agreement among the frozen OpenSSF record, a dated independent technical report, the project maintainer’s remediation changelog, and the official npm registry version-time map.",
+    "The strict cutoff is one millisecond before the earliest affected-release timestamp and selects the latest registry-retained package source object strictly before that time.",
+    "The record is one new incident family and does not assert that it is complete for a broader phishing campaign or that any reported downstream effect occurred."
+  ],
+  "prohibitedInterpretations": [
+    "This artifact does not create a cutoff-valid control population, benign labels, historical installation trace, dependency reach, or blast-radius estimate.",
+    "This artifact does not establish campaign-wide completeness or turn correlated campaign packages into independent incident families.",
+    "This artifact does not license ranking, calibration, PR-AUC, Recall@K, logistic regression, or attack-return claims."
+  ]
+}

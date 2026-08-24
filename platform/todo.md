@@ -132,3 +132,6 @@
 - [x] Define a machine-readable, non-executed provider-access request specification for a frozen npm package-version population, independently adjudicated positive join, and pre-registered horizon
 - [x] Validate the specification against the existing deps.dev access and target-mismatch findings, making clear that it neither supplies credentials nor creates data rows or controls
 - [x] Publish the access specification in Methodology and Gap Analysis with regression coverage and retain the no-control/no-model result
+- [x] Identify one compact, independently documented npm incident-provenance candidate that is distinct from the existing eight adjudicated families
+- [x] Validate affected-version scope, timing, independent corroboration, registry cutoff, and incident-family independence under the frozen adjudication protocol
+- [x] Publish only a qualified ledger addition or a precise provenance exclusion, retaining zero inferred controls and no unsupported metrics

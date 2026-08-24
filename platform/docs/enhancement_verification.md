@@ -141,3 +141,11 @@ The authenticated `/workspace/gap-analysis` page was reloaded after publishing t
 An in-page authenticated search then located `90_authorized_npm_control_frame_access_specification.json` in Gap Analysis and displayed its statement that the artifact is a non-executed extraction contract. This verifies that the new zero-control, future-access specification is served through the protected workspace rather than only present in the repository.
 
 The authenticated `/workspace/methodology` page was also reloaded and searched for the same artifact. The rendered amendment describes it as a non-executed reproducibility contract and explicitly states that it creates zero controls, labels, model fits, and metrics.
+
+The authenticated `/workspace/incident-labels` page was reloaded after the bounded `is` admission. The protected source query resolved and rendered the thirteen-record, nine-family register, including `is@3.3.1` and `5.0.0`, frozen OpenSSF `MAL-2025-6020`, the independent StepSecurity report, the maintainer remediation reference, and the exact `is@3.3.1` cutoff statement. The page remained authenticated and showed no rendering error.
+
+After reconciling the source-service summaries, the same authenticated workspace was reloaded. Its visible incident-card list now includes **is 2025**, labels it as a maintainer-account compromise, identifies `is@3.3.1` and `5.0.0`, retains the strict pre-event cutoff wording, and states that the bounded record is not a campaign-completeness or control observation.
+
+The authenticated `/workspace/gap-analysis` page was reloaded after the ledger and generated artifacts were reconciled. The rendered executive finding reports thirteen package-event records, nine incident families, eleven exact pre-event snapshots, 28 direct declarations, and 63 bounded edges, while preserving the explicit no-fit conclusion for ranking, calibration, and predictive metrics.
+
+The authenticated `/workspace/methodology` page was reloaded after the same reconciliation. Its rendered implementation amendment includes the bounded `is` admission, the thirteen-record and nine-family totals, eleven exact snapshots across eight exact-snapshot families, and the unchanged no-control/no-model restriction.

@@ -312,3 +312,13 @@ The new specification requires a user-controlled BigQuery environment, one named
 
 48. Open Source Insights, “deps.dev BigQuery dataset” documentation: <https://docs.deps.dev/bigquery/v1/>.
 49. Open Source Vulnerabilities, “Introduction to OSV”: <https://google.github.io/osv.dev/>.
+
+## Bounded `is` maintainer-compromise admission — 2026-08-24
+
+A compact `is` package-event candidate passed the frozen adjudication threshold. The frozen OpenSSF record `MAL-2025-6020` identifies `is@3.3.1` and `5.0.0` as unauthorized releases containing malicious obfuscated code through account compromise. Its immutable record preserves Google Open Source Security origin data. A dated StepSecurity report independently names the same pair and dates their npm publication to 19 July 2025, while the project maintainer’s `v3.3.2` remediation changelog states that those two releases were published with malware by a hijacked account. [50] [51] [52]
+
+The official npm registry time map sets `is@3.3.1` at `2025-07-19T11:40:30.778Z`; one millisecond earlier selects `is@3.3.0` as the exact retained pre-event source object. The package-event ledger therefore admits exactly one `is_maintainer_compromise_2025` family record with two affected versions. It does not claim campaign completeness, downstream exposure, historical installation state, dependency reach, blast radius, controls, benign labels, ranking, calibration, or predictive metrics. The reproducible screen is `91_is_package_compromise_candidate_assessment.json` and its builder only fetches registry and incident metadata.
+
+50. OpenSSF Malicious Packages, `MAL-2025-6020: Malicious code in is (npm)`, frozen at commit `063a778886548231828c8e476eecdb5c5c04fbcb`: <https://github.com/ossf/malicious-packages/blob/063a778886548231828c8e476eecdb5c5c04fbcb/osv/malicious/npm/is/MAL-2025-6020.json>.
+51. StepSecurity, “Another npm Supply Chain Attack: The 'is' Package Compromise,” 22 July 2025: <https://www.stepsecurity.io/blog/another-npm-supply-chain-attack-the-is-package-compromise>.
+52. enricomarino/is, `v3.3.2` remediation commit `0fe137a5946e4ecb0e649bd7dea48d5415a242fc`: <https://github.com/enricomarino/is/commit/0fe137a5946e4ecb0e649bd7dea48d5415a242fc>.

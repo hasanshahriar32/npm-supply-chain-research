@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const researchDir = path.join(root, "research");
-const manifestUrl = "https://raw.githubusercontent.com/DataDog/malicious-software-packages-dataset/main/samples/npm/manifest.json";
-const commitUrl = "https://api.github.com/repos/DataDog/malicious-software-packages-dataset/commits/main";
+const repositoryCommit = {
+  sha: "6de6e895805a8415f4cc6093f870587a768c67cd",
+  committedAtUtc: "2026-08-24T09:05:46Z",
+};
+const manifestUrl = `https://raw.githubusercontent.com/DataDog/malicious-software-packages-dataset/${repositoryCommit.sha}/samples/npm/manifest.json`;
 
 function parseCsv(text) {
   const [header, ...lines] = text.trim().split(/\r?\n/);
@@ -27,15 +30,10 @@ function parseCsv(text) {
 }
 
 const ledger = parseCsv(await readFile(path.join(researchDir, "64_temporal_package_event_ledger.csv"), "utf8"));
-const [manifestResponse, commitResponse] = await Promise.all([
-  fetch(manifestUrl, { headers: { Accept: "application/json", "User-Agent": "supply-chain-research-datadog-overlap/1.0" } }),
-  fetch(commitUrl, { headers: { Accept: "application/vnd.github+json", "User-Agent": "supply-chain-research-datadog-overlap/1.0" } }),
-]);
+const manifestResponse = await fetch(manifestUrl, { headers: { Accept: "application/json", "User-Agent": "supply-chain-research-datadog-overlap/1.0" } });
 if (!manifestResponse.ok) throw new Error(`DataDog manifest request failed (${manifestResponse.status}).`);
-if (!commitResponse.ok) throw new Error(`DataDog commit request failed (${commitResponse.status}).`);
 const manifestText = await manifestResponse.text();
 const manifest = JSON.parse(manifestText);
-const commit = await commitResponse.json();
 const overlap = ledger.map(row => {
   const affected = row.affected_versions.split("|");
   const entry = Object.prototype.hasOwnProperty.call(manifest, row.package_name) ? manifest[row.package_name] : undefined;
@@ -67,8 +65,8 @@ const output = {
   source: {
     manifestUrl,
     manifestSha256: createHash("sha256").update(manifestText).digest("hex"),
-    repositoryCommitSha: commit.sha,
-    repositoryCommitUtc: commit.commit?.committer?.date ?? null,
+    repositoryCommitSha: repositoryCommit.sha,
+    repositoryCommitUtc: repositoryCommit.committedAtUtc,
   },
   summary: {
     primaryRecordsChecked: overlap.length,
