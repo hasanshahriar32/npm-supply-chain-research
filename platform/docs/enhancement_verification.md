@@ -127,3 +127,5 @@ The authenticated `/workspace/gap-analysis` page was then revalidated. It render
 The authenticated `/workspace/gap-analysis` page was revalidated after the bounded Figshare detector-benchmark assessment. The rendered control-frame table now identifies the versioned benchmark as a release-classification lead only, explains its missing benign timing and outcome horizon, and retains the explicit zero-control decision.
 
 The authenticated `/workspace/gap-analysis` page was revalidated after publication of the GitHub Advisory Database malware-path assessment. The rendered comparison identifies it as OSV positive-advisory provenance only, explains the lack of a frozen at-risk population and non-event horizon, and retains the zero-control decision.
+
+The authenticated `/workspace/gap-analysis` page was revalidated after publication of the npm-follower access assessment. The rendered comparison identifies the historical npm archive, its greater-than-20-TB public-access boundary, and the absence of a compact filtered export, matched outcome coverage, or non-event horizon; it retains the zero-control decision.

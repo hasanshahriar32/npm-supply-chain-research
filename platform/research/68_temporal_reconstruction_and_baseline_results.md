@@ -127,6 +127,8 @@ The Figshare replication package for Guo et al.’s 2026 detector benchmark is a
 
 GitHub’s public malware-advisory path is similarly a **positive-provenance lead only**. GitHub documents an importer that validates OpenSSF OSV records, preserves upstream records as snapshots, drops entries without usable affected versions, and handles later retractions; its Advisory Database repository documents OSV-formatted advisories, curation, and npm support. [26] [27] Those properties can support future corroboration of an individually adjudicated positive record, but the documentation defines an advisory database rather than a frozen at-risk npm package-version population. It provides no closed-world malicious-publication or maintainer-compromise coverage statement and no paired non-event horizon. Advisory absence remains unknown, not benign; the path creates **zero controls**.
 
+The `npm-follower` archive is a more promising historical-population concept but not an accessible control source. Its project documents real-time archiving of npm metadata and code, including deleted versions, at a stated scale above 20 TB. [28] The linked public `dependencies.science` repository is only static website source and exposes no compact release, filtered export, query API, or row-addressable historical snapshot. [29] More importantly, the archive itself does not supply matched malicious-publication or maintainer-compromise outcome coverage or a non-event horizon. It is therefore excluded under the bounded-access and outcome-contract gates; no data rows or controls were created.
+
 | Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
 |---|---|---|---|---|
 | Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
@@ -134,6 +136,7 @@ GitHub’s public malware-advisory path is similarly a **positive-provenance lea
 | Libraries.io public metadata | Current scraped package metadata | No frozen historical outcome contract | Public page, but no documented temporal denominator | Excluded. |
 | Guo et al. Figshare detector benchmark | Versioned package/version labels and partial malware timestamps | Retrospective detector corpus; benign list lacks timestamp, cutoff, and horizon | Bounded metadata-only ZIP access works | Excluded as primary temporal control frame. |
 | GitHub Advisory Database malware path | OSV positive-advisory provenance and update/retraction handling | No frozen at-risk population, closed-world compromise coverage, or non-event horizon | Public repository and announcement | Excluded as primary temporal control frame. |
+| npm-follower archive | Real-time historical npm metadata and code archive, including deleted versions | No matched malicious-publication/compromise coverage or non-event horizon | More than 20 TB; no public filtered export or query path documented | Excluded under bounded-access and outcome-contract gates. |
 
 ## What the discovered version-resolved dataset changes—and does not change
 
@@ -202,3 +205,7 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [26] [GitHub Blog, “How we took malware advisories beyond npm,” 6 August 2026](https://github.blog/security/supply-chain-security/how-we-took-malware-advisories-beyond-npm/).
 
 [27] [GitHub, “GitHub Advisory Database” repository documentation](https://github.com/github/advisory-database).
+
+[28] [D. Pinckney et al., “npm-follower: A Complete Dataset Tracking the NPM Ecosystem,” project publication page, 2023](https://donaldpinckney.com/publication/npm-follower/).
+
+[29] [D. Pinckney, `dependencies.science` repository](https://github.com/donald-pinckney/dependencies.science).

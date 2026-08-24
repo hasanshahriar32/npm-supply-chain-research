@@ -117,3 +117,6 @@
 - [x] Identify a further compact public source with potential temporal outcome evidence: GitHub’s malware-advisory import path and public Advisory Database
 - [x] Validate the GitHub advisory path against the frozen control-frame contract and bounded-access policy; it documents positive advisories but not a valid non-event population or horizon
 - [x] Publish a precise positive-provenance exclusion, preserving zero inferred benign controls because advisory absence remains unknown
+- [x] Identify an additional historical npm population source: npm-follower’s real-time archive of package metadata and code
+- [x] Validate npm-follower against the frozen contract; no compact export, query API, matched outcome coverage, or non-event horizon is documented on the public access path
+- [x] Publish a precise bounded-access and outcome-contract exclusion, retaining zero inferred benign controls because all control-frame requirements remain incomplete

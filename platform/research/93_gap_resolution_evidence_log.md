@@ -275,6 +275,15 @@ This is a potentially useful **positive-advisory provenance and snapshot lead**,
 42. GitHub Blog, “How we took malware advisories beyond npm,” 6 August 2026: <https://github.blog/security/supply-chain-security/how-we-took-malware-advisories-beyond-npm/>.
 43. GitHub, “GitHub Advisory Database” repository documentation: <https://github.com/github/advisory-database>.
 
+## npm-follower historical-population access screen — 2026-08-24
+
+The npm-follower project documents a real-time replica of the entire npm ecosystem, including package metadata and code, with a stated size of more than 20 TB. [44] This makes it conceptually relevant to historical package-version population reconstruction, including versions no longer retained by the current registry. However, the public `dependencies.science` repository is only the static website source: it lists no release, package, compact data artifact, filtered export, query API, or row-addressable historical package-version snapshot. [45]
+
+The path is consequently excluded from the current control-frame pipeline. It fails the bounded reproducible-access requirement, and it does not itself define closed-world malicious-publication or maintainer-compromise coverage, a non-event horizon, or a benign label contract. No download, data rows, controls, labels, calibration results, or model metrics were created. Authorized access to a defined filtered export would still require a separately frozen incident-coverage and outcome-horizon source before control extraction could begin.
+
+44. D. Pinckney et al., “npm-follower: A Complete Dataset Tracking the NPM Ecosystem,” project publication page, 2023: <https://donaldpinckney.com/publication/npm-follower/>.
+45. D. Pinckney, `dependencies.science` repository: <https://github.com/donald-pinckney/dependencies.science>.
+
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.

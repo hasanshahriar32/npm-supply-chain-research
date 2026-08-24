@@ -42,6 +42,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Control-frame contract and public snapshot access assessment") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Figshare replication package") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("GitHub’s public malware-advisory path") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
@@ -159,6 +160,17 @@ describe("repository-backed research sources", () => {
     expect(assessment).toMatchObject({ controlFrameDecision: "excluded", controlsCreated: 0, primaryTemporalLabelsCreated: 0, candidate: { format: "OSV advisory records", supportedEcosystem: "npm" } });
     expect(assessment.blockingConditions).toContain("Absence from an advisory record cannot be interpreted as benign, uncompromised, or no-known-event.");
     expect(assessment.prohibitedInterpretations).toContain("Do not derive benign controls from advisory absence.");
+  });
+
+  it("retains npm-follower as a historical-population lead rather than an accessible temporal control source", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/87_npm_follower_population_access_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      controlFrameDecision: "excluded",
+      controlsCreated: 0,
+      boundedAccessScreen: { compactDataReleaseFound: false, filteredExportFound: false, queryApiFound: false, rowAddressableHistoricalPackageVersionSnapshotFound: false, dataRowsRetrieved: 0 },
+    });
+    expect(assessment.blockingConditions).toContain("No compact, reproducible filtered export, query API, or row-addressable historical package-version snapshot was documented on the public access path.");
+    expect(assessment.prohibitedInterpretations).toContain("Do not treat npm-follower’s existence as current access to a control population.");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {
