@@ -155,6 +155,19 @@ The decision is an **access-contract exclusion**, not a provenance-state result 
 
 The census stores only record identifiers, selected version identifiers and timestamps, retention states, and current response provenance. It extracts **zero package metadata, maintainer, publisher, repository, workflow, provenance, or attestation values**; derives **zero features**; and creates **zero controls, scores, models, rankings, or predictive metrics**. Current retention differences do not make campaign rows independent and cannot stand in for any release-time package, authority, dependency, or workflow observation.
 
+## Future raw-evidence capture contract for release-authority deltas
+
+`99_release_authority_raw_evidence_capture_contract.json` operationalizes the existing future-only delta ontology without observing a new authority value. It defines the collection envelope that must exist **before** a future eligible comparison: a frozen field-specific plan; access-controlled, immutable raw-evidence storage; append-only chain-of-custody records; source-time validity checks; and offline canonicalization that writes only opaque, access-controlled commitments to a public-safe ledger.
+
+| Contract element | Required future safeguard | Explicitly not produced now |
+|---|---|---|
+| Raw evidence integrity | Exact received bytes, byte digest, length, media type, retrieval protocol, and transformation lineage reside in controlled storage. | No evidence object, endpoint contact, package payload, installation, or execution. |
+| Opaque canonicalization | Versioned offline function plus keyed, non-public commitments prevent raw value publication and low-entropy dictionary recovery. | No raw value, canonicalization run, commitment, equality result, or delta classification. |
+| Source-time validity | Pairwise release/predecessor binding, field semantics, historical retention, and release-time relation must be documented before collection. | No current registry, maintainer, repository, VCS, workflow, or provenance state is substituted. |
+| Six field schemas | Repository link, source revision, manifest intent, provenance, publisher/mediation, and workflow evidence each have a narrow allowable source class. | No authority feature, control, outcome, score, rank, interval, model, calibration, or metric. |
+
+The contract is deliberately **pre-activation**. A capture run remains prohibited unless a frozen package-version population and independently adjudicated, target-matched, horizon-covered outcome manifest satisfy the primary control-frame gate, and the collector is insulated from outcomes until quality control is sealed. Missing, redacted, malformed, current-only, or time-ambiguous evidence remains a reason code—not `unchanged`, safe, benign, trusted, or no-known-event.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.

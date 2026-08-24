@@ -292,6 +292,18 @@ describe("repository-backed research sources", () => {
     expect(census.prohibitedInterpretations).toContain("Do not treat a current registry retention state as a historical package, maintainer, repository, provenance, workflow, or dependency-state observation.");
   });
 
+  it("retains the release-authority raw-evidence capture contract as future-only and opaque", async () => {
+    const contract = await import("node:fs/promises").then((fs) => fs.readFile("research/99_release_authority_raw_evidence_capture_contract.json", "utf8")).then(JSON.parse);
+    expect(contract).toMatchObject({
+      executionStatus: "future_only_contract_no_raw_evidence_retrieved_stored_canonicalized_or_compared",
+      protocolInput: { deltaTypes: ["repository_link_discontinuity", "source_revision_reference_discontinuity", "release_manifest_publication_intent_discontinuity", "verifiable_provenance_attestation_state_transition", "release_mediation_or_publisher_authority_transition", "release_workflow_authority_transition"] },
+      currentDecision: { rawEvidenceObjectsRetrieved: 0, rawAuthorityValuesStored: 0, rawAuthorityValuesPublished: 0, sourceEndpointsContacted: 0, packagePayloadsDownloaded: 0, packageInstallationsRun: 0, canonicalizationRunsExecuted: 0, opaqueCommitmentsRecorded: 0, sourceTimeValidityDecisionsMade: 0, observedDeltasClassified: 0, controlsCreated: 0, authorityScoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(contract.fieldCollectionSchemas).toHaveLength(6);
+    expect(contract.captureManifestSchema.forbiddenFields).toContain("Outcome labels, incident labels, control labels, model scores, ranks, or metric values in the collection manifest.");
+    expect(contract.prohibitedInterpretations).toContain("This contract is not a raw-evidence collection, a current-state audit, a delta comparison, or an authority assessment.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

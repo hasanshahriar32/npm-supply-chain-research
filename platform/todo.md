@@ -153,3 +153,6 @@
 - [x] Define a full-ledger source-object retention census that distinguishes current registry retention from release-time historical evidence and preserves label-only exceptions
 - [x] Reconstruct bounded retention states, response provenance, and exact source-selection eligibility for all fourteen incident records without deriving package features or outcomes
 - [x] Publish the retention census with regression coverage while retaining zero controls, feature values, scores, models, rankings, or predictive metrics
+- [x] Define a future-only raw-evidence capture contract for release-authority delta work that prohibits present observation and value comparison
+- [x] Specify checksum, opaque canonicalization, source-time validity, and typed field-schema requirements without storing authority values or delta classifications
+- [x] Publish the capture contract with regression safeguards while retaining zero raw evidence, controls, scores, models, rankings, intervals, or predictive metrics

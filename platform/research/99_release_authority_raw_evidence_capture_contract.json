@@ -1,0 +1,235 @@
+{
+  "study": "future-only-release-authority-raw-evidence-capture-contract",
+  "artifactVersion": 1,
+  "executionStatus": "future_only_contract_no_raw_evidence_retrieved_stored_canonicalized_or_compared",
+  "generatedAtUtc": "2026-08-24T12:39:31.888Z",
+  "protocolInput": {
+    "path": "research/96_release_authority_delta_semantics_protocol.json",
+    "sha256": "763d2b21a2d861a81fd58777074ba598d4b359241a14e286cdb67ee16dfcdb67",
+    "requiredExecutionStatus": "protocol_only_no_metadata_values_compared_or_deltas_classified",
+    "deltaTypes": [
+      "repository_link_discontinuity",
+      "source_revision_reference_discontinuity",
+      "release_manifest_publication_intent_discontinuity",
+      "verifiable_provenance_attestation_state_transition",
+      "release_mediation_or_publisher_authority_transition",
+      "release_workflow_authority_transition"
+    ]
+  },
+  "purposeAndScope": {
+    "purpose": "Pre-register an auditable capture envelope for future release-authority evidence before any eligible comparison or outcome inspection.",
+    "unit": "One candidate release and its immediate retained predecessor, each with version-specific evidence references only.",
+    "noObservationBoundary": "This artifact defines a future capture procedure. It does not contact a registry, repository, transparency log, provider, API, archive, package artifact, or workflow endpoint.",
+    "noPayloadBoundary": "The contract does not download package tarballs, install packages, execute package code, resolve dependencies, or retrieve a package artifact merely to attempt authority collection.",
+    "noOutcomeBoundary": "Authority capture must complete and pass quality control before a separately retained future outcome manifest is made available to the capture operator or analysis process."
+  },
+  "activationGate": {
+    "allRequiredBeforeAnyCapture": [
+      "The primary control-frame contract is satisfied by a frozen package-version population and independently adjudicated, target-matched outcome coverage over a pre-registered horizon.",
+      "The delta-semantics protocol and a field-specific collection plan are frozen with source-specific historical retention and time-validity rules.",
+      "The selected release and immediate retained predecessor are version-addressable source objects that precede the relevant release cutoff.",
+      "An access-controlled evidence store, encryption key-custody record, and immutable append-only capture ledger are provisioned outside the public repository.",
+      "The campaign-relatedness validation-unit registry is frozen, but it is withheld from capture operators until after raw-evidence quality control is sealed."
+    ],
+    "prohibitedActivationFallbacks": [
+      "Do not substitute a current package root document, dist-tag, maintainer roster, repository profile, workflow view, VCS branch, or account state.",
+      "Do not replace an unavailable predecessor with a nearest semantic version or a later retained release.",
+      "Do not collect source evidence after looking at outcomes, incident labels, risk scores, rankings, or model results."
+    ]
+  },
+  "captureManifestSchema": {
+    "description": "One immutable manifest for a future, completed collection run. Every field below is a schema requirement, not an observed value in this artifact.",
+    "requiredPublicSafeFields": [
+      "captureManifestIdOpaque",
+      "contractVersion",
+      "fieldCollectionPlanSha256",
+      "releasePairIdentifierOpaque",
+      "deltaType",
+      "sourceEvidenceClass",
+      "retrievalProtocolIdentifier",
+      "retrievalStartedAtUtc",
+      "retrievalCompletedAtUtc",
+      "sourceTimeValidityDecision",
+      "sourceTimeValidityReasonCode",
+      "rawEvidenceObjectReferenceOpaque",
+      "rawEvidenceByteSha256",
+      "rawEvidenceByteLength",
+      "rawEvidenceMediaType",
+      "canonicalizationFunctionIdentifier",
+      "canonicalizationFunctionVersion",
+      "canonicalizationInputCommitmentOpaque",
+      "canonicalizationOutputCommitmentOpaque",
+      "collectorRoleIdentifierOpaque",
+      "appendOnlyLedgerSequence",
+      "qualityControlDecision",
+      "qualityControlReasonCodes"
+    ],
+    "forbiddenFields": [
+      "Raw repository URLs, revision strings, publisher identifiers, account identifiers, workflow text, certificates, tokens, credentials, provenance statements, or canonicalized authority values in the public manifest.",
+      "Outcome labels, incident labels, control labels, model scores, ranks, or metric values in the collection manifest.",
+      "A boolean named unchanged, safe, benign, clean, trusted, or no_known_event as a fallback for missing or ambiguous evidence."
+    ],
+    "opaqueReferenceRule": "Each opaque reference must resolve only through an access-controlled evidence store. It must not be a reversible encoding, a raw value, a public URL, or a deterministic public hash of a low-entropy authority value."
+  },
+  "immutableRawEvidenceRequirements": {
+    "byteIntegrity": "Store the exact received evidence bytes in the access-controlled store and record SHA-256, byte length, media type, retrieval timestamps, and retrieval-protocol identifier in the append-only ledger.",
+    "sourceProvenance": "Record source evidence class, version-specific source-object reference, response status category, and documented source semantics without publishing raw headers, credentials, identities, or values.",
+    "redactionBoundary": "If an evidence object contains credentials, personal data, or security-sensitive material, retain only an approved minimal derivative under a documented redaction procedure; record the derivative relationship and redaction-policy identifier without exposing either object publicly.",
+    "chainOfCustody": "Every transformation must append a parent-object opaque reference, transformation-function identifier and version, operator-role opaque identifier, timestamp, and resulting byte digest. Overwrite and in-place mutation are prohibited."
+  },
+  "opaqueCanonicalizationLedger": {
+    "goal": "Permit future equality or transition checks without publishing raw authority values or enabling a public dictionary attack against low-entropy identifiers.",
+    "preRegisteredFields": [
+      "fieldSelectorIdentifier",
+      "inputObjectReferenceOpaque",
+      "inputByteSha256",
+      "canonicalizationFunctionIdentifier",
+      "canonicalizationFunctionVersion",
+      "canonicalizationParameterSetSha256",
+      "keyedCommitmentAlgorithmIdentifier",
+      "keyCustodyRecordIdentifierOpaque",
+      "canonicalizationOutputCommitmentOpaque",
+      "canonicalizationFailureReasonCode",
+      "transformationLedgerSequence"
+    ],
+    "requiredControls": [
+      "Canonicalization must be deterministic under the declared function version and parameter-set digest, and must never follow redirects, resolve a hostname, query current repository ownership, inspect a current VCS branch, or perform a network request.",
+      "Use an access-controlled keyed commitment for canonical outputs; neither the key nor a raw or unhashed canonical value may enter the repository, public artifact, test fixture, log, or benchmark table.",
+      "A canonicalization failure, malformed value, unavailable source, or ambiguous field must remain an explicit non-eligible reason; it must not become an empty string, equality, unchanged state, or negative outcome.",
+      "The same declaration must be used for both predecessor and selected release evidence before either canonical output is accessed for a future comparison."
+    ]
+  },
+  "sourceTimeValiditySchema": {
+    "requiredChecks": [
+      "selected_release_version_time_precedes_relevant_cutoff",
+      "predecessor_is_immediate_retained_predecessor_by_version_time",
+      "evidence_is_bound_to_the_version_specific_source_object_or_to_a_documented_equivalent_historical_release_record",
+      "source_semantics_and_retention_guarantee_are_recorded_before_capture",
+      "external_evidence_time_relation_to_release_is_documented_without_substituting_current_state",
+      "retrieval_after_release_is_distinguished_from_evidence_about_release_time"
+    ],
+    "decisionVocabulary": {
+      "time_valid_for_opaque_capture": "Required time relations and source semantics are documented; this permits capture only, not a public comparison or outcome join.",
+      "not_time_valid": "A required release, predecessor, binding, timestamp, or source-semantics condition fails.",
+      "time_ambiguous": "Available evidence cannot establish the required time relation or binding; do not capture a substitute value.",
+      "not_applicable": "The declared delta type cannot be meaningfully tied to the release regime."
+    }
+  },
+  "fieldCollectionSchemas": [
+    {
+      "deltaType": "repository_link_discontinuity",
+      "allowableSourceEvidenceClass": "version_specific_registry_release_object",
+      "opaqueFieldSelector": "repository_descriptor",
+      "requiredPairBindings": [
+        "selected_release_object",
+        "immediate_predecessor_release_object"
+      ],
+      "sourceTimeRule": "Each descriptor must be retained inside its own version-specific release object selected before the relevant cutoff.",
+      "noCurrentStateSubstitute": "No redirect follow, repository ownership lookup, current URL resolution, or current repository metadata is permitted."
+    },
+    {
+      "deltaType": "source_revision_reference_discontinuity",
+      "allowableSourceEvidenceClass": "version_specific_registry_release_object",
+      "opaqueFieldSelector": "source_revision_reference",
+      "requiredPairBindings": [
+        "selected_release_object",
+        "immediate_predecessor_release_object",
+        "registry_field_semantics_record"
+      ],
+      "sourceTimeRule": "Each reference must be bound to its release object and accompanied by the pre-registered registry-semantics record.",
+      "noCurrentStateSubstitute": "No current branch, tag, commit, repository, or VCS availability query is permitted."
+    },
+    {
+      "deltaType": "release_manifest_publication_intent_discontinuity",
+      "allowableSourceEvidenceClass": "version_specific_release_manifest_fragment",
+      "opaqueFieldSelector": "publish_configuration_allowlist_fragment",
+      "requiredPairBindings": [
+        "selected_release_manifest",
+        "immediate_predecessor_manifest",
+        "versioned_field_allowlist"
+      ],
+      "sourceTimeRule": "Each fragment must be retained in its version-specific manifest and parsed by the declared schema version.",
+      "noCurrentStateSubstitute": "Missing manifest fields remain unobservable; do not infer a workflow, actor, or build system."
+    },
+    {
+      "deltaType": "verifiable_provenance_attestation_state_transition",
+      "allowableSourceEvidenceClass": "artifact_bound_signed_attestation_with_transparency_log_reference",
+      "opaqueFieldSelector": "verification_policy_output",
+      "requiredPairBindings": [
+        "selected_release_artifact_binding",
+        "predecessor_release_artifact_binding",
+        "verification_policy",
+        "tool_version",
+        "transparency_log_reference"
+      ],
+      "sourceTimeRule": "The signed evidence must be bound to the release artifact and its time relation to publication must be documented.",
+      "noCurrentStateSubstitute": "No current badge, provenance page, unverified log search, or package download is a substitute under this metadata-only contract."
+    },
+    {
+      "deltaType": "release_mediation_or_publisher_authority_transition",
+      "allowableSourceEvidenceClass": "registry_native_version_specific_historically_retained_authority_evidence",
+      "opaqueFieldSelector": "pseudonymized_publication_authority_reference",
+      "requiredPairBindings": [
+        "selected_release_authority_evidence",
+        "predecessor_release_authority_evidence",
+        "registry_semantics_record",
+        "identifier_pseudonymization_policy"
+      ],
+      "sourceTimeRule": "Historical retention and field semantics must be independently documented for each version-specific evidence object.",
+      "noCurrentStateSubstitute": "No current maintainer roster, account profile, publisher page, or registry root document is permitted."
+    },
+    {
+      "deltaType": "release_workflow_authority_transition",
+      "allowableSourceEvidenceClass": "release_specific_commit_bound_workflow_evidence",
+      "opaqueFieldSelector": "workflow_authority_schema_fragment",
+      "requiredPairBindings": [
+        "selected_release_source_binding",
+        "predecessor_release_source_binding",
+        "historical_revision_workflow_evidence",
+        "evidence_chain_verification_policy"
+      ],
+      "sourceTimeRule": "Both workflow states must be retrieved at exact historical revisions and bound to their releases by verified provenance or an equivalently time-valid evidence chain.",
+      "noCurrentStateSubstitute": "No default-branch workflow, current repository setting, or public workflow absence is a substitute for historical revision evidence."
+    }
+  ],
+  "captureLifecycle": {
+    "sequence": [
+      "Freeze the field-specific collection plan and its hash before any source contact.",
+      "Verify source-object and time-validity eligibility without revealing an outcome manifest.",
+      "Collect only the pre-registered minimum evidence object through the declared metadata-only access path.",
+      "Seal raw bytes and append source provenance plus byte-integrity records in the access-controlled evidence store.",
+      "Execute the declared offline canonicalization and write only opaque commitments and reason codes to the public-safe ledger.",
+      "Conduct independent quality control against the frozen contract and seal the decision before any outcome join, grouping, model, or metric stage."
+    ],
+    "abortConditions": [
+      "Any source requires a package payload, package installation, code execution, unapproved authentication, or a guessed endpoint.",
+      "Any required source-time binding, historical retention guarantee, semantic record, or canonicalization control is absent or ambiguous.",
+      "The collector can see target outcomes, incident labels, controls, scores, rankings, or model results before sealing quality control."
+    ]
+  },
+  "currentDecision": {
+    "rawEvidenceObjectsRetrieved": 0,
+    "rawAuthorityValuesStored": 0,
+    "rawAuthorityValuesPublished": 0,
+    "sourceEndpointsContacted": 0,
+    "packagePayloadsDownloaded": 0,
+    "packageInstallationsRun": 0,
+    "canonicalizationRunsExecuted": 0,
+    "opaqueCommitmentsRecorded": 0,
+    "sourceTimeValidityDecisionsMade": 0,
+    "observedDeltasClassified": 0,
+    "controlsCreated": 0,
+    "authorityScoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "predictiveMetricsComputed": 0,
+    "status": "blocked_pending_primary_control_frame_and_authorized_pre_registered_evidence_collection"
+  },
+  "prohibitedInterpretations": [
+    "This contract is not a raw-evidence collection, a current-state audit, a delta comparison, or an authority assessment.",
+    "An opaque reference, digest, or commitment is evidence-integrity metadata only; it is not a release-authority value, a security score, or proof of a change.",
+    "Unavailable, missing, redacted, malformed, current-only, or time-ambiguous evidence must not be recoded as unchanged, safe, benign, trusted, or no-known-event.",
+    "No capture run may be used for controls, outcomes, effects, scores, rankings, models, intervals, calibration, or predictive metrics until every separate benchmark gate is met."
+  ]
+}
