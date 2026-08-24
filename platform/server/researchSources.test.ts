@@ -84,4 +84,14 @@ describe("repository-backed research sources", () => {
     expect(diagnostic.summary).toMatchObject({ boundedEdges: 45, directDepthOneEdges: 20, depthTwoEdges: 15, depthThreeEdges: 10, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
     expect(diagnostic.interpretation).toContain("not historical installed-tree size");
   });
+
+  it("keeps the explicit-label release corpus separate from a primary future-compromise control frame", async () => {
+    const fs = await import("node:fs/promises");
+    const provenance = JSON.parse(await fs.readFile("research/77_amalfi_release_sensitivity_diagnostics.json", "utf8"));
+    const gate = JSON.parse(await fs.readFile("research/78_amalfi_release_sensitivity_gate.json", "utf8"));
+    expect(provenance.corpus).toMatchObject({ explicitLabelRows: 1790, maliciousRows: 643, benignRows: 1147, distinctPackages: 444 });
+    expect(gate.summary.labelCounts).toMatchObject({ malicious: { retainedRegistryVersionObjects: 9, versionNotRetained: 634 }, benign: { retainedRegistryVersionObjects: 1093, versionNotRetained: 54 } });
+    expect(gate.decision.primaryFutureCompromiseControlFrame).toBe("blocked");
+    expect(gate.prohibitedInterpretations).toContain("Do not call the benign rows generic no-known-event controls.");
+  });
 });
