@@ -177,3 +177,11 @@ The public Amalfi artifact accompanying the ICSE 2022 malicious npm detection st
 This provides explicit package-version negatives for a separate retrospective release-classification sensitivity study; it is not evidence that arbitrary registry versions without an incident are benign. The corpus has no per-row review or horizon timestamps in the exposed CSV, and its case-centred construction is not a population frame for the primary future-compromise target. Any use is therefore isolated from the incident-family temporal benchmark and labelled non-primary.
 
 23. Sejfia and Schäfer, *Amalfi ICSE 2022 artifact*: <https://github.com/githubnext/amalfi-artifact>.
+
+## Human-vetted positive catalogue boundary — 2026-08-24
+
+The DataDog Malicious Software Packages Dataset exposes an npm manifest of known malicious package names with explicit version arrays where available. Its repository says sample-file dates are discovery dates rather than publication dates, and the manifest has no row-level dates, campaign family, evidence URL, or negative labels. [24]
+
+The manifest is consequently admissible only as a frozen positive-membership corroboration source. It cannot set a primary temporal event cutoff, turn an absent manifest entry into a benign label, or form a control population. The project will retain only candidate-overlap outputs and will not ingest samples or execute package content.
+
+24. DataDog, *Malicious Software Packages Dataset*: <https://github.com/DataDog/malicious-software-packages-dataset>.

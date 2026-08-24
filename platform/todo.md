@@ -88,3 +88,6 @@
 - [x] Identify and validate a lower-volume registry-only historical dependency approximation path suitable for the pre-registered incident records, with explicit package-lock and resolver exclusions
 - [x] Identify and evaluate an explicitly labelled release corpus for the cutoff-valid control-frame decision, documenting why it remains non-primary and unsuitable for temporal calibration
 - [x] Execute and publish only additional evidence-gated temporal graph and label-provenance analyses, with no unsupported model metrics
+- [x] Identify compact, independently verifiable historical source or sampling paths that could advance the temporal benchmark without weakening its target definition
+- [x] Validate provenance, timing, label semantics, and retention bias for newly identified candidate data paths, retaining non-primary exclusions where required
+- [x] Execute and publish only the corroboration analysis supported by the validated positive-only catalogue, with no new primary labels, event times, controls, or model metrics

@@ -74,6 +74,12 @@ The public ICSE 2022 Amalfi artifact contains a compact `basic-corpus.csv` whose
 
 The corpus is nevertheless **not** a primary control population for the project's pre-registered future-compromise target. The basic corpus is a classifier training corpus, is concentrated around known malicious-package families, and its README does not provide per-row discovery, review, or outcome-horizon timestamps. It can support only a clearly named **retrospective release-classification sensitivity** after release timestamps and corpus version hashes are frozen. It cannot support the main incident-family ranking, calibration, or blast-radius claims, and it must not be merged with the independently adjudicated compromise ledger.
 
+## Human-vetted positive-only catalogue
+
+The DataDog Malicious Software Packages Dataset publishes an npm `manifest.json` whose values are either an explicit list of known malicious versions or `null` when the catalogue does not specify a version. Its repository documents the sample filename date as a **discovery date**, not necessarily a package publication date. [13] The manifest itself has no per-record discovery date, evidence URL, campaign-family identifier, or negative/control rows.
+
+This makes the manifest useful only as a frozen, human-vetted **positive-membership corroboration** for existing or separately sourced package-version records. It cannot establish an event time for a new primary incident label, cannot distinguish a `null` value from a safe package version, and cannot create a control population. Any overlap is retained as candidate-level corroboration and never used to overwrite primary incident evidence or temporal cutoffs.
+
 ## References
 
 [1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
@@ -88,3 +94,4 @@ The corpus is nevertheless **not** a primary control population for the project'
 [10]: https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/ "npm package-lock documentation"
 [11]: https://docs.npmjs.com/cli/v6/using-npm/semver/ "npm SemVer documentation"
 [12]: https://github.com/githubnext/amalfi-artifact "Amalfi ICSE 2022 artifact repository"
+[13]: https://github.com/DataDog/malicious-software-packages-dataset "DataDog Malicious Software Packages Dataset"

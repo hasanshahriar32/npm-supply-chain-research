@@ -94,4 +94,12 @@ describe("repository-backed research sources", () => {
     expect(gate.decision.primaryFutureCompromiseControlFrame).toBe("blocked");
     expect(gate.prohibitedInterpretations).toContain("Do not call the benign rows generic no-known-event controls.");
   });
+
+  it("uses the DataDog manifest only as positive-membership corroboration", async () => {
+    const fs = await import("node:fs/promises");
+    const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 8, exactAffectedVersionMembership: 1, packagePresentVersionsUnspecified: 1, packageNotPresent: 6, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.interpretation).toContain("no event time");
+    expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
+  });
 });

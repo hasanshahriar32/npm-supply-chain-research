@@ -31,6 +31,19 @@ The 2026 Axios family includes two distinct package roles. `axios` is a publishe
 
 Seven of the eight records support an exact pre-event source-package metadata snapshot. The `plain-crypto-js` record remains `not_available` in the current registry reconstruction, so it does not yield a source-version dependency declaration. The associated direct-edge ledger and baseline gate are available in the temporal findings report; neither turns this evidence register into a predictive benchmark.
 
+## Human-vetted positive-catalogue overlap
+
+The current npm manifest from the human-vetted DataDog Malicious Software Packages Dataset was frozen at repository commit `6de6e895805a8415f4cc6093f870587a768c67cd` and compared with the eight primary records. [6] The overlap is intentionally limited to corroboration: the positive-only manifest has no row-level event time, evidence URL, campaign-family assignment, or negative labels, and its sample naming convention refers to discovery—not publication—dates.
+
+| Primary record outcome | Count | Permitted interpretation |
+|---|---:|---|
+| Exact affected-version membership | 1 | The manifest lists both affected Axios versions, corroborating positive package-version membership only. |
+| Package present, versions unspecified | 1 | `plain-crypto-js` is present but has a `null` manifest value; no version-specific assertion follows. |
+| Package absent from current manifest | 6 | No conclusion; absence is not benign evidence and does not alter the primary record. |
+| New primary labels, dates, families, or controls | 0 | The primary ledger remains authoritative. |
+
+The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) stores the source SHA-256 and commit identifier. It neither adds incident records nor changes any primary cutoff or target decision.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -42,3 +55,5 @@ Seven of the eight records support an exact pre-event source-package metadata sn
 [4] [ESLint, “Postmortem for Malicious Package Publishes,” 2018](https://eslint.org/blog/2018/07/postmortem-for-malicious-package-publishes/).
 
 [5] [CISA, “Supply Chain Compromise Impacts Axios Node Package Manager,” 20 April 2026](https://www.cisa.gov/news-events/alerts/2026/04/20/supply-chain-compromise-impacts-axios-node-package-manager).
+
+[6] [DataDog, “Malicious Software Packages Dataset”](https://github.com/DataDog/malicious-software-packages-dataset).
