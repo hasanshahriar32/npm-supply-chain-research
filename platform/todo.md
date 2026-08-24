@@ -138,3 +138,6 @@
 - [x] Identify one newly documented, compact npm compromise candidate with potentially exact version-level scope that is not presumed independent before screening
 - [x] Validate the candidate’s official timestamps, independent corroboration, strict pre-event source object, and relationship to the existing nine incident families
 - [x] Publish only an admissible new family record or a precise non-independence/provenance exclusion, retaining zero inferred controls and no model metrics
+- [x] Define a bounded campaign-relatedness inventory for all fourteen ledger records, distinguishing shared-family rows from documented cross-family payload lineage
+- [x] Specify pre-registered grouped split, resampling, and reporting rules that would apply only after a valid control frame and model-eligibility gate are satisfied
+- [x] Publish the grouped-inference protocol with regression coverage while retaining zero fitted models, uncertainty intervals, rankings, or predictive metrics

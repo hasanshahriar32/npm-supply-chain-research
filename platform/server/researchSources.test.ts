@@ -219,6 +219,23 @@ describe("repository-backed research sources", () => {
     expect(specification.prohibitedActions).toContain("Do not derive controls from advisory absence, registry survival, source omission, current package state, or no-known-event assertions.");
   });
 
+  it("retains campaign-relatedness rules as a non-executed grouped-inference safeguard", async () => {
+    const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/94_campaign_relatedness_and_grouped_inference_protocol.json", "utf8")).then(JSON.parse);
+    expect(protocol).toMatchObject({
+      executionStatus: "protocol_only_no_control_frame_or_model_eligible_dataset",
+      sourceInputs: { strictLedger: { recordCount: 14, familyCount: 10 } },
+      validationUnits: { unitCount: 9 },
+      currentDecision: { controlsCreated: 0, modelsFitted: 0, temporalSplitsGenerated: 0, uncertaintyIntervalsComputed: 0, rankingsComputed: 0, predictiveMetricsComputed: 0, status: "blocked_pending_control_frame_and_model_eligibility" },
+    });
+    expect(protocol.documentedCrossFamilyRelatedness).toContainEqual(expect.objectContaining({
+      sourceFamilyId: "mini_shai_hulud_atool_2026",
+      relatedFamilyId: "keyv_cacheable_august_2026",
+      requiredValidationClusterId: "mini_shai_hulud_payload_lineage_cluster",
+    }));
+    expect(protocol.futureEligibleOnlyRules.resamplingRules).toContain("If uncertainty is eligible, resample validation units rather than individual package-event rows.");
+    expect(protocol.prohibitedInterpretations).toContain("This protocol is not a model, a model evaluation, a confidence interval, or a predictive result.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

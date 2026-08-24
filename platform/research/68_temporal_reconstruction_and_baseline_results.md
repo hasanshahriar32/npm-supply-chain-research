@@ -90,6 +90,19 @@ The gate computed descriptive feature summaries rather than a model. Across the 
 
 The strict positive-count and family-count floors are met. The remaining gate is to pre-register a cutoff-valid control design and ensure that exact historical feature coverage is adequate for the records being evaluated before fitting or calibrating a model. The 2021 `ua-parser-js`, `coa`, and `rc` observations must remain grouped as one family rather than treated as three independent attack instances.
 
+## Campaign relatedness and future grouped-inference protocol
+
+`94_campaign_relatedness_and_grouped_inference_protocol.json` freezes a **non-executed** inference safeguard from the strict fourteen-record ledger. It inventories ten campaign families, keeps the shared-family `unc3379_2021`, Axios, and ESLint records intact, and defines nine validation units after clustering the documented Mini Shai-Hulud `atool` and Keyv/Cacheable payload-lineage families. The latter remain separately dated observations, but payload descent is not evidence of statistical independence. The artifact records source checksums, group memberships, and the exact statement retained from the frozen Keyv assessment.
+
+| Protocol layer | Pre-registered rule | Current result |
+|---|---|---|
+| Split unit | Assign connected components of the documented family-relatedness graph, not package-event rows, to a single temporal partition. | Nine validation units defined; **zero splits generated**. |
+| Temporal order | Use forward-only development, validation, and final-test cutoffs; exclude any split whose evaluation partition is structurally ineligible. | No control frame or model-eligible dataset exists. |
+| Related family handling | Keep `mini_shai_hulud_atool_2026` and `keyv_cacheable_august_2026` in one validation cluster. | Required for any future eligible split or resampling design. |
+| Uncertainty design | If the eligibility gate later opens, resample validation units rather than package-event rows and report degenerate replicates. | **Zero intervals** and no resampling output. |
+
+The implementation references group-aware validation only as a future technical pattern: GroupKFold documents non-overlapping groups; GroupShuffleSplit documents randomized group partitions and fixed seeds; and the cross-validation guide states that time-dependent and grouped processes warrant time-aware and group-wise validation. [39] [40] [41] No library splitter was run. The protocol does not supply controls, a train/test split, model fit, uncertainty interval, rank, or predictive metric; it makes future inference more auditable if and only if the separate frozen-population and target-matched outcome gate is later satisfied.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -239,3 +252,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [37] [Wiz Research, “keyv and cacheable npm Package Hijacked in Supply Chain Attack,” 4 August 2026](https://www.wiz.io/blog/keyv-and-cacheable-npm-supply-chain-attack).
 
 [38] [Snyk, “Inside the keyv npm Compromise: preinstall Malware, Trusted Provenance, and IDE Hooks,” 4 August 2026](https://snyk.io/blog/inside-keyv-npm-compromise-preinstall-malware-trusted-provenance-ide-hooks/).
+
+[39] [scikit-learn, “GroupKFold” documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupKFold.html).
+
+[40] [scikit-learn, “GroupShuffleSplit” documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupShuffleSplit.html).
+
+[41] [scikit-learn, “Cross-validation: evaluating estimator performance”](https://scikit-learn.org/stable/modules/cross_validation.html).
