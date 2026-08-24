@@ -83,4 +83,4 @@
 - [ ] Acquire and validate version-resolved historical dependency inputs before creating transitive graph snapshots
 - [ ] Assemble a cutoff-valid control population and sufficient independent incident families before fitting temporal ranking, calibration, or uncertainty models
 - [x] Publish the temporal reconstruction, label-adjudication, direct-range approximation, and baseline-study outputs in the governed workspace and validate the display
-- [ ] Synchronize the completed temporal research artifacts, platform updates, tests, and documentation to GitHub
+- [x] Synchronize the completed temporal research artifacts, platform updates, tests, and documentation to GitHub
