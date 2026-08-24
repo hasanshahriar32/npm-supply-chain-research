@@ -50,4 +50,15 @@ describe("repository-backed research sources", () => {
     expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 20, isolatedCutoffSemverApproximations: 20, computedTransitiveReachValues: 0 } });
     expect(gate).toMatchObject({ exactPreEventSnapshots: 7, calibrationInference: "blocked" });
   });
+
+  it("records the selectively inspected resolver archive without treating its monolithic relation payload as ingested graph data", async () => {
+    const fs = await import("node:fs/promises");
+    const inventory = JSON.parse(await fs.readFile("research/72_chrono_resolution_archive_inventory.json", "utf8"));
+    const schema = await fs.readFile("research/72_chrono_resolution_schema_relations.sql", "utf8");
+    expect(inventory.zip64).toMatchObject({ totalEntries: "4" });
+    expect(inventory.entries.find((entry: { name: string }) => entry.name === "data-relations.sql")).toMatchObject({ compressedSize: "10228591413", uncompressedSize: "138731381476" });
+    expect(inventory.conclusion).toBe("Central-directory metadata only. No archive member payload was downloaded or executed.");
+    expect(schema).toContain("dependency_version public.semver");
+    expect(schema).toContain("interval_start timestamp without time zone");
+  });
 });

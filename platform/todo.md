@@ -80,6 +80,7 @@
 - [x] Build and document cutoff-valid declared direct-dependency graph snapshots with direct-declaration fidelity and explicit non-resolution limits
 - [x] Run the real-label temporal baseline-eligibility and calibration-inference gate, preserving the justified no-fit result
 - [x] Resolve cutoff-valid direct dependency ranges as isolated SemVer approximations with an explicit non-lockfile fidelity label
+- [x] Inspect the public CHRONO-RESOLUTION archive selectively and validate its relation schema without downloading the monolithic data payload
 - [ ] Acquire and validate version-resolved historical dependency inputs before creating transitive graph snapshots
 - [ ] Assemble a cutoff-valid control population and sufficient independent incident families before fitting temporal ranking, calibration, or uncertainty models
 - [x] Publish the temporal reconstruction, label-adjudication, direct-range approximation, and baseline-study outputs in the governed workspace and validate the display

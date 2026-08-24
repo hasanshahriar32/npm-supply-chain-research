@@ -145,6 +145,14 @@ The work is publishable if it releases a provenance-complete benchmark and demon
 | WP5: Temporal pilot | One frozen-cutoff, grouped incident-family evaluation | Strict and approximate fidelity results reported separately |
 | WP6: Model comparison | Baseline ladder with reproducible configuration | HGAT only runs after Tier 0–4 completion |
 
+## Temporal implementation amendment — 24 August 2026
+
+The first reconstruction stage is complete. The adjudicated package-event ledger contains eight records in four incident families; seven strict pre-event package-version objects were reconstructed from official npm registry version-time maps. The companion artifact records 20 exact source-version direct dependency declarations. A separate bounded pass selected a highest satisfying target version for each of the 20 ranges using only target versions whose registry timestamp is at or before the relevant cutoff. These target values are labeled **`registry_reconstructed_cutoff_semver_approximation`** and must not be interpreted as package-lock entries, historical npm installation results, or transitive graph edges.
+
+The initial inference gate remains blocked. The pilot has no cutoff-valid adjudicated control population, only four independent incident families, and no historical transitive dependency traversal. Consequently, it reports no ranking, PR-AUC, Recall@K, calibration, logistic-regression, blast-radius, or attack-return metric. The completed result is a reproducible feasibility finding and fidelity-ledger implementation, not a forecasting result.
+
+The public CHRONO-RESOLUTION archive was selectively inspected through bounded HTTP byte ranges. Its validated relation schema includes package and dependency versions plus interval start/end, but its only relations payload is a 10.23 GB compressed, 138.73 GB uncompressed monolithic SQL member. No rows were ingested. A future transitive stage requires either an approved bulk-compute environment or an upstream filtered export, together with a pre-registered cutoff join and control design. [5]
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"

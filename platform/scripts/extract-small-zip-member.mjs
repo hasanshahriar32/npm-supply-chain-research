@@ -1,0 +1,23 @@
+import { createHash } from "node:crypto";
+import { inflateRawSync } from "node:zlib";
+import { readFile, writeFile } from "node:fs/promises";
+
+const [rangePath, rangeStartText, localHeaderOffsetText, expectedName, outputPath] = process.argv.slice(2);
+if (![rangePath, rangeStartText, localHeaderOffsetText, expectedName, outputPath].every(Boolean)) throw new Error("Usage: node extract-small-zip-member.mjs <range-path> <range-start> <local-header-offset> <expected-name> <output-path>");
+const range = await readFile(rangePath);
+const relative = Number(BigInt(localHeaderOffsetText) - BigInt(rangeStartText));
+if (relative < 0 || relative + 30 > range.length || range.readUInt32LE(relative) !== 0x04034b50) throw new Error("Local ZIP header is not fully present in the supplied range.");
+const flags = range.readUInt16LE(relative + 6);
+const compressionMethod = range.readUInt16LE(relative + 8);
+const compressedSize = range.readUInt32LE(relative + 18);
+const fileNameLength = range.readUInt16LE(relative + 26);
+const extraLength = range.readUInt16LE(relative + 28);
+const name = range.subarray(relative + 30, relative + 30 + fileNameLength).toString("utf8");
+const dataStart = relative + 30 + fileNameLength + extraLength;
+const compressed = range.subarray(dataStart, dataStart + compressedSize);
+if (name !== expectedName) throw new Error(`Expected ${expectedName}, found ${name}.`);
+if (flags & 0x0008) throw new Error("Data-descriptor ZIP entries are not supported by this bounded extractor.");
+if (compressed.length !== compressedSize) throw new Error("Supplied range does not contain the full compressed member.");
+const output = compressionMethod === 0 ? compressed : compressionMethod === 8 ? inflateRawSync(compressed) : (() => { throw new Error(`Unsupported compression method ${compressionMethod}.`); })();
+await writeFile(outputPath, output);
+console.log(JSON.stringify({ name, compressionMethod, compressedSize, extractedBytes: output.length, sha256: createHash("sha256").update(output).digest("hex") }, null, 2));

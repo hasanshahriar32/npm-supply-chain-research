@@ -139,3 +139,9 @@ The direct-declaration ledger was extended with a strictly limited target-versio
 This result is not represented as a reconstructed historical installation. It is an **isolated cutoff-valid SemVer approximation** and excludes package-lock state, package-manager-version behavior, peer, optional, bundled, workspace, override, nested, cache, and transitive-resolution semantics. The diagnostic stores zero transitive-reach values and keeps model ranking, calibration, and blast-radius inference blocked.
 
 18. npm, *node-semver* reference implementation: <https://github.com/npm/node-semver>.
+
+## Selective resolver-archive validation — 2026-08-24
+
+The official CHRONO-RESOLUTION ZIP64 central directory was inspected with a 65,557-byte HTTP range request, and no data-member payload was downloaded. The inventory confirms that the archive has only four members and that its sole relation-data member, `data-relations.sql`, is 10,228,591,413 bytes compressed and 138,731,381,476 bytes uncompressed. It is therefore not a package-selectable or streaming-friendly public source for the current constrained worktree. [17]
+
+A separate 1,508-byte range was used solely to extract and validate `schema-relations.sql` (SHA-256 `57db2833e311390250d1d292247f89573bd320917c4c301b44acb32839294c69`). The schema confirms direct relation fields for package and dependency versions plus interval start/end, supporting the conclusion that the dataset is semantically relevant for future interval-aware resolution. No relations rows were ingested, no historical resolver outputs were attributed to the pilot, and no transitive graph was produced.

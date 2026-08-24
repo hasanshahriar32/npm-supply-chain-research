@@ -16,7 +16,7 @@ The next study stage can execute a **small, exact direct-metadata temporal pilot
 | CISA Shai-Hulud alert | Confirmed campaign date and ecosystem scope | **Campaign-level only** | Candidate-discovery and exclusion evidence | No package-version list in the alert; not a primary package-version label [3] |
 | Datadog malicious package dataset | Human-triaged package samples and npm manifest entries, sometimes with versions | **Candidate source only** | Future label discovery | File dates are discovery dates, not publication dates; selection is rule-set biased [4] |
 | npm-follower | Continuously archived package metadata and code, including later-deleted versions | **Potential high-fidelity external archive** | Future expansion source | Access and coverage must be frozen, versioned, and documented before use [5] |
-| CHRONO-RESOLUTION | Release-point dependency-resolution dataset and construction methodology | **Potential transitive-resolution source** | Future exact-resolution extension | Dataset availability, snapshot coverage, and package join must be validated before inclusion [6] |
+| CHRONO-RESOLUTION | Release-point dependency-resolution dataset and construction methodology | **Schema validated; relation payload not locally acquirable** | Future version-resolved and transitive-resolution extension | The only relation-data ZIP member is 10.23 GB compressed and 138.73 GB uncompressed; it cannot be selectively queried from the published archive [6] [8] |
 | Zenodo NPM Registry Dataset 2025 | A 2025 GitHub-repository subset of registry data | **One dated snapshot** | Optional sensitivity source | 22.3 GB compressed; not a practical default artifact for this platform [7] |
 
 ## Label readiness
@@ -33,13 +33,22 @@ The Datadog repository is valuable candidate-discovery evidence because its samp
 | Direct dependency declarations | Ready | Read only the retained version objects; preserve raw semver range and source checksum |
 | Affected-version labels | Ready, sparse | Restrict primary positives to CISA-supported Axios versions; retain `plain-crypto-js` as a separate target class |
 | Negative observations | Ready only as **unlabeled controls** | Do not call them benign; report them as no-known-event observations |
-| Transitive dependency resolution | Not ready | Do not infer from current graph; adopt CHRONO-RESOLUTION or a separately validated resolver snapshot first [6] |
+| Isolated direct-range approximation | Ready with strict approximation label | Select the highest SemVer target satisfying each declared range among registry versions timestamped by the cutoff; never call this an observed install |
+| Transitive dependency resolution | Not ready | Do not infer from current graph; the validated CHRONO-RESOLUTION schema has `dependency_version` and intervals, but its published relation payload is not selectively queryable [6] [8] |
 | Historical workflow/CI exposure | Not ready | Do not use current GitHub workflow presence as a temporal feature |
 | Calibration or learned ranking | Not ready for inference | Compute only feasibility diagnostics until multiple incident families and adequate positive count exist |
 
 ## Immediate pilot specification
 
 The reproducible pilot will use the 31 March 2026 cutoff, registry responses for `axios` and `plain-crypto-js`, the CISA labels above, and a fixed 30-day lookback window. It will emit a package-version ledger containing exact publication time, pre-cutoff eligibility, dependency declarations, primary-label class, source retrieval time, and SHA-256 checksum. It will separately report why the sample cannot support calibrated probability estimates: there are too few independent incident families and no defensible labeled-negative population.
+
+## CHRONO-RESOLUTION selective archive validation
+
+On 24 August 2026, the project used an HTTP byte-range request against the official Zenodo archive to obtain the 65,557-byte ZIP64 tail and inspect its central directory without downloading the 10.2 GB release. The archive contains four members. `data-relations.sql` is the only relations-data member: **10,228,591,413 bytes compressed** and **138,731,381,476 bytes uncompressed**. The release is therefore a monolithic SQL dump rather than a partitioned, package-selectable artifact.
+
+The project then retrieved only a 1,508-byte range containing the compressed `schema-relations.sql` member and extracted its 2,888-byte schema. The verified `relations_minified` definition contains `ecosystem`, `package`, `package_version`, `dependency`, `dependency_constraint`, `dependency_version`, `dependency_highest_version`, `interval_start`, and `interval_end`. This validates that the source could support interval-aware version-resolved direct-edge work if an approved bulk-compute environment or an upstream filtered export becomes available. It does not validate or ingest any relations rows, and it does not make transitive reach computable in this project.
+
+The selective archive inventory is committed as `72_chrono_resolution_archive_inventory.json`; the extracted source schema is `72_chrono_resolution_schema_relations.sql`. Both artifacts record source provenance and avoid a full data download.
 
 ## References
 
@@ -50,3 +59,4 @@ The reproducible pilot will use the 31 March 2026 cutoff, registry responses for
 [5]: https://arxiv.org/abs/2308.12545 "Pinckney et al., npm-follower"
 [6]: https://arxiv.org/abs/2607.15315 "Rahman et al., CHRONO-RESOLUTION"
 [7]: https://zenodo.org/records/14914149 "NPM Registry Dataset 2025 (GitHub Only)"
+[8]: https://doi.org/10.5281/zenodo.17576373 "CHRONO-RESOLUTION Zenodo data release"
