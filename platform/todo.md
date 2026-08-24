@@ -114,3 +114,6 @@
 - [x] Identify a compact public candidate with version-addressable metadata: the Figshare detector benchmark’s version-1 archive
 - [x] Validate the Figshare candidate against the frozen control-frame contract, including scope, identifiers, missing benign timing, missing horizon, and bounded metadata-only access
 - [x] Publish a precise Figshare gate-preserving exclusion, retaining zero inferred benign controls because its retrospective detector benchmark does not establish a primary temporal control frame
+- [x] Identify a further compact public source with potential temporal outcome evidence: GitHub’s malware-advisory import path and public Advisory Database
+- [x] Validate the GitHub advisory path against the frozen control-frame contract and bounded-access policy; it documents positive advisories but not a valid non-event population or horizon
+- [x] Publish a precise positive-provenance exclusion, preserving zero inferred benign controls because advisory absence remains unknown

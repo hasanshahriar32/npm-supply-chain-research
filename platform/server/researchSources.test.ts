@@ -41,6 +41,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Provider-backed control-frame assessment") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Control-frame contract and public snapshot access assessment") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Figshare replication package") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("GitHub’s public malware-advisory path") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
@@ -151,6 +152,13 @@ describe("repository-backed research sources", () => {
     });
     expect(assessment.blockingConditions).toContain("The inspected selected-benign list has package/version identifiers but no per-row timestamp, collection cutoff, or observation horizon.");
     expect(assessment.prohibitedInterpretations).toContain("Do not call the selected benign strings cutoff-valid temporal controls.");
+  });
+
+  it("retains the GitHub malware-advisory path as positive provenance rather than temporal controls", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/86_github_advisory_database_malware_path_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({ controlFrameDecision: "excluded", controlsCreated: 0, primaryTemporalLabelsCreated: 0, candidate: { format: "OSV advisory records", supportedEcosystem: "npm" } });
+    expect(assessment.blockingConditions).toContain("Absence from an advisory record cannot be interpreted as benign, uncompromised, or no-known-event.");
+    expect(assessment.prohibitedInterpretations).toContain("Do not derive benign controls from advisory absence.");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {

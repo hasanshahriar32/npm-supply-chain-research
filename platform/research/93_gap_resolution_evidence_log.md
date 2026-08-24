@@ -266,6 +266,15 @@ The source is therefore **not eligible as a primary future-compromise control fr
 40. W. Guo et al., *How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study*, arXiv:2603.27549v2, 2026: <https://arxiv.org/html/2603.27549v2>.
 41. W. Guo, *How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study*, Figshare Version 6, DOI 10.6084/m9.figshare.31869370: <https://doi.org/10.6084/m9.figshare.31869370>.
 
+## GitHub Advisory Database malware-path screen — 2026-08-24
+
+GitHub announced that its malware-advisory importer validates OpenSSF OSV records, preserves each upstream record as a snapshot, drops records without usable affected versions, and supports later withdrawal or retraction handling. [42] GitHub’s public Advisory Database repository documents a broader, community-curated vulnerability-advisory corpus in OSV format, including npm, with advisory updates sourced from multiple inputs and merge decisions reviewed by its curation team. [43]
+
+This is a potentially useful **positive-advisory provenance and snapshot lead**, but it is not a temporal control frame. The public documentation defines an advisory database rather than an enumerated at-risk npm package-version population; it supplies no closed-world malicious-publication or maintainer-compromise coverage statement, no pre-registered non-event horizon, and no basis for interpreting a package/version absent from an advisory as benign. The new GitHub path therefore creates zero rows, controls, labels, family assignments, calibration results, or ranking metrics in the temporal benchmark. It may only be reconsidered as a frozen positive corroboration source, under the existing ledger protocol, if a candidate record requires it.
+
+42. GitHub Blog, “How we took malware advisories beyond npm,” 6 August 2026: <https://github.blog/security/supply-chain-security/how-we-took-malware-advisories-beyond-npm/>.
+43. GitHub, “GitHub Advisory Database” repository documentation: <https://github.com/github/advisory-database>.
+
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.

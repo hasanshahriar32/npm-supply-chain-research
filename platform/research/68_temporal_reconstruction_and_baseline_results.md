@@ -125,12 +125,15 @@ Libraries.io is likewise excluded: its public documentation describes scraped, u
 
 The Figshare replication package for Guo et al.’s 2026 detector benchmark is a useful **release-classification sensitivity lead**, but it also fails the primary temporal-control contract. Its public description reports 6,420 malicious package versions and 7,288 benign packages. A bounded version-1 archive inspection retrieved only its ZIP directory plus three named text/CSV metadata members—not any package source—and confirmed 6,420 malware package-version rows, of which 271 have blank timestamps after normalization. Its selected-benign list contains 1,000 version-addressable strings but no per-row timestamp, collection cutoff, follow-up horizon, or documented relationship to the later 7,288-benign count. [24] [25] The release is a retrospective detector-evaluation corpus assembled from academic datasets and public advisories, rather than a frozen at-risk population followed under matched compromise coverage. It creates **zero controls**.
 
+GitHub’s public malware-advisory path is similarly a **positive-provenance lead only**. GitHub documents an importer that validates OpenSSF OSV records, preserves upstream records as snapshots, drops entries without usable affected versions, and handles later retractions; its Advisory Database repository documents OSV-formatted advisories, curation, and npm support. [26] [27] Those properties can support future corroboration of an individually adjudicated positive record, but the documentation defines an advisory database rather than a frozen at-risk npm package-version population. It provides no closed-world malicious-publication or maintainer-compromise coverage statement and no paired non-event horizon. Advisory absence remains unknown, not benign; the path creates **zero controls**.
+
 | Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
 |---|---|---|---|---|
 | Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
 | deps.dev BigQuery | Snapshot and package-version fields documented | Advisories are vulnerability-oriented; no authenticated access | Google Cloud account and BigQuery API required | Excluded pending both access and target match. |
 | Libraries.io public metadata | Current scraped package metadata | No frozen historical outcome contract | Public page, but no documented temporal denominator | Excluded. |
 | Guo et al. Figshare detector benchmark | Versioned package/version labels and partial malware timestamps | Retrospective detector corpus; benign list lacks timestamp, cutoff, and horizon | Bounded metadata-only ZIP access works | Excluded as primary temporal control frame. |
+| GitHub Advisory Database malware path | OSV positive-advisory provenance and update/retraction handling | No frozen at-risk population, closed-world compromise coverage, or non-event horizon | Public repository and announcement | Excluded as primary temporal control frame. |
 
 ## What the discovered version-resolved dataset changes—and does not change
 
@@ -195,3 +198,7 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [24] [W. Guo et al., “How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study,” arXiv:2603.27549v2, 2026](https://arxiv.org/html/2603.27549v2).
 
 [25] [W. Guo, “How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study,” Figshare Version 6](https://doi.org/10.6084/m9.figshare.31869370).
+
+[26] [GitHub Blog, “How we took malware advisories beyond npm,” 6 August 2026](https://github.blog/security/supply-chain-security/how-we-took-malware-advisories-beyond-npm/).
+
+[27] [GitHub, “GitHub Advisory Database” repository documentation](https://github.com/github/advisory-database).
