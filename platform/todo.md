@@ -156,3 +156,6 @@
 - [x] Define a future-only raw-evidence capture contract for release-authority delta work that prohibits present observation and value comparison
 - [x] Specify checksum, opaque canonicalization, source-time validity, and typed field-schema requirements without storing authority values or delta classifications
 - [x] Publish the capture contract with regression safeguards while retaining zero raw evidence, controls, scores, models, rankings, intervals, or predictive metrics
+- [x] Define a future-only independently adjudicated outcome-manifest sealing protocol that prohibits present outcome or control creation
+- [x] Specify source provenance, target/horizon, checksum, adjudication, relatedness, and blinding requirements without recording outcome rows or labels
+- [x] Publish the sealing protocol with regression safeguards while retaining zero outcomes, controls, scores, models, rankings, intervals, or predictive metrics

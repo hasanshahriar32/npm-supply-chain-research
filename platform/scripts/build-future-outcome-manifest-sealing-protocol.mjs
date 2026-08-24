@@ -1,0 +1,253 @@
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const researchDir = path.join(root, "research");
+const controlFramePath = path.join(researchDir, "90_authorized_npm_control_frame_access_specification.json");
+const relatednessPath = path.join(researchDir, "94_campaign_relatedness_and_grouped_inference_protocol.json");
+const outputPath = path.join(researchDir, "100_future_outcome_manifest_sealing_protocol.json");
+
+const [controlFrameText, relatednessText] = await Promise.all([
+  readFile(controlFramePath, "utf8"),
+  readFile(relatednessPath, "utf8"),
+]);
+const controlFrame = JSON.parse(controlFrameText);
+const relatedness = JSON.parse(relatednessText);
+
+if (controlFrame.executionStatus !== "not_executed_no_authorized_provider_access_or_target_matched_outcome_manifest") {
+  throw new Error("The sealing protocol requires the non-executed control-frame access specification.");
+}
+if (controlFrame.currentDecision?.positiveOutcomeRowsJoined !== 0 || controlFrame.currentDecision?.controlsCreated !== 0) {
+  throw new Error("The sealing protocol cannot proceed from a joined or controlled outcome artifact.");
+}
+if (relatedness.executionStatus !== "protocol_only_no_control_frame_or_model_eligible_dataset") {
+  throw new Error("The sealing protocol requires the no-model grouped-inference protocol.");
+}
+
+const output = {
+  study: "future-independently-adjudicated-outcome-manifest-sealing-protocol",
+  artifactVersion: 1,
+  executionStatus: "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
+  generatedAtUtc: new Date().toISOString(),
+  protocolInputs: {
+    controlFrameAccessSpecification: {
+      path: "research/90_authorized_npm_control_frame_access_specification.json",
+      sha256: createHash("sha256").update(controlFrameText).digest("hex"),
+      requiredExecutionStatus: controlFrame.executionStatus,
+      targetConstraint: "An independently adjudicated malicious-publication or maintainer-compromise manifest must cover a declared observation horizon; advisory absence remains unknown.",
+    },
+    relatednessProtocol: {
+      path: "research/94_campaign_relatedness_and_grouped_inference_protocol.json",
+      sha256: createHash("sha256").update(relatednessText).digest("hex"),
+      requiredExecutionStatus: relatedness.executionStatus,
+      futureValidationUnitCount: relatedness.validationUnits.unitCount,
+      relatedFamilyBoundary: "The Mini Shai-Hulud atool and Keyv/Cacheable families must remain in one documented related-family validation cluster if a future manifest is eligible for a benchmark join.",
+    },
+  },
+  purposeAndScope: {
+    purpose: "Pre-register how a future target-matched outcome manifest must be independently adjudicated, coverage-audited, checksum-sealed, and withheld from feature collection until quality control is complete.",
+    unit: "One canonical npm package-version candidate with a documented event-time decision and a separate coverage decision for its declared outcome horizon.",
+    noCurrentOutcomeBoundary: "This protocol does not contact incident sources, registries, advisory feeds, provider datasets, package artifacts, repositories, or any outcome endpoint. It does not add, alter, confirm, reject, or re-time any existing incident ledger record.",
+    noControlBoundary: "A non-event outcome can exist only after source-specific completeness for the entire row horizon and registered exclusions are proven. Source omission, advisory absence, registry survival, no-known-event language, or lack of a matching record remains unknown.",
+    noModelBoundary: "The protocol does not create a population, outcome row, target label, control, feature join, split, score, rank, interval, calibration result, model, or predictive metric.",
+  },
+  activationGate: {
+    allRequiredBeforeOutcomeSourceContact: [
+      "The declared target is limited to independently adjudicated future malicious publication or maintainer compromise; ordinary vulnerability status is not a substitute target.",
+      "A field-complete source-inventory plan, outcome-horizon plan, adjudication handbook, conflict-of-interest policy, and public-safe release policy are versioned and checksum-sealed.",
+      "Reviewers and source collectors cannot access feature values, feature quality-control outputs, review-queue membership, model scores, ranks, controls, or split assignments.",
+      "An access-controlled evidence docket store and immutable decision ledger are provisioned outside the public repository with key custody and retention policies documented.",
+      "The prospective population owner agrees to receive no outcome manifest until the feature and raw-evidence quality-control seals required by the separate contracts are complete.",
+    ],
+    prohibitedActivationFallbacks: [
+      "Do not repurpose an advisory or vulnerability feed as closed-world malicious-publication or maintainer-compromise coverage.",
+      "Do not treat a current source page, later repository remediation, deletion, package unavailability, or current account status as an event-time observation.",
+      "Do not open an outcome source merely to enrich, repair, balance, or evaluate a feature table, control list, ranking, or model result.",
+    ],
+  },
+  targetAndHorizonContract: {
+    targetVocabulary: {
+      future_confirmed_compromise: "A technically corroborated targeted maintainer, publisher, account, or release-path compromise with exact npm affected-version evidence and adjudicated event start within the pre-registered horizon.",
+      future_malicious_publication: "A technically corroborated malicious npm package publication with exact affected-version evidence and adjudicated event start within the pre-registered horizon, excluding ordinary vulnerabilities.",
+      unknown_outcome: "Coverage, timing, version identity, target fit, or horizon completeness is absent or ambiguous. This is not benign, unaffected, safe, or a control.",
+      excluded_not_target_matched: "Evidence concerns an ordinary vulnerability, a non-npm system, no exact package-version identity, or another pre-registered exclusion; it is not a negative outcome.",
+    },
+    requiredFrozenFields: [
+      "feature_cutoff_at_utc",
+      "horizon_end_at_utc",
+      "horizon_duration",
+      "outcome_freeze_at_utc",
+      "positive_lag_handling_rule",
+      "right_censoring_rule",
+      "target_definition_version",
+      "registered_exclusion_policy_sha256",
+    ],
+    horizonRules: [
+      "Declare and checksum-seal the interval (feature_cutoff_at_utc, horizon_end_at_utc] before a source inventory is opened.",
+      "A positive event start must lie inside the declared interval; later discovery does not move its event start backward without independently documented time evidence.",
+      "A row with incomplete source coverage or an unobservable full horizon remains unknown or is right-censored under the frozen rule, never a control.",
+      "Source collection after horizon end may document historical coverage only when the source’s release/retrieval chronology and completeness scope are explicitly recorded; it may not create retrospective feature evidence.",
+    ],
+  },
+  sourceInventoryAndProvenanceSchema: {
+    description: "One pre-registered source inventory record per future source before candidate-docket review. This artifact contains field names only, not sources or observed values.",
+    requiredFields: [
+      "sourceInventoryIdOpaque",
+      "sourcePublisherOrCustodianOpaque",
+      "sourceType",
+      "sourceScopeStatement",
+      "sourceTargetFitDecision",
+      "sourceCoverageStartUtc",
+      "sourceCoverageEndUtc",
+      "sourceVersionOrRevisionIdentifierOpaque",
+      "sourceRetrievalProtocolIdentifier",
+      "sourceRetrievalCompletedAtUtc",
+      "sourceObjectReferenceOpaque",
+      "sourceObjectByteSha256",
+      "sourceObjectByteLength",
+      "sourceObjectMediaType",
+      "sourceTermsOrLicenseRecordIdentifierOpaque",
+      "knownCoverageLimitations",
+      "collectorRoleIdentifierOpaque",
+      "appendOnlyLedgerSequence",
+    ],
+    sourceAcceptanceRules: [
+      "A source must document its scope, time coverage, target semantics, version identity handling, and access provenance sufficiently to support a field-specific decision.",
+      "Primary or authoritative incident evidence and independent technical corroboration are captured as separate source objects where the target definition requires corroboration.",
+      "An OpenSSF, OSV, GitHub Advisory, provider, registry, or scanner record may support candidate discovery or corroboration only under its documented scope; absence never supplies a negative label.",
+      "Source inventories must preserve coverage limitations and retractions as first-class records rather than silently replacing or deleting prior source versions.",
+    ],
+  },
+  independentAdjudicationSchema: {
+    candidateDocketRequiredFields: [
+      "candidateDocketIdOpaque",
+      "canonicalNpmPackageNameSecure",
+      "exactAffectedVersionSecure",
+      "targetCandidateType",
+      "claimedEventStartUtcSecure",
+      "sourceEvidenceReferencesOpaque",
+      "sourceInventoryReferencesOpaque",
+      "versionIdentityDecision",
+      "eventTimeDecision",
+      "targetFitDecision",
+      "independentCorroborationDecision",
+      "incidentFamilyDecisionOpaque",
+      "relatednessReviewRequired",
+      "exclusionOrAmbiguityReasonCodes",
+      "docketByteSha256",
+    ],
+    reviewSeparation: [
+      "Assign each docket to at least two independent adjudicators who cannot access feature values, candidate priority, control status, outcome prevalence, model results, or split assignments.",
+      "Each adjudicator records a decision and reason codes before seeing the other adjudicator’s decision.",
+      "A third adjudicator or pre-registered panel resolves disagreement; preserve the initial decisions, reconciliation rationale, timestamps, and conflicts in the immutable ledger.",
+      "An adjudicated positive requires exact npm package-version identity, event-time support, target match, and the frozen corroboration threshold. Otherwise record unknown or excluded_not_target_matched rather than negative.",
+    ],
+    conflictAndRetractionRules: [
+      "Record reviewer conflicts, source conflicts, retractions, supersessions, and unresolved ambiguity without overwriting prior decisions.",
+      "A sealed manifest revision may be superseded only by a new immutable revision with a parent-manifest hash, change log, and pre-registered policy basis; do not mutate the prior manifest in place.",
+      "Do not derive event timing from a remediation commit, source retrieval time, or current package state when evidence for event start is absent.",
+    ],
+  },
+  coverageAndNonEventDecisionSchema: {
+    coverageRecordRequiredFields: [
+      "coverageRecordIdOpaque",
+      "sourceInventoryReferenceOpaque",
+      "targetDefinitionVersion",
+      "coverageStartUtc",
+      "coverageEndUtc",
+      "horizonCompletenessDecision",
+      "coverageCompletenessEvidenceReferenceOpaque",
+      "registeredExclusionsApplied",
+      "unknownReasonCodes",
+      "rightCensoringDecision",
+      "coverageRecordByteSha256",
+    ],
+    allowedDecisions: {
+      positive_in_horizon: "Exact adjudicated package-version event matches the target and has an event start inside the frozen horizon.",
+      eligible_non_event_after_complete_coverage: "Only permitted after source-specific completeness for the entire horizon, all registered exclusions, and independent quality control; it remains unavailable until the control-frame gate opens.",
+      unknown_or_coverage_incomplete: "Coverage, target fit, event time, package-version identity, or the full horizon is absent or ambiguous.",
+      excluded_or_right_censored: "A frozen exclusion or right-censoring rule applies; this is not a non-event/control label.",
+    },
+    prohibitedShortcuts: [
+      "Do not infer a non-event from missing source membership, advisory absence, registry persistence, package deletion, lack of a malware report, or no-known-event language.",
+      "Do not classify an entire package as a positive or non-event when the target is version-specific and the evidence does not identify an exact affected version.",
+      "Do not downgrade an ambiguous positive candidate into a non-event/control merely to complete a matched set or balance classes.",
+    ],
+  },
+  sealingAndBlindingWorkflow: {
+    publicSafeSealingManifestFields: [
+      "outcomeManifestIdOpaque",
+      "protocolVersion",
+      "sourceInventorySetSha256",
+      "adjudicationHandbookSha256",
+      "targetAndHorizonContractSha256",
+      "candidateDocketSetMerkleRoot",
+      "coverageRecordSetMerkleRoot",
+      "decisionLedgerMerkleRoot",
+      "manifestByteSha256",
+      "sealedAtUtc",
+      "qualityControlDecision",
+      "qualityControlReasonCodes",
+      "parentManifestSha256OrNull",
+      "publicReleaseEligibilityDecision",
+    ],
+    secureOnlyFields: [
+      "Exact package names and versions before source terms and the public-release policy permit disclosure.",
+      "Raw source objects, evidence text, reviewer identities, sensitive source references, adjudication notes, conflict disclosures, keyed mappings, and any feature or population identifiers.",
+      "Target outcomes, controls, join results, family or validation assignments, model artifacts, ranks, metrics, and row-level coverage decisions before the quality-control seal and applicable release authorization.",
+    ],
+    orderedWorkflow: [
+      "Checksum-seal the source inventory, target/horizon contract, adjudication handbook, relatedness rules, and public-release policy before source collection.",
+      "Collect source objects and candidate dockets in an access-controlled evidence store while outcomes remain inaccessible to feature collectors and population owners.",
+      "Complete independent adjudication, coverage review, retraction review, and source-quality control without feature, score, or split access.",
+      "Compute and record Merkle roots and a manifest byte checksum; seal the manifest with immutable parent revision linkage.",
+      "Release only the public-safe sealing manifest and permitted aggregates until source terms and quality policy permit row-level release.",
+      "Permit a separate authorized join only after the population, feature, raw-evidence, and outcome quality-control seals all pass; record the join as a new artifact rather than mutating this manifest.",
+    ],
+    blindingRules: [
+      "Outcome adjudicators must not receive feature values, authority commitments, graph measures, workflow evidence, review-queue membership, controls, scores, ranks, or performance metrics.",
+      "Feature and raw-evidence collectors must not receive candidate dockets, source evidence, outcome decisions, coverage decisions, family assignments, or target prevalence until their own quality-control seals are final.",
+      "No party may use preliminary positive counts, class balance, or missingness to modify source inclusion, adjudication, outcome horizon, feature definition, or population query.",
+    ],
+  },
+  relatednessAndJoinBoundary: {
+    requirement: "After outcome adjudication but before any eligible split, map documented incident-family and cross-family relatedness to the frozen validation-unit registry. Preserve an explicit unknown-relatedness state rather than assuming independence.",
+    inheritedValidationUnitRule: "Use the grouped-inference protocol’s connected-component validation units; do not split Mini Shai-Hulud atool and Keyv/Cacheable across partitions because documented payload lineage prevents an independence claim.",
+    prohibitedInterpretations: [
+      "An incident family is not automatically an attacker identity, causal chain, or independent observation.",
+      "A sealed outcome manifest is not a fitted dataset, temporal split, resample, control frame, or model evaluation.",
+    ],
+  },
+  currentDecision: {
+    outcomeSourcesContacted: 0,
+    sourceInventoryRecordsCreated: 0,
+    candidateDocketsCreated: 0,
+    adjudicatorDecisionsRecorded: 0,
+    outcomeRowsCreated: 0,
+    positiveOutcomeRowsCreated: 0,
+    eligibleNonEventRowsCreated: 0,
+    unknownOutcomeRowsCreated: 0,
+    controlsCreated: 0,
+    coverageRecordsCreated: 0,
+    manifestRevisionsSealed: 0,
+    featureOutcomeJoinsCreated: 0,
+    temporalSplitsGenerated: 0,
+    scoresComputed: 0,
+    modelsFitted: 0,
+    rankingsComputed: 0,
+    uncertaintyIntervalsComputed: 0,
+    predictiveMetricsComputed: 0,
+    status: "blocked_pending_authorized_frozen_population_and_independently_adjudicated_target_matched_outcome_coverage",
+  },
+  prohibitedInterpretations: [
+    "This protocol is not an outcome manifest, an incident-source audit, a positive-label expansion, a control frame, or a benchmark result.",
+    "A source inventory, docket identifier, digest, Merkle root, opaque reference, or sealing manifest is integrity metadata only; it does not establish that a package version is positive, unaffected, safe, benign, or trusted.",
+    "No non-event/control, score, rank, model, interval, calibration, or predictive metric may be inferred or computed from this protocol.",
+    "Existing strict incident records remain independently adjudicated positive evidence only; they are not a closed-world outcome population or proof of horizon completeness.",
+  ],
+};
+
+await writeFile(outputPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
+console.log(JSON.stringify({ outputPath, targetVocabulary: Object.keys(output.targetAndHorizonContract.targetVocabulary).length, sourceInventoryFields: output.sourceInventoryAndProvenanceSchema.requiredFields.length, publicSafeSealingFields: output.sealingAndBlindingWorkflow.publicSafeSealingManifestFields.length, outcomeRowsCreated: output.currentDecision.outcomeRowsCreated, controlsCreated: output.currentDecision.controlsCreated, modelsFitted: output.currentDecision.modelsFitted }, null, 2));

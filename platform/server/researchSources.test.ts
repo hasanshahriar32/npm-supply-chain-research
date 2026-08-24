@@ -304,6 +304,18 @@ describe("repository-backed research sources", () => {
     expect(contract.prohibitedInterpretations).toContain("This contract is not a raw-evidence collection, a current-state audit, a delta comparison, or an authority assessment.");
   });
 
+  it("retains the future outcome-manifest sealing protocol as blinded and without outcomes or controls", async () => {
+    const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/100_future_outcome_manifest_sealing_protocol.json", "utf8")).then(JSON.parse);
+    expect(protocol).toMatchObject({
+      executionStatus: "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
+      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 9 } },
+      currentDecision: { outcomeSourcesContacted: 0, sourceInventoryRecordsCreated: 0, candidateDocketsCreated: 0, adjudicatorDecisionsRecorded: 0, outcomeRowsCreated: 0, positiveOutcomeRowsCreated: 0, eligibleNonEventRowsCreated: 0, unknownOutcomeRowsCreated: 0, controlsCreated: 0, coverageRecordsCreated: 0, manifestRevisionsSealed: 0, featureOutcomeJoinsCreated: 0, temporalSplitsGenerated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(protocol.targetAndHorizonContract.targetVocabulary.unknown_outcome).toContain("not benign");
+    expect(protocol.sealingAndBlindingWorkflow.blindingRules).toContain("Outcome adjudicators must not receive feature values, authority commitments, graph measures, workflow evidence, review-queue membership, controls, scores, ranks, or performance metrics.");
+    expect(protocol.prohibitedInterpretations).toContain("Existing strict incident records remain independently adjudicated positive evidence only; they are not a closed-world outcome population or proof of horizon completeness.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

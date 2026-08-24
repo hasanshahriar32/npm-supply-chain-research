@@ -168,6 +168,19 @@ The census stores only record identifiers, selected version identifiers and time
 
 The contract is deliberately **pre-activation**. A capture run remains prohibited unless a frozen package-version population and independently adjudicated, target-matched, horizon-covered outcome manifest satisfy the primary control-frame gate, and the collector is insulated from outcomes until quality control is sealed. Missing, redacted, malformed, current-only, or time-ambiguous evidence remains a reason code—not `unchanged`, safe, benign, trusted, or no-known-event.
 
+## Future independently adjudicated outcome-manifest sealing protocol
+
+`100_future_outcome_manifest_sealing_protocol.json` defines the complementary future process for outcomes: it requires a target/horizon contract, versioned source inventory, independent candidate dockets, full-horizon coverage records, conflict and retraction history, checksum and Merkle-root sealing, and strict blinding from feature collection. It does not inspect an incident source or create a target record.
+
+| Protocol layer | Future requirement | Explicit boundary |
+|---|---|---|
+| Target and horizon | Freeze `(feature cutoff, horizon end]`, target definition, lag policy, censoring rule, and exclusions before opening an outcome source. | A later discovery cannot move an event time without independently documented time evidence. |
+| Source and adjudication | Preserve scoped source objects; use independent adjudicators, pre-registered reconciliation, exact package-version identity, and event-time support. | Advisory absence, registry survival, remediation, deletion, and current state never become a target decision. |
+| Non-event decision | Require source-specific completeness across the entire row horizon and explicit exclusions. | Incomplete coverage, ambiguity, or absence remains unknown or right-censored—not a control. |
+| Sealing and blinding | Seal source inventory, dockets, coverage, and decision ledgers with immutable revisions; keep adjudicators blind to features, priority, controls, and performance. | No manifest, outcome row, positive, non-event, join, split, score, model, interval, or metric exists now. |
+
+The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` and Keyv/Cacheable remain one documented related-family cluster in any future eligible join. A sealed manifest is **integrity metadata**, not proof that a package version is positive, unaffected, safe, benign, or trusted. Existing fourteen incident records remain positive evidence only and do not establish closed-world coverage or a non-event population.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
