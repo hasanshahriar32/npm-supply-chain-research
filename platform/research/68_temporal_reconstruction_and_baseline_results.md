@@ -7,33 +7,33 @@
 
 ## Executive finding
 
-This extension successfully reconstructs **eleven exact pre-event package-version metadata snapshots** from thirteen pre-registered npm package-event records spanning **nine incident families**. It produces a reproducible ledger of **28 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **63 bounded edges** across eight roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
+This extension successfully reconstructs **twelve exact pre-event package-version metadata snapshots** from fourteen pre-registered npm package-event records spanning **ten incident families**. It produces a reproducible ledger of **29 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **64 bounded edges** across nine roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
 
-The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The thirteen-record and nine-family floors are now met, but the pilot has no cutoff-valid adjudicated non-event population and only eleven exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
+The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The fourteen-record and ten-family totals are not an independently sampled training cohort; the pilot still has no cutoff-valid adjudicated non-event population and only twelve exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
 
 > **Historical-fidelity definition.** `registry_reconstructed_exact_direct_declaration` means that the source package version was selected strictly before the event cutoff from the official npm registry's version-time map and that version object's declared `dependencies` map was retained verbatim. It does **not** mean that a declared range was resolved to a target version, installed by npm, or expanded transitively.
 
 ## Evidence and reconstruction design
 
-The package-event ledger contains independently sourced, high-confidence incidents: the 2021 `ua-parser-js` / `coa` / `rc` compromise family, the 2018 `event-stream` incident, the 2018 ESLint incident, the 2025 `is` compromise, and the 2026 Axios-, `node-ipc`-, `oob.moika.tech`-, and Mini Shai-Hulud-`atool`-related families. Primary or authoritative incident sources identify the affected releases and event anchors, while the registry provides the temporal version objects. CISA's public alerts identify the `ua-parser-js` and Axios-related affected versions; Mandiant documents the 2021 Node.js compromise campaign; npm's incident post documents the `event-stream` response; ESLint's postmortem records its publication timeline; and independently published SafeDep and OpenSSF records corroborate the `node-ipc`, `@emcd-vue/auth`, and `amapcn` release sets and event timing. Frozen OpenSSF `MAL-2025-6020`, a dated StepSecurity report, and the `is` maintainer’s remediation commit agree that `is@3.3.1` and `5.0.0` were malware-bearing releases from a hijacked account. [1] [2] [3] [4] [5] [6] [7] [8] [9] [22] [23] [32] [33] [34]
+The package-event ledger contains independently sourced, high-confidence incidents: the 2021 `ua-parser-js` / `coa` / `rc` compromise family, the 2018 `event-stream` incident, the 2018 ESLint incident, the 2025 `is` compromise, and the 2026 Axios-, `node-ipc`-, `oob.moika.tech`-, Mini Shai-Hulud-`atool`-, and Keyv/Cacheable-related families. Primary or authoritative incident sources identify the affected releases and event anchors, while the registry provides the temporal version objects. CISA's public alerts identify the `ua-parser-js` and Axios-related affected versions; Mandiant documents the 2021 Node.js compromise campaign; npm's incident post documents the `event-stream` response; ESLint's postmortem records its publication timeline; and independently published SafeDep and OpenSSF records corroborate the `node-ipc`, `@emcd-vue/auth`, and `amapcn` release sets and event timing. Frozen OpenSSF `MAL-2025-6020`, a dated StepSecurity report, and the `is` maintainer’s remediation commit agree that `is@3.3.1` and `5.0.0` were malware-bearing releases from a hijacked account. Frozen OpenSSF `MAL-2026-11524`, the frozen Wiz Keyv IOC list, and independent Snyk research agree on `keyv@6.0.0`; the official registry timestamp provides the feature cutoff and selects `keyv@6.0.0-rc.1` as the source object. Wiz reports payload descent from Mini Shai-Hulud, so the separate Keyv/Cacheable campaign family is not treated as statistically independent of the May 2026 `atool` family. [1] [2] [3] [4] [5] [6] [7] [8] [9] [22] [23] [32] [33] [34] [35] [36] [37] [38]
 
 For each record, the builder sets the feature cutoff to one millisecond before the recorded event start, selects the latest registry version timestamp at or before that cutoff, and reads only that selected version object's runtime `dependencies`. A SHA-256 digest of the raw registry response is stored with each reconstructed source record. This arrangement prevents the event release itself or later metadata from becoming a feature.
 
 | Reconstruction component | Result | Fidelity and interpretation |
 |---|---:|---|
-| Pre-registered package-event records | 13 | Package-level observations; not thirteen independent attacks. |
-| Incident families | 9 | `unc3379_2021`, `event_stream_2018`, `eslint_2018`, `is_maintainer_compromise_2025`, `axios_2026`, `node_ipc_2026`, `moika_dependency_confusion_2026`, `shai_hulud_second_coming_2025`, and `mini_shai_hulud_atool_2026`. |
-| Exact source snapshots | 11 | Source package version object selected strictly before its cutoff. |
+| Pre-registered package-event records | 14 | Package-level observations; not fourteen independent attacks. |
+| Incident families | 10 | `unc3379_2021`, `event_stream_2018`, `eslint_2018`, `is_maintainer_compromise_2025`, `axios_2026`, `node_ipc_2026`, `moika_dependency_confusion_2026`, `shai_hulud_second_coming_2025`, `mini_shai_hulud_atool_2026`, and `keyv_cacheable_august_2026`. The last remains non-independent of the `atool` family for any future uncertainty design because only payload ancestry—not statistical independence—is documented. |
+| Exact source snapshots | 12 | Source package version object selected strictly before its cutoff. |
 | Source snapshot unavailable | 2 | `plain-crypto-js` and `@emcd-vue/auth`; no qualifying pre-event version object was retained by the current registry response. |
-| Declared direct edges | 28 | Exact source declarations, each retaining the original SemVer range. |
-| Isolated target-range approximations | 28 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
+| Declared direct edges | 29 | Exact source declarations, each retaining the original SemVer range. |
+| Isolated target-range approximations | 29 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
 | Transitive-reach values | 0 | Intentionally not computed. |
 
 The reproducible inputs and outputs are `64_temporal_package_event_ledger.csv`, `65_package_temporal_companion_snapshots.csv`, `65_package_temporal_companion_declared_edges.csv`, `66_temporal_baseline_and_calibration_gate.json`, `67_cutoff_direct_dependency_graph_edges.csv`, `67_cutoff_direct_dependency_graph_manifest.json`, `70_cutoff_direct_dependency_range_resolution.csv`, `71_direct_range_resolution_diagnostic.json`, `74_bounded_recursive_registry_semver_graph_edges.csv`, and `75_bounded_recursive_registry_graph_diagnostic.json`. The relevant build scripts are `build-package-temporal-companion.mjs`, `build-cutoff-direct-dependency-graphs.mjs`, `build-cutoff-direct-dependency-range-resolution.mjs`, `analyze-direct-range-resolution-diagnostic.mjs`, `build-bounded-recursive-registry-graph.mjs`, and `analyze-bounded-recursive-registry-graph.mjs`.
 
 ## Direct-dependency reconstruction result
 
-The graph artifact begins as a **declared-edge ledger**, not an implied package-manager installation tree. Every edge records the source package-version node, dependency package name, declared range, cutoff, response checksum, and three fidelity fields: source snapshot fidelity, target-version fidelity, and transitive-reach fidelity. A second ledger (`70_cutoff_direct_dependency_range_resolution.csv`) uses the maintained `semver` implementation to select the highest non-prerelease target version satisfying each direct declaration among versions whose registry timestamps are at or before the cutoff. All 28 ranges resolved under that deliberately narrow procedure. [12]
+The graph artifact begins as a **declared-edge ledger**, not an implied package-manager installation tree. Every edge records the source package-version node, dependency package name, declared range, cutoff, response checksum, and three fidelity fields: source snapshot fidelity, target-version fidelity, and transitive-reach fidelity. A second ledger (`70_cutoff_direct_dependency_range_resolution.csv`) uses the maintained `semver` implementation to select the highest non-prerelease target version satisfying each direct declaration among versions whose registry timestamps are at or before the cutoff. All 29 ranges resolved under that deliberately narrow procedure. [12]
 
 The resolved-target label is **`registry_reconstructed_cutoff_semver_approximation`**, not exact resolution. It does not reconstruct npm's historical installation state because peer, optional, bundled, workspace, override, nested, package-manager-version, cache, and lockfile behavior are not part of the calculation. The artifacts remain unsuitable for transitive graph traversal, centrality, dependency reach, blast radius, or attack-return estimates.
 
@@ -51,14 +51,15 @@ The resolved-target label is **`registry_reconstructed_cutoff_semver_approximati
 | `wenk-2025-11-24` | 1.0.8 | 0 | Exact direct declaration | No runtime dependency declarations in the selected version. |
 | `amapcn-2026-05-19` | 0.1.2 | 4 | Exact source declaration + 4 isolated target approximations | No install trace or transitive traversal. |
 | `is-2025-07-19` | 3.3.0 | 0 | Exact direct declaration | No runtime dependency declarations in the selected version. |
+| `keyv-2026-08-04` | 6.0.0-rc.1 | 1 | Exact source declaration + 1 isolated target approximation | No install trace or transitive traversal. |
 
-The selected eleven exact source snapshots have a mean of **2.5** declared runtime dependencies, a median of **3**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
+The selected twelve exact source snapshots have a mean of **2.4** declared runtime dependencies, a median of **2.5**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
 
 ## Bounded recursive registry-graph sensitivity
 
 Official npm documentation defines `package-lock.json` as the exact dependency tree generated by an npm operation, while the SemVer reference defines a range as a set of satisfying versions and documents highest-satisfying selection over a supplied version list. [11] [12] The study therefore uses the current registry only for a **bounded sensitivity graph**: it recursively selects the highest retained, non-prerelease package version satisfying each runtime `dependencies` range and published by the root's frozen cutoff. It excludes `devDependencies`, peers, optional and bundled relations, workspaces, overrides, links, git and tarball specifications, as well as all package-manager installation behavior.
 
-The resulting artifact contains **63 edges** and **65 bounded nodes across the eight root graphs with runtime dependencies**. The eleven-root exact-snapshot design also retains `ua-parser-js@0.7.28`, `wenk@1.0.8`, and `is@3.3.0`, each with no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 63 edges distribute as 28 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
+The resulting artifact contains **64 edges** and **67 bounded nodes across the nine root graphs with runtime dependencies**. The twelve-root exact-snapshot design also retains `ua-parser-js@0.7.28`, `wenk@1.0.8`, and `is@3.3.0`, each with no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 64 edges distribute as 29 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
 
 | Pre-event source root | Bounded edges | Bounded nodes including root | Depth 1 / 2 / 3 edges | Interpretation boundary |
 |---|---:|---:|---|---|
@@ -70,12 +71,13 @@ The resulting artifact contains **63 edges** and **65 bounded nodes across the e
 | `eslint-config-eslint@5.0.1` | 4 | 5 | 1 / 2 / 1 | Range-selected registry sensitivity only. |
 | `node-ipc@12.0.0` | 14 | 15 | 4 / 3 / 7 | Range-selected registry sensitivity only. |
 | `amapcn@0.1.2` | 4 | 5 | 4 / 0 / 0 | Range-selected registry sensitivity only. |
+| `keyv@6.0.0-rc.1` | 1 | 2 | 1 / 0 / 0 | Range-selected registry sensitivity only. |
 
 > **Interpretation limit.** These counts are neither historical installed-tree sizes nor transitive dependency reach. The graph is not a package-lock reconstruction and must not be compared across roots as a security score, centrality measure, blast-radius quantity, or input to any ranking, calibration, PR-AUC, Recall@K, or attack-return calculation.
 
 ## Temporal baseline and calibration gate
 
-The gate computed descriptive feature summaries rather than a model. Across the eleven exact snapshots, package age ranges from 5 to 4,990 days (median 3,372); prior version count ranges from 4 to 130 (median 31); and the direct-dependency count ranges from 0 to 7 (median 3). All eleven retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
+The gate computed descriptive feature summaries rather than a model. Across the twelve exact snapshots, package age ranges from 5 to 4,990 days (median 3,358); prior version count ranges from 4 to 130 (median 39.5); and the direct-dependency count ranges from 0 to 7 (median 2.5). All twelve retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
 
 | Requested analysis | Decision | Evidence-grounded reason |
 |---|---|---|
@@ -229,3 +231,11 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [33] [StepSecurity, “Another npm Supply Chain Attack: The 'is' Package Compromise,” 22 July 2025](https://www.stepsecurity.io/blog/another-npm-supply-chain-attack-the-is-package-compromise).
 
 [34] [enricomarino/is, “v3.3.2” remediation commit `0fe137a`](https://github.com/enricomarino/is/commit/0fe137a5946e4ecb0e649bd7dea48d5415a242fc).
+
+[35] [OpenSSF Malicious Packages, “MAL-2026-11524: Malicious code in keyv (npm),” frozen at commit `88b1340754`](https://github.com/ossf/malicious-packages/blob/88b1340754c17c3d9ae43642c9b2de22b1bbfc10/osv/malicious/npm/keyv/MAL-2026-11524.json).
+
+[36] [Wiz Research IOCs, frozen `keyv-packages.csv` at commit `22752e7`](https://github.com/wiz-sec-public/wiz-research-iocs/blob/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/keyv-packages.csv).
+
+[37] [Wiz Research, “keyv and cacheable npm Package Hijacked in Supply Chain Attack,” 4 August 2026](https://www.wiz.io/blog/keyv-and-cacheable-npm-supply-chain-attack).
+
+[38] [Snyk, “Inside the keyv npm Compromise: preinstall Malware, Trusted Provenance, and IDE Hooks,” 4 August 2026](https://snyk.io/blog/inside-keyv-npm-compromise-preinstall-malware-trusted-provenance-ide-hooks/).

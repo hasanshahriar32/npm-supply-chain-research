@@ -135,3 +135,6 @@
 - [x] Identify one compact, independently documented npm incident-provenance candidate that is distinct from the existing eight adjudicated families
 - [x] Validate affected-version scope, timing, independent corroboration, registry cutoff, and incident-family independence under the frozen adjudication protocol
 - [x] Publish only a qualified ledger addition or a precise provenance exclusion, retaining zero inferred controls and no unsupported metrics
+- [x] Identify one newly documented, compact npm compromise candidate with potentially exact version-level scope that is not presumed independent before screening
+- [x] Validate the candidate’s official timestamps, independent corroboration, strict pre-event source object, and relationship to the existing nine incident families
+- [x] Publish only an admissible new family record or a precise non-independence/provenance exclusion, retaining zero inferred controls and no model metrics

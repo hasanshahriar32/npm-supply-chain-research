@@ -1,0 +1,91 @@
+{
+  "study": "keyv-compromise-bounded-package-event-assessment",
+  "artifactDate": "2026-08-24",
+  "decision": "admit_one_bounded_campaign_family_record_without_cross_campaign_independence_claim",
+  "candidateRecord": {
+    "recordId": "keyv-2026-08-04",
+    "packageName": "keyv",
+    "affectedVersions": [
+      "6.0.0"
+    ],
+    "eventFamily": "keyv_cacheable_august_2026",
+    "eventStartUtc": "2026-08-04T09:35:00.763Z",
+    "labelClass": "confirmed_targeted_compromise",
+    "primaryPackageTargetEligible": true
+  },
+  "corroboration": {
+    "openssfRecordId": "MAL-2026-11524",
+    "openssfPublishedUtc": "2026-08-04T11:19:14Z",
+    "openssfModifiedUtc": "2026-08-05T00:12:13.176734347Z",
+    "openssfOrigins": [
+      {
+        "id": "IN-MAL-2026-010972",
+        "import_time": "2026-08-04T21:33:11.726128238Z",
+        "modified_time": "2026-08-04T21:07:18Z",
+        "sha256": "4b828a8383aadd40e3c94c5be32dc4466e0d7c4872550f6316da2a195e978ca5",
+        "source": "amazon-inspector",
+        "versions": [
+          "6.0.0"
+        ]
+      },
+      {
+        "id": "GHSA-3p9h-f68w-m6fx",
+        "import_time": "2026-08-05T00:10:17.860265883Z",
+        "modified_time": "2026-08-04T11:19:15Z",
+        "sha256": "48375bb2643bebbc43e5fd4ee45e9810e9fe77bf95e434aeafbc22d63ab577e6",
+        "source": "ghsa-malware",
+        "versions": [
+          "6.0.0"
+        ]
+      }
+    ],
+    "frozenWizIocList": {
+      "url": "https://raw.githubusercontent.com/wiz-sec-public/wiz-research-iocs/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/keyv-packages.csv",
+      "commit": "22752e7cc55ece6a053e3277b60b914e0260e65d"
+    },
+    "independentSnykIncidentReport": "https://snyk.io/blog/inside-keyv-npm-compromise-preinstall-malware-trusted-provenance-ide-hooks/",
+    "registryVersionTimesUtc": {
+      "6.0.0": "2026-08-04T09:35:00.763Z"
+    },
+    "preEventLatestVersion": "6.0.0-rc.1",
+    "strictFeatureCutoffUtc": "2026-08-04T09:35:00.762Z"
+  },
+  "familyRelationship": {
+    "withinCampaign": "This artifact represents only keyv@6.0.0, not the hundreds of packages reported in the August 2026 keyv/cacheable campaign.",
+    "crossCampaign": "Wiz describes the payload as a descendant of the Mini Shai-Hulud malware family. The August 2026 keyv/cacheable event is retained as a separate dated campaign family, but no statistical independence from the May 2026 Mini Shai-Hulud atool family is asserted."
+  },
+  "sourceProvenance": {
+    "openssfRecord": {
+      "url": "https://raw.githubusercontent.com/ossf/malicious-packages/88b1340754c17c3d9ae43642c9b2de22b1bbfc10/osv/malicious/npm/keyv/MAL-2026-11524.json",
+      "commit": "88b1340754c17c3d9ae43642c9b2de22b1bbfc10",
+      "responseSha256": "8d1781df0de7e6322193195398c6c344d10479e6aa67d5a61f2f2d7141bc601e"
+    },
+    "wizIocList": {
+      "url": "https://raw.githubusercontent.com/wiz-sec-public/wiz-research-iocs/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/keyv-packages.csv",
+      "commit": "22752e7cc55ece6a053e3277b60b914e0260e65d",
+      "responseSha256": "138c7a54f25d90ae339f4de652c49bd663c0a8a4accbf921707178b0e90330a0"
+    },
+    "wizIncidentReport": {
+      "url": "https://www.wiz.io/blog/keyv-and-cacheable-npm-supply-chain-attack",
+      "responseSha256": "f9198c8eda189dcac3a28cd0a530dd8dc0431f3155cc91d33d44b20283a7c877"
+    },
+    "independentSnykIncidentReport": {
+      "url": "https://snyk.io/blog/inside-keyv-npm-compromise-preinstall-malware-trusted-provenance-ide-hooks/",
+      "responseSha256": "23b37e2c63955e50d84f863663405e21d446878d586b7ccca60058892e5654f9"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/keyv",
+      "responseSha256": "e15dc48c69baa11f5934ff79dd97f6e13af1f5d53a43f00ab982209e93b44a14"
+    }
+  },
+  "inclusionBoundary": [
+    "This assessment admits only keyv@6.0.0 after agreement among the frozen OpenSSF record, frozen Wiz version list, Wiz incident report, independent Snyk report, and official npm registry version-time map.",
+    "The strict cutoff is one millisecond before keyv@6.0.0's official registry timestamp and selects the latest retained source object strictly before that time.",
+    "The record is one bounded August 2026 campaign-family observation and does not expand to the reported campaign list or establish cross-campaign independence."
+  ],
+  "prohibitedInterpretations": [
+    "This artifact does not create a cutoff-valid control population, benign labels, historical installation trace, dependency reach, or blast-radius estimate.",
+    "This artifact does not convert a shared malware-family description into evidence that the keyv/cacheable and Mini Shai-Hulud atool campaigns are independent samples.",
+    "This artifact does not license ranking, calibration, PR-AUC, Recall@K, logistic regression, or attack-return claims."
+  ]
+}
