@@ -147,3 +147,6 @@
 - [x] Define a future-only release-authority delta ontology that separates retained-field availability from qualified predecessor-to-release semantic comparisons
 - [x] Specify eligibility, source-fidelity, and missingness rules that must be satisfied before any authority delta can be classified or used in a future benchmark
 - [x] Publish the delta-semantics protocol with regression coverage while retaining zero observed deltas, scores, controls, models, rankings, or predictive metrics
+- [x] Identify official npm provenance-attestation documentation and a bounded version-specific metadata access path without retrieving package payloads
+- [x] Screen strict pre-event release objects for provenance-attestation response availability, time semantics, and verification prerequisites without treating absence as unchanged or benign
+- [x] Publish only a bounded availability finding or precise access exclusion, retaining zero provenance-state comparisons, controls, scores, models, rankings, or predictive metrics

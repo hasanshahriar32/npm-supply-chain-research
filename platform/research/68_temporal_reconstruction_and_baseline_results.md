@@ -130,6 +130,19 @@ The artifact emits booleans, selected/predecessor version identifiers, and regis
 
 The protocol makes `not_eligible_missing_or_ambiguous_evidence` and `not_applicable_to_release_regime` explicit states; neither may fall back to unchanged, safe, benign, or no-known-event. It records **zero raw values, observed comparisons, classified deltas, scores, controls, models, ranks, or predictive metrics**. The design uses Santos-Grueiro’s predecessor-aware release-authority record only as methodological context, retains npm’s explicit warning that provenance does not guarantee malicious-code absence, and does not access provenance data from npm or deps.dev. [42] [43] [44]
 
+## Official npm provenance-attestation access screen
+
+`97_official_npm_provenance_attestation_access_assessment.json` evaluates whether the twelve exact pre-event source versions can be checked for provenance attestations **without package download, installation, or undocumented endpoint guessing**. Official npm documentation describes `npm audit signatures` as the verification mechanism for downloaded dependency sets, while the public Registry API reference reviewed here does not document a public unauthenticated metadata-only endpoint for an arbitrary version’s attestation bundle. Therefore the assessment makes **zero version-specific endpoint requests**, downloads **zero package payloads**, runs **zero signature verifications**, retrieves **zero bundles**, and classifies **zero attestation states**.
+
+| Access question | Bounded result | Inference limit |
+|---|---|---|
+| Candidate pre-event versions | 12 exact source objects could be screened in a future documented or authorized path. | Candidate availability is not an attestation result. |
+| Official metadata-only retrieval path | Not established by the reviewed documentation. | Do not guess an endpoint or convert access uncertainty to attestation absence. |
+| Documented verification mechanism | `npm audit signatures` for downloaded dependency sets. | Not invoked; it would exceed the metadata-only/no-payload access policy. |
+| Provenance meaning | A verifiable link to source/build information. | It does not guarantee absence of malicious code and does not create a benign label. |
+
+The decision is an **access-contract exclusion**, not a provenance-state result for any package version. It creates **zero comparisons, controls, release-authority scores, rankings, models, or predictive metrics**. Current badges, current provenance views, current repository state, and current transparency-log search results remain unusable as historical evidence. [45] [46] [47]
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -291,3 +304,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [43] [npm Docs, “Generating provenance statements”](https://docs.npmjs.com/generating-provenance-statements).
 
 [44] [Open Source Insights, “Introducing npm package SLSA provenance support”](https://blog.deps.dev/npm-provenance/).
+
+[45] [npm Docs, “Generating provenance statements”](https://docs.npmjs.com/generating-provenance-statements).
+
+[46] [npm, “npm Registry API”](https://api-docs.npmjs.com/).
+
+[47] [GitHub, “Introducing npm package provenance”](https://github.blog/security/supply-chain-security/introducing-npm-package-provenance/).
