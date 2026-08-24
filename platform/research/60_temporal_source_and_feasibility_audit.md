@@ -84,7 +84,13 @@ This makes the manifest useful only as a frozen, human-vetted **positive-members
 
 The OpenSSF Malicious Packages OSV report `MAL-2026-3744` supplies a published timestamp of 14 May 2026, exact npm versions `9.1.6`, `9.2.3`, and `12.0.1`, source provenance records, package-integrity evidence, and an alias to `GHSA-pvh2-rg5g-69v7`. [14] Its independent SafeDep report, published on the same date, names the same three versions and reports their official registry publication timestamps, including `12.0.1` at `2026-05-14T14:25:30.311Z`. [15]
 
-This pair satisfies the pre-registered adjudication threshold for one new, independent maintainer-compromise family. The ledger uses the earliest reported malicious publication timestamp as the cutoff, reconstructs `node-ipc@12.0.0` immediately before that cutoff from official registry metadata, and retains the report publication time only as evidence provenance—not a feature. The expanded ledger now has nine package-event records, five incident families, eight exact source snapshots, and 24 exact declared direct edges. The baseline remains blocked because it is still one strict record short of the ten-record floor and has no cutoff-valid control population.
+This pair satisfies the pre-registered adjudication threshold for one new, independent maintainer-compromise family. The ledger uses the earliest reported malicious publication timestamp as the cutoff, reconstructs `node-ipc@12.0.0` immediately before that cutoff from official registry metadata, and retains the report publication time only as evidence provenance—not a feature.
+
+## Dated OSV-report validation: `@emcd-vue/auth`
+
+SafeDep documents the `oob.moika.tech` dependency-confusion campaign, including the `@emcd-vue` June 2026 wave and exact `@emcd-vue/auth` versions `6.4.8` and `6.4.9`. [16] OpenSSF report `MAL-2026-5163` independently identifies the package as malicious, records versions `6.4.5`, `7.0.0`, `6.4.8`, and `6.4.9`, exposes package-integrity evidence, and aliases `GHSA-gj65-7753-2q9f`. [17] The official registry time map confirms `6.4.8` at `2026-06-01T07:04:12.358Z`; this is the earliest documented malicious version and is used as the strict event anchor.
+
+The retained current registry response does not contain a usable pre-anchor version object for this package. The record is therefore admitted as a high-confidence **label-only event** but contributes no source-package metadata, direct declaration, range approximation, or bounded graph root. This is an intentional fidelity result: the expanded ledger reaches ten package-event records and six incident families, while exact reconstruction remains eight source snapshots and the primary baseline remains blocked for lack of cutoff-valid controls.
 
 ## References
 
@@ -103,3 +109,5 @@ This pair satisfies the pre-registered adjudication threshold for one new, indep
 [13]: https://github.com/DataDog/malicious-software-packages-dataset "DataDog Malicious Software Packages Dataset"
 [14]: https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/node-ipc/MAL-2026-3744.json "OpenSSF MAL-2026-3744 node-ipc report"
 [15]: https://safedep.io/malicious-node-ipc-npm-compromise/ "SafeDep node-ipc compromise report"
+[16]: https://safedep.io/oob-moika-tech-dependency-confusion-campaign/ "SafeDep oob.moika.tech dependency-confusion campaign"
+[17]: https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/%40emcd-vue/auth/MAL-2026-5163.json "OpenSSF MAL-2026-5163 @emcd-vue/auth report"

@@ -194,3 +194,12 @@ The project admits this as one new `node_ipc_2026` incident family. Its strict f
 
 25. OpenSSF Malicious Packages, *MAL-2026-3744: Malicious code in node-ipc (npm)*: <https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/node-ipc/MAL-2026-3744.json>.
 26. SafeDep, *Compromised node-ipc on npm: Credential Stealer via DNS Exfiltration*, 14 May 2026: <https://safedep.io/malicious-node-ipc-npm-compromise/>.
+
+## Dated dependency-confusion expansion — 2026-08-24
+
+SafeDep's `oob.moika.tech` campaign report documents the June 2026 `@emcd-vue` wave and identifies `@emcd-vue/auth` versions `6.4.8` and `6.4.9`. [27] OpenSSF report `MAL-2026-5163` independently records `@emcd-vue/auth` as malicious, supplies package-integrity evidence and a GHSA alias, and lists versions `6.4.5`, `7.0.0`, `6.4.8`, and `6.4.9`. [28] The official npm registry response provides the exact `6.4.8` publication timestamp of `2026-06-01T07:04:12.358Z`.
+
+The record is admitted as one distinct `moika_dependency_confusion_2026` family and uses that earliest documented malicious publication as its strict cutoff. The retained registry response does not provide a usable pre-cutoff version object, so this is intentionally a label-only event: it increases the ledger to ten package-event records and six families but does not increase exact source snapshots, direct edges, isolated range targets, or bounded graph roots. The ten-record count now meets the pre-registered positive-record floor; calibration and ranking remain blocked because no cutoff-valid control population exists and only eight exact feature snapshots are reconstructable.
+
+27. SafeDep, *183 npm Packages Target Cloud and Finance via oob.moika.tech*, 28 May 2026: <https://safedep.io/oob-moika-tech-dependency-confusion-campaign/>.
+28. OpenSSF Malicious Packages, *MAL-2026-5163: Malicious code in @emcd-vue/auth (npm)*: <https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/%40emcd-vue/auth/MAL-2026-5163.json>.

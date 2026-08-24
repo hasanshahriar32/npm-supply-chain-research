@@ -21,6 +21,7 @@ describe("repository-backed research sources", () => {
     expect(names).toContain("Shai-Hulud");
     expect(names).toContain("Axios");
     expect(names).toContain("node-ipc 2026");
+    expect(names).toContain("@emcd-vue/auth 2026");
   });
 
   it("marks the graph-attention experiment as blocked until prerequisites are met", () => {
@@ -36,7 +37,7 @@ describe("repository-backed research sources", () => {
     expect(documents.find((document) => document.slug === "experiment-results")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ title: "Gap Analysis" });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("nine package-event records") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("ten package-event records") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -44,13 +45,15 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 9, exactSourceSnapshots: 8, declaredDirectEdges: 24, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 10, exactSourceSnapshots: 8, unavailableSourceSnapshots: 2, declaredDirectEdges: 24, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
     expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 24, resolvedIsolatedSemverRanges: 24, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
     expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 24, isolatedCutoffSemverApproximations: 24, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ exactPreEventSnapshots: 8, calibrationInference: "blocked" });
-    expect(gate.distinctIncidentFamilies).toContain("node_ipc_2026");
+    expect(gate).toMatchObject({ strictPackageEventRecords: 10, adjudicatedIncidentFamilyCount: 6, exactPreEventSnapshots: 8, exactSnapshotIncidentFamilyCount: 5, calibrationInference: "blocked" });
+    expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
+    expect(gate.adjudicatedIncidentFamilies).toContain("moika_dependency_confusion_2026");
+    expect(gate.blockingConditions).toContain("No cutoff-valid, independently adjudicated control population is available.");
   });
 
   it("records the selectively inspected resolver archive without treating its monolithic relation payload as ingested graph data", async () => {
@@ -100,7 +103,7 @@ describe("repository-backed research sources", () => {
   it("uses the DataDog manifest only as positive-membership corroboration", async () => {
     const fs = await import("node:fs/promises");
     const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
-    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 9, exactAffectedVersionMembership: 2, packagePresentVersionsUnspecified: 1, packageNotPresent: 6, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 10, exactAffectedVersionMembership: 2, packagePresentVersionsUnspecified: 1, packageNotPresent: 7, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });

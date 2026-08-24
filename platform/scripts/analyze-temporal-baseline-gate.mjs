@@ -22,11 +22,16 @@ function numeric(values) {
 const rows = parseCsv(await readFile(path.join(researchDir, "65_package_temporal_companion_snapshots.csv"), "utf8"));
 const diagnostics = JSON.parse(await readFile(path.join(researchDir, "65_package_temporal_companion_diagnostics.json"), "utf8"));
 const exact = rows.filter(row => row.snapshot_status === "registry_reconstructed_exact");
-const distinctFamilies = [...new Set(exact.map(row => row.event_family))];
+const exactSnapshotFamilies = [...new Set(exact.map(row => row.event_family))];
+const adjudicatedIncidentFamilies = diagnostics.incidentFamilies;
 const report = {
   study: "temporal-baseline-and-calibration-gate",
+  strictPackageEventRecords: diagnostics.observations,
+  adjudicatedIncidentFamilies,
+  adjudicatedIncidentFamilyCount: diagnostics.incidentFamilyCount,
   exactPreEventSnapshots: exact.length,
-  distinctIncidentFamilies: distinctFamilies,
+  exactSnapshotIncidentFamilies: exactSnapshotFamilies,
+  exactSnapshotIncidentFamilyCount: exactSnapshotFamilies.length,
   featureSummaries: {
     package_age_days: numeric(exact.map(row => row.package_age_days)),
     prior_version_count: numeric(exact.map(row => row.prior_version_count)),
@@ -43,9 +48,9 @@ const report = {
   },
   calibrationInference: "blocked",
   blockingConditions: [
-    `Only ${diagnostics.observations} strict pre-registered package-event records are available; the minimum gate is ten.`,
+    diagnostics.observations < 10 ? `Only ${diagnostics.observations} strict pre-registered package-event records are available; the minimum gate is ten.` : null,
     `Only ${exact.length} exact pre-event source snapshots are currently reconstructable.`,
-    distinctFamilies.length < 5 ? `Only ${distinctFamilies.length} independent incident families are represented; the minimum gate is five.` : null,
+    diagnostics.incidentFamilyCount < 5 ? `Only ${diagnostics.incidentFamilyCount} adjudicated incident families are represented; the minimum gate is five.` : null,
     "No cutoff-valid, independently adjudicated control population is available.",
     "Current structural and workflow metrics cannot be joined as historical features.",
   ].filter(Boolean),
@@ -56,4 +61,4 @@ const report = {
 };
 
 await writeFile(path.join(researchDir, "66_temporal_baseline_and_calibration_gate.json"), JSON.stringify(report, null, 2) + "\n");
-console.log(JSON.stringify({ exactPreEventSnapshots: report.exactPreEventSnapshots, distinctIncidentFamilies: distinctFamilies.length, calibrationInference: report.calibrationInference }, null, 2));
+console.log(JSON.stringify({ exactPreEventSnapshots: report.exactPreEventSnapshots, adjudicatedIncidentFamilyCount: report.adjudicatedIncidentFamilyCount, exactSnapshotIncidentFamilyCount: report.exactSnapshotIncidentFamilyCount, calibrationInference: report.calibrationInference }, null, 2));

@@ -94,3 +94,8 @@
 - [x] Identify dated advisory, vulnerability-record, or provider-maintained incident sources with npm package-version scope suitable for temporal adjudication
 - [x] Validate candidate source timing, affected-version detail, evidence provenance, and campaign independence against the frozen adjudication rules
 - [x] Expand only labels that meet the evidence threshold, or publish the reason a candidate source cannot advance the primary temporal ledger
+- [x] Identify a distinct npm incident family with dated primary evidence and exact affected-release scope
+- [x] Validate the candidate family’s timing, affected versions, source provenance, and independence from existing ledger families
+- [x] Expand reproducible temporal artifacts only if the candidate passes the frozen adjudication protocol
+- [x] Reconcile all temporal diagnostics so total incident-family and exact-snapshot-family counts are explicit and consistent after label-only additions
+- [x] Rerun tests and production build after final artifact and document fixes, then revalidate protected Incident Labels, Gap Analysis, and Methodology pages
