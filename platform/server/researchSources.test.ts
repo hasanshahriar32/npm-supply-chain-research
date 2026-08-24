@@ -44,6 +44,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("GitHub’s public malware-advisory path") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Original Sin of npm") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
@@ -179,6 +180,18 @@ describe("repository-backed research sources", () => {
     expect(assessment).toMatchObject({ npmControlFrameDecision: "excluded", npmRowsCreated: 0, controlsCreated: 0, candidate: { documentedEcosystem: "PyPI/OSV" } });
     expect(assessment.blockingConditions).toContain("The disclosed benchmark population is PyPI/OSV component-cutoff instances, not npm package versions.");
     expect(assessment.prohibitedInterpretations).toContain("Do not transfer reported PyPI/OSV performance results to npm.");
+  });
+
+  it("retains Original Sin of npm as vulnerability-lifecycle context rather than a temporal compromise-control frame", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/89_original_sin_npm_control_frame_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      controlFrameDecision: "excluded",
+      controlsCreated: 0,
+      npmRowsCreated: 0,
+      candidate: { documentedOutcome: "Disclosed OSV/NVD vulnerability propagation and lifecycle information." },
+    });
+    expect(assessment.blockingConditions).toContain("The documented target is vulnerability propagation, not closed-world malicious-publication or maintainer-compromise coverage.");
+    expect(assessment.prohibitedInterpretations).toContain("Do not treat vulnerability absence as a benign or uncompromised npm control label.");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {

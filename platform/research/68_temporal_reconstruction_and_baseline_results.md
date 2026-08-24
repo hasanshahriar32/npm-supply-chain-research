@@ -131,6 +131,8 @@ The `npm-follower` archive is a more promising historical-population concept but
 
 SupplyTGN supplies a useful **benchmark-design reference**, not npm control data. Its preprint documents cutoff-safe feature materialization, leakage audits, explicit 30- and 90-day horizons, and released per-instance predictions, but the disclosed benchmark is constructed from PyPI/OSV component–cutoff instances. [30] Its outcomes are therefore outside the npm malicious-publication and maintainer-compromise target contract. The study may inform future npm pre-registration of horizons and leakage checks, but creates **zero npm rows or controls** and cannot transfer PyPI/OSV performance claims to npm.
 
+The 2026 **Original Sin of npm** study is an npm-specific vulnerability-lifecycle and propagation reference, not a matched compromise-control frame. It reports a 5 September 2023 npm-follower snapshot, random package-name sampling, subsequent live-registry filtering, and a custom 1,077,946-parent-package database combining current/default dependency resolution with OSV/NVD vulnerability information. [31] Its target is disclosed vulnerability propagation rather than closed-world malicious publication or maintainer compromise; its post-sample live filtering means the final population is not a frozen cutoff-valid at-risk denominator; it provides no named downloadable custom-database release or query endpoint; and it specifies no future non-event horizon. The candidate creates **zero controls, labels, model fits, or metrics**. Its discussion of vulnerability introduction, fixing, publication, and right-censoring is retained only as methodology context.
+
 | Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
 |---|---|---|---|---|
 | Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
@@ -140,6 +142,7 @@ SupplyTGN supplies a useful **benchmark-design reference**, not npm control data
 | GitHub Advisory Database malware path | OSV positive-advisory provenance and update/retraction handling | No frozen at-risk population, closed-world compromise coverage, or non-event horizon | Public repository and announcement | Excluded as primary temporal control frame. |
 | npm-follower archive | Real-time historical npm metadata and code archive, including deleted versions | No matched malicious-publication/compromise coverage or non-event horizon | More than 20 TB; no public filtered export or query path documented | Excluded under bounded-access and outcome-contract gates. |
 | SupplyTGN | PyPI/OSV component–cutoff benchmark with explicit horizons and leakage audits | PyPI/OSV vulnerability target, not npm compromise/malicious-publication coverage | Public preprint and described release | Methodology-only; excluded from npm controls. |
+| Original Sin of npm | 2023 npm-follower-derived random package-name sample with later live filtering | OSV/NVD vulnerability lifecycle, not closed-world malicious-publication/compromise coverage; no non-event horizon | Paper describes custom database but no row-level release, filtered export, or query endpoint | Methodology-only; excluded from npm controls. |
 
 ## What the discovered version-resolved dataset changes—and does not change
 
@@ -214,3 +217,5 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [29] [D. Pinckney, `dependencies.science` repository](https://github.com/donald-pinckney/dependencies.science).
 
 [30] [T. P. Tran Truong, S. Ha, and X.-B. Le, “SupplyTGN: A Reproducible Leakage-Safe Benchmark for Temporal Software Supply-Chain Risk,” SSRN preprint, 2026](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7194447).
+
+[31] [M. Robinson et al., “Original Sin of npm: A Study on Vulnerability Propagation in JavaScript Dependency Networks,” ASIA CCS 2026 / arXiv:2604.17668v1, 19 April 2026](https://arxiv.org/html/2604.17668v1).

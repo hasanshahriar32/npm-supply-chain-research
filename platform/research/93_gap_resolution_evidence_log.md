@@ -292,6 +292,14 @@ SupplyTGN creates zero npm rows, controls, labels, incident families, calibratio
 
 46. T. P. Tran Truong, S. Ha, and X.-B. Le, “SupplyTGN: A Reproducible Leakage-Safe Benchmark for Temporal Software Supply-Chain Risk,” SSRN preprint, 28 July 2026: <https://papers.ssrn.com/sol3/papers.cfm?abstract_id=7194447>.
 
+## Original Sin of npm dataset screen — 2026-08-24
+
+Robinson et al. describe a large npm vulnerability-propagation study built from a 5 September 2023 npm-follower snapshot: 3,946,361 packages and 36,432,989 package versions before a random package-name sample and subsequent live-registry filtering. Their resulting analysis database covers 1,077,946 parent packages, source-derived dependency networks, and OSV/NVD vulnerability information with publication, modification, affected-version, and fix fields. [47]
+
+The study does not satisfy the primary npm compromise-control contract. Its reported target is disclosed vulnerability propagation, not closed-world malicious publication or maintainer compromise. Its sampling process removes currently unavailable and designated malicious-stub names using a live repository, so the reported parent population is not a frozen cutoff-valid at-risk population. The paper describes its build algorithm and public upstream sources but does not provide a named downloadable row-level release, filtered export, or query endpoint for the custom database. Finally, it does not pre-register a future non-event observation horizon. It therefore creates zero benchmark rows, controls, labels, family assignments, calibration results, or model metrics. Its vulnerability timing and right-censoring discussion may be considered only as methodology context.
+
+47. M. Robinson et al., “Original Sin of npm: A Study on Vulnerability Propagation in JavaScript Dependency Networks,” ASIA CCS 2026 / arXiv:2604.17668v1, 19 April 2026: <https://arxiv.org/html/2604.17668v1>.
+
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.

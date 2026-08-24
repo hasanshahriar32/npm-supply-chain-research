@@ -123,3 +123,6 @@
 - [x] Identify a further public temporal benchmark candidate: SupplyTGN’s leakage-safe component–cutoff release
 - [x] Validate SupplyTGN against the npm contract; its population and outcomes are PyPI/OSV rather than npm malicious-publication or compromise evidence
 - [x] Publish a precise methodology-only exclusion, retaining zero inferred benign controls and prohibiting transfer of PyPI/OSV metrics to npm
+- [x] Identify a further npm-specific public candidate that could document a frozen package-version population, compromise or malicious-publication coverage, and a non-event horizon
+- [x] Validate the selected npm candidate's cutoff, row-level identifiers, outcome coverage, non-event semantics, and bounded reproducible access against the frozen control-frame contract
+- [x] Publish only a supported npm-specific evidence improvement or a precise exclusion, retaining zero inferred benign controls when any gate fails

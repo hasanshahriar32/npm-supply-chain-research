@@ -159,6 +159,8 @@ The evaluated npm-follower resource is a relevant future source for version rete
 
 The current DataDog npm manifest was also frozen as a human-vetted, positive-only catalogue. It corroborates package-version membership for the Axios and node-ipc records and package presence without version detail for `plain-crypto-js`; its absence entries produce no conclusion. Because it has no row-level event time, campaign assignment, evidence URLs, or negative labels, it neither alters the primary ledger nor supplies a temporal control population. [14]
 
+The npm-specific Original Sin of npm study is also excluded from the temporal-control population. It reports a 5 September 2023 npm-follower snapshot, random sampling, later live-registry availability/stub filtering, default-or-latest dependency construction, and OSV/NVD vulnerability records for a custom analysis database. [24] That supports methodology context for vulnerability timing and right-censoring only: the target is disclosed vulnerability propagation rather than malicious-publication or maintainer-compromise coverage, the final sample is not a frozen cutoff-valid at-risk denominator, no row-level custom-database release or query endpoint is named, and no future non-event horizon is declared. It creates zero controls, labels, model fits, or metrics.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -184,3 +186,4 @@ The current DataDog npm manifest was also frozen as a human-vetted, positive-onl
 [21]: https://github.com/wiz-sec-public/wiz-research-iocs/blob/22752e7cc55ece6a053e3277b60b914e0260e65d/reports/shai-hulud-2-packages.csv "Wiz frozen Shai-Hulud second-wave IOC CSV"
 [22]: https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/ "SafeDep Mini Shai-Hulud atool incident report"
 [23]: https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json "OpenSSF MAL-2026-4127 amapcn report"
+[24]: https://arxiv.org/html/2604.17668v1 "Robinson et al., Original Sin of npm"
