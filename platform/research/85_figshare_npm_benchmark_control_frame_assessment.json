@@ -1,0 +1,70 @@
+{
+  "study": "figshare-npm-malicious-package-benchmark-control-frame-assessment",
+  "assessmentDate": "2026-08-24",
+  "candidate": {
+    "paper": "How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study",
+    "paperUrl": "https://arxiv.org/html/2603.27549v2",
+    "figshareDoi": "10.6084/m9.figshare.31869370.v6",
+    "figshareArticleUrl": "https://api.figshare.com/v2/articles/31869370",
+    "currentRelease": {
+      "version": 6,
+      "publishedUtc": "2026-08-01T14:54:22Z",
+      "totalBytes": 11370463451,
+      "describedMaliciousPackageVersions": 6420,
+      "describedBenignPackages": 7288
+    },
+    "boundedInspectedArchive": {
+      "version": 1,
+      "fileId": 63179326,
+      "fileName": "NPMStudy.zip",
+      "bytes": 87885991,
+      "md5": "be67198a63e059ec7a123c356784db6f",
+      "publishedUtc": "2026-03-27T10:00:43Z",
+      "accessMethod": "HTTP byte ranges: ZIP central directory plus named metadata members only"
+    }
+  },
+  "boundedMetadataObservations": {
+    "archiveInventory": {
+      "entries": 59783,
+      "uncompressedBytes": 213032525,
+      "packageSourceMembersExtractedOrExecuted": 0,
+      "topLevelCsvMembers": [
+        "NPMStudy/Data/timecollect/time/malware_packages.csv",
+        "NPMStudy/Data/timecollect/time/malware_time.csv"
+      ]
+    },
+    "malwareTimeCsv": {
+      "schema": ["package_name", "version", "timestamp"],
+      "rows": 6420,
+      "distinctPackageVersions": 6420,
+      "timestampsNonblankAfterNormalization": 6149,
+      "timestampsBlankAfterNormalization": 271,
+      "earliestNonblankTimestampUtc": "2011-05-12T08:43:03.953Z",
+      "latestNonblankTimestampUtc": "2025-05-17T07:07:29.508Z"
+    },
+    "selectedBenignPackages": {
+      "member": "NPMStudy/Data/cleaning/selected_benign_packages.txt",
+      "rows": 1000,
+      "distinctPackageVersionStrings": 1000,
+      "perRowTimestampProvided": false,
+      "collectionCutoffProvided": false,
+      "observationHorizonProvided": false,
+      "relationshipToCurrentReleaseBenignCountDocumented": false
+    }
+  },
+  "controlFrameDecision": "excluded",
+  "controlsCreated": 0,
+  "blockingConditions": [
+    "The release is a retrospective detector-evaluation benchmark, not a frozen at-risk population with a prospectively or retrospectively documented closed-world outcome horizon.",
+    "The inspected selected-benign list has package/version identifiers but no per-row timestamp, collection cutoff, or observation horizon.",
+    "The release description does not establish that absence from the benchmark's malicious data is a valid non-event outcome for malicious publication or maintainer compromise.",
+    "The version-1 metadata extracts do not document their relationship to the later stated 7,288-benign-package count."
+  ],
+  "permittedUse": "Future release-classification sensitivity lead only after a separately specified label, sampling, temporal, and retention analysis.",
+  "prohibitedInterpretations": [
+    "Do not call the selected benign strings cutoff-valid temporal controls.",
+    "Do not infer benign, uncompromised, or no-known-event labels from non-membership in this benchmark.",
+    "Do not report ranking, calibration, PR-AUC, Recall@K, logistic-regression, blast-radius, or attack-return metrics from this source in the temporal benchmark.",
+    "Do not treat the bounded archive inventory or metadata extraction as package-code analysis or package execution."
+  ]
+}

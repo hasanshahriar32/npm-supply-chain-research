@@ -40,6 +40,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("no predictive model has been fitted") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Provider-backed control-frame assessment") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Control-frame contract and public snapshot access assessment") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Figshare replication package") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("twelve package-event records") });
   });
 
@@ -136,6 +137,20 @@ describe("repository-backed research sources", () => {
     expect(contract).toContain("redirected to Google sign-in");
     expect(contract).toContain("Libraries.io public metadata");
     expect(contract).toContain("zero valid controls");
+  });
+
+  it("retains the bounded Figshare detector benchmark as a release-classification lead rather than temporal controls", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/85_figshare_npm_benchmark_control_frame_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      controlFrameDecision: "excluded",
+      controlsCreated: 0,
+      boundedMetadataObservations: {
+        malwareTimeCsv: { rows: 6420, timestampsNonblankAfterNormalization: 6149, timestampsBlankAfterNormalization: 271 },
+        selectedBenignPackages: { rows: 1000, perRowTimestampProvided: false, observationHorizonProvided: false },
+      },
+    });
+    expect(assessment.blockingConditions).toContain("The inspected selected-benign list has package/version identifiers but no per-row timestamp, collection cutoff, or observation horizon.");
+    expect(assessment.prohibitedInterpretations).toContain("Do not call the selected benign strings cutoff-valid temporal controls.");
   });
 
   it("admits only the bounded and cross-source corroborated wenk Shai-Hulud record", async () => {

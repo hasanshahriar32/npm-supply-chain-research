@@ -123,11 +123,14 @@ The Zenodo **NPM Registry Dataset 2025 (GitHub Only)** is a useful population-so
 
 Libraries.io is likewise excluded: its public documentation describes scraped, unvalidated package metadata and a current aggregate package count, not an immutable historical package-version population with a documented outcome horizon. [21] Its public data cannot supply a temporal non-event denominator. The new `83_control_frame_contract_and_access_assessment.md` preserves the contract, exact source boundaries, and zero-control decision.
 
+The Figshare replication package for Guo et al.’s 2026 detector benchmark is a useful **release-classification sensitivity lead**, but it also fails the primary temporal-control contract. Its public description reports 6,420 malicious package versions and 7,288 benign packages. A bounded version-1 archive inspection retrieved only its ZIP directory plus three named text/CSV metadata members—not any package source—and confirmed 6,420 malware package-version rows, of which 271 have blank timestamps after normalization. Its selected-benign list contains 1,000 version-addressable strings but no per-row timestamp, collection cutoff, follow-up horizon, or documented relationship to the later 7,288-benign count. [24] [25] The release is a retrospective detector-evaluation corpus assembled from academic datasets and public advisories, rather than a frozen at-risk population followed under matched compromise coverage. It creates **zero controls**.
+
 | Candidate source | Population property | Outcome-coverage and horizon | Bounded access | Primary-control decision |
 |---|---|---|---|---|
 | Zenodo NPM Registry Dataset 2025 | Named 20 February 2025 GitHub-repository subset | No paired malicious-publication/compromise coverage or horizon | One 22.3 GB gzip / 108 GB expanded stream | Excluded. |
 | deps.dev BigQuery | Snapshot and package-version fields documented | Advisories are vulnerability-oriented; no authenticated access | Google Cloud account and BigQuery API required | Excluded pending both access and target match. |
 | Libraries.io public metadata | Current scraped package metadata | No frozen historical outcome contract | Public page, but no documented temporal denominator | Excluded. |
+| Guo et al. Figshare detector benchmark | Versioned package/version labels and partial malware timestamps | Retrospective detector corpus; benign list lacks timestamp, cutoff, and horizon | Bounded metadata-only ZIP access works | Excluded as primary temporal control frame. |
 
 ## What the discovered version-resolved dataset changes—and does not change
 
@@ -188,3 +191,7 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [22] [SafeDep, “Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised,” 19 May 2026](https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/).
 
 [23] [OpenSSF Malicious Packages, “MAL-2026-4127: Malicious code in amapcn (npm)”](https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json).
+
+[24] [W. Guo et al., “How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study,” arXiv:2603.27549v2, 2026](https://arxiv.org/html/2603.27549v2).
+
+[25] [W. Guo, “How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study,” Figshare Version 6](https://doi.org/10.6084/m9.figshare.31869370).

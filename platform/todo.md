@@ -111,3 +111,6 @@
 - [x] Identify a compact, independently documented npm compromise source with explicit version-level identifiers and a strict registry cutoff: the bounded Mini Shai-Hulud atool amapcn record
 - [x] Screen bounded historical-population access paths against the control-frame contract; the existing Zenodo, deps.dev, and Libraries.io exclusions remain unchanged and no valid control population is available
 - [x] Publish the validated bounded amapcn evidence addition while preserving zero inferred controls, no historical installations, and no predictive metrics
+- [x] Identify a compact public candidate with version-addressable metadata: the Figshare detector benchmark’s version-1 archive
+- [x] Validate the Figshare candidate against the frozen control-frame contract, including scope, identifiers, missing benign timing, missing horizon, and bounded metadata-only access
+- [x] Publish a precise Figshare gate-preserving exclusion, retaining zero inferred benign controls because its retrospective detector benchmark does not establish a primary temporal control frame

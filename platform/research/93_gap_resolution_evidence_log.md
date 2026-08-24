@@ -255,6 +255,17 @@ Socket independently reports a 19 May Mini Shai-Hulud wave with hundreds of affe
 
 The official npm registry returned `amapcn@0.2.2` at `2026-05-19T01:56:40.925Z` and `amapcn@0.3.2` at `2026-05-19T02:05:59.265Z`; `amapcn@0.1.2`, published at `2026-05-18T14:23:03.053Z`, is the latest retained version strictly before the earliest selected affected release. The candidate therefore passed the frozen adjudication protocol and is admitted as **one** `mini_shai_hulud_atool_2026` record with `amapcn@0.1.2` as an exact pre-event source snapshot. The reproducible `84_mini_shai_hulud_atool_candidate_assessment.json` stores source response hashes, version agreement, cutoff, and exclusions. The 318 SafeDep table rows and Socket’s broader campaign list are not converted into independent families, controls, completeness claims, or predictive inputs.
 
+## Figshare NPM malicious-package benchmark screen — 2026-08-24
+
+Guo et al. release a versioned Figshare replication package for a 2026 npm malicious-package detector study. The landing record describes 6,420 malicious package versions and 7,288 benign packages, while the version-1 archive is 87,885,991 bytes and supports HTTP byte ranges. [40] [41] A bounded central-directory retrieval and two metadata-only member extractions were performed; no package source member was extracted or executed.
+
+The extracted `malware_time.csv` contains 6,420 package-version rows. It has 6,149 nonblank timestamps after line-ending normalization, ranging from 2011-05-12T08:43:03.953Z to 2025-05-17T07:07:29.508Z, and 271 blank timestamps. The companion `selected_benign_packages.txt` contains 1,000 unique package/version strings but no per-row timestamp, collection cutoff, observation horizon, or documented relationship to the 7,288-benign count in the later public landing description. The archive’s filename inventory contains only those two top-level CSV files and package-code directories; it does not expose a compact benign temporal-label table.
+
+The source is therefore **not eligible as a primary future-compromise control frame**: it is a retrospective detector-evaluation benchmark assembled from academic datasets and public advisories, not a documented cutoff population followed under a closed-world malicious-publication or compromise coverage protocol. Its explicitly labelled samples may be preserved as a future release-classification sensitivity lead only after separate sampling and retention checks. No rows, controls, benign labels, calibration, ranking, or prediction metrics were added to the current benchmark.
+
+40. W. Guo et al., *How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study*, arXiv:2603.27549v2, 2026: <https://arxiv.org/html/2603.27549v2>.
+41. W. Guo, *How Effective Are NPM Malicious Package Detectors? A Large-Scale Empirical Study*, Figshare Version 6, DOI 10.6084/m9.figshare.31869370: <https://doi.org/10.6084/m9.figshare.31869370>.
+
 37. SafeDep, *Mini Shai-Hulud Strikes Again: 317 npm Packages Compromised*, 19 May 2026: <https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/>.
 38. OpenSSF Malicious Packages, *MAL-2026-4127: Malicious code in amapcn (npm)*: <https://github.com/ossf/malicious-packages/blob/c04e75e38121768f82fef0495de77b68b7054d7c/osv/malicious/npm/amapcn/MAL-2026-4127.json>.
 39. Socket Research, *Mini Shai-Hulud Hits @antv Ecosystem, 639 Compromised npm Package Versions*, 19 May 2026: <https://socket.dev/blog/antv-packages-compromised>.
