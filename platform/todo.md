@@ -85,3 +85,6 @@
 - [x] Determine whether a cutoff-valid control population and sufficient independent incident families can support temporal ranking, calibration, or uncertainty models; preserve the documented no-control/no-fit result when they cannot
 - [x] Publish the temporal reconstruction, label-adjudication, direct-range approximation, and baseline-study outputs in the governed workspace and validate the display
 - [x] Synchronize the completed temporal research artifacts, platform updates, tests, and documentation to GitHub
+- [x] Identify and validate a lower-volume registry-only historical dependency approximation path suitable for the pre-registered incident records, with explicit package-lock and resolver exclusions
+- [x] Identify and evaluate an explicitly labelled release corpus for the cutoff-valid control-frame decision, documenting why it remains non-primary and unsuitable for temporal calibration
+- [x] Execute and publish only additional evidence-gated temporal graph and label-provenance analyses, with no unsupported model metrics

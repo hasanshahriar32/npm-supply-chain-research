@@ -62,6 +62,18 @@ The npm-follower publication confirms that the project archives package metadata
 
 As a result, the project does not create “no-known-event” package rows from the current registry and label them benign. A cutoff-valid control population remains unassembled rather than fabricated. The next admissible control-design step is to obtain a frozen incident-coverage source and a matching, explicitly sampled at-risk package frame from an authoritative provider; only then may non-event observations be defined relative to documented coverage and horizon.
 
+## Registry-only recursive graph admissibility
+
+Official npm documentation distinguishes a package lockfile—an exact representation of the dependency tree that an npm operation generated—from a manifest range. [10] The SemVer reference defines a range as a set of satisfying versions and exposes `maxSatisfying` as a function over a supplied version list. [11] These semantics permit a bounded, reproducible **registry-only approximation** for the pre-registered roots: recursively select the highest retained non-prerelease version satisfying each runtime `dependencies` range among versions timestamped by the root cutoff.
+
+This strategy is admissible only as a labeled sensitivity artifact. It cannot reproduce a historical `package-lock.json`, npm installation, hoisting arrangement, or resolved peer/optional/bundled/workspace/override behavior. The associated graph builder therefore excludes those relations, caps depth and node count, and prohibits use for global reach, centrality, blast-radius, ranking, calibration, or attack-return claims. Its valid descriptive outputs are bounded edge and node counts only.
+
+## Version-labelled release-corpus sensitivity source
+
+The public ICSE 2022 Amalfi artifact contains a compact `basic-corpus.csv` whose rows explicitly identify an npm package, exact version, content hash, and manually assigned `malicious` or `benign` analysis label. Its separate daily experiment CSVs are described as all new public npm versions for the day, with unreviewed samples marked `not triaged`. [12] This is materially stronger than a registry row with no known event: it supplies an explicit version-level negative label.
+
+The corpus is nevertheless **not** a primary control population for the project's pre-registered future-compromise target. The basic corpus is a classifier training corpus, is concentrated around known malicious-package families, and its README does not provide per-row discovery, review, or outcome-horizon timestamps. It can support only a clearly named **retrospective release-classification sensitivity** after release timestamps and corpus version hashes are frozen. It cannot support the main incident-family ranking, calibration, or blast-radius claims, and it must not be merged with the independently adjudicated compromise ledger.
+
 ## References
 
 [1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
@@ -73,3 +85,6 @@ As a result, the project does not create “no-known-event” package rows from 
 [7]: https://zenodo.org/records/14914149 "NPM Registry Dataset 2025 (GitHub Only)"
 [8]: https://doi.org/10.5281/zenodo.17576373 "CHRONO-RESOLUTION Zenodo data release"
 [9]: https://donaldpinckney.com/publication/npm-follower/ "npm-follower project page"
+[10]: https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/ "npm package-lock documentation"
+[11]: https://docs.npmjs.com/cli/v6/using-npm/semver/ "npm SemVer documentation"
+[12]: https://github.com/githubnext/amalfi-artifact "Amalfi ICSE 2022 artifact repository"

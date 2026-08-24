@@ -74,4 +74,14 @@ describe("repository-backed research sources", () => {
     });
     expect(attempt.nextDataGate).toContain("bulk-compute environment");
   });
+
+  it("preserves the bounded recursive registry graph as a sensitivity artifact rather than a reach or predictive result", async () => {
+    const fs = await import("node:fs/promises");
+    const manifest = JSON.parse(await fs.readFile("research/74_bounded_recursive_registry_semver_graph_manifest.json", "utf8"));
+    const diagnostic = JSON.parse(await fs.readFile("research/75_bounded_recursive_registry_graph_diagnostic.json", "utf8"));
+    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 7, reconstructedEdges: 45, unresolvedEdges: 0, maxObservedDepth: 3 });
+    expect(manifest.prohibitedInterpretations).toContain("This graph is not a package-lock, npm install execution trace, or reproducible historical node_modules tree.");
+    expect(diagnostic.summary).toMatchObject({ boundedEdges: 45, directDepthOneEdges: 20, depthTwoEdges: 15, depthThreeEdges: 10, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
+    expect(diagnostic.interpretation).toContain("not historical installed-tree size");
+  });
 });

@@ -1,0 +1,40 @@
+{
+  "study": "amalfi-release-sensitivity-control-frame-decision",
+  "generatedAtUtc": "2026-08-24T09:04:09.892Z",
+  "summary": {
+    "explicitLabelRows": 1790,
+    "labelCounts": {
+      "malicious": {
+        "explicitLabelRows": 643,
+        "retainedRegistryVersionObjects": 9,
+        "versionNotRetained": 634,
+        "otherUnavailable": 0,
+        "distinctPackages": 443
+      },
+      "benign": {
+        "explicitLabelRows": 1147,
+        "retainedRegistryVersionObjects": 1093,
+        "versionNotRetained": 54,
+        "otherUnavailable": 0,
+        "distinctPackages": 91
+      }
+    },
+    "retainedRegistryVersionObjects": 1102,
+    "unavailableOrMissingVersions": 688,
+    "distinctPackagesAcrossLabels": 444
+  },
+  "decision": {
+    "primaryFutureCompromiseControlFrame": "blocked",
+    "rationale": [
+      "The artifact provides release-classification labels, not per-row future-outcome or review-horizon timestamps.",
+      "The basic corpus is a case-centred detection corpus, not an explicitly sampled at-risk npm population for the independently adjudicated incident families.",
+      "688 of 1,790 corpus versions are not retained as current registry version objects, producing outcome-linked availability attrition that must not be imputed."
+    ],
+    "allowedSensitivityUse": "The 1,102 retained version objects may support separately labelled retrospective release-classification provenance/descriptive work only, with package-grouped separation and no transfer of any metric to the primary future-compromise benchmark."
+  },
+  "prohibitedInterpretations": [
+    "Do not call the benign rows generic no-known-event controls.",
+    "Do not merge these labels with the independently adjudicated incident ledger or treat package/version rows as independent incident families.",
+    "Do not report PR-AUC, recall, calibration, blast radius, attack return, or compromise-ranking results for the primary benchmark from this corpus."
+  ]
+}
