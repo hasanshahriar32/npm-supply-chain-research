@@ -316,6 +316,19 @@ describe("repository-backed research sources", () => {
     expect(protocol.prohibitedInterpretations).toContain("Existing strict incident records remain independently adjudicated positive evidence only; they are not a closed-world outcome population or proof of horizon completeness.");
   });
 
+  it("retains the public-safe aggregate-release policy as future-only and without released cells or results", async () => {
+    const policy = await import("node:fs/promises").then((fs) => fs.readFile("research/101_future_public_safe_aggregate_release_policy.json", "utf8")).then(JSON.parse);
+    expect(policy).toMatchObject({
+      executionStatus: "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
+      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 9 } },
+      currentDecision: { releasePlansCreated: 0, releaseLedgerEntriesCreated: 0, sourceObjectsInspectedForRelease: 0, outcomeRowsReleased: 0, controlRowsReleased: 0, authorityValuesReleased: 0, aggregateCellsComputed: 0, aggregateCellsReleased: 0, smallCellReviewsPerformed: 0, differencingReviewsPerformed: 0, modelResultsReleased: 0, rankingsReleased: 0, uncertaintyIntervalsReleased: 0, predictiveMetricsReleased: 0 },
+    });
+    expect(policy.releaseClasses).toHaveLength(4);
+    expect(policy.releaseClasses.find((releaseClass: { releaseClass: string }) => releaseClass.releaseClass === "P3_aggregate_benchmark_results")?.futureEligibility).toContain("Not enabled");
+    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current fourteen positive records, ten families, or nine future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
+    expect(policy.prohibitedInterpretations).toContain("The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

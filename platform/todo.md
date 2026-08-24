@@ -159,3 +159,7 @@
 - [x] Define a future-only independently adjudicated outcome-manifest sealing protocol that prohibits present outcome or control creation
 - [x] Specify source provenance, target/horizon, checksum, adjudication, relatedness, and blinding requirements without recording outcome rows or labels
 - [x] Publish the sealing protocol with regression safeguards while retaining zero outcomes, controls, scores, models, rankings, intervals, or predictive metrics
+- [x] Define a future public-safe aggregate-release policy that prohibits present row, label, control, or model-result release
+- [x] Specify release classes, small-cell safeguards, revision lineage, and pre-publication gates without computing aggregates or inspecting outcome data
+- [x] Publish the aggregate-release policy with regression safeguards while retaining zero releases, outcomes, controls, scores, models, rankings, intervals, or predictive metrics
+- [x] Restore the private repository-backed workspace after the sandbox reset before validating and synchronizing this research update

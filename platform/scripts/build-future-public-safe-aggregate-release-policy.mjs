@@ -1,0 +1,212 @@
+import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const researchDir = path.join(root, "research");
+const outcomeProtocolPath = path.join(researchDir, "100_future_outcome_manifest_sealing_protocol.json");
+const authorityContractPath = path.join(researchDir, "99_release_authority_raw_evidence_capture_contract.json");
+const relatednessPath = path.join(researchDir, "94_campaign_relatedness_and_grouped_inference_protocol.json");
+const outputPath = path.join(researchDir, "101_future_public_safe_aggregate_release_policy.json");
+
+const [outcomeText, authorityText, relatednessText] = await Promise.all([
+  readFile(outcomeProtocolPath, "utf8"),
+  readFile(authorityContractPath, "utf8"),
+  readFile(relatednessPath, "utf8"),
+]);
+const outcome = JSON.parse(outcomeText);
+const authority = JSON.parse(authorityText);
+const relatedness = JSON.parse(relatednessText);
+
+if (outcome.executionStatus !== "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created") {
+  throw new Error("Aggregate-release policy requires the future-only outcome-manifest protocol.");
+}
+if (authority.executionStatus !== "future_only_contract_no_raw_evidence_retrieved_stored_canonicalized_or_compared") {
+  throw new Error("Aggregate-release policy requires the future-only authority capture contract.");
+}
+if (relatedness.executionStatus !== "protocol_only_no_control_frame_or_model_eligible_dataset") {
+  throw new Error("Aggregate-release policy requires the future-only relatedness protocol.");
+}
+for (const value of Object.values(outcome.currentDecision)) {
+  if (typeof value === "number" && value !== 0) throw new Error("Outcome protocol is no longer zero-output.");
+}
+for (const value of Object.values(authority.currentDecision)) {
+  if (typeof value === "number" && value !== 0) throw new Error("Authority contract is no longer zero-output.");
+}
+
+const output = {
+  study: "future-public-safe-aggregate-release-policy",
+  artifactVersion: 1,
+  executionStatus: "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
+  generatedAtUtc: new Date().toISOString(),
+  policyInputs: {
+    outcomeManifestSealingProtocol: {
+      path: "research/100_future_outcome_manifest_sealing_protocol.json",
+      sha256: createHash("sha256").update(outcomeText).digest("hex"),
+      requiredExecutionStatus: outcome.executionStatus,
+      publicSafeNeed: "The outcome protocol permits only a public-safe sealing manifest and permitted future aggregates after quality control and applicable release authorization.",
+    },
+    authorityRawEvidenceCaptureContract: {
+      path: "research/99_release_authority_raw_evidence_capture_contract.json",
+      sha256: createHash("sha256").update(authorityText).digest("hex"),
+      requiredExecutionStatus: authority.executionStatus,
+      publicSafeNeed: "The authority contract allows only opaque references, integrity records, and reason codes; raw values and keyed commitments remain restricted.",
+    },
+    groupedInferenceProtocol: {
+      path: "research/94_campaign_relatedness_and_grouped_inference_protocol.json",
+      sha256: createHash("sha256").update(relatednessText).digest("hex"),
+      futureValidationUnitCount: relatedness.validationUnits.unitCount,
+      relatednessConstraint: "Any future aggregate must preserve the documented Mini Shai-Hulud atool / Keyv/Cacheable related-family cluster and must not present related families as independent rows or units.",
+    },
+  },
+  purposeAndScope: {
+    purpose: "Pre-register which future integrity metadata and carefully screened aggregate descriptions may be released publicly, which evidence stays restricted, and which quality, privacy, relatedness, and provenance gates must pass before any public release.",
+    noCurrentReleaseBoundary: "This policy does not create, inspect, compute, or publish a row, label, control, source object, evidence value, aggregate, summary count, split, score, rank, interval, calibration result, model result, or predictive metric.",
+    noInferenceBoundary: "A public-safe checksum, opaque identifier, policy status, release class, or suppression decision is release-governance metadata only. It does not demonstrate incident coverage, benignness, safety, trust, feature availability, a measured effect, or model eligibility.",
+    separateAuthorizationBoundary: "A future release must satisfy source terms, participant/privacy obligations where applicable, the sealed protocol gates, and explicit maintainer authorization. This policy cannot grant data access or override a source restriction.",
+  },
+  releaseClasses: [
+    {
+      releaseClass: "P0_protocol_metadata_only",
+      futureEligibility: "Permitted before any evidence collection only after the policy itself is versioned and checksum-sealed.",
+      potentiallyPermittedContent: [
+        "Protocol version, policy identifier, schema names, field names, prohibited-field list, gate definitions, and code version identifiers.",
+        "No observed values, source inventory entries, row counts, event counts, coverage counts, or outcome-related values.",
+      ],
+      prohibitedContent: [
+        "Any package, version, source, reviewer, outcome, control, feature, authority value, opaque object reference, content digest tied to a collected object, or aggregate derived from data.",
+      ],
+    },
+    {
+      releaseClass: "P1_sealed_integrity_metadata_only",
+      futureEligibility: "Only after the relevant source inventory, collection, outcome, and quality-control seal exists and source terms permit publishing the integrity metadata.",
+      potentiallyPermittedContent: [
+        "Manifest identifiers opaque by policy, protocol and schema versions, parent-revision hash, aggregate-level byte or Merkle commitments, gate-pass/fail status, and release timestamp rounded under the frozen disclosure rule.",
+        "No raw evidence, source URLs, package/version identifiers, raw or keyed authority values, docket references, coverage records, reviewer identities, or row-level commitments.",
+      ],
+      prohibitedContent: [
+        "A digest or opaque reference that enables matching a low-entropy package, version, source, authority, or reviewer identity through dictionary, linkage, timing, or differencing attacks.",
+      ],
+    },
+    {
+      releaseClass: "P2_screened_descriptive_aggregates",
+      futureEligibility: "Only after all P1 gates, an authorized frozen population, a sealed target-matched outcome manifest, complete disclosure review, documented source permissions, and a separately sealed aggregate plan pass.",
+      potentiallyPermittedContent: [
+        "Pre-registered aggregate descriptions at an approved broad stratum, after small-cell, differencing, overlap, relatedness, and composition checks pass.",
+        "Aggregate denominators and numerator-like values only when the disclosure review demonstrates that neither direct nor complementary cells, prior releases, external sources, nor known positive-ledger records permit row, family, or outcome reconstruction.",
+      ],
+      prohibitedContent: [
+        "Package-, version-, source-, reviewer-, family-, validation-unit-, release-pair-, date-window-, outcome-, control-, score-, rank-, split-, or model-specific tables unless a separately approved disclosure review explicitly permits a broader aggregate representation.",
+      ],
+    },
+    {
+      releaseClass: "P3_aggregate_benchmark_results",
+      futureEligibility: "Not enabled by this policy. It may be considered only through a future amendment after an eligible benchmark has passed all independent gates and a model-result disclosure plan is separately reviewed and sealed.",
+      potentiallyPermittedContent: [
+        "None under the current policy.",
+      ],
+      prohibitedContent: [
+        "Performance metrics, calibration plots, ranking quality, confidence/uncertainty intervals, model comparisons, feature effects, cohort counts, fold outputs, or evaluation aggregates.",
+      ],
+    },
+  ],
+  permanentlyRestrictedCategories: [
+    "Raw incident-source objects, raw registry/repository/provider responses, package payloads, package installation traces, and executable artifacts.",
+    "Exact package and version identifiers from future protected population or outcome data unless separately authorized by source terms and disclosure review.",
+    "Outcome labels, candidate dockets, coverage decisions, controls, unknown states, exclusions, right-censoring decisions, or row-level join results.",
+    "Raw authority values, repository/revision/publisher/workflow/provenance values, canonicalized values, keyed commitments, encryption keys, credentials, tokens, or key-custody information.",
+    "Reviewer identities, reviewer disagreements, conflict disclosures, sensitive source references, operational logs, IP addresses, timestamps with linkability risk, or any personal data.",
+    "Model inputs, feature values, feature missingness by row, split membership, random seeds, scores, ranks, model artifacts, calibration artifacts, uncertainty outputs, or predictive metrics under the current policy version.",
+  ],
+  futureAggregatePlanSchema: {
+    description: "A future aggregate plan is a schema-only precondition. No plan, parameter, aggregate, cell, or result is populated by this artifact.",
+    requiredFields: [
+      "aggregatePlanIdOpaque",
+      "policyVersion",
+      "sourceManifestRevisionSha256",
+      "populationSnapshotRevisionSha256",
+      "outcomeManifestRevisionSha256",
+      "authorityEvidenceQualityControlRevisionSha256",
+      "targetAndHorizonContractSha256",
+      "relatednessRegistryRevisionSha256",
+      "approvedStratumDefinition",
+      "aggregateMeasureDefinition",
+      "minimumCellThresholdPolicyIdentifier",
+      "minimumDistinctValidationUnitThresholdPolicyIdentifier",
+      "complementarySuppressionPolicyIdentifier",
+      "differencingAttackReviewPolicyIdentifier",
+      "externalLinkageRiskReviewPolicyIdentifier",
+      "sourceTermsDecisionReferenceOpaque",
+      "disclosureReviewerRolesOpaque",
+      "prePublicationQualityControlDecision",
+      "prePublicationReasonCodes",
+      "aggregatePlanByteSha256",
+    ],
+    forbiddenFields: [
+      "Actual package/version/source/reviewer identifiers, row-level values, rows or labels, controls, raw count cells, positive prevalence, split membership, scores, ranks, model outputs, metric values, or unapproved free-text evidence.",
+      "A policy parameter chosen after inspecting an aggregate, class prevalence, ranking result, or disclosure risk in the proposed release.",
+    ],
+  },
+  disclosureSafeguards: {
+    smallCellAndCompositionControls: [
+      "Before any P2 aggregate, pre-register the minimum cell threshold and minimum distinct validation-unit threshold in a separate sealed parameter record; do not infer or publish either threshold value in this policy artifact.",
+      "Suppress a cell when it fails either threshold, can be reconstructed from another released total, exposes an incident family or related-family cluster, or has a high-risk composition dominated by one package/version/source/reviewer/outcome state.",
+      "Apply complementary suppression or coarsening until all directly and indirectly sensitive cells are protected; do not release marginal totals that reveal suppressed values by subtraction.",
+      "Treat any aggregate based on the current fourteen positive records, ten families, or nine future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.",
+    ],
+    differencingAndLinkageControls: [
+      "Compare every proposed release against all prior public releases, approved public sources, and approved query interfaces for differencing, temporal linkage, and reconstruction risk.",
+      "Do not emit deterministic row-derived hashes, stable opaque identifiers, fine-grained timestamps, narrow date windows, or crosswalks that permit joining two releases or a public incident ledger.",
+      "Do not publish overlapping aggregates whose difference, union, or intersection can expose a suppressed cell, package version, incident family, control state, unknown state, or authority transition.",
+      "Abort release when a reviewer cannot bound linkage risk using the frozen policy; lack of an identified attack is not proof of safe disclosure.",
+    ],
+    relatednessAndTemporalControls: [
+      "Aggregate definitions must preserve documented family and related-family clustering. They must not call records independent, double-count a validation unit, or reveal cross-partition membership.",
+      "Do not disclose cutoffs, horizons, release times, or outcome-freeze details at a granularity that allows reconstruction of a candidate row, a sensitive event, or an outcome decision.",
+      "Never use public release pressure to shorten a required outcome horizon, alter an exclusion, collapse unknown into non-event, or substitute current state for historical evidence.",
+    ],
+  },
+  prePublicationGates: [
+    "The requested release class is explicitly allowed by this policy version and all prerequisite seals and source-term permissions are recorded.",
+    "The policy, source inventory, outcome manifest, authority collection quality control, population snapshot, relatedness registry, and aggregate plan have immutable revision identifiers and matching commitments.",
+    "An independent disclosure reviewer, separate from outcome adjudication and feature collection, confirms that the release contains no restricted field and passes small-cell, complementary suppression, differencing, composition, external linkage, and temporal-risk checks.",
+    "The proposed content contains no current-state substitute, inferred benign/non-event label, retrospective feature claim, raw count cell, model result, or unaudited assertion of independence.",
+    "A release ledger entry records the policy version, review roles opaque by policy, decision, reason codes, parent release linkage, byte checksum, and revocation contact without revealing sensitive values.",
+  ],
+  revisionAndRevocationProtocol: {
+    immutableRevisionRule: "Never silently replace a public release. Every revision requires a new release identifier, parent release commitment, policy version, source-manifest lineage, change-category code, fresh disclosure review, and new byte checksum.",
+    revocationRule: "If source terms, privacy, integrity, or disclosure controls fail, withdraw the affected artifact, preserve a non-sensitive revocation notice and lineage record, and do not publish a corrected replacement until the full gate sequence is rerun.",
+    prohibitedRevisionPractices: [
+      "Do not patch row, label, aggregate, or model content in place.",
+      "Do not use a revision to reveal a previously suppressed complement, narrow a stratum, expose a control state, or make linked comparison easier.",
+      "Do not treat a revoked or superseded release as evidence that its withheld data were correct, complete, or safe to infer.",
+    ],
+  },
+  currentDecision: {
+    releasePlansCreated: 0,
+    releaseLedgerEntriesCreated: 0,
+    sourceObjectsInspectedForRelease: 0,
+    outcomeRowsReleased: 0,
+    controlRowsReleased: 0,
+    authorityValuesReleased: 0,
+    aggregateCellsComputed: 0,
+    aggregateCellsReleased: 0,
+    smallCellReviewsPerformed: 0,
+    differencingReviewsPerformed: 0,
+    modelResultsReleased: 0,
+    rankingsReleased: 0,
+    uncertaintyIntervalsReleased: 0,
+    predictiveMetricsReleased: 0,
+    status: "blocked_pending_future_eligible_data_seals_authorized_disclosure_review_and_source_term_permissions",
+  },
+  prohibitedInterpretations: [
+    "This policy is not a data release, a source audit, an outcome manifest, a control frame, an aggregate result, or a model evaluation.",
+    "A release class, gate definition, policy identifier, integrity commitment, or suppression decision is governance metadata only; it cannot prove that a withheld row is positive, non-event, safe, benign, trusted, complete, independent, or model-eligible.",
+    "No current or future absence from a public release may be interpreted as benignness, a non-event, an unobserved incident, a source gap, or a negative control.",
+    "The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.",
+  ],
+};
+
+await writeFile(outputPath, `${JSON.stringify(output, null, 2)}\n`, "utf8");
+console.log(JSON.stringify({ outputPath, releaseClasses: output.releaseClasses.length, permanentlyRestrictedCategories: output.permanentlyRestrictedCategories.length, futureAggregatePlanFields: output.futureAggregatePlanSchema.requiredFields.length, aggregateCellsComputed: output.currentDecision.aggregateCellsComputed, aggregateCellsReleased: output.currentDecision.aggregateCellsReleased, modelResultsReleased: output.currentDecision.modelResultsReleased }, null, 2));

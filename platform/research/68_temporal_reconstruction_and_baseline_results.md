@@ -181,6 +181,19 @@ The contract is deliberately **pre-activation**. A capture run remains prohibite
 
 The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` and Keyv/Cacheable remain one documented related-family cluster in any future eligible join. A sealed manifest is **integrity metadata**, not proof that a package version is positive, unaffected, safe, benign, or trusted. Existing fourteen incident records remain positive evidence only and do not establish closed-world coverage or a non-event population.
 
+## Future public-safe aggregate-release policy
+
+`101_future_public_safe_aggregate_release_policy.json` specifies how a future eligible study must separate public governance metadata from restricted evidence. It defines four release classes, but currently enables only protocol metadata. It does not inspect a source or compute an aggregate.
+
+| Release class | Future content boundary | Current state |
+|---|---|---|
+| P0 — protocol metadata | Versioned schemas, gates, policy identifiers, and prohibited-field rules only. | The only class represented by this policy itself; it contains no observed values or counts. |
+| P1 — sealed integrity metadata | Opaque manifest-level commitments and gate status only, subject to source terms and disclosure review. | Not activated; raw values, source references, row commitments, and identifiers remain restricted. |
+| P2 — screened descriptive aggregates | Broad, pre-registered aggregates only after population/outcome seals, disclosure review, small-cell suppression, complementary suppression, differencing review, linkage review, and relatedness controls. | Not activated; any aggregate using the current 14 records, 10 families, or 9 future validation units is non-releasable. |
+| P3 — aggregate benchmark results | Model-result release would require a separate future amendment and independently eligible benchmark. | Explicitly disabled: no performance, calibration, ranking, interval, cohort, or feature-effect result may be released. |
+
+The policy permanently restricts raw source objects, exact protected package/version identities, outcome and control rows, authority values and commitments, reviewer material, feature rows, split membership, scores, rankings, intervals, and predictive metrics. Even a permitted future aggregate must preserve documented related-family clusters, avoid direct and complementary small-cell reconstruction, resist temporal and cross-release differencing, and carry immutable revision and revocation lineage. A release class, digest, gate decision, or suppression decision remains **governance metadata**, not evidence of benignness, coverage, independence, historical fidelity, or model eligibility.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
