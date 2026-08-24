@@ -341,6 +341,19 @@ describe("repository-backed research sources", () => {
     expect(contract.prohibitedInterpretations).toContain("No current policy permits a P3 model-result release, and no current artifact creates or reveals a threshold, plan, aggregate, row, label, control, authority value, score, rank, interval, calibration, or predictive metric.");
   });
 
+  it("excludes the corroborated crossenv candidate when the strict pre-event source object is not retained", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/103_crossenv_typosquatting_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_retained_pre_event_source_object",
+      candidate: { recordId: "crossenv-2017-07-19", packageName: "crossenv", independentlyReportedAffectedVersion: "6.1.1", affectedVersionPublishedUtc: "2017-07-19T06:49:52.698Z", strictFeatureCutoffUtc: "2017-07-19T06:49:52.697Z", timeMapSelectedPreEventVersion: "6.0.7" },
+      corroboration: { officialRegistry: { affectedVersionObjectRetained: false, selectedPreEventVersionObjectRetained: false } },
+      currentDecision: { primaryLedgerRecordsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.corroboration.officialRegistry.retainedVersionObjectKeys).toEqual(["0.0.1-security", "0.0.2-security", "1.0.0", "1.0.1"]);
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add crossenv to the 14-record primary ledger");
+    expect(assessment.prohibitedInterpretations).toContain("This exclusion does not dispute the independently corroborated crossenv incident evidence or convert the candidate into a benign, safe, unchanged, no-known-event, or control row.");
+  });
+
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/91_is_package_compromise_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

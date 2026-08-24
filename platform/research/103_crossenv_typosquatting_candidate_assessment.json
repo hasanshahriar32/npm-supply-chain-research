@@ -1,0 +1,91 @@
+{
+  "study": "crossenv-2017-typosquatting-bounded-package-event-candidate-assessment",
+  "artifactVersion": 1,
+  "artifactDate": "2026-08-24",
+  "decision": "exclude_from_primary_temporal_ledger_due_to_no_retained_pre_event_source_object",
+  "candidate": {
+    "recordId": "crossenv-2017-07-19",
+    "packageName": "crossenv",
+    "independentlyReportedAffectedVersion": "6.1.1",
+    "affectedVersionPublishedUtc": "2017-07-19T06:49:52.698Z",
+    "strictFeatureCutoffUtc": "2017-07-19T06:49:52.697Z",
+    "timeMapSelectedPreEventVersion": "6.0.7",
+    "eventFamilyCandidate": "hacktask_typosquatting_2017",
+    "candidateLabelEvidenceStatus": "independently_corroborated_exact_package_version_but_not_primary_ledger_admitted"
+  },
+  "corroboration": {
+    "npmIncidentNotice": {
+      "statement": "npm reports that hacktask published deliberate malicious typo-squatted packages on July 19, that crossenv exfiltrated environment variables, and that all hacktask packages were removed.",
+      "publicNoticeDate": "2017-08-02"
+    },
+    "independentTechnicalAccount": {
+      "statement": "The account lists crossenv@6.1.1 and links its list to npm confirmation."
+    },
+    "independentSnykAdvisory": {
+      "advisoryId": "npm:crossenv:20170802",
+      "publishedAndDisclosedDate": "2017-08-02",
+      "statement": "The advisory lists crossenv@6.1.1 as one of the malicious typosquatted packages and says to avoid it."
+    },
+    "officialRegistry": {
+      "boundedMetadataOnly": true,
+      "affectedVersionTimeUtc": "2017-07-19T06:49:52.698Z",
+      "selectedPreEventVersion": "6.0.7",
+      "selectedPreEventVersionTimeUtc": "2017-07-19T06:32:58.946Z",
+      "affectedVersionObjectRetained": false,
+      "selectedPreEventVersionObjectRetained": false,
+      "retainedVersionObjectKeys": [
+        "0.0.1-security",
+        "0.0.2-security",
+        "1.0.0",
+        "1.0.1"
+      ]
+    }
+  },
+  "sourceProvenance": {
+    "npmIncidentNotice": {
+      "url": "https://blog.npmjs.org/post/163723642530/crossenv-malware-on-the-npm-registry",
+      "responseSha256": "e7e0afc114ff01289791349dbda3664be07e86f40073c89242639e01f430230e"
+    },
+    "independentTechnicalAccount": {
+      "url": "https://iamakulov.com/notes/npm-malicious-packages/",
+      "responseSha256": "42f2793df24dc13ec89865147f094cdc89f8031d29f89f763cbdacc452a93ca3"
+    },
+    "independentSnykAdvisory": {
+      "url": "https://security.snyk.io/vuln/npm:crossenv:20170802",
+      "responseSha256": "fd0a5cb2c8edeb0fd6591883d9c6e8473a971fa405302e449016a422816050e3"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/crossenv",
+      "responseSha256": "f2bb18da11f7c9eade1c088bc6260dc1a5214ff0e556c6407a78c3d0d4ca7899"
+    }
+  },
+  "strictExclusionReason": {
+    "requiredRule": "A primary temporal-ledger record requires a retained official-registry version object selected strictly before the candidate event cutoff so the companion builder can reproduce an exact source snapshot.",
+    "observedState": "The official registry time map selects crossenv@6.0.7 immediately before the independently reported crossenv@6.1.1 timestamp, but the current bounded response retains only 1.0.0 and 1.0.1 version objects; the selected 6.0.7 object is absent.",
+    "consequence": "Do not add crossenv to the 14-record primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, campaign-family count, or validation unit from this candidate."
+  },
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 0,
+    "primaryLedgerFamiliesAdded": 0,
+    "exactPreEventSourceSnapshotsCreated": 0,
+    "packageMetadataValuesExtracted": 0,
+    "dependencyDeclarationsCreated": 0,
+    "resolvedTargetsCreated": 0,
+    "recursiveGraphEdgesCreated": 0,
+    "controlsCreated": 0,
+    "benignLabelsCreated": 0,
+    "historicalInstallTracesCreated": 0,
+    "reachOrBlastRadiusValuesCreated": 0,
+    "scoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "prohibitedInterpretations": [
+    "This exclusion does not dispute the independently corroborated crossenv incident evidence or convert the candidate into a benign, safe, unchanged, no-known-event, or control row.",
+    "Current registry retention is not a release-time package observation and cannot be used as an authority, dependency, workflow, provenance, or historical-installation feature.",
+    "This assessment does not create a broader hacktask campaign census, prove campaign completeness, or establish that its packages are independent observations.",
+    "This artifact does not license reach, blast-radius, attack-return, ranking, calibration, PR-AUC, Recall@K, logistic regression, uncertainty, or predictive claims."
+  ]
+}

@@ -166,3 +166,6 @@
 - [x] Define a future aggregate-plan parameter-sealing contract that prohibits setting current thresholds or inspecting data
 - [x] Specify secure parameter custody, opaque commitments, amendment controls, and pre-release checks without creating a parameter record or aggregate
 - [x] Publish the parameter-sealing contract with regression safeguards while retaining zero thresholds, plans, aggregates, releases, outcomes, controls, or model results
+- [x] Define strict independent-corroboration, exact-version, cutoff, and source-object requirements for the bounded crossenv candidate screen
+- [x] Collect bounded primary and independent corroboration plus official npm registry metadata without downloading or executing package payloads
+- [x] Publish only a strict ledger admission or precise exclusion for crossenv with regression coverage, retaining zero controls, historical installs, reach, scores, models, or predictive metrics

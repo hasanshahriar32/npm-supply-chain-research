@@ -207,6 +207,19 @@ The policy permanently restricts raw source objects, exact protected package/ver
 
 The contract contains zero secure records, parameter values, commitments, attestations, access-control reviews, verifications, amendments, plans, cells, releases, outcomes, controls, authority values, scores, rankings, intervals, or metrics. A withheld or revoked parameter is not evidence about a package, incident, coverage gap, non-event, safe release, or model conclusion.
 
+## Bounded crossenv typosquatting screen
+
+The 2017 `crossenv` typosquatting incident is independently corroborated but **excluded** from the 14-record primary temporal ledger. npm’s incident notice identifies deliberate malicious `hacktask` typosquatting beginning 19 July 2017, environment-variable exfiltration through `crossenv`, and registry removal of the actor’s packages. [48] An independent contemporaneous account and Snyk’s advisory both identify `crossenv@6.1.1`. [49] [50]
+
+| Eligibility check | Bounded evidence | Strict result |
+|---|---|---|
+| Exact candidate release | Independent reports identify `crossenv@6.1.1`. | Satisfied for a candidate screen only. |
+| Official event-time anchor | The official registry time map retains `6.1.1` at `2017-07-19T06:49:52.698Z`; the strict cutoff is one millisecond earlier. [51] | Satisfied. |
+| Time-mapped predecessor | The same official time map selects `6.0.7` at `2017-07-19T06:32:58.946Z`. [51] | Satisfied only as a timestamp selection. |
+| Exact retained pre-event source object | The bounded current registry response retains only `0.0.1-security`, `0.0.2-security`, `1.0.0`, and `1.0.1` version objects; it does not retain the selected `6.0.7` object. | **Failed.** No strict snapshot can be reconstructed. |
+
+`103_crossenv_typosquatting_candidate_assessment.json` preserves the source checksums, exact time-map decision, and retention exception. It adds **zero** primary-ledger records or families, source snapshots, declarations, range approximations, graph edges, validation units, controls, labels, historical installs, reach values, scores, models, rankings, intervals, or metrics. The exclusion does not deny the incident, and it does not turn the unretained predecessor into benign, safe, unchanged, no-known-event, or a control.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -374,3 +387,11 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [46] [npm, “npm Registry API”](https://api-docs.npmjs.com/).
 
 [47] [GitHub, “Introducing npm package provenance”](https://github.blog/security/supply-chain-security/introducing-npm-package-provenance/).
+
+[48] [npm, “crossenv malware on the npm registry,” 2 August 2017](https://blog.npmjs.org/post/163723642530/crossenv-malware-on-the-npm-registry).
+
+[49] [Ivan Akulov, “Malicious packages in npm. Here’s what to do,” 2 August 2017](https://iamakulov.com/notes/npm-malicious-packages/).
+
+[50] [Snyk Vulnerability Database, “Malicious Package Affecting crossenv package,” `npm:crossenv:20170802`](https://security.snyk.io/vuln/npm:crossenv:20170802).
+
+[51] [npm registry metadata, `crossenv`](https://registry.npmjs.org/crossenv).
