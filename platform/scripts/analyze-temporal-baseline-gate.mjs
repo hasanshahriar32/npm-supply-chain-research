@@ -38,17 +38,20 @@ const report = {
     direct_dependency_ranking: "not_evaluable_without_cutoff-valid controls",
     package_age_ranking: "not_evaluable_without_cutoff-valid controls",
     multivariate_logistic_regression: "blocked: all retained snapshots are event records, not labeled negatives",
-    probability_calibration: "blocked: no evaluation population or independent positive-family count",
+    probability_calibration: "blocked: no cutoff-valid evaluation population; the strict positive-record threshold is not yet met",
     pr_auc_and_recall_at_k: "blocked: requires positives and a defensible non-event population",
   },
   calibrationInference: "blocked",
   blockingConditions: [
-    `Only ${exact.length} exact pre-event snapshots are available.`,
-    `Only ${distinctFamilies.length} independent incident families are represented.`,
+    `Only ${diagnostics.observations} strict pre-registered package-event records are available; the minimum gate is ten.`,
+    `Only ${exact.length} exact pre-event source snapshots are currently reconstructable.`,
+    distinctFamilies.length < 5 ? `Only ${distinctFamilies.length} independent incident families are represented; the minimum gate is five.` : null,
     "No cutoff-valid, independently adjudicated control population is available.",
     "Current structural and workflow metrics cannot be joined as historical features.",
-  ],
-  nextDataGate: "Acquire at least ten strict future positives from five or more incident families and pre-register a cutoff-valid control design before fitting or calibrating any ranking model.",
+  ].filter(Boolean),
+  nextDataGate: diagnostics.observations < 10
+    ? "Add at least one more strict future-positive package-event record and pre-register a cutoff-valid control design before fitting or calibrating any ranking model."
+    : "Pre-register a cutoff-valid control design before fitting or calibrating any ranking model.",
   provenance: diagnostics.provenance,
 };
 

@@ -8,7 +8,7 @@
 
 This register expands the earlier seed labels into a compact, reviewable set of independently documented npm package-event records. It preserves the difference between a package whose publisher account was compromised, a maliciously published package, and an affected downstream dependency. Each row retains a primary evidence URL, an event-family identifier, the exact affected release(s) reported by that source, and an explicit target-eligibility decision.
 
-The register includes eight package-event records in four independent incident families. The `unc3379_2021` records must be evaluated as one correlated campaign family, not three independent successful attacks. CISA documents the malicious `ua-parser-js` releases, while Mandiant identifies the affected `coa` and `rc` releases from the same 2021 Node.js campaign. [1] [2] npm's incident account documents `event-stream@3.3.6`, ESLint's postmortem provides the affected ESLint releases and timestamp, and CISA documents the Axios-related releases and injected package. [3] [4] [5]
+The register includes nine package-event records in five independent incident families. The `unc3379_2021` records must be evaluated as one correlated campaign family, not three independent successful attacks. CISA documents the malicious `ua-parser-js` releases, while Mandiant identifies the affected `coa` and `rc` releases from the same 2021 Node.js campaign. [1] [2] npm's incident account documents `event-stream@3.3.6`, ESLint's postmortem provides the affected ESLint releases and timestamp, and CISA documents the Axios-related releases and injected package. [3] [4] [5] The 2026 `node-ipc` record is independently corroborated by a same-day SafeDep incident report and the OpenSSF OSV record `MAL-2026-3744`. [6] [7]
 
 | Record | Incident family | Event anchor (UTC) | Affected release(s) | Evidence tier | Target decision |
 |---|---|---|---|---|---|
@@ -20,6 +20,7 @@ The register includes eight package-event records in four independent incident f
 | `event-stream-2018-11-26` | `event_stream_2018` | 2018-11-26 00:00 | `3.3.6` | npm incident report | Included; confirmed targeted compromise. |
 | `eslint-scope-2018-07-12` | `eslint_2018` | 2018-07-12 10:40 | `3.7.2` | Maintainer postmortem | Included; confirmed targeted compromise. |
 | `eslint-config-eslint-2018-07-12` | `eslint_2018` | 2018-07-12 09:49 | `5.0.2` | Maintainer postmortem | Included; confirmed targeted compromise. |
+| `node-ipc-2026-05-14` | `node_ipc_2026` | 2026-05-14 14:25:30.311 | `9.1.6`, `9.2.3`, `12.0.1` | OpenSSF OSV and independent technical report | Included; earliest malicious publication is the strict cutoff. |
 
 ## Adjudication constraints
 
@@ -29,15 +30,15 @@ The 2026 Axios family includes two distinct package roles. `axios` is a publishe
 
 ## Relationship to the graph and calibration artifacts
 
-Seven of the eight records support an exact pre-event source-package metadata snapshot. The `plain-crypto-js` record remains `not_available` in the current registry reconstruction, so it does not yield a source-version dependency declaration. The associated direct-edge ledger and baseline gate are available in the temporal findings report; neither turns this evidence register into a predictive benchmark.
+Eight of the nine records support an exact pre-event source-package metadata snapshot. The `plain-crypto-js` record remains `not_available` in the current registry reconstruction, so it does not yield a source-version dependency declaration. The associated direct-edge ledger and baseline gate are available in the temporal findings report; neither turns this evidence register into a predictive benchmark.
 
 ## Human-vetted positive-catalogue overlap
 
-The current npm manifest from the human-vetted DataDog Malicious Software Packages Dataset was frozen at repository commit `6de6e895805a8415f4cc6093f870587a768c67cd` and compared with the eight primary records. [6] The overlap is intentionally limited to corroboration: the positive-only manifest has no row-level event time, evidence URL, campaign-family assignment, or negative labels, and its sample naming convention refers to discovery—not publication—dates.
+The current npm manifest from the human-vetted DataDog Malicious Software Packages Dataset was frozen at repository commit `6de6e895805a8415f4cc6093f870587a768c67cd` and compared with the nine primary records. [8] The overlap is intentionally limited to corroboration: the positive-only manifest has no row-level event time, evidence URL, campaign-family assignment, or negative labels, and its sample naming convention refers to discovery—not publication—dates.
 
 | Primary record outcome | Count | Permitted interpretation |
 |---|---:|---|
-| Exact affected-version membership | 1 | The manifest lists both affected Axios versions, corroborating positive package-version membership only. |
+| Exact affected-version membership | 2 | The manifest lists the Axios versions and the expanded node-ipc version set, corroborating positive package-version membership only. |
 | Package present, versions unspecified | 1 | `plain-crypto-js` is present but has a `null` manifest value; no version-specific assertion follows. |
 | Package absent from current manifest | 6 | No conclusion; absence is not benign evidence and does not alter the primary record. |
 | New primary labels, dates, families, or controls | 0 | The primary ledger remains authoritative. |
@@ -56,4 +57,8 @@ The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) st
 
 [5] [CISA, “Supply Chain Compromise Impacts Axios Node Package Manager,” 20 April 2026](https://www.cisa.gov/news-events/alerts/2026/04/20/supply-chain-compromise-impacts-axios-node-package-manager).
 
-[6] [DataDog, “Malicious Software Packages Dataset”](https://github.com/DataDog/malicious-software-packages-dataset).
+[6] [SafeDep, “Compromised node-ipc on npm: Credential Stealer via DNS Exfiltration,” 14 May 2026](https://safedep.io/malicious-node-ipc-npm-compromise/).
+
+[7] [OpenSSF Malicious Packages, “MAL-2026-3744: Malicious code in node-ipc (npm)”](https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/node-ipc/MAL-2026-3744.json).
+
+[8] [DataDog, “Malicious Software Packages Dataset”](https://github.com/DataDog/malicious-software-packages-dataset).

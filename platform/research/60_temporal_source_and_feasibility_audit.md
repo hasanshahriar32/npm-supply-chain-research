@@ -80,6 +80,12 @@ The DataDog Malicious Software Packages Dataset publishes an npm `manifest.json`
 
 This makes the manifest useful only as a frozen, human-vetted **positive-membership corroboration** for existing or separately sourced package-version records. It cannot establish an event time for a new primary incident label, cannot distinguish a `null` value from a safe package version, and cannot create a control population. Any overlap is retained as candidate-level corroboration and never used to overwrite primary incident evidence or temporal cutoffs.
 
+## Dated OSV-report validation: node-ipc
+
+The OpenSSF Malicious Packages OSV report `MAL-2026-3744` supplies a published timestamp of 14 May 2026, exact npm versions `9.1.6`, `9.2.3`, and `12.0.1`, source provenance records, package-integrity evidence, and an alias to `GHSA-pvh2-rg5g-69v7`. [14] Its independent SafeDep report, published on the same date, names the same three versions and reports their official registry publication timestamps, including `12.0.1` at `2026-05-14T14:25:30.311Z`. [15]
+
+This pair satisfies the pre-registered adjudication threshold for one new, independent maintainer-compromise family. The ledger uses the earliest reported malicious publication timestamp as the cutoff, reconstructs `node-ipc@12.0.0` immediately before that cutoff from official registry metadata, and retains the report publication time only as evidence provenance—not a feature. The expanded ledger now has nine package-event records, five incident families, eight exact source snapshots, and 24 exact declared direct edges. The baseline remains blocked because it is still one strict record short of the ten-record floor and has no cutoff-valid control population.
+
 ## References
 
 [1]: https://github.com/npm/registry/blob/main/docs/responses/package-metadata.md "npm Registry package metadata documentation"
@@ -95,3 +101,5 @@ This makes the manifest useful only as a frozen, human-vetted **positive-members
 [11]: https://docs.npmjs.com/cli/v6/using-npm/semver/ "npm SemVer documentation"
 [12]: https://github.com/githubnext/amalfi-artifact "Amalfi ICSE 2022 artifact repository"
 [13]: https://github.com/DataDog/malicious-software-packages-dataset "DataDog Malicious Software Packages Dataset"
+[14]: https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/node-ipc/MAL-2026-3744.json "OpenSSF MAL-2026-3744 node-ipc report"
+[15]: https://safedep.io/malicious-node-ipc-npm-compromise/ "SafeDep node-ipc compromise report"

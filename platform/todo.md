@@ -91,3 +91,6 @@
 - [x] Identify compact, independently verifiable historical source or sampling paths that could advance the temporal benchmark without weakening its target definition
 - [x] Validate provenance, timing, label semantics, and retention bias for newly identified candidate data paths, retaining non-primary exclusions where required
 - [x] Execute and publish only the corroboration analysis supported by the validated positive-only catalogue, with no new primary labels, event times, controls, or model metrics
+- [x] Identify dated advisory, vulnerability-record, or provider-maintained incident sources with npm package-version scope suitable for temporal adjudication
+- [x] Validate candidate source timing, affected-version detail, evidence provenance, and campaign independence against the frozen adjudication rules
+- [x] Expand only labels that meet the evidence threshold, or publish the reason a candidate source cannot advance the primary temporal ledger

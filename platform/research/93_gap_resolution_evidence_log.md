@@ -185,3 +185,12 @@ The DataDog Malicious Software Packages Dataset exposes an npm manifest of known
 The manifest is consequently admissible only as a frozen positive-membership corroboration source. It cannot set a primary temporal event cutoff, turn an absent manifest entry into a benign label, or form a control population. The project will retain only candidate-overlap outputs and will not ingest samples or execute package content.
 
 24. DataDog, *Malicious Software Packages Dataset*: <https://github.com/DataDog/malicious-software-packages-dataset>.
+
+## Dated OSV and independent-report expansion — 2026-08-24
+
+OpenSSF report `MAL-2026-3744` records `node-ipc` versions `9.1.6`, `9.2.3`, and `12.0.1` as malicious, with `published` set to `2026-05-14T16:53:17Z`, package-integrity evidence, and source-origin timestamps. [25] SafeDep's independently published incident report names the same three versions, characterizes a compromised maintainer account, and reports registry times including `12.0.1` at `2026-05-14T14:25:30.311Z`. [26]
+
+The project admits this as one new `node_ipc_2026` incident family. Its strict feature cutoff is the earliest reported malicious publication timestamp, one millisecond before `12.0.1`; the selected exact pre-event source object is `node-ipc@12.0.0`. No report publication, discovery, remediation, payload, or current registry information enters the feature snapshot. The record increases the adjudicated ledger to nine package-event records and five families, but it does not create controls or permit model fitting.
+
+25. OpenSSF Malicious Packages, *MAL-2026-3744: Malicious code in node-ipc (npm)*: <https://github.com/ossf/malicious-packages/blob/main/osv/malicious/npm/node-ipc/MAL-2026-3744.json>.
+26. SafeDep, *Compromised node-ipc on npm: Credential Stealer via DNS Exfiltration*, 14 May 2026: <https://safedep.io/malicious-node-ipc-npm-compromise/>.

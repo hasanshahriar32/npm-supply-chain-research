@@ -105,7 +105,11 @@ const diagnostics = {
   graphFidelity: "cutoff-valid direct dependency declarations only; no package-version or transitive resolution",
   controls: "not constructed; no defensible negative population was pre-registered",
   calibrationInference: "blocked",
-  blockedReason: "Fewer than ten strict future positives, fewer than five independent incident families, and no adjudicated negative/control design.",
+  blockedReason: [
+    output.length < 10 ? `Only ${output.length} strict pre-registered package-event records are available; the minimum gate is ten.` : null,
+    families.length < 5 ? `Only ${families.length} independent incident families are available; the minimum gate is five.` : null,
+    "No cutoff-valid, independently adjudicated negative/control design is available.",
+  ].filter(Boolean).join(" "),
   provenance,
 };
 

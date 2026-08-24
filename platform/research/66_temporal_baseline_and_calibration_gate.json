@@ -1,92 +1,98 @@
 {
   "study": "temporal-baseline-and-calibration-gate",
-  "exactPreEventSnapshots": 7,
+  "exactPreEventSnapshots": 8,
   "distinctIncidentFamilies": [
     "unc3379_2021",
     "axios_2026",
     "event_stream_2018",
-    "eslint_2018"
+    "eslint_2018",
+    "node_ipc_2026"
   ],
   "featureSummaries": {
     "package_age_days": {
-      "count": 7,
+      "count": 8,
       "min": 481,
-      "median": 3372,
-      "max": 4231,
-      "mean": 2686
+      "median": 3374.5,
+      "max": 4464,
+      "mean": 2908.25
     },
     "prior_version_count": {
-      "count": 7,
+      "count": 8,
       "min": 5,
-      "median": 48,
+      "median": 48.5,
       "max": 130,
-      "mean": 50.57142857142857
+      "mean": 54.125
     },
     "direct_dependency_count": {
-      "count": 7,
+      "count": 8,
       "min": 0,
       "median": 3,
       "max": 7,
-      "mean": 2.857142857142857
+      "mean": 3
     },
     "install_script_true_count": 0,
-    "integrity_present_count": 7
+    "integrity_present_count": 8
   },
   "baselineEvaluation": {
     "direct_dependency_ranking": "not_evaluable_without_cutoff-valid controls",
     "package_age_ranking": "not_evaluable_without_cutoff-valid controls",
     "multivariate_logistic_regression": "blocked: all retained snapshots are event records, not labeled negatives",
-    "probability_calibration": "blocked: no evaluation population or independent positive-family count",
+    "probability_calibration": "blocked: no cutoff-valid evaluation population; the strict positive-record threshold is not yet met",
     "pr_auc_and_recall_at_k": "blocked: requires positives and a defensible non-event population"
   },
   "calibrationInference": "blocked",
   "blockingConditions": [
-    "Only 7 exact pre-event snapshots are available.",
-    "Only 4 independent incident families are represented.",
+    "Only 9 strict pre-registered package-event records are available; the minimum gate is ten.",
+    "Only 8 exact pre-event source snapshots are currently reconstructable.",
     "No cutoff-valid, independently adjudicated control population is available.",
     "Current structural and workflow metrics cannot be joined as historical features."
   ],
-  "nextDataGate": "Acquire at least ten strict future positives from five or more incident families and pre-register a cutoff-valid control design before fitting or calibrating any ranking model.",
+  "nextDataGate": "Add at least one more strict future-positive package-event record and pre-register a cutoff-valid control design before fitting or calibrating any ranking model.",
   "provenance": [
     {
       "packageName": "ua-parser-js",
       "responseSha256": "0eab3a61365e0e672035bc66e2ad81a03cf6bb9f9f7ec16786e7954285b1bce5",
-      "retrievedAt": "2026-08-24T08:06:45.957Z"
+      "retrievedAt": "2026-08-24T09:20:01.256Z"
     },
     {
       "packageName": "coa",
       "responseSha256": "6ae7745daad86eda0cc0d25490b8c51aa23380f91eac5e330317d4115cb7dcd9",
-      "retrievedAt": "2026-08-24T08:06:45.975Z"
+      "retrievedAt": "2026-08-24T09:20:01.277Z"
     },
     {
       "packageName": "rc",
       "responseSha256": "2cce08499df0fa32be710df12a4ccde4d4aa0b6c4b317f94009283bfee8b927a",
-      "retrievedAt": "2026-08-24T08:06:45.989Z"
+      "retrievedAt": "2026-08-24T09:20:01.294Z"
     },
     {
       "packageName": "axios",
       "responseSha256": "0d2838c5dab4bb763e6c00bfbb1c89c59aa77f1802f0ff3e2b3d97b035adf029",
-      "retrievedAt": "2026-08-24T08:06:46.031Z"
+      "retrievedAt": "2026-08-24T09:20:01.342Z"
     },
     {
       "packageName": "plain-crypto-js",
       "responseSha256": "d2431f4be7f323e5ef3136247766abcc74fc8ebd28041cc655bc8a620293afe7",
-      "retrievedAt": "2026-08-24T08:06:46.046Z"
+      "retrievedAt": "2026-08-24T09:20:01.357Z"
     },
     {
       "packageName": "event-stream",
       "responseSha256": "70502b28679d954ba51b10a1961e0fdf34d64f9950b6b70e864c49841a764bf1",
-      "retrievedAt": "2026-08-24T08:06:46.063Z"
+      "retrievedAt": "2026-08-24T09:20:01.375Z"
     },
     {
       "packageName": "eslint-scope",
       "responseSha256": "5957d93e397750c2c1e3e6a88bf59fc4fcd5ce310705860bf7af35d6fb8d8118",
-      "retrievedAt": "2026-08-24T08:06:46.079Z"
+      "retrievedAt": "2026-08-24T09:20:01.394Z"
     },
     {
       "packageName": "eslint-config-eslint",
       "responseSha256": "16cbdb66a0b4aec2f9d4c904cc6b4568be1205f13c2d32b11a5c3cdae2a06bbd",
-      "retrievedAt": "2026-08-24T08:06:46.094Z"
+      "retrievedAt": "2026-08-24T09:20:01.410Z"
+    },
+    {
+      "packageName": "node-ipc",
+      "responseSha256": "8560985da38b9948ef81928b40bc754199a545dbf87ed651bdb5f5dd06ee3816",
+      "retrievedAt": "2026-08-24T09:20:01.431Z"
     }
   ]
 }
