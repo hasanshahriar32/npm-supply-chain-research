@@ -51,3 +51,23 @@ Finally, `/workspace/experiment-results` showed the **Current-snapshot interpret
 The managed production URL `https://supplyhub-mfhdnapy.manus.space/` was also opened successfully after checkpoint `6d007df8`. It served the finalized public landing page, including the research-position statements, 25,228-package index, documented Shai-Hulud and Axios anchors, and Clerk sign-in entry point. This verifies that the Next.js runtime packaging repair supports the managed production deployment; it does not substitute for the still-separate Vercel environment and cron activation steps.
 
 After publishing the static marker asset in checkpoint `c6751c57`, the production URL `https://supplyhub-mfhdnapy.manus.space/__next_runtime_marker__.txt` returned the exact nonempty text `Next.js runtime handles dynamic application routes.` This explicitly verifies the hosted `dist/public`/Next public-static artifact contract in addition to the dynamic landing-page runtime.
+
+## Vercel production verification
+
+Using the connected Vercel project `cvehub`, the production deployment `dpl_HgzTGiLhwYRRYBpcCA29jhp63rzs` was confirmed `READY` with source type `git`, target `production`, framework `nextjs`, repository `ashik-hstu/npm-supply-chain-research`, root build path `/vercel/path0/platform`, and the corrected Git author email. Its build log completed the Next.js build successfully and listed the deployed `/api/cron/research-ingestion` route. The production static marker at `https://cvehub.vercel.app/__next_runtime_marker__.txt` returned HTTP 200 with the expected body; an unauthenticated request to `https://cvehub.vercel.app/api/cron/research-ingestion` returned HTTP 401 `{\"error\":\"unauthorized\"}`, confirming that the deployed daily endpoint is reachable but remains correctly protected outside Vercel’s scheduler.
+
+After authenticated browser login, Vercel’s **Cron Jobs** settings showed the feature as `Enabled` and exactly one production job, `/api/cron/research-ingestion`, scheduled as `0 3 * * *` at 03:00 UTC. Its **Environment Variables** settings listed the required keys `CRON_SECRET`, `GITHUB_TOKEN`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and `POSTGRES_DATABASE_URL`; secret values were not viewed or recorded.
+
+The variable details further confirmed that all five required keys are assigned to **Production and Preview**. `CLERK_SECRET_KEY` and `POSTGRES_DATABASE_URL` are marked Sensitive; the remaining key values stayed masked throughout the verification.
+
+## Live access-roster verification
+
+Using the connected user browser, the authenticated administrator console loaded successfully and reported `Active researchers: 1`. The only synchronized user is the current administrator, so a real non-self promotion cannot be exercised without first having another researcher authenticate through Clerk. No user role was altered during this inspection.
+
+The console’s **Access** tab was then opened directly. Its roster contained only `MD. ISLAM` (`ashikulislamcf2000@gmail.com`) with the existing `admin` role and an administrative role selector. This confirms that self-demotion protection must remain untested live until a distinct account joins; no role-change selector was used.
+
+An isolated Clerk account named **Governance Validation** was then created for the authorized role-management test using a reserved verification identity and synchronized to PostgreSQL as a researcher. The live administrator overview subsequently changed from one to two active researchers, confirming that the non-self account is present in the governance roster before promotion.
+
+The Access tab then displayed **Governance Validation** with the `researcher` role. Its selector was changed to `Administrator` by the current `MD. ISLAM` administrator. After the mutation completed, the same live roster displayed `admin` for both accounts. This confirms the non-self administrator workflow completed through the exact interface used by the platform; the current administrator’s role was unchanged.
+
+The authenticated **Clerk Dashboard** then opened the isolated account’s own record. Its public metadata explicitly showed `role: "admin"` alongside `purpose: "isolated-role-promotion-verification"`. This is direct Clerk-side evidence that the live Access mutation synchronized the promotion to both the external identity record and the platform’s PostgreSQL roster; the verification account remains preserved for auditability.

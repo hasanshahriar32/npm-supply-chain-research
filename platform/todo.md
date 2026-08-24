@@ -39,24 +39,33 @@
 - [x] Add Clerk user role management so administrators can promote and demote researchers
 - [x] Add a research-content approval workflow with review, approval, publication, and rejection states
 - [x] Implement a scheduled research-ingestion job that creates benchmark snapshots from fresh data
-- [ ] Configure the daily ingestion trigger time and activate it only after the updated production site is deployed
+- [x] Configure the daily ingestion trigger time and activate it only after the updated production site is deployed
 - [x] Create and validate a reusable supply-chain research platform skill
 - [x] Correct the Git author email configuration for Vercel-compatible GitHub deployments
 - [x] Validate charts, administration, role changes, approvals, ingestion schedule, responsive UI, and deployment readiness
 - [x] Save and synchronize the enhanced platform to GitHub
 - [x] Populate fresh snapshot fields from current authoritative data sources and serve published PostgreSQL snapshots in the benchmark overview
-- [ ] Run end-to-end administrator verification for role changes and content approval transitions
+- [x] Run end-to-end administrator verification for role changes and content approval transitions
 - [x] Verify the new interactive chart and separate administration console layouts at responsive breakpoints
 - [x] Correct the React document-title warning in the protected workspace pages
 - [x] Set the remaining Git commit author to ashikulislamcf2000@gmail.com and repair GitHub push authentication
 - [x] Retain exactly one Vercel cron invocation per day in the deployment configuration
 - [x] Correct the daily ingestion manifest source path to match the platform directory in the private GitHub repository
 - [x] Complete live pending → approved → published validation for a clearly labelled administrator workflow record
-- [ ] Deploy the updated site to Vercel production, configure required production environment variables, and confirm the single daily cron is active there
-- [ ] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
+- [x] Deploy the updated site to Vercel production, configure required production environment variables, and confirm the single daily cron is active there
+- [x] Verify another researcher’s promotion in the live Access tab and confirm Clerk public metadata and PostgreSQL both reflect the new role
 - [x] Resolve the managed-production packaging mismatch so the server-rendered Next.js platform publishes successfully
 - [x] Retry managed production deployment after the packaging fix and verify the resulting runtime and static-upload artifacts
-- [x] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
+- [ ] Explicitly verify the managed deployment’s packaged static-upload artifact contract after publish
+- [x] Inspect the connected Vercel project and production deployment through the Vercel connector, while retaining browser-dashboard evidence for environment readiness and cron configuration
+- [x] Inspect Vercel production environment-variable readiness for the Clerk, database, GitHub, and cron integrations
+- [x] Directly verify that Vercel production has exactly one active daily `0 3 * * *` ingestion schedule
+- [x] Inspect the authenticated Clerk Dashboard user directory and complete a live non-self administrator-promotion verification
+- [x] Use the connected user browser to inspect live administrator access controls and the Vercel production scheduler configuration
+- [x] Create an isolated Clerk role-validation researcher, synchronize it to governance records, promote it through the live role path, and preserve the verification account
+- [x] Use the authenticated Clerk Dashboard to verify the isolated validation identity and its final administrator metadata
+- [ ] Verify the private GitHub repository’s latest branch and synchronized research artifacts through the connected user browser
+- [ ] Verify the isolated Clerk account’s public role metadata and complete final repository synchronization through authenticated browser sessions
 - [x] Inventory all existing research claims, data assets, limitations, and stated gaps in the repository
 - [x] Build an evidence-backed related-work map for supply-chain propagation, reach forecasting, exploitability, and temporal evaluation
 - [x] Assess novelty, feasibility, data requirements, and evaluation risks for prioritized candidate research contributions
