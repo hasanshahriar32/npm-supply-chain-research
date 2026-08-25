@@ -98,7 +98,7 @@ const artifact = {
   strictExclusionReason: {
     requiredRule: "A primary temporal-ledger record requires an official registry timestamp for an independently corroborated affected release and a retained official-registry source object selected strictly before the resulting cutoff.",
     observedState: "The bounded current registry response lacks a 0.1.1 time-map entry, lacks all 0.1.x time-map entries, and retains no historically relevant 0.1.x version object. A later security-holder object does not supply event-time or pre-event source evidence. Therefore no official exact cutoff or pre-event source-object selection can be reconstructed.",
-    consequence: "Do not add flatmap-stream to the 14-record primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, a new campaign family, or a new validation unit from this candidate.",
+    consequence: "Do not add flatmap-stream to the current primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, a new campaign family, or a new validation unit from this candidate.",
   },
   currentDecision: {
     primaryLedgerRecordsAdded: 0,

@@ -22,8 +22,8 @@ const [snapshotsText, diagnosticsText] = await Promise.all([
 const snapshots = parseCsv(snapshotsText);
 const diagnostics = JSON.parse(diagnosticsText);
 
-if (snapshots.length !== diagnostics.observations || snapshots.length !== 14) {
-  throw new Error("The source-object retention census requires the 14-record strict companion ledger.");
+if (snapshots.length !== diagnostics.observations) {
+  throw new Error("The source-object retention census requires one snapshot-status row for every strict companion observation.");
 }
 const diagnosticByPackage = new Map(diagnostics.provenance.map((entry) => [entry.packageName, entry]));
 

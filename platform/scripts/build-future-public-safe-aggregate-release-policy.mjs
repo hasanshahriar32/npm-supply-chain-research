@@ -34,6 +34,12 @@ for (const value of Object.values(outcome.currentDecision)) {
 for (const value of Object.values(authority.currentDecision)) {
   if (typeof value === "number" && value !== 0) throw new Error("Authority contract is no longer zero-output.");
 }
+const strictRecordCount = relatedness.sourceInputs?.strictLedger?.recordCount;
+const strictFamilyCount = relatedness.sourceInputs?.strictLedger?.familyCount;
+const validationUnitCount = relatedness.validationUnits?.unitCount;
+if (![strictRecordCount, strictFamilyCount, validationUnitCount].every((value) => Number.isInteger(value) && value > 0)) {
+  throw new Error("Aggregate-release policy requires positive grouped-inference ledger, family, and validation-unit counts.");
+}
 
 const output = {
   study: "future-public-safe-aggregate-release-policy",
@@ -56,7 +62,7 @@ const output = {
     groupedInferenceProtocol: {
       path: "research/94_campaign_relatedness_and_grouped_inference_protocol.json",
       sha256: createHash("sha256").update(relatednessText).digest("hex"),
-      futureValidationUnitCount: relatedness.validationUnits.unitCount,
+      futureValidationUnitCount: validationUnitCount,
       relatednessConstraint: "Any future aggregate must preserve the documented Mini Shai-Hulud atool / Keyv/Cacheable related-family cluster and must not present related families as independent rows or units.",
     },
   },
@@ -153,7 +159,7 @@ const output = {
       "Before any P2 aggregate, pre-register the minimum cell threshold and minimum distinct validation-unit threshold in a separate sealed parameter record; do not infer or publish either threshold value in this policy artifact.",
       "Suppress a cell when it fails either threshold, can be reconstructed from another released total, exposes an incident family or related-family cluster, or has a high-risk composition dominated by one package/version/source/reviewer/outcome state.",
       "Apply complementary suppression or coarsening until all directly and indirectly sensitive cells are protected; do not release marginal totals that reveal suppressed values by subtraction.",
-      "Treat any aggregate based on the current fourteen positive records, ten families, or nine future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.",
+      `Treat any aggregate based on the current ${strictRecordCount} positive records, ${strictFamilyCount} families, or ${validationUnitCount} future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.`,
     ],
     differencingAndLinkageControls: [
       "Compare every proposed release against all prior public releases, approved public sources, and approved query interfaces for differencing, temporal linkage, and reconstruction risk.",

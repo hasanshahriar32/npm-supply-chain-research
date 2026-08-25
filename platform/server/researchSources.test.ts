@@ -32,11 +32,11 @@ describe("repository-backed research sources", () => {
     expect(hgat?.status).toBe("blocked");
   });
 
-  it("reconciles the temporal-feasibility card with the fourteen-record no-fit ledger", () => {
+  it("reconciles the temporal-feasibility card with the sixteen-record no-fit ledger", () => {
     const temporal = getExperiments().find((experiment) => experiment.id === "temporal-feasibility");
-    expect(temporal?.evaluation).toContain("Fourteen package-event records");
-    expect(temporal?.note).toContain("ten campaign families");
-    expect(temporal?.note).toContain("not asserted statistically independent");
+    expect(temporal?.evaluation).toContain("Sixteen package-event records");
+    expect(temporal?.note).toContain("eleven campaign families");
+    expect(temporal?.note).toContain("remains non-independent");
     expect(temporal?.note).toContain("no cutoff-valid controls exist");
   });
 
@@ -55,7 +55,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Original Sin of npm") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("fourteen package-event records") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("sixteen package-event records") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -63,12 +63,13 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 14, exactSourceSnapshots: 12, unavailableSourceSnapshots: 2, declaredDirectEdges: 29, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 16, exactSourceSnapshots: 14, unavailableSourceSnapshots: 2, declaredDirectEdges: 29, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
     expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 29, resolvedIsolatedSemverRanges: 29, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
     expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 29, isolatedCutoffSemverApproximations: 29, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ strictPackageEventRecords: 14, adjudicatedIncidentFamilyCount: 10, exactPreEventSnapshots: 12, exactSnapshotIncidentFamilyCount: 9, calibrationInference: "blocked" });
+    expect(gate).toMatchObject({ strictPackageEventRecords: 16, adjudicatedIncidentFamilyCount: 11, exactPreEventSnapshots: 14, exactSnapshotIncidentFamilyCount: 10, calibrationInference: "blocked" });
+    expect(gate.adjudicatedIncidentFamilies).toContain("colors_faker_protestware_2022");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("moika_dependency_confusion_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("shai_hulud_second_coming_2025");
@@ -106,7 +107,7 @@ describe("repository-backed research sources", () => {
     const fs = await import("node:fs/promises");
     const manifest = JSON.parse(await fs.readFile("research/74_bounded_recursive_registry_semver_graph_manifest.json", "utf8"));
     const diagnostic = JSON.parse(await fs.readFile("research/75_bounded_recursive_registry_graph_diagnostic.json", "utf8"));
-    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 12, reconstructedEdges: 64, unresolvedEdges: 0, maxObservedDepth: 3 });
+    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 14, reconstructedEdges: 64, unresolvedEdges: 0, maxObservedDepth: 3 });
     expect(manifest.prohibitedInterpretations).toContain("This graph is not a package-lock, npm install execution trace, or reproducible historical node_modules tree.");
     expect(diagnostic.summary).toMatchObject({ boundedEdges: 64, directDepthOneEdges: 29, depthTwoEdges: 18, depthThreeEdges: 17, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
     expect(diagnostic.interpretation).toContain("not historical installed-tree size");
@@ -125,7 +126,7 @@ describe("repository-backed research sources", () => {
   it("uses the DataDog manifest only as positive-membership corroboration", async () => {
     const fs = await import("node:fs/promises");
     const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
-    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 14, exactAffectedVersionMembership: 5, packagePresentVersionsUnspecified: 2, packageNotPresent: 7, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 16, exactAffectedVersionMembership: 5, packagePresentVersionsUnspecified: 2, packageNotPresent: 9, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });
@@ -223,8 +224,8 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/94_campaign_relatedness_and_grouped_inference_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_control_frame_or_model_eligible_dataset",
-      sourceInputs: { strictLedger: { recordCount: 14, familyCount: 10 } },
-      validationUnits: { unitCount: 9 },
+      sourceInputs: { strictLedger: { recordCount: 16, familyCount: 11 } },
+      validationUnits: { unitCount: 10 },
       currentDecision: { controlsCreated: 0, modelsFitted: 0, temporalSplitsGenerated: 0, uncertaintyIntervalsComputed: 0, rankingsComputed: 0, predictiveMetricsComputed: 0, status: "blocked_pending_control_frame_and_model_eligibility" },
     });
     expect(protocol.documentedCrossFamilyRelatedness).toContainEqual(expect.objectContaining({
@@ -240,12 +241,12 @@ describe("repository-backed research sources", () => {
     const audit = await import("node:fs/promises").then((fs) => fs.readFile("research/95_release_authority_metadata_availability_audit.json", "utf8")).then(JSON.parse);
     expect(audit).toMatchObject({
       executionStatus: "availability_audit_only_no_feature_values_deltas_scores_or_models",
-      input: { exactPreEventSourceSnapshots: 12 },
+      input: { exactPreEventSourceSnapshots: 14 },
       summary: {
-        exactPreEventSourceSnapshots: 12,
-        predecessorAvailable: 12,
-        repositoryDescriptorComparisonAvailable: 11,
-        gitHeadComparisonAvailable: 9,
+        exactPreEventSourceSnapshots: 14,
+        predecessorAvailable: 14,
+        repositoryDescriptorComparisonAvailable: 13,
+        gitHeadComparisonAvailable: 11,
         publishConfigComparisonAvailable: 0,
         featureValuesExtracted: 0,
         deltasClassified: 0,
@@ -263,7 +264,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/96_release_authority_delta_semantics_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_metadata_values_compared_or_deltas_classified",
-      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 12, predecessorAvailable: 12, repositoryDescriptorComparisonAvailable: 11, gitHeadComparisonAvailable: 9, publishConfigComparisonAvailable: 0 } } },
+      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 14, predecessorAvailable: 14, repositoryDescriptorComparisonAvailable: 13, gitHeadComparisonAvailable: 11, publishConfigComparisonAvailable: 0 } } },
       currentDecision: { observedDeltaValuesExtracted: 0, observedDeltasClassified: 0, authorityScoresComputed: 0, controlsCreated: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.deltaOntology).toHaveLength(6);
@@ -275,7 +276,7 @@ describe("repository-backed research sources", () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/97_official_npm_provenance_attestation_access_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
       decision: "metadata_only_version_specific_attestation_access_not_established",
-      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 12, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
+      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 14, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
       counts: { versionSpecificEndpointRequestsAttempted: 0, undocumentedEndpointsGuessed: 0, packagePayloadsDownloaded: 0, packagesInstalled: 0, attestationBundlesRetrieved: 0, signatureVerificationRuns: 0, attestationStatesClassified: 0, controlsCreated: 0, authorityScoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(assessment.prohibitedInterpretations).toContain("Do not infer that any strict pre-event version lacks an attestation because no metadata-only access path was established.");
@@ -285,7 +286,7 @@ describe("repository-backed research sources", () => {
     const census = await import("node:fs/promises").then((fs) => fs.readFile("research/98_full_ledger_source_object_retention_census.json", "utf8")).then(JSON.parse);
     expect(census).toMatchObject({
       executionStatus: "current_registry_retention_census_only_no_package_feature_or_outcome_analysis",
-      summary: { incidentRecords: 14, incidentFamilies: 10, currentRegistryResponsesWithProvenance: 14, strictPreEventSourceObjectsRetained: 12, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
+      summary: { incidentRecords: 16, incidentFamilies: 11, currentRegistryResponsesWithProvenance: 16, strictPreEventSourceObjectsRetained: 14, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
       exceptionCategories: { timeMapSelectionButStrictObjectRetentionFailure: ["plain-crypto-js-2026-03-31"], noPreCutoffVersionSelectionInCurrentResponse: ["emcd-vue-auth-2026-06-01"] },
       currentDecision: { packageMetadataValuesExtracted: 0, maintainerOrPublisherValuesExtracted: 0, repositoryOrWorkflowValuesExtracted: 0, provenanceOrAttestationStatesClassified: 0, packageFeaturesDerived: 0, controlsCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
@@ -308,7 +309,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/100_future_outcome_manifest_sealing_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
-      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 9 } },
+      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 10 } },
       currentDecision: { outcomeSourcesContacted: 0, sourceInventoryRecordsCreated: 0, candidateDocketsCreated: 0, adjudicatorDecisionsRecorded: 0, outcomeRowsCreated: 0, positiveOutcomeRowsCreated: 0, eligibleNonEventRowsCreated: 0, unknownOutcomeRowsCreated: 0, controlsCreated: 0, coverageRecordsCreated: 0, manifestRevisionsSealed: 0, featureOutcomeJoinsCreated: 0, temporalSplitsGenerated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.targetAndHorizonContract.targetVocabulary.unknown_outcome).toContain("not benign");
@@ -320,12 +321,12 @@ describe("repository-backed research sources", () => {
     const policy = await import("node:fs/promises").then((fs) => fs.readFile("research/101_future_public_safe_aggregate_release_policy.json", "utf8")).then(JSON.parse);
     expect(policy).toMatchObject({
       executionStatus: "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
-      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 9 } },
+      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 10 } },
       currentDecision: { releasePlansCreated: 0, releaseLedgerEntriesCreated: 0, sourceObjectsInspectedForRelease: 0, outcomeRowsReleased: 0, controlRowsReleased: 0, authorityValuesReleased: 0, aggregateCellsComputed: 0, aggregateCellsReleased: 0, smallCellReviewsPerformed: 0, differencingReviewsPerformed: 0, modelResultsReleased: 0, rankingsReleased: 0, uncertaintyIntervalsReleased: 0, predictiveMetricsReleased: 0 },
     });
     expect(policy.releaseClasses).toHaveLength(4);
     expect(policy.releaseClasses.find((releaseClass: { releaseClass: string }) => releaseClass.releaseClass === "P3_aggregate_benchmark_results")?.futureEligibility).toContain("Not enabled");
-    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current fourteen positive records, ten families, or nine future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
+    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current 16 positive records, 11 families, or 10 future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
     expect(policy.prohibitedInterpretations).toContain("The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.");
   });
 
@@ -350,7 +351,7 @@ describe("repository-backed research sources", () => {
       currentDecision: { primaryLedgerRecordsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(assessment.corroboration.officialRegistry.retainedVersionObjectKeys).toEqual(["0.0.1-security", "0.0.2-security", "1.0.0", "1.0.1"]);
-    expect(assessment.strictExclusionReason.consequence).toContain("Do not add crossenv to the 14-record primary ledger");
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add crossenv to the current primary ledger");
     expect(assessment.prohibitedInterpretations).toContain("This exclusion does not dispute the independently corroborated crossenv incident evidence or convert the candidate into a benign, safe, unchanged, no-known-event, or control row.");
   });
 
@@ -362,8 +363,24 @@ describe("repository-backed research sources", () => {
       corroboration: { officialRegistry: { affectedVersionTimeUtc: null, blockedVersionTimeRetention: { "0.1.0": null, "0.1.1": null, "0.1.2": null }, blockedVersionObjectRetention: { "0.1.0": false, "0.1.1": false, "0.1.2": false }, retainedVersionObjectKeys: ["0.0.1-security"] } },
       currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, primaryLedgerValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
     });
-    expect(assessment.strictExclusionReason.consequence).toContain("Do not add flatmap-stream to the 14-record primary ledger");
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add flatmap-stream to the current primary ledger");
     expect(assessment.prohibitedInterpretations).toContain("The documented relationship to event-stream is relatedness evidence only; it does not establish a new independent campaign family, validation unit, causal pathway, or campaign-complete census.");
+  });
+
+  it("admits the two related colors and faker records with strict registry cutoffs but no controls or model outputs", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/105_colors_faker_protestware_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "admit_two_related_records_to_existing_primary_temporal_ledger_under_single_new_related_family",
+      eventFamily: "colors_faker_protestware_2022",
+      labelClass: "confirmed_malicious_publication",
+      candidates: [
+        { recordId: "colors-2022-01-08", packageName: "colors", affectedVersions: ["1.4.44-liberty-2", "1.4.1", "1.4.2"], eventStartUtc: "2022-01-08T04:24:16.448Z", sourceSelection: { selectedVersion: "1.4.0", exactSourceObjectRetained: true } },
+        { recordId: "faker-2022-01-05", packageName: "faker", affectedVersions: ["6.6.6"], eventStartUtc: "2022-01-05T01:38:36.409Z", sourceSelection: { selectedVersion: "5.5.3", exactSourceObjectRetained: true } },
+      ],
+      currentDecision: { primaryLedgerRecordsAdded: 2, primaryLedgerFamiliesAdded: 1, primaryLedgerValidationUnitsAdded: 1, exactPreEventSourceSnapshotsExpected: 2, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.relatednessRule).toContain("cannot create two independent validation units");
+    expect(assessment.prohibitedInterpretations).toContain("The two records are related and count as one future validation unit, not two independent observations.");
   });
 
   it("admits only the bounded and independently corroborated is maintainer-compromise record", async () => {

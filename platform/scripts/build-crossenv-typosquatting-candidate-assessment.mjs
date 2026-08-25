@@ -118,7 +118,7 @@ const artifact = {
   strictExclusionReason: {
     requiredRule: "A primary temporal-ledger record requires a retained official-registry version object selected strictly before the candidate event cutoff so the companion builder can reproduce an exact source snapshot.",
     observedState: "The official registry time map selects crossenv@6.0.7 immediately before the independently reported crossenv@6.1.1 timestamp, but the current bounded response retains only 1.0.0 and 1.0.1 version objects; the selected 6.0.7 object is absent.",
-    consequence: "Do not add crossenv to the 14-record primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, campaign-family count, or validation unit from this candidate.",
+    consequence: "Do not add crossenv to the current primary ledger, do not create a companion source snapshot, direct declarations, range approximations, recursive graph edges, campaign-family count, or validation unit from this candidate.",
   },
   currentDecision: {
     primaryLedgerRecordsAdded: 0,

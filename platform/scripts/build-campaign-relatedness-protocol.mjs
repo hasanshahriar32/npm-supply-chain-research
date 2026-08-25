@@ -53,8 +53,8 @@ const [ledgerText, keyvAssessmentText] = await Promise.all([
 const ledger = asObjects(ledgerText);
 const keyvAssessment = JSON.parse(keyvAssessmentText);
 
-if (ledger.length !== 14) {
-  throw new Error(`Expected 14 strict ledger records, found ${ledger.length}.`);
+if (ledger.length < 14) {
+  throw new Error(`Expected at least 14 strict ledger records, found ${ledger.length}.`);
 }
 if (!keyvAssessment.familyRelationship?.crossCampaign?.includes("no statistical independence")) {
   throw new Error("Keyv assessment does not retain the required cross-campaign non-independence boundary.");
@@ -75,6 +75,18 @@ const familyInventory = [...familyToRecords.entries()]
     splitRule: "All member records must remain in the same development, validation, or final-test partition.",
   }))
   .sort((left, right) => left.familyId.localeCompare(right.familyId));
+
+const keyvPayloadLineageFamilies = ["mini_shai_hulud_atool_2026", "keyv_cacheable_august_2026"];
+const standaloneValidationUnits = familyInventory
+  .filter((family) => !keyvPayloadLineageFamilies.includes(family.familyId))
+  .map((family) => ({ validationClusterId: family.familyId, familyIds: [family.familyId] }));
+const validationUnits = [
+  ...standaloneValidationUnits,
+  {
+    validationClusterId: "mini_shai_hulud_payload_lineage_cluster",
+    familyIds: keyvPayloadLineageFamilies,
+  },
+].sort((left, right) => left.validationClusterId.localeCompare(right.validationClusterId));
 
 const output = {
   study: "campaign-relatedness-and-grouped-inference-protocol",
@@ -120,18 +132,8 @@ const output = {
   ],
   validationUnits: {
     unitDefinition: "Connected components of the documented family-relatedness graph, not package-event rows.",
-    unitCount: 9,
-    units: [
-      { validationClusterId: "unc3379_2021", familyIds: ["unc3379_2021"] },
-      { validationClusterId: "axios_2026", familyIds: ["axios_2026"] },
-      { validationClusterId: "event_stream_2018", familyIds: ["event_stream_2018"] },
-      { validationClusterId: "eslint_2018", familyIds: ["eslint_2018"] },
-      { validationClusterId: "is_maintainer_compromise_2025", familyIds: ["is_maintainer_compromise_2025"] },
-      { validationClusterId: "node_ipc_2026", familyIds: ["node_ipc_2026"] },
-      { validationClusterId: "moika_dependency_confusion_2026", familyIds: ["moika_dependency_confusion_2026"] },
-      { validationClusterId: "shai_hulud_second_coming_2025", familyIds: ["shai_hulud_second_coming_2025"] },
-      { validationClusterId: "mini_shai_hulud_payload_lineage_cluster", familyIds: ["mini_shai_hulud_atool_2026", "keyv_cacheable_august_2026"] },
-    ],
+    unitCount: validationUnits.length,
+    units: validationUnits,
   },
   futureEligibleOnlyRules: {
     activationPrerequisites: [

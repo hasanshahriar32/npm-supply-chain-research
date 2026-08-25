@@ -16,8 +16,8 @@ const [availabilityText, deltaProtocolText] = await Promise.all([
 const availability = JSON.parse(availabilityText);
 const deltaProtocol = JSON.parse(deltaProtocolText);
 
-if (availability.summary?.exactPreEventSourceSnapshots !== 12) {
-  throw new Error("Expected 12 strict source snapshots for the provenance-access screen.");
+if (!Number.isInteger(availability.summary?.exactPreEventSourceSnapshots) || availability.summary.exactPreEventSourceSnapshots <= 0) {
+  throw new Error("The provenance-access screen requires at least one strict source snapshot from the availability audit.");
 }
 if (deltaProtocol.currentDecision?.observedDeltasClassified !== 0) {
   throw new Error("The input delta protocol must not contain observed deltas.");
@@ -56,7 +56,7 @@ const output = {
     },
   },
   boundedAccessDecision: {
-    strictPreEventVersionsEligibleForFutureScreen: 12,
+    strictPreEventVersionsEligibleForFutureScreen: availability.summary.exactPreEventSourceSnapshots,
     documentedMetadataOnlyVersionSpecificRetrievalPath: false,
     endpointGuessingPermitted: false,
     packagePayloadDownloadPermitted: false,

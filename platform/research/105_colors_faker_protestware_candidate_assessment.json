@@ -1,0 +1,93 @@
+{
+  "study": "colors-faker-2022-bounded-related-package-event-candidate-assessment",
+  "artifactVersion": 1,
+  "artifactDate": "2026-08-25",
+  "decision": "admit_two_related_records_to_existing_primary_temporal_ledger_under_single_new_related_family",
+  "eventFamily": "colors_faker_protestware_2022",
+  "relatednessRule": "colors and faker are two package-event records in one related family because independent sources identify a common maintainer and coordinated intentional disruption. They cannot create two independent validation units, and this relationship does not establish a causal mechanism beyond the documented shared-maintainer incident context.",
+  "labelClass": "confirmed_malicious_publication",
+  "evidenceTier": "independent_technical_and_vendor",
+  "candidates": [
+    {
+      "recordId": "colors-2022-01-08",
+      "packageName": "colors",
+      "affectedVersions": [
+        "1.4.44-liberty-2",
+        "1.4.1",
+        "1.4.2"
+      ],
+      "eventStartUtc": "2022-01-08T04:24:16.448Z",
+      "sourceSelection": {
+        "selectedVersion": "1.4.0",
+        "selectedPublishedUtc": "2019-09-22T23:46:07.522Z",
+        "exactSourceObjectRetained": true,
+        "priorVersionCount": 26
+      }
+    },
+    {
+      "recordId": "faker-2022-01-05",
+      "packageName": "faker",
+      "affectedVersions": [
+        "6.6.6"
+      ],
+      "eventStartUtc": "2022-01-05T01:38:36.409Z",
+      "sourceSelection": {
+        "selectedVersion": "5.5.3",
+        "selectedPublishedUtc": "2021-04-08T22:14:17.569Z",
+        "exactSourceObjectRetained": true,
+        "priorVersionCount": 32
+      }
+    }
+  ],
+  "corroboration": {
+    "snyk": "Snyk reports colors@1.4.1 and colors@1.4.44-liberty-2 as intentionally breaking publications and describes faker@6.6.6 as an empty package after a forced repository change by the same maintainer.",
+    "sonatype": "Sonatype independently reports colors 1.4.1, 1.4.2, and 1.4.44-liberty-2 as anomalous and faker@6.6.6 as a functional-code purge, identifying a shared author.",
+    "russCox": "Russ Cox independently documents intentional sabotage of both colors and faker and the contemporaneous impact of a newly published colors version on fresh installs."
+  },
+  "sourceProvenance": {
+    "snyk": {
+      "url": "https://snyk.io/blog/open-source-npm-packages-colors-faker/",
+      "responseSha256": "b3044ee4389f2a150a86ab880037071f1a8f3c8a6819dabcbf023cc00761c7d0"
+    },
+    "sonatype": {
+      "url": "https://www.sonatype.com/blog/npm-libraries-colors-and-faker-sabotaged-in-protest-by-their-maintainer-what-to-do-now",
+      "responseSha256": "094e725335335b60b014a240828d231a73229ee14fb5272f2b4c47e7bba2d1a1"
+    },
+    "russCox": {
+      "url": "https://research.swtch.com/npm-colors",
+      "responseSha256": "84eaea2cb932ca8faa0dc5187d48064321fe1d2a7c15dd12dc37c8550ad40402"
+    },
+    "colorsRegistry": {
+      "url": "https://registry.npmjs.org/colors",
+      "responseSha256": "65303366190f28467d0bc0909328e91d3f746fe21c8f72b8e8e483147cea63fa"
+    },
+    "fakerRegistry": {
+      "url": "https://registry.npmjs.org/faker",
+      "responseSha256": "0cd435ef19ab7e15060ef7eb668713ffb05908c1e1ae683ed831bf65f742ab85"
+    }
+  },
+  "strictAdmissionRule": {
+    "required": "Each ledger record requires independently corroborated package/version scope, an official registry timestamp for the earliest assessed affected release, and a retained official registry package-version object strictly before the resulting cutoff.",
+    "result": "Both candidate records satisfy the bounded rule. The registry time map sets each strict cutoff; a retained source object exists for the immediate prior retained version selected only by the official time map."
+  },
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 2,
+    "primaryLedgerFamiliesAdded": 1,
+    "primaryLedgerValidationUnitsAdded": 1,
+    "exactPreEventSourceSnapshotsExpected": 2,
+    "controlsCreated": 0,
+    "benignLabelsCreated": 0,
+    "historicalInstallTracesCreated": 0,
+    "reachOrBlastRadiusValuesCreated": 0,
+    "scoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "prohibitedInterpretations": [
+    "The two records are related and count as one future validation unit, not two independent observations.",
+    "The selected registry source objects are cutoff-valid source metadata only; they are not package downloads, installs, lockfiles, historical installation trees, or evidence of runtime reach.",
+    "Admission does not create controls, benign labels, a complete campaign census, authority features, release comparisons, causal conclusions, scores, models, rankings, calibration, uncertainty intervals, or predictive metrics."
+  ]
+}

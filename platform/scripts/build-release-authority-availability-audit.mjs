@@ -67,8 +67,8 @@ async function getRegistry(packageName) {
 
 const snapshots = parseCsv(await readFile(path.join(researchDir, "65_package_temporal_companion_snapshots.csv"), "utf8"));
 const exactSnapshots = snapshots.filter((snapshot) => snapshot.snapshot_status === "registry_reconstructed_exact");
-if (exactSnapshots.length !== 12) {
-  throw new Error(`Expected 12 exact snapshots, found ${exactSnapshots.length}.`);
+if (exactSnapshots.length === 0) {
+  throw new Error("The release-authority availability audit requires at least one exact companion snapshot.");
 }
 
 const records = [];

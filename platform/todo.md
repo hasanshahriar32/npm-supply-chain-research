@@ -172,3 +172,6 @@
 - [x] Define strict corroboration, cutoff, source-object, and event-stream related-family requirements for the bounded flatmap-stream candidate screen
 - [x] Collect bounded primary and independent corroboration plus official npm registry metadata without downloading or executing package payloads
 - [x] Publish only a strict ledger admission or precise exclusion for flatmap-stream with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
+- [x] Define strict corroboration, cutoff, source-object, and related-family requirements for the bounded colors and faker candidate screen
+- [x] Collect bounded primary and independent corroboration plus official npm registry metadata without downloading or executing package payloads
+- [x] Publish only a strict ledger admission or precise exclusion for colors and faker with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
