@@ -246,6 +246,19 @@ The 2022 `colors` and `faker` publications satisfy the frozen admission rule and
 
 `105_colors_faker_protestware_candidate_assessment.json` records source checksums, exact official cutoffs, and the two strict predecessor selections. The admission adds two records, one family, one future validation unit, and two exact source snapshots, but **zero controls, historical installation traces, reach or blast-radius values, authority comparisons, scores, models, rankings, intervals, or predictive metrics**. Shared-maintainer and coordinated-disruption evidence does not license two independent observations, a campaign-complete census, or a causal claim beyond the bounded source descriptions.
 
+## Bounded peacenotwar protestware package-event screen
+
+The historic `peacenotwar` incident is independently corroborated but **excluded** from the 16-record primary ledger. Snyk reports that the maintainer published `peacenotwar` on 8 March 2022 before adding it to `node-ipc`; its dedicated advisory marks all `peacenotwar` versions affected. The CNCF TAG Security compromise catalogue independently characterizes the node-ipc/peacenotwar event as malicious-maintainer behavior. [61] [62] [63]
+
+| Eligibility check | Bounded evidence | Strict result |
+|---|---|---|
+| Finite exact candidate release set | The dedicated Snyk advisory uses an all-versions (`*`) scope; no inspected independent source identifies a finite event-specific `peacenotwar` release set. [61] [62] | **Failed.** An all-version advisory cannot be collapsed into a finite exact target without version-specific evidence. |
+| Relatedness | The reports establish a potentially related node-ipc protestware context. [61] [63] | No family or validation unit is created from this excluded candidate. |
+| Official registry cutoff | The first retained registry publication is `9.1.1` at `2022-03-08T16:38:45.767Z`. [64] | The strict cutoff is one millisecond earlier. |
+| Exact retained pre-event source object | The official registry begins with `9.1.1`; no retained version exists strictly earlier than the cutoff. [64] | **Failed.** No strict source snapshot can be reconstructed. |
+
+`106_peacenotwar_protestware_candidate_assessment.json` preserves source checksums, the all-version advisory boundary, and the first-publication registry exception. It adds **zero** ledger records, campaign families, future validation units, source snapshots, declarations, range approximations, graph edges, controls, benign labels, historical installations, reach or blast-radius values, scores, models, rankings, intervals, or metrics. The exclusion neither disputes the documented behavior nor converts this candidate, an advisory omission, or unavailable pre-event state into benign, safe, unchanged, no-known-event, or a control.
+
 ## Explicit-label corpus control-frame review
 
 The public Amalfi ICSE 2022 artifact provides a valuable distinction from generic “no-known-event” rows: its frozen 1,790-row basic corpus explicitly labels 643 package-version releases malicious and 1,147 benign. [11] However, it is a retrospective release-classification corpus rather than a documented future-outcome population. It does not disclose a per-row review time or outcome horizon, and it is concentrated around malicious-package detection cases rather than a population-sampled at-risk frame.
@@ -437,5 +450,8 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [58] [Russ Cox, “What NPM Should Do Today To Stop A New Colors Attack Tomorrow,” 10 January 2022](https://research.swtch.com/npm-colors).
 
 [59] [npm registry metadata, `colors`](https://registry.npmjs.org/colors).
-
 [60] [npm registry metadata, `faker`](https://registry.npmjs.org/faker).
+[61] [Snyk, “Malicious npm package peacenotwar had a destructive payload,” 16 March 2022](https://snyk.io/blog/peacenotwar-malicious-npm-node-ipc-package-vulnerability/).
+[62] [Snyk vulnerability database, `SNYK-JS-PEACENOTWAR-2426724`](https://security.snyk.io/vuln/SNYK-JS-PEACENOTWAR-2426724).
+[63] [CNCF TAG Security, “node-ipc/peacenotwar” compromise catalogue](https://tag-security.cncf.io/community/catalog/compromises/2022/node-ipc-peacenotwar/).
+[64] [npm registry metadata, `peacenotwar`](https://registry.npmjs.org/peacenotwar).

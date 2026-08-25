@@ -367,6 +367,18 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("The documented relationship to event-stream is relatedness evidence only; it does not establish a new independent campaign family, validation unit, causal pathway, or campaign-complete census.");
   });
 
+  it("excludes peacenotwar when the advisory is all-version scoped and no strict pre-event source object exists", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/106_peacenotwar_protestware_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_strict_pre_event_source_object_and_no_exact_version_specific_advisory_target",
+      candidate: { recordId: "peacenotwar-2022-03-08", packageName: "peacenotwar", advisoryAffectedVersionScope: "all_versions", registryFirstVersion: "9.1.1", registryFirstVersionPublishedUtc: "2022-03-08T16:38:45.767Z", timeMapSelectedPreEventVersion: null },
+      corroboration: { snykAdvisory: { advisoryId: "SNYK-JS-PEACENOTWAR-2426724" }, officialRegistry: { firstRegistryVersion: "9.1.1", selectedPreEventVersion: null, selectedPreEventVersionObjectRetained: false } },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add peacenotwar to the primary ledger");
+    expect(assessment.prohibitedInterpretations).toContain("The all-versions advisory scope cannot be collapsed into a finite exact release target without a source that explicitly identifies the candidate version set.");
+  });
+
   it("admits the two related colors and faker records with strict registry cutoffs but no controls or model outputs", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/105_colors_faker_protestware_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
