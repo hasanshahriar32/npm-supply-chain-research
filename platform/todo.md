@@ -178,3 +178,6 @@
 - [x] Define strict corroboration, cutoff, source-object, and relatedness requirements for the bounded peacenotwar candidate screen
 - [x] Collect bounded primary and independent corroboration plus official npm registry metadata without downloading or executing package payloads
 - [x] Publish only a strict ledger admission or precise exclusion for peacenotwar with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
+- [x] Identify one compact historical npm candidate with a plausible finite exact-version incident target and retained strict predecessor source object
+- [x] Collect bounded independent incident corroboration and official registry metadata without downloading or executing package payloads
+- [x] Publish only a strict ledger admission or precise exclusion for the selected candidate with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics

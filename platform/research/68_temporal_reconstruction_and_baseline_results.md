@@ -7,9 +7,9 @@
 
 ## Executive finding
 
-This extension successfully reconstructs **fourteen exact pre-event package-version metadata snapshots** from sixteen pre-registered npm package-event records spanning **eleven incident families**. It produces a reproducible ledger of **29 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **64 bounded edges** across nine roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
+This extension successfully reconstructs **fifteen exact pre-event package-version metadata snapshots** from seventeen pre-registered npm package-event records spanning **twelve incident families**. It produces a reproducible ledger of **30 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **65 bounded edges** across ten roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
 
-The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The sixteen-record and eleven-family totals are not an independently sampled training cohort; the pilot still has no cutoff-valid adjudicated non-event population and only fourteen exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
+The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The seventeen-record and twelve-family totals are not an independently sampled training cohort; the pilot still has no cutoff-valid adjudicated non-event population and only fifteen exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
 
 > **Historical-fidelity definition.** `registry_reconstructed_exact_direct_declaration` means that the source package version was selected strictly before the event cutoff from the official npm registry's version-time map and that version object's declared `dependencies` map was retained verbatim. It does **not** mean that a declared range was resolved to a target version, installed by npm, or expanded transitively.
 
@@ -21,12 +21,12 @@ For each record, the builder sets the feature cutoff to one millisecond before t
 
 | Reconstruction component | Result | Fidelity and interpretation |
 |---|---:|---|
-| Pre-registered package-event records | 16 | Package-level observations; not sixteen independent attacks. |
-| Incident families | 11 | The earlier ten families plus `colors_faker_protestware_2022`. `colors` and `faker` remain one related family; Keyv/Cacheable remains non-independent of the `atool` family for any future uncertainty design because only payload ancestry—not statistical independence—is documented. |
-| Exact source snapshots | 14 | Source package version object selected strictly before its cutoff. |
+| Pre-registered package-event records | 17 | Package-level observations; not seventeen independent attacks. |
+| Incident families | 12 | The earlier eleven families plus `qix_npm_phishing_september_2025`. `colors` and `faker` remain one related family; Keyv/Cacheable remains non-independent of the `atool` family for any future uncertainty design because only payload ancestry—not statistical independence—is documented. |
+| Exact source snapshots | 15 | Source package version object selected strictly before its cutoff. |
 | Source snapshot unavailable | 2 | `plain-crypto-js` and `@emcd-vue/auth`; no qualifying pre-event version object was retained by the current registry response. |
-| Declared direct edges | 29 | Exact source declarations, each retaining the original SemVer range. |
-| Isolated target-range approximations | 29 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
+| Declared direct edges | 30 | Exact source declarations, each retaining the original SemVer range. |
+| Isolated target-range approximations | 30 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
 | Transitive-reach values | 0 | Intentionally not computed. |
 
 The reproducible inputs and outputs are `64_temporal_package_event_ledger.csv`, `65_package_temporal_companion_snapshots.csv`, `65_package_temporal_companion_declared_edges.csv`, `66_temporal_baseline_and_calibration_gate.json`, `67_cutoff_direct_dependency_graph_edges.csv`, `67_cutoff_direct_dependency_graph_manifest.json`, `70_cutoff_direct_dependency_range_resolution.csv`, `71_direct_range_resolution_diagnostic.json`, `74_bounded_recursive_registry_semver_graph_edges.csv`, and `75_bounded_recursive_registry_graph_diagnostic.json`. The relevant build scripts are `build-package-temporal-companion.mjs`, `build-cutoff-direct-dependency-graphs.mjs`, `build-cutoff-direct-dependency-range-resolution.mjs`, `analyze-direct-range-resolution-diagnostic.mjs`, `build-bounded-recursive-registry-graph.mjs`, and `analyze-bounded-recursive-registry-graph.mjs`.
@@ -54,14 +54,15 @@ The resolved-target label is **`registry_reconstructed_cutoff_semver_approximati
 | `keyv-2026-08-04` | 6.0.0-rc.1 | 1 | Exact source declaration + 1 isolated target approximation | No install trace or transitive traversal. |
 | `colors-2022-01-08` | 1.4.0 | 0 | Exact direct declaration | Related to `faker`; no runtime dependency declarations in the selected version. |
 | `faker-2022-01-05` | 5.5.3 | 0 | Exact direct declaration | Related to `colors`; no runtime dependency declarations in the selected version. |
+| `debug-2025-09-08` | 4.4.1 | 1 | Exact source declaration + 1 isolated target approximation | One bounded Qix-related family record; no install trace or transitive traversal. |
 
-The selected fourteen exact source snapshots have a mean of **2.1** declared runtime dependencies, a median of **1.5**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
+The selected fifteen exact source snapshots have a mean of **2.0** declared runtime dependencies, a median of **1**, a minimum of **0**, and a maximum of **7**. These are descriptive properties of the reconstructed pilot records only. They do not measure dependency reach, downstream consumers, package importance, or attack impact.
 
 ## Bounded recursive registry-graph sensitivity
 
 Official npm documentation defines `package-lock.json` as the exact dependency tree generated by an npm operation, while the SemVer reference defines a range as a set of satisfying versions and documents highest-satisfying selection over a supplied version list. [11] [12] The study therefore uses the current registry only for a **bounded sensitivity graph**: it recursively selects the highest retained, non-prerelease package version satisfying each runtime `dependencies` range and published by the root's frozen cutoff. It excludes `devDependencies`, peers, optional and bundled relations, workspaces, overrides, links, git and tarball specifications, as well as all package-manager installation behavior.
 
-The resulting artifact contains **64 edges** and **67 bounded nodes across the nine root graphs with runtime dependencies**. The fourteen-root exact-snapshot design also retains `ua-parser-js@0.7.28`, `wenk@1.0.8`, `is@3.3.0`, `colors@1.4.0`, and `faker@5.5.3`, each with no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 64 edges distribute as 29 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
+The resulting artifact contains **65 edges** and **69 bounded nodes across the ten root graphs with runtime dependencies**. The fifteen-root exact-snapshot design also retains `ua-parser-js@0.7.28`, `wenk@1.0.8`, `is@3.3.0`, `colors@1.4.0`, and `faker@5.5.3`, each with no runtime dependencies, while `plain-crypto-js` and `@emcd-vue/auth` remain unavailable as exact source snapshots. The 65 edges distribute as 30 at depth one, 18 at depth two, and 17 at depth three; every selected target range resolved under the stated cutoff-valid SemVer method.
 
 | Pre-event source root | Bounded edges | Bounded nodes including root | Depth 1 / 2 / 3 edges | Interpretation boundary |
 |---|---:|---:|---|---|
@@ -74,12 +75,13 @@ The resulting artifact contains **64 edges** and **67 bounded nodes across the n
 | `node-ipc@12.0.0` | 14 | 15 | 4 / 3 / 7 | Range-selected registry sensitivity only. |
 | `amapcn@0.1.2` | 4 | 5 | 4 / 0 / 0 | Range-selected registry sensitivity only. |
 | `keyv@6.0.0-rc.1` | 1 | 2 | 1 / 0 / 0 | Range-selected registry sensitivity only. |
+| `debug@4.4.1` | 1 | 2 | 1 / 0 / 0 | Range-selected registry sensitivity only. |
 
 > **Interpretation limit.** These counts are neither historical installed-tree sizes nor transitive dependency reach. The graph is not a package-lock reconstruction and must not be compared across roots as a security score, centrality measure, blast-radius quantity, or input to any ranking, calibration, PR-AUC, Recall@K, or attack-return calculation.
 
 ## Temporal baseline and calibration gate
 
-The gate computed descriptive feature summaries rather than a model. Across the fourteen exact snapshots, package age ranges from 5 to 4,990 days (median 3,358); prior version count ranges from 4 to 130 (median 31.5); and the direct-dependency count ranges from 0 to 7 (median 1.5). All fourteen retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
+The gate computed descriptive feature summaries rather than a model. Across the fifteen exact snapshots, package age ranges from 5 to 5,032 days (median 3,372); prior version count ranges from 4 to 130 (median 32); and the direct-dependency count ranges from 0 to 7 (median 1). All fifteen retained source versions include registry integrity metadata and none expose an install-script indicator in the retained snapshot. These facts are not evidence of protective or harmful effects because the data contain no comparison population.
 
 | Requested analysis | Decision | Evidence-grounded reason |
 |---|---|---|
@@ -94,7 +96,7 @@ The strict positive-count and family-count floors are met. The remaining gate is
 
 ## Campaign relatedness and future grouped-inference protocol
 
-`94_campaign_relatedness_and_grouped_inference_protocol.json` freezes a **non-executed** inference safeguard from the strict sixteen-record ledger. It inventories eleven campaign families, keeps the shared-family `unc3379_2021`, Axios, ESLint, and colors/faker records intact, and defines ten validation units after clustering the documented Mini Shai-Hulud `atool` and Keyv/Cacheable payload-lineage families. The latter remain separately dated observations, but payload descent is not evidence of statistical independence. The colors/faker shared-maintainer event remains a single family rather than two independent units. The artifact records source checksums, group memberships, and the exact statement retained from the frozen Keyv assessment.
+`94_campaign_relatedness_and_grouped_inference_protocol.json` freezes a **non-executed** inference safeguard from the strict seventeen-record ledger. It inventories twelve campaign families, keeps the shared-family `unc3379_2021`, Axios, ESLint, and colors/faker records intact, and defines eleven validation units after clustering the documented Mini Shai-Hulud `atool` and Keyv/Cacheable payload-lineage families. The latter remain separately dated observations, but payload descent is not evidence of statistical independence. The colors/faker shared-maintainer event remains a single family rather than two independent units; the bounded Qix-related Debug family is also a single unit and does not establish campaign completeness. The artifact records source checksums, group memberships, and the exact statement retained from the frozen Keyv assessment.
 
 | Protocol layer | Pre-registered rule | Current result |
 |---|---|---|
@@ -134,11 +136,11 @@ The protocol makes `not_eligible_missing_or_ambiguous_evidence` and `not_applica
 
 ## Official npm provenance-attestation access screen
 
-`97_official_npm_provenance_attestation_access_assessment.json` evaluates whether the fourteen exact pre-event source versions can be checked for provenance attestations **without package download, installation, or undocumented endpoint guessing**. Official npm documentation describes `npm audit signatures` as the verification mechanism for downloaded dependency sets, while the public Registry API reference reviewed here does not document a public unauthenticated metadata-only endpoint for an arbitrary version’s attestation bundle. Therefore the assessment makes **zero version-specific endpoint requests**, downloads **zero package payloads**, runs **zero signature verifications**, retrieves **zero bundles**, and classifies **zero attestation states**.
+`97_official_npm_provenance_attestation_access_assessment.json` evaluates whether the fifteen exact pre-event source versions can be checked for provenance attestations **without package download, installation, or undocumented endpoint guessing**. Official npm documentation describes `npm audit signatures` as the verification mechanism for downloaded dependency sets, while the public Registry API reference reviewed here does not document a public unauthenticated metadata-only endpoint for an arbitrary version’s attestation bundle. Therefore the assessment makes **zero version-specific endpoint requests**, downloads **zero package payloads**, runs **zero signature verifications**, retrieves **zero bundles**, and classifies **zero attestation states**.
 
 | Access question | Bounded result | Inference limit |
 |---|---|---|
-| Candidate pre-event versions | 14 exact source objects could be screened in a future documented or authorized path. | Candidate availability is not an attestation result. |
+| Candidate pre-event versions | 15 exact source objects could be screened in a future documented or authorized path. | Candidate availability is not an attestation result. |
 | Official metadata-only retrieval path | Not established by the reviewed documentation. | Do not guess an endpoint or convert access uncertainty to attestation absence. |
 | Documented verification mechanism | `npm audit signatures` for downloaded dependency sets. | Not invoked; it would exceed the metadata-only/no-payload access policy. |
 | Provenance meaning | A verifiable link to source/build information. | It does not guarantee absence of malicious code and does not create a benign label. |
@@ -147,11 +149,11 @@ The decision is an **access-contract exclusion**, not a provenance-state result 
 
 ## Full-ledger source-object retention census
 
-`98_full_ledger_source_object_retention_census.json` separates the **current registry’s retention of reconstructable source objects** from historical package evidence across every pre-registered ledger record. All sixteen records have a checksum-identified current registry response. Fourteen retain a selected pre-cutoff version object that satisfies the strict source-object requirement; two remain label-only exceptions. This is a census of reconstruction eligibility, not a measurement of historical package state.
+`98_full_ledger_source_object_retention_census.json` separates the **current registry’s retention of reconstructable source objects** from historical package evidence across every pre-registered ledger record. All seventeen records have a checksum-identified current registry response. Fifteen retain a selected pre-cutoff version object that satisfies the strict source-object requirement; two remain label-only exceptions. This is a census of reconstruction eligibility, not a measurement of historical package state.
 
 | Retention state | Records | Consequence |
 |---|---:|---|
-| Current response retains selected pre-event version object | 14 | Eligible for the existing strict source-object reconstruction only. |
+| Current response retains selected pre-event version object | 15 | Eligible for the existing strict source-object reconstruction only. |
 | Time map selects a pre-cutoff version but the selected object fails strict retention | 1 (`plain-crypto-js`) | Remains label-only; no substitute source object, feature, or delta is created. |
 | Current response has no retained pre-cutoff version selection | 1 (`@emcd-vue/auth`) | Remains label-only; no absent-history or benign inference is permitted. |
 
@@ -181,7 +183,7 @@ The contract is deliberately **pre-activation**. A capture run remains prohibite
 | Non-event decision | Require source-specific completeness across the entire row horizon and explicit exclusions. | Incomplete coverage, ambiguity, or absence remains unknown or right-censored—not a control. |
 | Sealing and blinding | Seal source inventory, dockets, coverage, and decision ledgers with immutable revisions; keep adjudicators blind to features, priority, controls, and performance. | No manifest, outcome row, positive, non-event, join, split, score, model, interval, or metric exists now. |
 
-The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` and Keyv/Cacheable remain one documented related-family cluster in any future eligible join, while colors and faker remain one shared-maintainer family. A sealed manifest is **integrity metadata**, not proof that a package version is positive, unaffected, safe, benign, or trusted. Existing sixteen incident records remain positive evidence only and do not establish closed-world coverage or a non-event population.
+The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` and Keyv/Cacheable remain one documented related-family cluster in any future eligible join, while colors and faker remain one shared-maintainer family. The bounded Qix-related Debug record remains one separate family and validation unit, not a campaign-complete census. A sealed manifest is **integrity metadata**, not proof that a package version is positive, unaffected, safe, benign, or trusted. Existing seventeen incident records remain positive evidence only and do not establish closed-world coverage or a non-event population.
 
 ## Future public-safe aggregate-release policy
 
@@ -191,7 +193,7 @@ The protocol inherits the frozen related-family rule: Mini Shai-Hulud `atool` an
 |---|---|---|
 | P0 — protocol metadata | Versioned schemas, gates, policy identifiers, and prohibited-field rules only. | The only class represented by this policy itself; it contains no observed values or counts. |
 | P1 — sealed integrity metadata | Opaque manifest-level commitments and gate status only, subject to source terms and disclosure review. | Not activated; raw values, source references, row commitments, and identifiers remain restricted. |
-| P2 — screened descriptive aggregates | Broad, pre-registered aggregates only after population/outcome seals, disclosure review, small-cell suppression, complementary suppression, differencing review, linkage review, and relatedness controls. | Not activated; any aggregate using the current 16 records, 11 families, or 10 future validation units is non-releasable. |
+| P2 — screened descriptive aggregates | Broad, pre-registered aggregates only after population/outcome seals, disclosure review, small-cell suppression, complementary suppression, differencing review, linkage review, and relatedness controls. | Not activated; any aggregate using the current 17 records, 12 families, or 11 future validation units is non-releasable. |
 | P3 — aggregate benchmark results | Model-result release would require a separate future amendment and independently eligible benchmark. | Explicitly disabled: no performance, calibration, ranking, interval, cohort, or feature-effect result may be released. |
 
 The policy permanently restricts raw source objects, exact protected package/version identities, outcome and control rows, authority values and commitments, reviewer material, feature rows, split membership, scores, rankings, intervals, and predictive metrics. Even a permitted future aggregate must preserve documented related-family clusters, avoid direct and complementary small-cell reconstruction, resist temporal and cross-release differencing, and carry immutable revision and revocation lineage. A release class, digest, gate decision, or suppression decision remains **governance metadata**, not evidence of benignness, coverage, independence, historical fidelity, or model eligibility.
@@ -211,7 +213,7 @@ The contract contains zero secure records, parameter values, commitments, attest
 
 ## Bounded crossenv typosquatting screen
 
-The 2017 `crossenv` typosquatting incident is independently corroborated but **excluded** from the 16-record primary temporal ledger. npm’s incident notice identifies deliberate malicious `hacktask` typosquatting beginning 19 July 2017, environment-variable exfiltration through `crossenv`, and registry removal of the actor’s packages. [48] An independent contemporaneous account and Snyk’s advisory both identify `crossenv@6.1.1`. [49] [50]
+The 2017 `crossenv` typosquatting incident is independently corroborated but **excluded** from the 17-record primary temporal ledger. npm’s incident notice identifies deliberate malicious `hacktask` typosquatting beginning 19 July 2017, environment-variable exfiltration through `crossenv`, and registry removal of the actor’s packages. [48] An independent contemporaneous account and Snyk’s advisory both identify `crossenv@6.1.1`. [49] [50]
 
 | Eligibility check | Bounded evidence | Strict result |
 |---|---|---|
@@ -224,7 +226,7 @@ The 2017 `crossenv` typosquatting incident is independently corroborated but **e
 
 ## Bounded flatmap-stream package-event screen
 
-The historic `flatmap-stream` package event is independently corroborated but **excluded** from the 16-record primary ledger. npm identifies `flatmap-stream@0.1.1` as the malicious package associated with `event-stream@3.3.6`; Snyk independently records the injected `0.1.1` release timeline; and Microsoft independently identifies `flatmap-stream` as malicious while blocking `0.1.0`, `0.1.1`, and `0.1.2`. [52] [53] [54]
+The historic `flatmap-stream` package event is independently corroborated but **excluded** from the 17-record primary ledger. npm identifies `flatmap-stream@0.1.1` as the malicious package associated with `event-stream@3.3.6`; Snyk independently records the injected `0.1.1` release timeline; and Microsoft independently identifies `flatmap-stream` as malicious while blocking `0.1.0`, `0.1.1`, and `0.1.2`. [52] [53] [54]
 
 | Eligibility check | Bounded evidence | Strict result |
 |---|---|---|
@@ -245,6 +247,16 @@ The 2022 `colors` and `faker` publications satisfy the frozen admission rule and
 | `faker-2022-01-05` | `faker@6.6.6`, `2022-01-05T01:38:36.409Z` [60] | `faker@5.5.3` | Shares one related family and future validation unit with colors. |
 
 `105_colors_faker_protestware_candidate_assessment.json` records source checksums, exact official cutoffs, and the two strict predecessor selections. The admission adds two records, one family, one future validation unit, and two exact source snapshots, but **zero controls, historical installation traces, reach or blast-radius values, authority comparisons, scores, models, rankings, intervals, or predictive metrics**. Shared-maintainer and coordinated-disruption evidence does not license two independent observations, a campaign-complete census, or a causal claim beyond the bounded source descriptions.
+
+## Bounded Debug September 2025 package-event family
+
+The September 2025 `debug` compromise satisfies the frozen admission rule and adds one strict record under the one `qix_npm_phishing_september_2025` family. The Debug maintainer’s incident issue identifies `debug@4.4.2` among phishing-driven npm-account-compromise releases. Wiz and StepSecurity independently list the same exact affected version and document the compromise context. [65] [66] [67]
+
+| Record | Official affected-release time | Strict selected source object | Family rule |
+|---|---|---|---|
+| `debug-2025-09-08` | `debug@4.4.2`, `2025-09-08T13:12:39.973Z` [68] | `debug@4.4.1` | One bounded Qix-related family and future validation unit; neither campaign completeness nor statistical independence from unadjudicated packages is inferred. |
+
+`108_debug_september_2025_candidate_assessment.json` records cross-source corroboration, the strict registry cutoff, and the retained predecessor selection. The admission adds one record, one family, one future validation unit, one exact source snapshot, one direct declaration, one isolated range approximation, and one bounded registry-only sensitivity edge. It adds **zero controls, historical installation traces, reach or blast-radius values, authority comparisons, scores, models, rankings, intervals, calibration results, or predictive metrics**.
 
 ## Bounded peacenotwar protestware package-event screen
 
@@ -455,3 +467,7 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [62] [Snyk vulnerability database, `SNYK-JS-PEACENOTWAR-2426724`](https://security.snyk.io/vuln/SNYK-JS-PEACENOTWAR-2426724).
 [63] [CNCF TAG Security, “node-ipc/peacenotwar” compromise catalogue](https://tag-security.cncf.io/community/catalog/compromises/2022/node-ipc-peacenotwar/).
 [64] [npm registry metadata, `peacenotwar`](https://registry.npmjs.org/peacenotwar).
+[65] [Debug project, “Version 4.4.2 published to npm is compromised,” Issue #1005, 8 September 2025](https://github.com/debug-js/debug/issues/1005).
+[66] [Wiz, “Widespread npm Supply Chain Attack: Breaking Down Impact & Scope Across Debug, Chalk, and Beyond,” 9 September 2025](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+[67] [StepSecurity, “20+ Popular NPM Packages Compromised,” 8 September 2025](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+[68] [npm registry metadata, `debug`](https://registry.npmjs.org/debug).

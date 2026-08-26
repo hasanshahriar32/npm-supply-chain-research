@@ -10,6 +10,8 @@ This register expands the earlier seed labels into a compact, reviewable set of 
 
 The register includes sixteen package-event records in eleven incident families. The `unc3379_2021` records must be evaluated as one correlated campaign family, not three independent successful attacks. CISA documents the malicious `ua-parser-js` releases, while Mandiant identifies the affected `coa` and `rc` releases from the same 2021 Node.js campaign. [1] [2] npm's incident account documents `event-stream@3.3.6`, ESLint's postmortem provides the affected ESLint releases and timestamp, and CISA documents the Axios-related releases and injected package. [3] [4] [5] The 2026 `node-ipc` record is independently corroborated by a same-day SafeDep incident report and the OpenSSF OSV record `MAL-2026-3744`. [6] [7] The `@emcd-vue/auth` record is a distinct `oob.moika.tech` dependency-confusion campaign family with exact affected versions and earliest registry publication time corroborated by SafeDep and OpenSSF `MAL-2026-5163`. [8] [9] The bounded `wenk` record represents one distinct November 2025 Shai-Hulud second-wave family: the frozen Wiz IOC CSV and OpenSSF `MAL-2025-191155` agree on versions `1.0.9` and `1.0.10`, while the OpenSSF record retains independent Aikido, Wiz, and StepSecurity campaign references. [11] [12] [13] [14] The bounded `amapcn` record represents one distinct May 2026 Mini Shai-Hulud `atool` family: SafeDep and OpenSSF `MAL-2026-4127` agree on versions `0.2.2` and `0.3.2`, the latter preserving Amazon Inspector and Google Open Source Security origin provenance and a Socket campaign reference. [15] [16] [17] The bounded `is` record is a distinct July 2025 maintainer-compromise family: frozen OpenSSF `MAL-2025-6020`, a dated StepSecurity report, and the project maintainer’s v3.3.2 changelog agree that `is@3.3.1` and `5.0.0` contained malware from a hijacked account. [18] [19] [20] The bounded August 2026 `keyv` record is one Keyv/Cacheable campaign-family observation: frozen OpenSSF `MAL-2026-11524`, a frozen Wiz IOC list, and independent Snyk research agree on `keyv@6.0.0`; its earlier registry timestamp fixes the cutoff. Wiz describes its payload as Mini Shai-Hulud-descended, so the separate dated family is not asserted statistically independent from the May 2026 `atool` family. [21] [22] [23] [24] The two related 2022 `colors` and `faker` records are independently corroborated as intentional breaking publications by Snyk, Sonatype, and Russ Cox; they form one shared-maintainer family and one future validation unit, not two independent observations. [25] [26] [27]
 
+> **Current amendment — 26 August 2026.** The active register now contains **17 package-event records in 12 incident families**. The bounded September 2025 Debug record is one `qix_npm_phishing_september_2025` family and one future validation unit only; it neither establishes a campaign-complete census nor turns any package row into an independent sample.
+
 | Record | Incident family | Event anchor (UTC) | Affected release(s) | Evidence tier | Target decision |
 |---|---|---|---|---|---|
 | `ua-parser-js-2021-10-22` | `unc3379_2021` | 2021-10-22 12:15 | `0.7.29`, `0.8.0`, `1.0.0` | Government and technical | Included; confirmed targeted compromise. |
@@ -28,12 +30,15 @@ The register includes sixteen package-event records in eleven incident families.
 | `keyv-2026-08-04` | `keyv_cacheable_august_2026` | 2026-08-04 09:35:00.763 | `6.0.0` | Frozen OpenSSF OSV, frozen Wiz IOC list, and independent technical report | Included as one bounded Keyv/Cacheable campaign-family record; `keyv@6.0.0` is the strict cutoff. Payload ancestry does not establish cross-campaign independence from the `atool` Mini Shai-Hulud family. |
 | `colors-2022-01-08` | `colors_faker_protestware_2022` | 2022-01-08 04:24:16.448 | `1.4.44-liberty-2`, `1.4.1`, `1.4.2` | Independent technical and vendor reports | Included; earliest assessed official registry publication is the strict cutoff. Related to faker as one shared-maintainer family. |
 | `faker-2022-01-05` | `colors_faker_protestware_2022` | 2022-01-05 01:38:36.409 | `6.6.6` | Independent technical and vendor reports | Included; official registry publication is the strict cutoff. Related to colors as one shared-maintainer family. |
+| `debug-2025-09-08` | `qix_npm_phishing_september_2025` | 2025-09-08 13:12:39.973 | `4.4.2` | Maintainer and independent technical reports | Included; official registry publication is the strict cutoff and selects retained `debug@4.4.1`. One bounded family record only. [28] [29] [30] [31] |
 
 ## Adjudication constraints
 
 Each recorded outcome uses the event anchor only to define a feature cutoff. The feature snapshot ends immediately before the anchor; no attributes from the malicious release, remediation, public alert, or later registry state may be included as features. This register does not assert that no other package was compromised, so it cannot by itself provide a benign or negative control population.
 
 The 2026 Axios family includes two distinct package roles. `axios` is a publisher-compromise target, while `plain-crypto-js` is retained as the injected malicious dependency. Treating both as interchangeable targets would blur causal role and inflate inference. The same care applies to the 2021 records: the shared campaign identifier is retained so a future split or bootstrap can operate at the family level.
+
+The current reconstruction has **15 exact pre-event source snapshots** across **17 records**. `debug@4.4.1` is the strict source object immediately before the independently corroborated `debug@4.4.2` cutoff and declares one runtime dependency. The 30 direct declarations, 30 isolated cutoff-valid range approximations, and 65 depth-three registry-only sensitivity edges remain reconstruction artifacts—not installations, dependency reach, blast-radius values, or model features with causal or predictive interpretation.
 
 ## Relationship to the graph and calibration artifacts
 
@@ -51,6 +56,8 @@ The current npm manifest from the human-vetted DataDog Malicious Software Packag
 | New primary labels, dates, families, or controls | 0 | The primary ledger remains authoritative. |
 
 The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) stores the source SHA-256 and commit identifier. It neither adds incident records nor changes any primary cutoff or target decision.
+
+> **Current overlap amendment — 26 August 2026.** The positive-only manifest now compares 17 primary records: 6 have exact affected-version membership (including `debug@4.4.2`), 2 are package-present with unspecified versions, and 9 are package-absent. Those outcomes remain corroboration or unknown only; absence is never a benign label or control.
 
 ## References
 
@@ -107,3 +114,11 @@ The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) st
 [26] [Sonatype, “npm Libraries ‘colors’ and ‘faker’ Sabotaged in Protest by Their Maintainer,” 10 January 2022](https://www.sonatype.com/blog/npm-libraries-colors-and-faker-sabotaged-in-protest-by-their-maintainer-what-to-do-now).
 
 [27] [Russ Cox, “What NPM Should Do Today To Stop A New Colors Attack Tomorrow,” 10 January 2022](https://research.swtch.com/npm-colors).
+
+[28] [Debug project, “Version 4.4.2 published to npm is compromised,” Issue #1005, 8 September 2025](https://github.com/debug-js/debug/issues/1005).
+
+[29] [Wiz, “Widespread npm Supply Chain Attack: Breaking Down Impact & Scope Across Debug, Chalk, and Beyond,” 9 September 2025](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+
+[30] [StepSecurity, “20+ Popular NPM Packages Compromised,” 8 September 2025](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+
+[31] [npm registry metadata, `debug`](https://registry.npmjs.org/debug).
