@@ -223,6 +223,12 @@ The strict ledger now admits `country-currency-map@2.1.8` as one distinct March 
 
 The protocol now governs **26 positive package-event records in 20 incident families**, with **24 exact retained pre-event snapshots**, **110 direct declarations**, **110 isolated cutoff-valid SemVer approximations**, **459 bounded depth-three registry-only sensitivity edges**, and **19 future validation units**. The country-currency-map row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### html-to-gutenberg May 2026 admission — 26 August 2026
+
+The strict ledger now admits `html-to-gutenberg@4.2.11` and `4.2.14` as one distinct May 2026 hijacked-publication family. GitHub’s reviewed malware advisory identifies the finite version set, and JFrog independently identifies the hijacked `4.2.11` release and May 2026 upload timing; The Hacker News independently corroborates the package-level hijack and upload date.[87] [88] [89] The earliest official registry publication is `4.2.11` at `2026-05-25T19:19:47.408Z`; the exact one-millisecond cutoff selects retained `html-to-gutenberg@4.2.10` as the strict pre-event source object.[90]
+
+The protocol now governs **27 positive package-event records in 21 incident families**, with **25 exact retained pre-event snapshots**, **124 direct declarations**, **124 isolated cutoff-valid SemVer approximations**, **721 bounded depth-three registry-only sensitivity edges**, and **20 future validation units**. The html-to-gutenberg row adds one separate family and one unit; no relationship to another governed family is asserted. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -305,3 +311,7 @@ The protocol now governs **26 positive package-event records in 20 incident fami
 [84]: https://www.sonatype.com/blog/multiple-crypto-packages-hijacked-turned-into-info-stealers "Sonatype country-currency-map hijack report"
 [85]: https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/ "BleepingComputer country-currency-map incident report"
 [86]: https://registry.npmjs.org/country-currency-map "npm registry country-currency-map metadata"
+[87]: https://github.com/advisories/GHSA-2gqj-wrf5-35w8 "GitHub Advisory Database html-to-gutenberg malware advisory"
+[88]: https://research.jfrog.com/post/hijacked-npm-vscode-tasks-blockchain/ "JFrog html-to-gutenberg hijack report"
+[89]: https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html "The Hacker News html-to-gutenberg incident report"
+[90]: https://registry.npmjs.org/html-to-gutenberg "npm registry html-to-gutenberg metadata"

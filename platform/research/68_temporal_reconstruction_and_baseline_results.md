@@ -401,6 +401,20 @@ Sonatype reported `country-currency-map@2.1.8` as a hijacked malicious release i
 
 This adds one bounded March 2025 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded html-to-gutenberg May 2026 hijacked-publication admission
+
+GitHub’s reviewed malware advisory identifies `html-to-gutenberg@4.2.11` and `4.2.14`, and JFrog independently identifies the hijacked `4.2.11` release and the May 2026 upload timing; The Hacker News independently corroborates the package-level event and its upload date. [84] [85] [86] The bounded official npm registry metadata response timestamps `4.2.11` at `2026-05-25T19:19:47.408Z`; strict subtraction yields cutoff `2026-05-25T19:19:47.407Z`, which selects retained `html-to-gutenberg@4.2.10` as the exact pre-event source object. [87]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 27 records in 21 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 25 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 124 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 721 edges across 18 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 20 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded May 2026 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -559,3 +573,11 @@ This adds one bounded March 2025 family and future validation unit. It creates *
 [82] [BleepingComputer, “Infostealer campaign compromises 10 npm packages, targets devs,” 27 March 2025](https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/).
 
 [83] [npm registry metadata, `country-currency-map`](https://registry.npmjs.org/country-currency-map).
+
+[84] [GitHub Advisory Database, “Malware in html-to-gutenberg,” GHSA-2gqj-wrf5-35w8](https://github.com/advisories/GHSA-2gqj-wrf5-35w8).
+
+[85] [JFrog Security Research, “Hijacked npm Packages Use Novel VSCode Autorun and Blockchain Dead Drops to Deploy a Credential/Crypto Stealer,” 24 June 2026](https://research.jfrog.com/post/hijacked-npm-vscode-tasks-blockchain/).
+
+[86] [The Hacker News, “Hijacked npm and Go Packages Use VS Code Tasks to Deploy Python Infostealer,” 29 June 2026](https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html).
+
+[87] [npm registry metadata, `html-to-gutenberg`](https://registry.npmjs.org/html-to-gutenberg).

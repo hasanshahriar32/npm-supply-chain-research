@@ -486,3 +486,14 @@ Sonatype identifies `country-currency-map@2.1.8` as a hijacked malicious release
 84. Sonatype, *Multiple Crypto Packages Hijacked, Turned Into Info-Stealers*, 27 March 2025: <https://www.sonatype.com/blog/multiple-crypto-packages-hijacked-turned-into-info-stealers>.
 85. BleepingComputer, *Infostealer campaign compromises 10 npm packages, targets devs*, 27 March 2025: <https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/>.
 86. npm, *Registry metadata for country-currency-map*: <https://registry.npmjs.org/country-currency-map>.
+
+## Bounded html-to-gutenberg May 2026 admission — source provenance, 26 August 2026
+
+JFrog identifies `html-to-gutenberg@4.2.11` as a hijacked npm release and dates the upload during 25 May 2026. GitHub’s reviewed malware advisory independently identifies the finite affected-version set `4.2.11` and `4.2.14`; The Hacker News independently corroborates the package-level hijack and 25 May upload date. [87] [88] [89] Bounded official registry metadata timestamps the earliest affected release, `4.2.11`, at `2026-05-25T19:19:47.408Z`; the strict one-millisecond cutoff selects retained `html-to-gutenberg@4.2.10` as the exact pre-event source object. [90]
+
+`133_html_to_gutenberg_may_2026_candidate_assessment.json` records the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one separate family, one exact source snapshot, fourteen direct declarations, fourteen isolated cutoff-valid SemVer approximations, 262 bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **27 records, 21 families, 25 exact snapshots, 124 direct declarations, 721 bounded sensitivity edges, and 20 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. No relationship to another governed family is asserted.
+
+87. GitHub Advisory Database, *Malware in html-to-gutenberg*, GHSA-2gqj-wrf5-35w8: <https://github.com/advisories/GHSA-2gqj-wrf5-35w8>.
+88. JFrog Security Research, *Hijacked npm Packages Use Novel VSCode Autorun and Blockchain Dead Drops to Deploy a Credential/Crypto Stealer*, 24 June 2026: <https://research.jfrog.com/post/hijacked-npm-vscode-tasks-blockchain/>.
+89. The Hacker News, *Hijacked npm and Go Packages Use VS Code Tasks to Deploy Python Infostealer*, 29 June 2026: <https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html>.
+90. npm, *Registry metadata for html-to-gutenberg*: <https://registry.npmjs.org/html-to-gutenberg>.

@@ -29,6 +29,7 @@ describe("repository-backed research sources", () => {
     expect(names).toContain("Lottie Player 2024");
     expect(names).toContain("Nx S1ngularity 2025");
     expect(names).toContain("country-currency-map 2025");
+    expect(names).toContain("html-to-gutenberg 2026");
   });
 
   it("marks the graph-attention experiment as blocked until prerequisites are met", () => {
@@ -36,16 +37,17 @@ describe("repository-backed research sources", () => {
     expect(hgat?.status).toBe("blocked");
   });
 
-  it("reconciles the temporal-feasibility card with the twenty-six-record no-fit ledger", () => {
+  it("reconciles the temporal-feasibility card with the twenty-seven-record no-fit ledger", () => {
     const temporal = getExperiments().find((experiment) => experiment.id === "temporal-feasibility");
-    expect(temporal?.evaluation).toContain("Twenty-six package-event records");
-    expect(temporal?.note).toContain("twenty campaign families");
+    expect(temporal?.evaluation).toContain("Twenty-seven package-event records");
+    expect(temporal?.note).toContain("twenty-one campaign families");
     expect(temporal?.note).toContain("March 2022 node-ipc");
     expect(temporal?.note).toContain("shared Qix-related family");
     expect(temporal?.note).toContain("Debug/chalk");
     expect(temporal?.note).toContain("Lottie Player");
     expect(temporal?.note).toContain("Nx S1ngularity");
     expect(temporal?.note).toContain("country-currency-map");
+    expect(temporal?.note).toContain("html-to-gutenberg");
     expect(temporal?.note).toContain("remains non-independent");
     expect(temporal?.note).toContain("no cutoff-valid controls exist");
   });
@@ -109,6 +111,27 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("Registry metadata establishes publication-time selection and retained-object availability only; it does not establish historical installations, downstream reach, blast radius, current maintainer state, or a causal effect.");
   });
 
+  it("admits the bounded html-to-gutenberg hijack only with independently corroborated exact versions, a retained strict predecessor, and no-inference safeguards", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/133_html_to_gutenberg_may_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "eligible_for_governed_primary_temporal_ledger_reconstruction",
+      candidate: {
+        recordId: "html-to-gutenberg-2026-05-25",
+        packageName: "html-to-gutenberg",
+        eventFamilyCandidate: "html_to_gutenberg_vscode_task_hijack_2026",
+        affectedVersions: ["4.2.11", "4.2.14"],
+        earliestAffectedVersion: { version: "4.2.11", publishedUtc: "2026-05-25T19:19:47.408Z" },
+        strictFeatureCutoffUtc: "2026-05-25T19:19:47.407Z",
+        selectedPreEventVersion: "4.2.10",
+        selectedPreEventVersionObjectRetained: true,
+        distinctFromExistingLedgerFamilies: "not_asserted_related_to_any_governed_family",
+      },
+      strictEligibility: { finiteExactAffectedVersionsIndependentlyCorroborated: true, officialAffectedVersionTimestampsRetained: true, selectedPreEventVersion: "4.2.10", selectedPreEventVersionObjectRetained: true, eligibleForGovernedReconstruction: true },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("Registry metadata establishes publication-time selection and retained-object availability only; it does not establish historical installations, downstream reach, blast radius, current maintainer state, or a causal effect.");
+  });
+
   it("serves the completed temporal reconstruction and adjudication artifacts in governed workspace sections", async () => {
     const documents = await getDocuments();
     expect(documents.find((document) => document.slug === "gap-analysis")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
@@ -124,7 +147,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Original Sin of npm") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("26 package-event records in 20 incident families") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("27 package-event records in 21 incident families") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -132,12 +155,12 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 26, exactSourceSnapshots: 24, unavailableSourceSnapshots: 2, declaredDirectEdges: 110, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 27, exactSourceSnapshots: 25, unavailableSourceSnapshots: 2, declaredDirectEdges: 124, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
-    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 110, resolvedIsolatedSemverRanges: 110, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
+    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 124, resolvedIsolatedSemverRanges: 124, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
-    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 110, isolatedCutoffSemverApproximations: 110, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ strictPackageEventRecords: 26, adjudicatedIncidentFamilyCount: 20, exactPreEventSnapshots: 24, exactSnapshotIncidentFamilyCount: 19, calibrationInference: "blocked" });
+    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 124, isolatedCutoffSemverApproximations: 124, computedTransitiveReachValues: 0 } });
+    expect(gate).toMatchObject({ strictPackageEventRecords: 27, adjudicatedIncidentFamilyCount: 21, exactPreEventSnapshots: 25, exactSnapshotIncidentFamilyCount: 20, calibrationInference: "blocked" });
     expect(gate.adjudicatedIncidentFamilies).toContain("colors_faker_protestware_2022");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_march_2022_maintainer_protestware");
@@ -151,6 +174,7 @@ describe("repository-backed research sources", () => {
     expect(gate.adjudicatedIncidentFamilies).toContain("lottie_player_npm_account_takeover_2024");
     expect(gate.adjudicatedIncidentFamilies).toContain("nx_s1ngularity_publish_token_compromise_2025");
     expect(gate.adjudicatedIncidentFamilies).toContain("country_currency_map_crypto_package_hijack_2025");
+    expect(gate.adjudicatedIncidentFamilies).toContain("html_to_gutenberg_vscode_task_hijack_2026");
     expect(gate.blockingConditions).toContain("No cutoff-valid, independently adjudicated control population is available.");
   });
 
@@ -182,9 +206,9 @@ describe("repository-backed research sources", () => {
     const fs = await import("node:fs/promises");
     const manifest = JSON.parse(await fs.readFile("research/74_bounded_recursive_registry_semver_graph_manifest.json", "utf8"));
     const diagnostic = JSON.parse(await fs.readFile("research/75_bounded_recursive_registry_graph_diagnostic.json", "utf8"));
-    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 24, reconstructedEdges: 459, unresolvedEdges: 0, maxObservedDepth: 3 });
+    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 25, reconstructedEdges: 721, unresolvedEdges: 0, maxObservedDepth: 3 });
     expect(manifest.prohibitedInterpretations).toContain("This graph is not a package-lock, npm install execution trace, or reproducible historical node_modules tree.");
-    expect(diagnostic.summary).toMatchObject({ boundedEdges: 459, directDepthOneEdges: 110, depthTwoEdges: 200, depthThreeEdges: 149, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
+    expect(diagnostic.summary).toMatchObject({ boundedEdges: 721, directDepthOneEdges: 124, depthTwoEdges: 270, depthThreeEdges: 327, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
     expect(diagnostic.interpretation).toContain("not historical installed-tree size");
   });
 
@@ -201,7 +225,7 @@ describe("repository-backed research sources", () => {
   it("uses the DataDog manifest only as positive-membership corroboration", async () => {
     const fs = await import("node:fs/promises");
     const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
-    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 26, exactAffectedVersionMembership: 11, packagePresentVersionsUnspecified: 3, packagePresentNoExactVersionMatch: 1, packageNotPresent: 11, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 27, exactAffectedVersionMembership: 11, packagePresentVersionsUnspecified: 3, packagePresentNoExactVersionMatch: 1, packageNotPresent: 12, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });
@@ -302,8 +326,8 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/94_campaign_relatedness_and_grouped_inference_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_control_frame_or_model_eligible_dataset",
-      sourceInputs: { strictLedger: { recordCount: 26, familyCount: 20 } },
-      validationUnits: { unitCount: 19 },
+      sourceInputs: { strictLedger: { recordCount: 27, familyCount: 21 } },
+      validationUnits: { unitCount: 20 },
       currentDecision: { controlsCreated: 0, modelsFitted: 0, temporalSplitsGenerated: 0, uncertaintyIntervalsComputed: 0, rankingsComputed: 0, predictiveMetricsComputed: 0, status: "blocked_pending_control_frame_and_model_eligibility" },
     });
     expect(protocol.documentedCrossFamilyRelatedness).toContainEqual(expect.objectContaining({
@@ -319,12 +343,12 @@ describe("repository-backed research sources", () => {
     const audit = await import("node:fs/promises").then((fs) => fs.readFile("research/95_release_authority_metadata_availability_audit.json", "utf8")).then(JSON.parse);
     expect(audit).toMatchObject({
       executionStatus: "availability_audit_only_no_feature_values_deltas_scores_or_models",
-      input: { exactPreEventSourceSnapshots: 24 },
+      input: { exactPreEventSourceSnapshots: 25 },
       summary: {
-        exactPreEventSourceSnapshots: 24,
-        predecessorAvailable: 24,
-        repositoryDescriptorComparisonAvailable: 23,
-        gitHeadComparisonAvailable: 16,
+        exactPreEventSourceSnapshots: 25,
+        predecessorAvailable: 25,
+        repositoryDescriptorComparisonAvailable: 24,
+        gitHeadComparisonAvailable: 17,
         publishConfigComparisonAvailable: 4,
         featureValuesExtracted: 0,
         deltasClassified: 0,
@@ -342,7 +366,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/96_release_authority_delta_semantics_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_metadata_values_compared_or_deltas_classified",
-      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 24, predecessorAvailable: 24, repositoryDescriptorComparisonAvailable: 23, gitHeadComparisonAvailable: 16, publishConfigComparisonAvailable: 4 } } },
+      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 25, predecessorAvailable: 25, repositoryDescriptorComparisonAvailable: 24, gitHeadComparisonAvailable: 17, publishConfigComparisonAvailable: 4 } } },
       currentDecision: { observedDeltaValuesExtracted: 0, observedDeltasClassified: 0, authorityScoresComputed: 0, controlsCreated: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.deltaOntology).toHaveLength(6);
@@ -354,7 +378,7 @@ describe("repository-backed research sources", () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/97_official_npm_provenance_attestation_access_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
       decision: "metadata_only_version_specific_attestation_access_not_established",
-      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 24, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
+      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 25, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
       counts: { versionSpecificEndpointRequestsAttempted: 0, undocumentedEndpointsGuessed: 0, packagePayloadsDownloaded: 0, packagesInstalled: 0, attestationBundlesRetrieved: 0, signatureVerificationRuns: 0, attestationStatesClassified: 0, controlsCreated: 0, authorityScoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(assessment.prohibitedInterpretations).toContain("Do not infer that any strict pre-event version lacks an attestation because no metadata-only access path was established.");
@@ -364,7 +388,7 @@ describe("repository-backed research sources", () => {
     const census = await import("node:fs/promises").then((fs) => fs.readFile("research/98_full_ledger_source_object_retention_census.json", "utf8")).then(JSON.parse);
     expect(census).toMatchObject({
       executionStatus: "current_registry_retention_census_only_no_package_feature_or_outcome_analysis",
-      summary: { incidentRecords: 26, incidentFamilies: 20, currentRegistryResponsesWithProvenance: 26, strictPreEventSourceObjectsRetained: 24, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
+      summary: { incidentRecords: 27, incidentFamilies: 21, currentRegistryResponsesWithProvenance: 27, strictPreEventSourceObjectsRetained: 25, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
       exceptionCategories: { timeMapSelectionButStrictObjectRetentionFailure: ["plain-crypto-js-2026-03-31"], noPreCutoffVersionSelectionInCurrentResponse: ["emcd-vue-auth-2026-06-01"] },
       currentDecision: { packageMetadataValuesExtracted: 0, maintainerOrPublisherValuesExtracted: 0, repositoryOrWorkflowValuesExtracted: 0, provenanceOrAttestationStatesClassified: 0, packageFeaturesDerived: 0, controlsCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
@@ -387,7 +411,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/100_future_outcome_manifest_sealing_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
-      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 19 } },
+      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 20 } },
       currentDecision: { outcomeSourcesContacted: 0, sourceInventoryRecordsCreated: 0, candidateDocketsCreated: 0, adjudicatorDecisionsRecorded: 0, outcomeRowsCreated: 0, positiveOutcomeRowsCreated: 0, eligibleNonEventRowsCreated: 0, unknownOutcomeRowsCreated: 0, controlsCreated: 0, coverageRecordsCreated: 0, manifestRevisionsSealed: 0, featureOutcomeJoinsCreated: 0, temporalSplitsGenerated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.targetAndHorizonContract.targetVocabulary.unknown_outcome).toContain("not benign");
@@ -399,12 +423,12 @@ describe("repository-backed research sources", () => {
     const policy = await import("node:fs/promises").then((fs) => fs.readFile("research/101_future_public_safe_aggregate_release_policy.json", "utf8")).then(JSON.parse);
     expect(policy).toMatchObject({
       executionStatus: "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
-      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 19 } },
+      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 20 } },
       currentDecision: { releasePlansCreated: 0, releaseLedgerEntriesCreated: 0, sourceObjectsInspectedForRelease: 0, outcomeRowsReleased: 0, controlRowsReleased: 0, authorityValuesReleased: 0, aggregateCellsComputed: 0, aggregateCellsReleased: 0, smallCellReviewsPerformed: 0, differencingReviewsPerformed: 0, modelResultsReleased: 0, rankingsReleased: 0, uncertaintyIntervalsReleased: 0, predictiveMetricsReleased: 0 },
     });
     expect(policy.releaseClasses).toHaveLength(4);
     expect(policy.releaseClasses.find((releaseClass: { releaseClass: string }) => releaseClass.releaseClass === "P3_aggregate_benchmark_results")?.futureEligibility).toContain("Not enabled");
-    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current 26 positive records, 20 families, or 19 future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
+    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current 27 positive records, 21 families, or 20 future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
     expect(policy.prohibitedInterpretations).toContain("The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.");
   });
 
