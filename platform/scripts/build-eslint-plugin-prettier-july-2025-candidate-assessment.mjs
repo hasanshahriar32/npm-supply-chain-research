@@ -1,0 +1,21 @@
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageName = "eslint-plugin-prettier";
+const affectedVersions = ["4.2.2", "4.2.3"];
+const registryUrl = `https://registry.npmjs.org/${packageName}`;
+const response = await fetch(registryUrl, { headers: { Accept: "application/json", "User-Agent": "supply-chain-research-eslint-plugin-prettier/1.0" } });
+if (!response.ok) throw new Error(`Registry request failed: ${response.status}`);
+const registry = await response.json();
+const affected = affectedVersions.map((version) => ({ version, publishedUtc: registry.time?.[version] ?? null }));
+if (affected.some(({ publishedUtc }) => !publishedUtc)) throw new Error("Missing affected-version timestamp.");
+const earliest = [...affected].sort((a, b) => Date.parse(a.publishedUtc) - Date.parse(b.publishedUtc))[0];
+const cutoffUtc = new Date(Date.parse(earliest.publishedUtc) - 1).toISOString();
+const selectedPreEventVersion = Object.entries(registry.time).filter(([version, timestamp]) => !["created", "modified"].includes(version) && Date.parse(timestamp) <= Date.parse(cutoffUtc)).sort((a, b) => Date.parse(a[1]) - Date.parse(b[1])).at(-1)?.[0] ?? null;
+const retained = Boolean(selectedPreEventVersion && registry.versions?.[selectedPreEventVersion]);
+const decision = "exclude_from_primary_temporal_ledger_due_to_no_independently_corroborated_package_specific_incident_source";
+const output = { study: "eslint-plugin-prettier-july-2025-bounded-package-event-candidate-assessment", decision, candidate: { packageName, affectedVersions, earliestAffectedVersion: earliest, strictFeatureCutoffUtc: cutoffUtc, selectedPreEventVersion, selectedPreEventVersionObjectRetained: retained, requiredFamilyId: "eslint_config_prettier_compromise_2025", relatednessBoundary: "Related to eslint-config-prettier through the reviewed CVE-2025-54313 advisory; must not become an independent validation unit." }, sources: { reviewedAdvisory: "https://github.com/advisories/GHSA-f29h-pxvx-f335", officialRegistry: registryUrl }, evidenceGate: { independentlyCorroboratedPackageSpecificIncidentSource: false, rationale: "The bounded screen confirms only a reviewed advisory and registry metadata; it does not inspect a separate independent package-specific incident source for eslint-plugin-prettier." }, zeroOutputs: { ledgerRows: 0, families: 0, validationUnits: 0, snapshots: 0, controls: 0, models: 0, predictiveMetrics: 0 } };
+await writeFile(path.join(root, "research", "119_eslint_plugin_prettier_july_2025_candidate_assessment.json"), `${JSON.stringify(output, null, 2)}\n`);
+console.log(JSON.stringify({ decision, earliest, selectedPreEventVersion, retained }, null, 2));

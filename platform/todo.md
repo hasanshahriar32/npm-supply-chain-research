@@ -193,3 +193,6 @@
 - [x] Identify one additional independent historical npm candidate with a plausible finite exact-version incident target and retained strict predecessor source object
 - [x] Collect bounded independent incident corroboration and official registry metadata without downloading or executing package payloads
 - [x] Publish only a strict ledger admission or precise exclusion for the selected candidate with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
+- [x] Reconcile all downstream graph, authority, retention, provenance, grouped-inference, and public-safe governance artifacts to the 21-record strict ledger
+- [x] Reconcile repository-backed source summaries, governed narratives, and regression assertions to the 21-record strict ledger without relaxing no-inference safeguards
+- [x] Identify and screen one further compact historical npm candidate with finite exact-version evidence and a retained strict predecessor source object
