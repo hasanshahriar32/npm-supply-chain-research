@@ -217,6 +217,12 @@ The strict ledger now admits `nx@21.5.0`, `20.9.0`, `20.10.0`, `21.6.0`, `20.11.
 
 The protocol now governs **25 positive package-event records in 19 incident families**, with **23 exact retained pre-event snapshots**, **109 direct declarations**, **109 isolated cutoff-valid SemVer approximations**, **458 bounded depth-three registry-only sensitivity edges**, and **18 future validation units**. The Nx row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### country-currency-map March 2025 admission — 26 August 2026
+
+The strict ledger now admits `country-currency-map@2.1.8` as one distinct March 2025 package-hijack family. Sonatype identifies `2.1.8` as the hijacked malicious release, and BleepingComputer independently names that deprecated release; the official npm registry timestamps it at `2025-03-25T09:03:00.518Z`.[84] [85] [86] The exact one-millisecond cutoff selects retained `country-currency-map@2.1.7` as the strict pre-event source object.
+
+The protocol now governs **26 positive package-event records in 20 incident families**, with **24 exact retained pre-event snapshots**, **110 direct declarations**, **110 isolated cutoff-valid SemVer approximations**, **459 bounded depth-three registry-only sensitivity edges**, and **19 future validation units**. The country-currency-map row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -296,3 +302,6 @@ The protocol now governs **25 positive package-event records in 19 incident fami
 [81]: https://snyk.io/blog/weaponizing-ai-coding-agents-for-malware-in-the-nx-malicious-package/ "Snyk Nx incident report"
 [82]: https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware "StepSecurity Nx incident report"
 [83]: https://registry.npmjs.org/nx "npm registry nx metadata"
+[84]: https://www.sonatype.com/blog/multiple-crypto-packages-hijacked-turned-into-info-stealers "Sonatype country-currency-map hijack report"
+[85]: https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/ "BleepingComputer country-currency-map incident report"
+[86]: https://registry.npmjs.org/country-currency-map "npm registry country-currency-map metadata"

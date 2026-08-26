@@ -387,6 +387,20 @@ The bounded `nx` screen satisfies the frozen admission rule. The Nx postmortem a
 
 This creates one separate family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. The selected canary object is a strict timing result only and does not permit same-branch substitution, installation, reach, causality, or prediction claims.
 
+## Amendment: bounded country-currency-map March 2025 package-hijack admission
+
+Sonatype reported `country-currency-map@2.1.8` as a hijacked malicious release in its March 2025 crypto-package campaign, while contemporaneous BleepingComputer coverage independently names the same deprecated `2.1.8` version. [81] [82] The bounded official npm registry metadata response timestamps `2.1.8` at `2025-03-25T09:03:00.518Z`; strict subtraction yields cutoff `2025-03-25T09:03:00.517Z`, which selects retained `country-currency-map@2.1.7` as the exact pre-event source object. [83]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 26 records in 20 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 24 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 110 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 459 edges across 17 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 19 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded March 2025 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -539,3 +553,9 @@ This creates one separate family and future validation unit. It creates **zero**
 [79] [StepSecurity, “s1ngularity: Popular Nx Build System Package Compromised with Data-Stealing Malware,” 27 August 2025](https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware).
 
 [80] [npm registry metadata, `nx`](https://registry.npmjs.org/nx).
+
+[81] [Sonatype, “Multiple Crypto Packages Hijacked, Turned Into Info-Stealers,” 27 March 2025](https://www.sonatype.com/blog/multiple-crypto-packages-hijacked-turned-into-info-stealers).
+
+[82] [BleepingComputer, “Infostealer campaign compromises 10 npm packages, targets devs,” 27 March 2025](https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/).
+
+[83] [npm registry metadata, `country-currency-map`](https://registry.npmjs.org/country-currency-map).

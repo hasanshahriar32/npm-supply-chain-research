@@ -476,3 +476,13 @@ Nx’s postmortem and reviewed GitHub advisory identify the stolen publishing to
 81. Snyk, *Weaponizing AI Coding Agents for Malware in the Nx Malicious Package Security Incident*, 27 August 2025: <https://snyk.io/blog/weaponizing-ai-coding-agents-for-malware-in-the-nx-malicious-package/>.
 82. StepSecurity, *s1ngularity: Popular Nx Build System Package Compromised with Data-Stealing Malware*, 27 August 2025: <https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware>.
 83. npm, *Registry metadata for nx*: <https://registry.npmjs.org/nx>.
+
+## Bounded country-currency-map March 2025 admission — source provenance, 26 August 2026
+
+Sonatype identifies `country-currency-map@2.1.8` as a hijacked malicious release in the March 2025 crypto-package campaign. BleepingComputer independently names the same deprecated malicious version and reports that the maintainer recommended the earlier `2.1.7` release. [84] [85] Official npm registry metadata fixes `2.1.8` at `2025-03-25T09:03:00.518Z`; the strict one-millisecond cutoff selects retained `country-currency-map@2.1.7` as the exact source object. [86]
+
+`131_country_currency_map_march_2025_candidate_assessment.json` preserves the zero-output eligibility screen before atomic reconstruction. The completed governed regeneration admits one record, one separate family, one exact source snapshot, one direct declaration, one isolated cutoff-valid SemVer approximation, one bounded registry-only sensitivity edge, and one future validation unit. The active cohort is **26 records, 20 families, 24 exact snapshots, 110 direct declarations, 459 bounded sensitivity edges, and 19 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics.
+
+84. Sonatype, *Multiple Crypto Packages Hijacked, Turned Into Info-Stealers*, 27 March 2025: <https://www.sonatype.com/blog/multiple-crypto-packages-hijacked-turned-into-info-stealers>.
+85. BleepingComputer, *Infostealer campaign compromises 10 npm packages, targets devs*, 27 March 2025: <https://www.bleepingcomputer.com/news/security/infostealer-campaign-compromises-10-npm-packages-targets-devs/>.
+86. npm, *Registry metadata for country-currency-map*: <https://registry.npmjs.org/country-currency-map>.

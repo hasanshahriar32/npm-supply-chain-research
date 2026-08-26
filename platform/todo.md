@@ -211,3 +211,6 @@
 - [x] Identify one further independent compact historical npm candidate with finite exact-version evidence and a plausible retained strict predecessor source object
 - [x] Collect bounded independent incident corroboration and official registry metadata without downloading or executing package payloads
 - [x] Publish only a strict ledger admission or precise exclusion with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
+- [x] Identify one further independent compact historical npm candidate with finite exact-version evidence and a plausible retained strict predecessor source object
+- [x] Collect bounded independent incident corroboration and official registry metadata without downloading or executing package payloads
+- [x] Publish only a strict ledger admission or precise exclusion with regression coverage, preserving zero controls, historical installs, reach, scores, models, or predictive metrics
