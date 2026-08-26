@@ -453,3 +453,14 @@ Sonatype’s 27 October 2021 report and BleepingComputer’s same-day independen
 72. Sonatype, *npm Ransomware Attack: Malicious Roblox API Package Discovered by Sonatype*, 27 October 2021: <https://www.sonatype.com/blog/fake-npm-roblox-api-package-installs-ransomware-spooky-surprise>.
 73. BleepingComputer, *Malicious NPM libraries install ransomware, password stealer*, 27 October 2021: <https://www.bleepingcomputer.com/news/security/malicious-npm-libraries-install-ransomware-password-stealer/>.
 74. npm, *Registry metadata for noblox.js-proxy*: <https://registry.npmjs.org/noblox.js-proxy>.
+
+## Bounded Lottie Player October 2024 admission — source provenance, 26 August 2026
+
+LottieFiles’ incident resolution identifies the account takeover and unauthorized `@lottiefiles/lottie-player` releases `2.0.5`, `2.0.6`, and `2.0.7`. Independent Sonatype and Snyk reports identify the same finite release set and compromised publishing-access context.[75] [76] [77] Official registry metadata fixes the earliest affected publication, `2.0.5`, at `2024-10-30T20:12:15.375Z`; the strict one-millisecond cutoff selects retained `2.0.4` as the source object.[78]
+
+`127_lottie_player_october_2024_candidate_assessment.json` preserves the zero-output eligibility screen before atomic reconstruction. The completed governed regeneration admits one record, one separate family, one exact source snapshot, five direct declarations, five isolated cutoff-valid SemVer approximations, thirteen bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **24 records, 18 families, 22 exact snapshots, 74 direct declarations, 335 bounded sensitivity edges, and 17 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics.
+
+75. LottieFiles, *Resolution of Security Incident with @lottiefiles/lottie-player Package*, 2 November 2024: <https://lottiefiles.com/blog/inside-lottiefiles/resolution-of-security-incident-with-lottiefiles-lottie-player-package>.
+76. Sonatype, *Lottie Player Compromised in Supply Chain Attack*, 31 October 2024: <https://www.sonatype.com/blog/lottie-player-compromised-in-supply-chain-attack-all-you-need-to-know>.
+77. Snyk, *Lottie Player npm package compromised for crypto wallet theft*, 31 October 2024: <https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/>.
+78. npm, *Registry metadata for @lottiefiles/lottie-player*: <https://registry.npmjs.org/%40lottiefiles%2Flottie-player>.

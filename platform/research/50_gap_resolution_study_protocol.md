@@ -205,6 +205,12 @@ Sonatype and BleepingComputer independently identify `noblox.js-proxy` and `nobl
 
 The candidate is therefore excluded before cutoff selection and source-object reconstruction. It adds **zero** primary records, families, validation units, snapshots, direct declarations, SemVer approximations, graph edges, controls, benign labels, historical installations, reach values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics. The exclusion neither disputes the reports nor treats registry retention as evidence of benignness, safety, unchanged state, or no known event.
 
+### Lottie Player October 2024 admission — 26 August 2026
+
+The strict ledger now admits `@lottiefiles/lottie-player@2.0.5`, `2.0.6`, and `2.0.7` as one distinct October 2024 account-takeover family. LottieFiles’ incident resolution and independent Sonatype and Snyk reports identify the finite release set and unauthorized publishing context.[75] [76] [77] The earliest official registry publication is `2.0.5` at `2024-10-30T20:12:15.375Z`; the exact one-millisecond cutoff selects retained `2.0.4` as the strict pre-event source object.[78]
+
+The protocol now governs **24 positive package-event records in 18 incident families**, with **22 exact retained pre-event snapshots**, **74 direct declarations**, **74 isolated cutoff-valid SemVer approximations**, **335 bounded depth-three registry-only sensitivity edges**, and **17 future validation units**. The Lottie Player row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -275,3 +281,7 @@ The candidate is therefore excluded before cutoff selection and source-object re
 [72]: https://www.sonatype.com/blog/fake-npm-roblox-api-package-installs-ransomware-spooky-surprise "Sonatype Noblox package report"
 [73]: https://www.bleepingcomputer.com/news/security/malicious-npm-libraries-install-ransomware-password-stealer/ "BleepingComputer Noblox package report"
 [74]: https://registry.npmjs.org/noblox.js-proxy "npm registry noblox.js-proxy metadata"
+[75]: https://lottiefiles.com/blog/inside-lottiefiles/resolution-of-security-incident-with-lottiefiles-lottie-player-package "LottieFiles Lottie Player incident resolution"
+[76]: https://www.sonatype.com/blog/lottie-player-compromised-in-supply-chain-attack-all-you-need-to-know "Sonatype Lottie Player incident report"
+[77]: https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/ "Snyk Lottie Player incident report"
+[78]: https://registry.npmjs.org/%40lottiefiles%2Flottie-player "npm registry Lottie Player metadata"

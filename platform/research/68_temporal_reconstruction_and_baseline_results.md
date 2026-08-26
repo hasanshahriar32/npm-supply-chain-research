@@ -359,6 +359,20 @@ The bounded March 2022 `node-ipc` event is now admitted as a record distinct fro
 
 The admission adds one family and one future validation unit while preserving **zero controls, benign labels, historical installations, dependency reach values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics**. The no-control/no-model gate remains blocked.
 
+## Lottie Player October 2024 admission — 26 August 2026
+
+The bounded `@lottiefiles/lottie-player` account-takeover screen satisfies the frozen admission rule. LottieFiles’ incident resolution identifies unauthorized versions `2.0.5`, `2.0.6`, and `2.0.7`; Sonatype and Snyk independently identify the same finite release set and the compromised publishing-access context.[72] [73] [74] Official npm registry metadata places the earliest affected release, `2.0.5`, at `2024-10-30T20:12:15.375Z`. The one-millisecond cutoff is `2024-10-30T20:12:15.374Z`, selecting retained `@lottiefiles/lottie-player@2.0.4` as the exact source object.[75]
+
+| Governed artifact | Current result | Interpretation boundary |
+|---|---:|---|
+| Strict package-event ledger | 24 records in 18 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 22 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 74 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 335 edges across 15 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 17 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This creates one separate family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. The retained source object is a temporal reconstruction input only; it does not license inferences about current maintainers, repository state, downstream use, or causal impact.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -493,3 +507,11 @@ The admission adds one family and one future validation unit while preserving **
 [70] [NVD, “CVE-2022-23812 Detail”](https://nvd.nist.gov/vuln/detail/CVE-2022-23812).
 
 [71] [npm registry metadata, `node-ipc`](https://registry.npmjs.org/node-ipc).
+
+[72] [LottieFiles, “Resolution of Security Incident with @lottiefiles/lottie-player Package,” 2 November 2024](https://lottiefiles.com/blog/inside-lottiefiles/resolution-of-security-incident-with-lottiefiles-lottie-player-package).
+
+[73] [Sonatype, “Lottie Player Compromised in Supply Chain Attack,” 31 October 2024](https://www.sonatype.com/blog/lottie-player-compromised-in-supply-chain-attack-all-you-need-to-know).
+
+[74] [Snyk, “Lottie Player npm package compromised for crypto wallet theft,” 31 October 2024](https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/).
+
+[75] [npm registry metadata, `@lottiefiles/lottie-player`](https://registry.npmjs.org/%40lottiefiles%2Flottie-player).
