@@ -57,7 +57,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Original Sin of npm") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("19 package-event records in 13 incident families") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("21 package-event records in 15 incident families") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -65,12 +65,12 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 20, exactSourceSnapshots: 18, unavailableSourceSnapshots: 2, declaredDirectEdges: 51, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 21, exactSourceSnapshots: 19, unavailableSourceSnapshots: 2, declaredDirectEdges: 51, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
     expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 51, resolvedIsolatedSemverRanges: 51, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
     expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 51, isolatedCutoffSemverApproximations: 51, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ strictPackageEventRecords: 20, adjudicatedIncidentFamilyCount: 14, exactPreEventSnapshots: 18, exactSnapshotIncidentFamilyCount: 13, calibrationInference: "blocked" });
+    expect(gate).toMatchObject({ strictPackageEventRecords: 21, adjudicatedIncidentFamilyCount: 15, exactPreEventSnapshots: 19, exactSnapshotIncidentFamilyCount: 14, calibrationInference: "blocked" });
     expect(gate.adjudicatedIncidentFamilies).toContain("colors_faker_protestware_2022");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("moika_dependency_confusion_2026");
