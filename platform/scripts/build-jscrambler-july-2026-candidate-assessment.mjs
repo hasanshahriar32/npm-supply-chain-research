@@ -1,0 +1,21 @@
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageName = "jscrambler";
+const affectedVersions = ["8.14.0", "8.16.0", "8.17.0", "8.18.0", "8.20.0"];
+const registryUrl = `https://registry.npmjs.org/${packageName}`;
+const response = await fetch(registryUrl, { headers: { Accept: "application/json", "User-Agent": "supply-chain-research-jscrambler/1.0" } });
+if (!response.ok) throw new Error(`Registry request failed: ${response.status}`);
+const registry = await response.json();
+const affected = affectedVersions.map((version) => ({ version, publishedUtc: registry.time?.[version] ?? null }));
+if (affected.some(({ publishedUtc }) => !publishedUtc)) throw new Error("Missing affected-version timestamp.");
+const earliest = [...affected].sort((a, b) => Date.parse(a.publishedUtc) - Date.parse(b.publishedUtc))[0];
+const cutoffUtc = new Date(Date.parse(earliest.publishedUtc) - 1).toISOString();
+const selectedPreEventVersion = Object.entries(registry.time).filter(([version, timestamp]) => !["created", "modified"].includes(version) && Date.parse(timestamp) <= Date.parse(cutoffUtc)).sort((a, b) => Date.parse(a[1]) - Date.parse(b[1])).at(-1)?.[0] ?? null;
+const retained = Boolean(selectedPreEventVersion && registry.versions?.[selectedPreEventVersion]);
+const decision = retained ? "eligible_for_governed_primary_temporal_ledger_reconstruction" : "exclude_from_primary_temporal_ledger_due_to_no_retained_strict_pre_event_source_object";
+const output = { study: "jscrambler-july-2026-bounded-package-event-candidate-assessment", decision, candidate: { packageName, affectedVersions, earliestAffectedVersion: earliest, strictFeatureCutoffUtc: cutoffUtc, selectedPreEventVersion, selectedPreEventVersionObjectRetained: retained, proposedFamilyId: "jscrambler_npm_token_compromise_2026" }, corroboration: { primaryAdvisory: "https://jscrambler.com/blog/security-advisory-malicious-npm-package/", independentStepSecurity: "https://www.stepsecurity.io/blog/jscrambler-npm-package-publishes-malicious-preinstall-binary", independentSocket: "https://socket.dev/blog/jscrambler-supply-chain-attack", officialRegistry: registryUrl }, zeroOutputsUntilReconstruction: { ledgerRows: 0, families: 0, validationUnits: 0, snapshots: 0, controls: 0, models: 0, predictiveMetrics: 0 }, prohibitedInterpretations: ["No registry survival, advisory absence, or current state is a benign control.", "No historical installation, dependency reach, blast-radius, score, model, ranking, interval, calibration, or predictive metric is created."] };
+await writeFile(path.join(root, "research", "121_jscrambler_july_2026_candidate_assessment.json"), `${JSON.stringify(output, null, 2)}\n`);
+console.log(JSON.stringify({ decision, earliest, selectedPreEventVersion, retained }, null, 2));
