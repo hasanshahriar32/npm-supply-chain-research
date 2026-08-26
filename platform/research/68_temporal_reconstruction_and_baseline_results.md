@@ -345,6 +345,20 @@ The result narrows a defensible contribution. Rather than claiming that blast ra
 
 This boundary is scientifically useful. It prevents a present-day dependency graph or repository workflow feature from being presented as evidence about a prior compromise, and it prevents multiple packages from the same campaign from inflating apparent sample size. A future predictive study should retain this fidelity vocabulary, preserve raw checksums and event-family identifiers, and report results only after its controls, time splits, and historical feature availability have passed the stated gate.
 
+## Current strict-cohort amendment — 26 August 2026
+
+The bounded March 2022 `node-ipc` event is now admitted as a record distinct from the separately adjudicated May 2026 `node-ipc` compromise. GitHub’s reviewed advisory and Snyk’s contemporaneous technical report identify `node-ipc@10.1.1` and `10.1.2` as the finite destructive maintainer publications; NVD records the same affected range. Official registry metadata places the earliest selected affected release at `2022-03-07T11:03:59.179Z`, fixes the strict cutoff at `2022-03-07T11:03:59.178Z`, and selects retained `node-ipc@10.1.0` as the exact source object.[61] [69] [70] [71]
+
+| Governed artifact | Current result | Interpretation boundary |
+|---|---:|---|
+| Strict package-event ledger | 23 records in 17 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 21 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 69 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 322 edges across 14 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 16 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+The admission adds one family and one future validation unit while preserving **zero controls, benign labels, historical installations, dependency reach values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics**. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -473,3 +487,9 @@ This boundary is scientifically useful. It prevents a present-day dependency gra
 [66] [Wiz, “Widespread npm Supply Chain Attack: Breaking Down Impact & Scope Across Debug, Chalk, and Beyond,” 9 September 2025](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
 [67] [StepSecurity, “20+ Popular NPM Packages Compromised,” 8 September 2025](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
 [68] [npm registry metadata, `debug`](https://registry.npmjs.org/debug).
+
+[69] [GitHub Advisory Database, “Embedded Malicious Code in node-ipc,” GHSA-97m3-w2cp-4xx6](https://github.com/advisories/GHSA-97m3-w2cp-4xx6).
+
+[70] [NVD, “CVE-2022-23812 Detail”](https://nvd.nist.gov/vuln/detail/CVE-2022-23812).
+
+[71] [npm registry metadata, `node-ipc`](https://registry.npmjs.org/node-ipc).

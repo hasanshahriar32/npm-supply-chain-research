@@ -193,6 +193,12 @@ The npm-specific Original Sin of npm study is also excluded from the temporal-co
 
 `90_authorized_npm_control_frame_access_specification.json` supplies a non-executed reproducibility contract for the provider path already assessed as inaccessible and target-mismatched. The contract begins with a user-controlled BigQuery environment and one frozen `Snapshots.Time` value, selects npm `PackageVersions` rows only at the matching `SnapshotAt` and at or before the specified `UpstreamPublishedAt` cutoff, and records the exact query, parameters, deterministic export, job metadata, row count, and checksums. [17] It then requires an independent frozen positive-coverage manifest for malicious publication or maintainer compromise over a pre-registered horizon. Provider advisories remain vulnerability provenance only; advisory absence, a `Latest` view, current package state, or source omission cannot yield a non-event label. This is a future-access specification, not a query result: it creates zero rows, controls, labels, model fits, or metrics.
 
+### Current strict-cohort amendment — 26 August 2026
+
+The protocol now governs **23 positive package-event records in 17 incident families**, with **21 exact retained pre-event snapshots**, **69 direct declarations**, **69 isolated cutoff-valid SemVer approximations**, **322 bounded depth-three registry-only sensitivity edges**, and **16 future validation units**. The added `node-ipc-2022-03-07` record is a separate March 2022 maintainer-protestware event, not an extension of `node_ipc_2026`: GitHub’s reviewed advisory and Snyk’s contemporaneous report identify `10.1.1` and `10.1.2`, while official registry metadata fixes the earliest publication at `2022-03-07T11:03:59.179Z` and selects retained `10.1.0` before the one-millisecond cutoff.[61] [69] [70] [71]
+
+This amendment preserves the existing negative/control, outcome-sealing, provenance-access, relatedness, and disclosure gates. No control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric is created.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -256,3 +262,7 @@ The npm-specific Original Sin of npm study is also excluded from the temporal-co
 [66]: https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk "Wiz Debug September 2025 incident report"
 [67]: https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi "StepSecurity Debug September 2025 incident report"
 [68]: https://registry.npmjs.org/debug "npm registry debug metadata"
+
+[69]: https://github.com/advisories/GHSA-97m3-w2cp-4xx6 "GitHub Advisory Database: Embedded Malicious Code in node-ipc"
+[70]: https://nvd.nist.gov/vuln/detail/CVE-2022-23812 "NVD: CVE-2022-23812"
+[71]: https://registry.npmjs.org/node-ipc "npm registry node-ipc metadata"
