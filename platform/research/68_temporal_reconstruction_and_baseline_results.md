@@ -373,6 +373,20 @@ The bounded `@lottiefiles/lottie-player` account-takeover screen satisfies the f
 
 This creates one separate family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. The retained source object is a temporal reconstruction input only; it does not license inferences about current maintainers, repository state, downstream use, or causal impact.
 
+## Nx S1ngularity August 2025 admission — 26 August 2026
+
+The bounded `nx` screen satisfies the frozen admission rule. The Nx postmortem and reviewed GitHub advisory identify eight unauthorized `nx` publications after publishing-token theft; independent Snyk and StepSecurity reports retain the same finite release set.[76] [77] [78] [79] Official npm registry metadata places the earliest affected release, `21.5.0`, at `2025-08-26T22:32:25.482Z`. The one-millisecond cutoff is `2025-08-26T22:32:25.481Z`, and the all-stream time map selects retained `nx@21.5.0-canary.20250826-af44608` rather than a same-branch substitute.[80]
+
+| Governed artifact | Current result | Interpretation boundary |
+|---|---:|---|
+| Strict package-event ledger | 25 records in 19 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 23 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 109 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 458 edges across 16 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 18 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This creates one separate family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. The selected canary object is a strict timing result only and does not permit same-branch substitution, installation, reach, causality, or prediction claims.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -515,3 +529,13 @@ This creates one separate family and future validation unit. It creates **zero**
 [74] [Snyk, “Lottie Player npm package compromised for crypto wallet theft,” 31 October 2024](https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/).
 
 [75] [npm registry metadata, `@lottiefiles/lottie-player`](https://registry.npmjs.org/%40lottiefiles%2Flottie-player).
+
+[76] [Nx, “S1ngularity - What Happened, How We Responded, What We Learned,” 5 September 2025](https://nx.dev/blog/s1ngularity-postmortem).
+
+[77] [GitHub Security Advisory, “Malicious versions of Nx and some supporting plugins were published,” GHSA-cxm3-wv7p-598c](https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c).
+
+[78] [Snyk, “Weaponizing AI Coding Agents for Malware in the Nx Malicious Package Security Incident,” 27 August 2025](https://snyk.io/blog/weaponizing-ai-coding-agents-for-malware-in-the-nx-malicious-package/).
+
+[79] [StepSecurity, “s1ngularity: Popular Nx Build System Package Compromised with Data-Stealing Malware,” 27 August 2025](https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware).
+
+[80] [npm registry metadata, `nx`](https://registry.npmjs.org/nx).

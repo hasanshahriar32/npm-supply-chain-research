@@ -464,3 +464,15 @@ LottieFiles’ incident resolution identifies the account takeover and unauthori
 76. Sonatype, *Lottie Player Compromised in Supply Chain Attack*, 31 October 2024: <https://www.sonatype.com/blog/lottie-player-compromised-in-supply-chain-attack-all-you-need-to-know>.
 77. Snyk, *Lottie Player npm package compromised for crypto wallet theft*, 31 October 2024: <https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/>.
 78. npm, *Registry metadata for @lottiefiles/lottie-player*: <https://registry.npmjs.org/%40lottiefiles%2Flottie-player>.
+
+## Bounded Nx S1ngularity August 2025 admission — source provenance, 26 August 2026
+
+Nx’s postmortem and reviewed GitHub advisory identify the stolen publishing token and unauthorized `nx` releases `21.5.0`, `20.9.0`, `20.10.0`, `21.6.0`, `20.11.0`, `21.7.0`, `21.8.0`, and `20.12.0`. Independent Snyk and StepSecurity reports retain the same finite release set and publishing-token compromise context.[79] [80] [81] [82] Official registry metadata fixes the earliest affected publication, `21.5.0`, at `2025-08-26T22:32:25.482Z`; the strict one-millisecond cutoff selects retained `21.5.0-canary.20250826-af44608` under the all-stream rule.[83]
+
+`129_nx_august_2025_candidate_assessment.json` preserves the zero-output eligibility screen before atomic reconstruction. The completed governed regeneration admits one record, one separate family, one exact source snapshot, thirty-five direct declarations, thirty-five isolated cutoff-valid SemVer approximations, 123 bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **25 records, 19 families, 23 exact snapshots, 109 direct declarations, 458 bounded sensitivity edges, and 18 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics.
+
+79. Nx, *S1ngularity - What Happened, How We Responded, What We Learned*, 5 September 2025: <https://nx.dev/blog/s1ngularity-postmortem>.
+80. GitHub Security Advisory, *Malicious versions of Nx and some supporting plugins were published*, GHSA-cxm3-wv7p-598c: <https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c>.
+81. Snyk, *Weaponizing AI Coding Agents for Malware in the Nx Malicious Package Security Incident*, 27 August 2025: <https://snyk.io/blog/weaponizing-ai-coding-agents-for-malware-in-the-nx-malicious-package/>.
+82. StepSecurity, *s1ngularity: Popular Nx Build System Package Compromised with Data-Stealing Malware*, 27 August 2025: <https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware>.
+83. npm, *Registry metadata for nx*: <https://registry.npmjs.org/nx>.

@@ -211,6 +211,12 @@ The strict ledger now admits `@lottiefiles/lottie-player@2.0.5`, `2.0.6`, and `2
 
 The protocol now governs **24 positive package-event records in 18 incident families**, with **22 exact retained pre-event snapshots**, **74 direct declarations**, **74 isolated cutoff-valid SemVer approximations**, **335 bounded depth-three registry-only sensitivity edges**, and **17 future validation units**. The Lottie Player row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### Nx S1ngularity August 2025 admission — 26 August 2026
+
+The strict ledger now admits `nx@21.5.0`, `20.9.0`, `20.10.0`, `21.6.0`, `20.11.0`, `21.7.0`, `21.8.0`, and `20.12.0` as one distinct August 2025 publish-token-compromise family. The Nx postmortem and reviewed GitHub advisory identify the finite release set and token-theft publication path; Snyk and StepSecurity independently retain the same `nx` versions.[79] [80] [81] [82] The earliest official registry publication is `21.5.0` at `2025-08-26T22:32:25.482Z`; the exact one-millisecond cutoff selects retained `21.5.0-canary.20250826-af44608` under the all-stream rule, with no same-branch substitution.[83]
+
+The protocol now governs **25 positive package-event records in 19 incident families**, with **23 exact retained pre-event snapshots**, **109 direct declarations**, **109 isolated cutoff-valid SemVer approximations**, **458 bounded depth-three registry-only sensitivity edges**, and **18 future validation units**. The Nx row adds one family and one unit. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -285,3 +291,8 @@ The protocol now governs **24 positive package-event records in 18 incident fami
 [76]: https://www.sonatype.com/blog/lottie-player-compromised-in-supply-chain-attack-all-you-need-to-know "Sonatype Lottie Player incident report"
 [77]: https://snyk.io/blog/lottie-player-npm-package-compromised-crypto-wallet-theft/ "Snyk Lottie Player incident report"
 [78]: https://registry.npmjs.org/%40lottiefiles%2Flottie-player "npm registry Lottie Player metadata"
+[79]: https://nx.dev/blog/s1ngularity-postmortem "Nx S1ngularity postmortem"
+[80]: https://github.com/nrwl/nx/security/advisories/GHSA-cxm3-wv7p-598c "GitHub Security Advisory GHSA-cxm3-wv7p-598c"
+[81]: https://snyk.io/blog/weaponizing-ai-coding-agents-for-malware-in-the-nx-malicious-package/ "Snyk Nx incident report"
+[82]: https://www.stepsecurity.io/blog/supply-chain-security-alert-popular-nx-build-system-package-compromised-with-data-stealing-malware "StepSecurity Nx incident report"
+[83]: https://registry.npmjs.org/nx "npm registry nx metadata"
