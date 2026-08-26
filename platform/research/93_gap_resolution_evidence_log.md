@@ -443,3 +443,13 @@ The March 2022 `node-ipc` screen was deliberately separated from both the all-ve
 69. GitHub Advisory Database, *Embedded Malicious Code in node-ipc*, GHSA-97m3-w2cp-4xx6: <https://github.com/advisories/GHSA-97m3-w2cp-4xx6>.
 70. National Vulnerability Database, *CVE-2022-23812 Detail*: <https://nvd.nist.gov/vuln/detail/CVE-2022-23812>.
 71. npm, *Registry metadata for node-ipc*: <https://registry.npmjs.org/node-ipc>.
+
+## Bounded Noblox 2021 package-name exclusion — source provenance, 26 August 2026
+
+Sonatype’s 27 October 2021 report and BleepingComputer’s same-day independent reporting both identify `noblox.js-proxy` and `noblox.js-proxies` as malicious Roblox-targeting typosquatting package names.[72] [73] Neither retrieved report supplies a finite exact affected release set. The bounded official registry response for `noblox.js-proxy` retains historical timestamps but only the `0.0.1-security` version object; that retention state cannot select or infer the reported malicious release.[74]
+
+`125_noblox_js_proxy_october_2021_candidate_assessment.json` records a strict exclusion before an event cutoff or source snapshot is constructed. It adds zero primary ledger records, families, validation units, snapshots, declarations, isolated SemVer approximations, graph edges, controls, benign labels, installations, reach values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics. It does not dispute the corroborated reports or recast the candidate as benign, safe, unchanged, no-known-event, or a control.
+
+72. Sonatype, *npm Ransomware Attack: Malicious Roblox API Package Discovered by Sonatype*, 27 October 2021: <https://www.sonatype.com/blog/fake-npm-roblox-api-package-installs-ransomware-spooky-surprise>.
+73. BleepingComputer, *Malicious NPM libraries install ransomware, password stealer*, 27 October 2021: <https://www.bleepingcomputer.com/news/security/malicious-npm-libraries-install-ransomware-password-stealer/>.
+74. npm, *Registry metadata for noblox.js-proxy*: <https://registry.npmjs.org/noblox.js-proxy>.

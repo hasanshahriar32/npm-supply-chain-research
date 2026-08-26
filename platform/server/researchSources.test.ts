@@ -408,6 +408,18 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("The all-versions advisory scope cannot be collapsed into a finite exact release target without a source that explicitly identifies the candidate version set.");
   });
 
+  it("excludes the independently corroborated Noblox 2021 package-name screen when no finite exact affected version is documented", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/125_noblox_js_proxy_october_2021_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_independently_corroborated_finite_exact_affected_version_target",
+      candidate: { recordId: "noblox-js-proxy-2021-10-26", packageName: "noblox.js-proxy", independentlyCorroboratedPackageName: true, independentlyCorroboratedAffectedVersions: null },
+      corroboration: { officialRegistry: { boundedMetadataOnly: true, httpStatus: 200, retainedVersionObjectKeys: ["0.0.1-security"], inspectedForSourceObjectSelection: false } },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, isolatedSemverApproximationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, calibrationResultsCreated: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add a primary ledger record");
+    expect(assessment.prohibitedInterpretations).toContain("The official registry response is used only to document bounded metadata availability; it cannot infer a finite affected version, historical installation, source snapshot, dependency graph, reach, or blast radius.");
+  });
+
   it("admits the bounded Debug record only with independent finite-version corroboration and a retained strict predecessor", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/108_debug_september_2025_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({

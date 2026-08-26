@@ -199,6 +199,12 @@ The protocol now governs **23 positive package-event records in 17 incident fami
 
 This amendment preserves the existing negative/control, outcome-sealing, provenance-access, relatedness, and disclosure gates. No control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric is created.
 
+### Bounded Noblox 2021 package-name screen — 26 August 2026
+
+Sonatype and BleepingComputer independently identify `noblox.js-proxy` and `noblox.js-proxies` as the 2021 Roblox-targeting malicious npm package names. The retrieved reports do not state an exact affected release or finite affected-version set, however.[72] [73] A bounded official registry metadata response for `noblox.js-proxy` retains package-history timestamps and only a `0.0.1-security` version object, but registry state cannot convert package-name corroboration into a version-specific outcome target.[74]
+
+The candidate is therefore excluded before cutoff selection and source-object reconstruction. It adds **zero** primary records, families, validation units, snapshots, direct declarations, SemVer approximations, graph edges, controls, benign labels, historical installations, reach values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics. The exclusion neither disputes the reports nor treats registry retention as evidence of benignness, safety, unchanged state, or no known event.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -266,3 +272,6 @@ This amendment preserves the existing negative/control, outcome-sealing, provena
 [69]: https://github.com/advisories/GHSA-97m3-w2cp-4xx6 "GitHub Advisory Database: Embedded Malicious Code in node-ipc"
 [70]: https://nvd.nist.gov/vuln/detail/CVE-2022-23812 "NVD: CVE-2022-23812"
 [71]: https://registry.npmjs.org/node-ipc "npm registry node-ipc metadata"
+[72]: https://www.sonatype.com/blog/fake-npm-roblox-api-package-installs-ransomware-spooky-surprise "Sonatype Noblox package report"
+[73]: https://www.bleepingcomputer.com/news/security/malicious-npm-libraries-install-ransomware-password-stealer/ "BleepingComputer Noblox package report"
+[74]: https://registry.npmjs.org/noblox.js-proxy "npm registry noblox.js-proxy metadata"
