@@ -1,0 +1,104 @@
+{
+  "study": "solana-web3-js-december-2024-bounded-package-event-candidate-assessment",
+  "artifactVersion": 1,
+  "artifactDate": "2026-08-26",
+  "decision": "eligible_for_governed_primary_temporal_ledger_reconstruction",
+  "candidate": {
+    "recordId": "solana-web3-js-2024-12-03",
+    "packageName": "@solana/web3.js",
+    "affectedVersions": [
+      "1.95.6",
+      "1.95.7"
+    ],
+    "eventFamilyCandidate": "solana_web3_js_publish_access_compromise_2024",
+    "relatednessStatus": "no_existing_related_primary_ledger_family_identified_in_this_bounded_screen",
+    "eventStartRule": "The earliest official registry timestamp among the independently corroborated affected versions defines the strict cutoff; incident-report chronology does not substitute for the registry timestamp.",
+    "affectedVersionPublicationTimes": [
+      {
+        "version": "1.95.6",
+        "publishedUtc": "2024-12-03T15:10:07.122Z"
+      },
+      {
+        "version": "1.95.7",
+        "publishedUtc": "2024-12-03T15:20:23.458Z"
+      }
+    ],
+    "eventStartUtc": "2024-12-03T15:10:07.122Z",
+    "strictFeatureCutoffUtc": "2024-12-03T15:10:07.121Z",
+    "timeMapSelectedPreEventVersion": "2.1.0-canary-20241203100809"
+  },
+  "corroboration": {
+    "projectSecurityAdvisory": {
+      "statement": "The Solana web3.js advisory identifies versions 1.95.6 and 1.95.7, reports a compromised publish-access account, and calls both unauthorized versions."
+    },
+    "socketTechnicalReport": {
+      "statement": "Socket independently identifies versions 1.95.6 and 1.95.7 and reports a phishing or social-engineering attack against the maintainers."
+    },
+    "officialRegistry": {
+      "boundedMetadataOnly": true,
+      "affectedVersionPublicationTimes": [
+        {
+          "version": "1.95.6",
+          "publishedUtc": "2024-12-03T15:10:07.122Z"
+        },
+        {
+          "version": "1.95.7",
+          "publishedUtc": "2024-12-03T15:20:23.458Z"
+        }
+      ],
+      "earliestAffectedVersion": "1.95.6",
+      "eventStartUtc": "2024-12-03T15:10:07.122Z",
+      "selectedPreEventVersion": "2.1.0-canary-20241203100809",
+      "selectedPreEventVersionObjectRetained": true,
+      "affectedVersionObjectsRetained": {
+        "1.95.6": false,
+        "1.95.7": false
+      }
+    }
+  },
+  "strictEligibility": {
+    "finiteExactAffectedVersionsIndependentlyCorroborated": true,
+    "officialAffectedVersionTimestampsRetained": true,
+    "selectedPreEventVersion": "2.1.0-canary-20241203100809",
+    "selectedPreEventVersionObjectRetained": true
+  },
+  "sourceProvenance": {
+    "projectSecurityAdvisory": {
+      "url": "https://github.com/solana-foundation/solana-web3.js/security/advisories/GHSA-jcxm-7wvp-g6p5",
+      "responseSha256": "faaa527dae7ca40162064c2d419b69e6f0c68c51a0b1d02d01bfea9c233deca6"
+    },
+    "socketTechnicalReport": {
+      "url": "https://socket.dev/blog/supply-chain-attack-solana-web3-js-library",
+      "responseSha256": "dc7e0a2f13f514bd8731b5039ef8c235e3cd28153de8668989d68dd79f058c60"
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/%40solana%2Fweb3.js",
+      "responseSha256": "e850ca989c09faf2dd9a0912bb536664ddce4306a12c51e1ed29c71e1af068a4"
+    }
+  },
+  "nextDecisionBoundary": "The candidate may proceed to a separate governed reconstruction only after all ledger-dependent artifacts are updated atomically and the source-object and family boundaries are preserved.",
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 0,
+    "primaryLedgerFamiliesAdded": 0,
+    "futureValidationUnitsAdded": 0,
+    "exactPreEventSourceSnapshotsCreated": 0,
+    "packageMetadataValuesExtracted": 0,
+    "dependencyDeclarationsCreated": 0,
+    "resolvedTargetsCreated": 0,
+    "recursiveGraphEdgesCreated": 0,
+    "controlsCreated": 0,
+    "benignLabelsCreated": 0,
+    "historicalInstallTracesCreated": 0,
+    "reachOrBlastRadiusValuesCreated": 0,
+    "scoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "prohibitedInterpretations": [
+    "This evidence screen does not establish campaign completeness, a common actor identity beyond the documented account-compromise context, causality beyond the source descriptions, or statistical independence from any other package event.",
+    "No later package, repository, maintainer, workflow, lockfile, download, payload, installation, or dependency-reach state may be substituted for the selected strict pre-event source object.",
+    "An eligible source-object screen alone does not create a cutoff-valid control population, benign labels, historical installation trace, dependency reach, blast-radius estimate, score, model, ranking, interval, calibration result, or predictive metric."
+  ]
+}

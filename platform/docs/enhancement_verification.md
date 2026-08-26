@@ -244,3 +244,10 @@ The authenticated `/workspace/methodology` page was reloaded after the same publ
 - `pnpm test` passed all **56 tests across 9 files**, including the new finite-version, strict-cutoff, retained-predecessor, atomic-reconstruction-boundary, and zero-output safeguard assertions.
 - `NODE_OPTIONS=--max-old-space-size=1536 pnpm build` passed and preserved `dist/index.js` plus the nonempty Next runtime marker.
 - Unauthenticated desktop checks for `/workspace/gap-analysis`, `/workspace/incident-labels`, `/workspace/methodology`, and `/admin` rendered the public Clerk sign-in landing page. These checks confirm the guarded-route boundary only; they do not claim authenticated workspace or administrator content rendering.
+
+## Bounded Solana web3.js December 2024 admission — 26 August 2026
+
+- `node scripts/build-solana-web3-js-december-2024-candidate-assessment.mjs` produced `110_solana_web3_js_december_2024_candidate_assessment.json` using bounded source text and official registry metadata only. The Solana advisory and Socket independently identify `@solana/web3.js@1.95.6` and `1.95.7`; the earliest official publication is `2024-12-03T15:10:07.122Z`. The strict all-stream time-map rule selects retained `2.1.0-canary-20241203100809`, without a same-branch substitution. Governed artifacts contain 18 records, 13 families, 16 exact snapshots, 48 declarations, 225 bounded sensitivity edges, and 12 validation units.
+- The admission creates zero controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics.
+- `pnpm test` passed all **57 tests across 9 files**. `NODE_OPTIONS=--max-old-space-size=1536 pnpm build` passed and preserved `dist/index.js` with the nonempty runtime marker.
+- Unauthenticated desktop checks for `/workspace/gap-analysis`, `/workspace/incident-labels`, `/workspace/methodology`, and `/admin` rendered the public Clerk sign-in landing page. These checks confirm the guarded-route boundary only; they do not claim authenticated workspace or administrator content rendering.
