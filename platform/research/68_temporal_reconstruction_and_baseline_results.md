@@ -7,9 +7,9 @@
 
 ## Executive finding
 
-This extension successfully reconstructs **sixteen exact pre-event package-version metadata snapshots** from eighteen pre-registered npm package-event records spanning **thirteen incident families**. It produces a reproducible ledger of **48 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **225 bounded edges** across eleven roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
+This extension successfully reconstructs **seventeen exact pre-event package-version metadata snapshots** from nineteen pre-registered npm package-event records spanning **thirteen incident families**. It produces a reproducible ledger of **48 cutoff-valid direct dependency declarations** and, for every declared range, one **isolated cutoff-valid SemVer target approximation**. A separate, depth-three registry-only sensitivity artifact expands those approximations to **225 bounded edges** across eleven roots with runtime dependencies. Neither artifact is a lockfile or a package-manager execution trace. No transitive reach is computed, and therefore no historical blast-radius or attack-return quantity is estimated.
 
-The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The eighteen-record and thirteen-family totals are not an independently sampled training cohort; the pilot still has no cutoff-valid adjudicated non-event population and only sixteen exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
+The evidence permits a negative but important methodological conclusion. The present data cannot support ranking, logistic-regression, PR-AUC, Recall@K, probability-calibration, or uncertainty estimates. The nineteen-record and thirteen-family totals are not an independently sampled training cohort; the pilot still has no cutoff-valid adjudicated non-event population and only seventeen exact source snapshots because two high-confidence label-only events lack usable pre-event registry objects. The correct result is a transparent **no-fit decision**, not a weakly powered model claim.
 
 > **Historical-fidelity definition.** `registry_reconstructed_exact_direct_declaration` means that the source package version was selected strictly before the event cutoff from the official npm registry's version-time map and that version object's declared `dependencies` map was retained verbatim. It does **not** mean that a declared range was resolved to a target version, installed by npm, or expanded transitively.
 
@@ -21,9 +21,9 @@ For each record, the builder sets the feature cutoff to one millisecond before t
 
 | Reconstruction component | Result | Fidelity and interpretation |
 |---|---:|---|
-| Pre-registered package-event records | 18 | Package-level observations; not eighteen independent attacks. |
+| Pre-registered package-event records | 19 | Package-level observations; not nineteen independent attacks. |
 | Incident families | 13 | The earlier twelve families plus `solana_web3_js_publish_access_compromise_2024`. `colors` and `faker` remain one related family; Keyv/Cacheable remains non-independent of the `atool` family for any future uncertainty design because only payload ancestry—not statistical independence—is documented. |
-| Exact source snapshots | 16 | Source package version object selected strictly before its cutoff. |
+| Exact source snapshots | 17 | Source package version object selected strictly before its cutoff. |
 | Source snapshot unavailable | 2 | `plain-crypto-js` and `@emcd-vue/auth`; no qualifying pre-event version object was retained by the current registry response. |
 | Declared direct edges | 48 | Exact source declarations, each retaining the original SemVer range. |
 | Isolated target-range approximations | 48 | Highest valid SemVer version within the declared range and published by the cutoff; not an observed installation result. |
