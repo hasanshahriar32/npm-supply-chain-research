@@ -253,6 +253,12 @@ The strict ledger now admits `react-native-country-select@0.3.91` as one bounded
 
 The protocol now governs **30 positive package-event records in 24 incident families**, with **28 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **23 future validation units**. This row adds one bounded family and one unit. The sources document a same-day shared-publisher context with a separately named package, but that does not authorize another package row, campaign-complete census, assignment to an existing governed family, or statistical-independence claim. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### rand-user-agent April–May 2025 unauthorized-publication admission — 27 August 2026
+
+The strict ledger now admits `rand-user-agent@2.0.83`, `@2.0.84`, and `@1.0.110` as one bounded unauthorized-publication family. Aikido and BleepingComputer independently identify exactly these three releases; BleepingComputer also records direct developer confirmation of the three unauthorized npm publications.[104] [105] The bounded official npm registry time map lists earliest affected `2.0.83` at `2025-04-26T15:25:00.992Z`; the exact one-millisecond cutoff selects retained `rand-user-agent@2.0.82` as the strict pre-event source object.[106]
+
+The protocol now governs **31 positive package-event records in 25 incident families**, with **29 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **24 future validation units**. This row adds one bounded family, one exact source snapshot, and one unit, but no direct declarations, range approximations, or sensitivity edges. The documented unauthorized-publication context does not authorize expansion into other packages, an existing governed family, campaign completeness, or statistical independence. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -352,3 +358,6 @@ The protocol now governs **30 positive package-event records in 24 incident fami
 [101]: https://www.stepsecurity.io/blog/malicious-npm-releases-found-in-popular-react-native-packages---130k-monthly-downloads-compromised "StepSecurity React Native malicious-release incident report"
 [102]: https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers "Aikido React Native package incident report"
 [103]: https://registry.npmjs.org/react-native-country-select "npm registry react-native-country-select metadata"
+[104]: https://www.aikido.dev/blog/catching-a-rat-remote-access-trojian-rand-user-agent-supply-chain-compromise "Aikido rand-user-agent incident report"
+[105]: https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/ "BleepingComputer rand-user-agent incident report"
+[106]: https://registry.npmjs.org/rand-user-agent "npm registry rand-user-agent metadata"

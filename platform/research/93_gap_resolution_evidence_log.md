@@ -546,3 +546,15 @@ Bounded official npm registry metadata timestamps `0.3.91` at `2026-03-16T10:54:
 101. StepSecurity, *Malicious npm Releases Found in Popular React Native Packages*, 16 March 2026: <https://www.stepsecurity.io/blog/malicious-npm-releases-found-in-popular-react-native-packages---130k-monthly-downloads-compromised>.
 102. Aikido, *Glassworm Strikes Popular React Native Phone Number Packages*, 18 March 2026: <https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers>.
 103. npm, *Registry metadata for react-native-country-select*: <https://registry.npmjs.org/react-native-country-select>.
+
+## Bounded rand-user-agent April–May 2025 admission — source provenance, 27 August 2026
+
+The `rand-user-agent` screen is bounded to the three package-event versions `2.0.83`, `2.0.84`, and `1.0.110`. Aikido identifies exactly those malicious-version indicators in a supply-chain compromise. BleepingComputer independently identifies the same three releases as malicious unauthorized npm publications and records direct developer confirmation of the versions. [104] [105] No other version, package, relationship, actor attribution, or campaign member is added, grouped, or inferred.
+
+Bounded official npm registry metadata timestamps earliest affected `2.0.83` at `2025-04-26T15:25:00.992Z`; the strict one-millisecond cutoff is `2025-04-26T15:25:00.991Z`, selecting retained `rand-user-agent@2.0.82` as the exact pre-event source object. [106] The registry response was used only for time-map selection, retained-source availability, exact direct declarations, and declared-range sensitivity inputs. No package payload was downloaded, extracted, installed, or executed.
+
+`144_rand_user_agent_may_2025_candidate_assessment.json` preserves the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one bounded separate family, one exact source snapshot, zero direct declarations, zero isolated cutoff-valid SemVer approximations, zero bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **31 records, 25 families, 29 exact snapshots, 153 direct declarations, 974 bounded sensitivity edges, and 24 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. The documented unauthorized-publication context does not establish a relationship to another governed family, campaign completeness, or statistical independence.
+
+104. Aikido, *RATatouille: A Malicious Recipe Hidden in rand-user-agent*, 6 May 2025: <https://www.aikido.dev/blog/catching-a-rat-remote-access-trojian-rand-user-agent-supply-chain-compromise>.
+105. BleepingComputer, *Supply chain attack hits npm package with 45,000 weekly downloads*, 8 May 2025: <https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/>.
+106. npm, *Registry metadata for rand-user-agent*: <https://registry.npmjs.org/rand-user-agent>.

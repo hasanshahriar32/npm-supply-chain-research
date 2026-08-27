@@ -469,6 +469,20 @@ StepSecurity and Aikido independently identify `react-native-country-select@0.3.
 
 This adds one bounded family and one future validation unit. The sources’ same-day shared-publisher context with a separately named package does **not** authorize expansion into that package, assignment to an existing governed family, campaign completeness, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded rand-user-agent April–May 2025 unauthorized-publication admission
+
+Aikido and BleepingComputer independently identify `rand-user-agent@2.0.83`, `@2.0.84`, and `@1.0.110` as malicious unauthorized npm releases. BleepingComputer records direct developer confirmation of the three unauthorized versions. [101] [102] The governed target is limited to that exact three-version intersection. The bounded official npm registry metadata response timestamps earliest affected `2.0.83` at `2025-04-26T15:25:00.992Z`; strict subtraction yields cutoff `2025-04-26T15:25:00.991Z`, selecting retained `rand-user-agent@2.0.82` as the exact pre-event source object. [103]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 31 records in 25 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 29 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 153 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 974 edges across 20 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 24 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded separate family, one exact source snapshot, and one future validation unit. The retained source object declares no runtime dependencies, so this admission adds no direct declaration, isolated range approximation, or bounded sensitivity edge. The documented unauthorized-publication context does **not** authorize expansion into another package, assignment to an existing governed family, campaign completeness, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -661,3 +675,9 @@ This adds one bounded family and one future validation unit. The sources’ same
 [99] [Aikido, “Glassworm Strikes Popular React Native Phone Number Packages,” 18 March 2026](https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers).
 
 [100] [npm registry metadata, `react-native-country-select`](https://registry.npmjs.org/react-native-country-select).
+
+[101] [Aikido, “RATatouille: A Malicious Recipe Hidden in rand-user-agent,” 6 May 2025](https://www.aikido.dev/blog/catching-a-rat-remote-access-trojian-rand-user-agent-supply-chain-compromise).
+
+[102] [BleepingComputer, “Supply chain attack hits npm package with 45,000 weekly downloads,” 8 May 2025](https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/).
+
+[103] [npm registry metadata, `rand-user-agent`](https://registry.npmjs.org/rand-user-agent).
