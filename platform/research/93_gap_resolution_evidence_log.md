@@ -659,3 +659,13 @@ This supports one `opensearch_npm_development_package_compromise_2026` record, f
 134. OpenSearch, *Urgent security notice regarding malicious npm packages*: <https://forum.opensearch.org/t/urgent-security-notice-regarding-malicious-npm-packages/34807>.
 135. GitHub Advisory Database, *GHSA-2qw9-7rhx-g3c9*: <https://github.com/advisories/GHSA-2qw9-7rhx-g3c9>.
 136. npm registry metadata, `@opensearch-project/opensearch`: <https://registry.npmjs.org/@opensearch-project%2fopensearch>.
+
+## Red Hat Cloud Services Chrome admission — 2026-08-27
+
+StepSecurity and Aikido independently identify `@redhat-cloud-services/chrome@2.3.1` and `2.3.2`. [137] [138] Official npm registry metadata timestamps `2.3.1` at `2026-06-01T10:54:42.121Z`; the strict cutoff is `2026-06-01T10:54:42.120Z`, and `2.3.0` is retained as the all-stream pre-event source object. [139] Red Hat describes the relevant Miasma malware as Mini Shai-Hulud, so the row is grouped with the existing `mini_shai_hulud_atool_2026` family and adds no validation unit. This contextual relationship is not proof of a common actor, campaign completeness, or statistical independence.
+
+The governed cohort is **40 records, 29 families, 38 exact snapshots, 219 direct declarations and isolated cutoff-valid SemVer approximations, 1,652 bounded registry-only sensitivity edges, and 28 future validation units**. No control, benign label, historic install, resolved lock, reach or blast-radius measure, score, rank, model, interval, calibration result, or predictive metric was created.
+
+137. StepSecurity, *Multiple redhat-cloud-services npm Packages compromised*: <https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised>.
+138. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
+139. npm registry metadata, `@redhat-cloud-services/chrome`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome>.

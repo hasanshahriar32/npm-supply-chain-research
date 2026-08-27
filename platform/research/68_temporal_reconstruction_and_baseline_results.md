@@ -796,3 +796,11 @@ The record is one distinct family and one future validation unit only. The gover
 [129] [OpenSearch security notice](https://forum.opensearch.org/t/urgent-security-notice-regarding-malicious-npm-packages/34807).
 [130] [GitHub reviewed advisory](https://github.com/advisories/GHSA-2qw9-7rhx-g3c9).
 [131] [npm registry metadata](https://registry.npmjs.org/@opensearch-project%2fopensearch).
+
+## Red Hat Cloud Services Chrome admission — 27 August 2026
+
+StepSecurity and Aikido independently list `@redhat-cloud-services/chrome@2.3.1` and `2.3.2`; official registry metadata fixes the earliest release at `2026-06-01T10:54:42.121Z`, the strict one-millisecond cutoff at `2026-06-01T10:54:42.120Z`, and the retained source object at `2.3.0`. [132] [133] [134] Red Hat’s Miasma/Mini Shai-Hulud description justifies inclusion in the existing Mini Shai-Hulud family, not a new family or validation unit. The cohort is **40/29/38/219/1,652/28**. These values remain metadata-only reconstruction outputs, not historic installs, lockfiles, reach, blast-radius, controls, scores, models, or predictive metrics.
+
+[132] [StepSecurity report](https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised).
+[133] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[134] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome).

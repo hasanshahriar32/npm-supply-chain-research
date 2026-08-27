@@ -442,3 +442,11 @@ StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`; registry met
 [132]: https://forum.opensearch.org/t/urgent-security-notice-regarding-malicious-npm-packages/34807 "OpenSearch security notice"
 [133]: https://github.com/advisories/GHSA-2qw9-7rhx-g3c9 "GitHub reviewed advisory"
 [134]: https://registry.npmjs.org/@opensearch-project%2fopensearch "npm registry metadata"
+
+### Red Hat Cloud Services Chrome admission — 27 August 2026
+
+`163_redhat_cloud_services_chrome_june_2026_candidate_assessment.json` admits `@redhat-cloud-services/chrome@2.3.1` and `2.3.2` as one bounded row. StepSecurity and Aikido independently identify the exact pair; official registry metadata timestamps `2.3.1` at `2026-06-01T10:54:42.121Z`, fixes the cutoff at `2026-06-01T10:54:42.120Z`, and retains `2.3.0` as the all-stream source object. [135] [136] [137] Red Hat describes Miasma as Mini Shai-Hulud, so the row joins the existing `mini_shai_hulud_atool_2026` family and creates no new family or validation unit; this documents neither actor identity, campaign completeness, nor statistical independence. The governed totals are **40 records, 29 families, 38 exact snapshots, 219 direct declarations and isolated cutoff-valid SemVer approximations, 1,652 bounded registry-only sensitivity edges, and 28 future validation units**. No control, benign label, historical installation, reach, blast-radius, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[135]: https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised "StepSecurity report"
+[136]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
+[137]: https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome "npm registry metadata"
