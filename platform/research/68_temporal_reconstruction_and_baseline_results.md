@@ -455,6 +455,20 @@ Bitwarden’s public incident statement identifies malicious npm distribution of
 
 This adds one bounded separate family and future validation unit. The documented broader Checkmarx context does **not** expand this row into additional package records, authorize assignment to another governed family, or establish statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded React Native country-select March 2026 malicious-publication admission
+
+StepSecurity and Aikido independently identify `react-native-country-select@0.3.91` as a malicious npm release published on 16 March 2026. [98] [99] The target is limited to their finite exact-version intersection, `0.3.91`; later releases reported only by StepSecurity are not inferred into the row. The bounded official npm registry metadata response timestamps `0.3.91` at `2026-03-16T10:54:18.512Z`; strict subtraction yields cutoff `2026-03-16T10:54:18.511Z`, selecting retained `react-native-country-select@0.3.9` as the exact pre-event source object. [100]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 30 records in 24 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 28 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 153 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 974 edges across 20 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 23 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded family and one future validation unit. The sources’ same-day shared-publisher context with a separately named package does **not** authorize expansion into that package, assignment to an existing governed family, campaign completeness, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -641,3 +655,9 @@ This adds one bounded separate family and future validation unit. The documented
 [96] [GitHub Advisory Database, CVE-2026-42994](https://github.com/advisories/GHSA-999x-2wm3-jfx8).
 
 [97] [npm registry metadata, `@bitwarden/cli`](https://registry.npmjs.org/%40bitwarden%2Fcli).
+
+[98] [StepSecurity, “Malicious npm Releases Found in Popular React Native Packages,” 16 March 2026](https://www.stepsecurity.io/blog/malicious-npm-releases-found-in-popular-react-native-packages---130k-monthly-downloads-compromised).
+
+[99] [Aikido, “Glassworm Strikes Popular React Native Phone Number Packages,” 18 March 2026](https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers).
+
+[100] [npm registry metadata, `react-native-country-select`](https://registry.npmjs.org/react-native-country-select).

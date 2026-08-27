@@ -247,6 +247,12 @@ The strict ledger now admits `@bitwarden/cli@2026.4.0` as one bounded April 2026
 
 The protocol now governs **29 positive package-event records in 23 incident families**, with **27 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **22 future validation units**. The Bitwarden CLI row adds one bounded separate family and one unit. The documented broader Checkmarx context neither authorizes an additional package row nor establishes a relationship to an existing governed family or statistical independence. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### React Native country-select March 2026 admission — 27 August 2026
+
+The strict ledger now admits `react-native-country-select@0.3.91` as one bounded March 2026 malicious-publication family. StepSecurity and Aikido independently identify the same exact release; the governed target is their single-version intersection only, so later versions reported by StepSecurity are not inferred into the row.[101] [102] The official npm registry time map lists `0.3.91` at `2026-03-16T10:54:18.512Z`; the exact one-millisecond cutoff selects retained `react-native-country-select@0.3.9` as the strict pre-event source object.[103]
+
+The protocol now governs **30 positive package-event records in 24 incident families**, with **28 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **23 future validation units**. This row adds one bounded family and one unit. The sources document a same-day shared-publisher context with a separately named package, but that does not authorize another package row, campaign-complete census, assignment to an existing governed family, or statistical-independence claim. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -343,3 +349,6 @@ The protocol now governs **29 positive package-event records in 23 incident fami
 [98]: https://www.stepsecurity.io/blog/bitwarden-cli-hijacked-on-npm-bun-staged-credential-stealer-targets-developers-github-actions-and-ai-tools "StepSecurity Bitwarden CLI incident report"
 [99]: https://github.com/advisories/GHSA-999x-2wm3-jfx8 "GitHub Advisory Database CVE-2026-42994"
 [100]: https://registry.npmjs.org/%40bitwarden%2Fcli "npm registry Bitwarden CLI metadata"
+[101]: https://www.stepsecurity.io/blog/malicious-npm-releases-found-in-popular-react-native-packages---130k-monthly-downloads-compromised "StepSecurity React Native malicious-release incident report"
+[102]: https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers "Aikido React Native package incident report"
+[103]: https://registry.npmjs.org/react-native-country-select "npm registry react-native-country-select metadata"

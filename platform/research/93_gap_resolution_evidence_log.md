@@ -534,3 +534,15 @@ Bounded official npm registry metadata timestamps `2026.4.0` at `2026-04-22T21:2
 98. StepSecurity, *Bitwarden CLI Hijacked on npm*, 23 April 2026: <https://www.stepsecurity.io/blog/bitwarden-cli-hijacked-on-npm-bun-staged-credential-stealer-targets-developers-github-actions-and-ai-tools>.
 99. GitHub Advisory Database, *CVE-2026-42994*: <https://github.com/advisories/GHSA-999x-2wm3-jfx8>.
 100. npm, *Registry metadata for @bitwarden/cli*: <https://registry.npmjs.org/%40bitwarden%2Fcli>.
+
+## Bounded React Native country-select March 2026 admission — source provenance, 27 August 2026
+
+The `react-native-country-select` screen is bounded to the one package-event candidate `0.3.91`. StepSecurity identifies that release among malicious React Native npm releases. Aikido independently identifies the same package/version in a coordinated same-day incident context. [101] [102] The governed target is their exact one-version intersection. The separately named package and later release versions are not added, grouped with existing families, or inferred.
+
+Bounded official npm registry metadata timestamps `0.3.91` at `2026-03-16T10:54:18.512Z`; the strict one-millisecond cutoff is `2026-03-16T10:54:18.511Z`, selecting retained `react-native-country-select@0.3.9` as the exact pre-event source object. [103] The registry response was used only for time-map selection, retained-source availability, exact direct declarations, and declared-range sensitivity inputs. No package payload was downloaded, extracted, installed, or executed.
+
+`142_react_native_country_select_march_2026_candidate_assessment.json` preserves the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one bounded family, one exact source snapshot, zero direct declarations, zero isolated cutoff-valid SemVer approximations, zero bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **30 records, 24 families, 28 exact snapshots, 153 direct declarations, 974 bounded sensitivity edges, and 23 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. The same-day shared-publisher context does not establish a relationship to an existing governed family, campaign completeness, or statistical independence.
+
+101. StepSecurity, *Malicious npm Releases Found in Popular React Native Packages*, 16 March 2026: <https://www.stepsecurity.io/blog/malicious-npm-releases-found-in-popular-react-native-packages---130k-monthly-downloads-compromised>.
+102. Aikido, *Glassworm Strikes Popular React Native Phone Number Packages*, 18 March 2026: <https://www.aikido.dev/blog/glassworm-strikes-react-packages-phone-numbers>.
+103. npm, *Registry metadata for react-native-country-select*: <https://registry.npmjs.org/react-native-country-select>.
