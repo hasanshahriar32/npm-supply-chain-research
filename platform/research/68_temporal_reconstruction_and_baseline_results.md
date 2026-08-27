@@ -851,3 +851,11 @@ Red Hat and Aikido independently identify `@redhat-cloud-services/compliance-cli
 [149] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
 [150] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [151] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client).
+
+## Red Hat Config Manager Client admission — 27 August 2026
+
+Red Hat and Aikido independently identify `@redhat-cloud-services/config-manager-client@5.0.4` and `5.0.5` in the June 2026 Miasma/Mini Shai-Hulud event. Registry metadata fixes the earliest affected publication at `2026-06-01T10:54:25.934Z`, the one-millisecond cutoff at `2026-06-01T10:54:25.933Z`, and retained `5.0.3` as the all-stream source object. [152] [153] [154] The row joins the existing Mini Shai-Hulud family only and adds no validation unit. The reconstruction is **45/31/43/256 direct declarations/252 isolated approximations/1,840 bounded edges/30 validation units**. These registry-only sensitivity artifacts are not historic installs, lockfiles, reach, blast radius, controls, scores, models, or predictive metrics.
+
+[152] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
+[153] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[154] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client).

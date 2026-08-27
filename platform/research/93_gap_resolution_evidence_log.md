@@ -724,3 +724,13 @@ The governed cohort is **44 records, 31 families, 42 exact snapshots, 254 direct
 154. Red Hat, *RHSB-2026-006 Supply chain compromise of @redhat-cloud-services npm packages*: <https://access.redhat.com/security/vulnerabilities/RHSB-2026-006>.
 155. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
 156. npm registry metadata, `@redhat-cloud-services/compliance-client`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client>.
+
+## Red Hat Config Manager Client admission — 2026-08-27
+
+Red Hat and Aikido independently identify the finite set `@redhat-cloud-services/config-manager-client@5.0.4` and `5.0.5` in the June 2026 Miasma/Mini Shai-Hulud context. [157] [158] Official npm registry metadata timestamps the earliest affected version `5.0.4` at `2026-06-01T10:54:25.934Z`; the exact cutoff is `2026-06-01T10:54:25.933Z` and retained `5.0.3` is selected. [159] The candidate joins the existing Mini Shai-Hulud family, adding neither a new family nor validation unit and making no campaign-completeness or statistical-independence claim.
+
+The governed cohort is **45 records, 31 families, 43 exact snapshots, 256 direct declarations, 252 isolated cutoff-valid SemVer approximations, 1,840 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved direct ranges and seven unresolved bounded edges remain technical limits, not reach or blast-radius measures. No control, benign label, historic installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric was created.
+
+157. Red Hat, *RHSB-2026-006 Supply chain compromise of @redhat-cloud-services npm packages*: <https://access.redhat.com/security/vulnerabilities/RHSB-2026-006>.
+158. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
+159. npm registry metadata, `@redhat-cloud-services/config-manager-client`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client>.

@@ -345,3 +345,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [113] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
 [114] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [115] [npm registry metadata, `@redhat-cloud-services/compliance-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client).
+
+> **Red Hat Config Manager Client amendment — 27 August 2026.** `@redhat-cloud-services/config-manager-client@5.0.4` and `5.0.5` are included as one bounded row in the existing `mini_shai_hulud_atool_2026` family after independent exact-version corroboration and strict retained-object selection. [116] [117] [118] This entry establishes no new family, validation unit, campaign-completeness claim, cross-family relationship, or statistical-independence claim. The register consequently contains **45 records in 31 families**, with **43 exact snapshots, 256 direct declarations, 252 isolated cutoff-valid SemVer approximations, 1,840 bounded registry-only sensitivity edges, and 30 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[116] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
+[117] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[118] [npm registry metadata, `@redhat-cloud-services/config-manager-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client).
