@@ -426,3 +426,11 @@ StepSecurity and Wiz independently identify `backslash@0.2.1`; registry metadata
 [126]: https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi "StepSecurity report"
 [127]: https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk "Wiz report"
 [128]: https://registry.npmjs.org/backslash "npm registry metadata"
+
+## Bounded simple-swizzle September 2025 family-member admission
+
+StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`; registry metadata selects retained `0.2.2` one millisecond before its `2025-09-08T13:19:05.292Z` publication.[129] [130] [131] The row joins the Qix family without a new family or validation unit. The cohort is 38 records, 28 families, 36 snapshots, 212 declarations, 1,644 edges, and 27 units; no controls or predictive outputs are created.
+
+[129]: https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi "StepSecurity report"
+[130]: https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk "Wiz report"
+[131]: https://registry.npmjs.org/simple-swizzle "npm registry metadata"

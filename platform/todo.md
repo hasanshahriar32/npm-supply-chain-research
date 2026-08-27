@@ -1,5 +1,7 @@
 # Project TODO
 
+- [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment
+- [x] Publish only the resulting bounded decision after required validation and synchronization
 - [x] Screen backslash September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment
 - [x] Publish only the resulting bounded admission or exclusion and validate before synchronization
 - [x] Screen ansi-styles September 2025 exact-version evidence, registry cutoff, retained source object, and explicit Qix-family treatment

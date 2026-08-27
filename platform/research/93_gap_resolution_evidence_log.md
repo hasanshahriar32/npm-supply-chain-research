@@ -634,3 +634,11 @@ StepSecurity and Wiz independently identify `backslash@0.2.1`. Registry metadata
 126. StepSecurity, *20+ Popular NPM Packages Compromised*: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
 127. Wiz, *Widespread npm Supply Chain Attack*: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
 128. npm, *Registry metadata for backslash*: <https://registry.npmjs.org/backslash>.
+
+## Bounded simple-swizzle September 2025 family-member admission
+
+StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`. Registry metadata fixes `2025-09-08T13:19:05.292Z`; strict cutoff selects retained `0.2.2`. `160_simple_swizzle_september_2025_candidate_assessment.json` records this metadata-only decision. The Qix family gains one record and snapshot; totals are **38/28/36/212/1,644/27**, with no controls, reach, scores, models, rankings, calibration, or predictive output.
+
+129. StepSecurity, *20+ Popular NPM Packages Compromised*: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
+130. Wiz, *Widespread npm Supply Chain Attack*: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
+131. npm, *Registry metadata for simple-swizzle*: <https://registry.npmjs.org/simple-swizzle>.

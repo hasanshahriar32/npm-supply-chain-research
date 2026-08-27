@@ -288,3 +288,15 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [87] [StepSecurity report](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
 [88] [Wiz report](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
 [89] [npm registry metadata](https://registry.npmjs.org/backslash).
+
+## Bounded simple-swizzle September 2025 family-member admission
+
+| Record | Affected release | Strict source object | Disposition |
+|---|---|---|---|
+| `simple-swizzle-2025-09-08` | `simple-swizzle@0.2.3` | `0.2.2` | Bounded Qix-family member; no new family or validation unit. |
+
+StepSecurity and Wiz independently specify the release, and registry metadata selects `0.2.2` one millisecond before publication.[90] [91] [92] The register is **38 records in 28 families** with 36 exact snapshots.
+
+[90] [StepSecurity report](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+[91] [Wiz report](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+[92] [npm registry metadata](https://registry.npmjs.org/simple-swizzle).

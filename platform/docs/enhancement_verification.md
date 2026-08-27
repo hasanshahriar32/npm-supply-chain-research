@@ -370,3 +370,7 @@ The authenticated `/workspace/methodology` page was reloaded after the same publ
 ## Bounded backslash September 2025 family-member admission — 27 August 2026
 
 - StepSecurity and Wiz independently identify `backslash@0.2.1`; official registry metadata selects retained `0.2.0` one millisecond before cutoff. The row joins the Qix family without a new family or validation unit. The rebuilt cohort is **37/28/35/211/1,643/27**. All 75 tests and the constrained build passed; required artifacts are nonempty, and screenshots verify only unauthenticated Clerk boundaries.
+
+## Bounded simple-swizzle September 2025 family-member admission — 27 August 2026
+
+- StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`; official registry metadata selects retained `0.2.2` one millisecond before cutoff. It joins the existing Qix family without a new family or validation unit. The rebuilt cohort is **38/28/36/212/1,644/27**. All 75 tests and the constrained build passed; required artifacts are nonempty, and screenshots verify only unauthenticated Clerk boundaries.
