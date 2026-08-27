@@ -558,3 +558,12 @@ Bounded official npm registry metadata timestamps earliest affected `2.0.83` at 
 104. Aikido, *RATatouille: A Malicious Recipe Hidden in rand-user-agent*, 6 May 2025: <https://www.aikido.dev/blog/catching-a-rat-remote-access-trojian-rand-user-agent-supply-chain-compromise>.
 105. BleepingComputer, *Supply chain attack hits npm package with 45,000 weekly downloads*, 8 May 2025: <https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/>.
 106. npm, *Registry metadata for rand-user-agent*: <https://registry.npmjs.org/rand-user-agent>.
+
+## Bounded Joyfill July 2026 relatedness exclusion — source provenance, 27 August 2026
+
+The `@joyfill/components` screen is bounded to the source intersection `4.0.0-rc24-2773-beta.4`: StepSecurity reports three malicious `2773` beta versions, and Socket independently names the intersecting release. [107] [108] Socket explicitly links the package to the ongoing PolinRider supply-chain attack, which is already represented by the governed `common_stack_generate_plugin_polinrider_hijack_2026` family. [108] The screen therefore excludes the lead as a new independent family before any official registry access. It does not make an existing-family addition or expand to another package because the autonomous task is limited to genuinely separate candidates.
+
+`146_joyfill_components_july_2026_candidate_assessment.json` records no registry request, cutoff, or retained source-object selection. It creates zero ledger records, families, validation units, source snapshots, dependency declarations, SemVer approximations, graph edges, controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. The exclusion does not dispute the reported release and does not establish campaign completeness, current publisher state, downstream exposure, causality, or statistical independence.
+
+107. StepSecurity, *Compromised npm Packages: @joyfill/components and @joyfill/layouts Ship an Obfuscated Remote Access Trojan*, 28 July 2026: <https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise>.
+108. Socket, *Two Joyfill npm Beta Releases Compromised to Deliver DEV#POPPER Remote Access Trojan*, 28 July 2026: <https://socket.dev/blog/joyfill-npm-beta-releases-compromised>.

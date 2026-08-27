@@ -230,6 +230,27 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("The documented unauthorized-publication context does not authorize expansion into additional package records, assignment to an existing governed family, campaign completeness, or a statistical-independence claim.");
   });
 
+  it("excludes the bounded Joyfill lead as a new independent family when independent reporting documents PolinRider relatedness before registry access", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/146_joyfill_components_july_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_new_independent_primary_family_due_to_documented_polinrider_relatedness",
+      candidate: {
+        recordId: "joyfill-components-2026-07-28",
+        packageName: "@joyfill/components",
+        sourceOneAffectedVersions: ["4.0.0-rc24-2773-beta.4", "4.0.0-rc24-2773-beta.5", "4.0.0-rc24-2773-beta.6"],
+        sourceTwoAffectedVersions: ["4.0.0-rc24-2773-beta.4"],
+        affectedVersionIntersection: ["4.0.0-rc24-2773-beta.4"],
+        documentedRelatedCampaign: "PolinRider",
+        existingRelatedGovernedFamily: "common_stack_generate_plugin_polinrider_hijack_2026",
+        distinctFromExistingLedgerFamilies: false,
+      },
+      registryBoundary: { officialRegistryRequestAttempted: false, strictFeatureCutoffUtc: null, selectedPreEventVersion: null, selectedPreEventVersionObjectRetained: null },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, isolatedSemverApproximationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.strictExclusionReason.consequence).toContain("Do not add @joyfill/components as a new independent primary-ledger family or future validation unit");
+    expect(assessment.prohibitedInterpretations).toContain("The documented PolinRider relation does not establish campaign completeness, a complete related-package set, a current publisher state, or a statistical-independence claim.");
+  });
+
   it("serves the completed temporal reconstruction and adjudication artifacts in governed workspace sections", async () => {
     const documents = await getDocuments();
     expect(documents.find((document) => document.slug === "gap-analysis")?.sourceFile).toBe("68_temporal_reconstruction_and_baseline_results.md");
@@ -245,6 +266,7 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("npm-follower archive") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("SupplyTGN supplies a useful") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Original Sin of npm") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Joyfill July 2026 relatedness exclusion") });
     await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("31 package-event records in 25 incident families") });
   });
 

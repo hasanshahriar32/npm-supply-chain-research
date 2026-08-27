@@ -483,6 +483,20 @@ Aikido and BleepingComputer independently identify `rand-user-agent@2.0.83`, `@2
 
 This adds one bounded separate family, one exact source snapshot, and one future validation unit. The retained source object declares no runtime dependencies, so this admission adds no direct declaration, isolated range approximation, or bounded sensitivity edge. The documented unauthorized-publication context does **not** authorize expansion into another package, assignment to an existing governed family, campaign completeness, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded Joyfill July 2026 relatedness exclusion
+
+StepSecurity identifies three malicious `@joyfill/components` beta releases, and Socket independently identifies `@joyfill/components@4.0.0-rc24-2773-beta.4`, producing a strict one-version source intersection. [104] [105] Socket explicitly links that release to the ongoing PolinRider supply-chain attack, already represented by the governed `common_stack_generate_plugin_polinrider_hijack_2026` family. [105] This screen is restricted to genuinely separate candidates, so it excludes the Joyfill lead before registry access rather than infer a new family, another package row, an existing-family expansion, campaign completeness, or statistical independence.
+
+| Governed quantity after exclusion | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | Unchanged: 31 records in 25 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | Unchanged: 29 | No registry request or source-object selection occurred. |
+| Direct declarations and isolated SemVer approximations | Unchanged: 153 each | No dependency data was acquired. |
+| Depth-three registry-only sensitivity graph | Unchanged: 974 edges across 20 edge-bearing roots | No reach, centrality, blast-radius, or predictive interpretation. |
+| Future validation units | Unchanged: 24 | No independent unit was created. |
+
+This exclusion creates **zero** ledger records, families, validation units, source snapshots, declarations, range approximations, graph edges, controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. It does not dispute the reported malicious version or establish a complete campaign, current publisher state, downstream exposure, causal effect, or statistical-independence conclusion.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -681,3 +695,7 @@ This adds one bounded separate family, one exact source snapshot, and one future
 [102] [BleepingComputer, “Supply chain attack hits npm package with 45,000 weekly downloads,” 8 May 2025](https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/).
 
 [103] [npm registry metadata, `rand-user-agent`](https://registry.npmjs.org/rand-user-agent).
+
+[104] [StepSecurity, “Compromised npm Packages: @joyfill/components and @joyfill/layouts Ship an Obfuscated Remote Access Trojan,” 28 July 2026](https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise).
+
+[105] [Socket, “Two Joyfill npm Beta Releases Compromised to Deliver DEV#POPPER Remote Access Trojan,” 28 July 2026](https://socket.dev/blog/joyfill-npm-beta-releases-compromised).

@@ -259,6 +259,12 @@ The strict ledger now admits `rand-user-agent@2.0.83`, `@2.0.84`, and `@1.0.110`
 
 The protocol now governs **31 positive package-event records in 25 incident families**, with **29 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **24 future validation units**. This row adds one bounded family, one exact source snapshot, and one unit, but no direct declarations, range approximations, or sensitivity edges. The documented unauthorized-publication context does not authorize expansion into other packages, an existing governed family, campaign completeness, or statistical independence. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### Joyfill July 2026 relatedness exclusion — 27 August 2026
+
+The bounded `@joyfill/components` screen identified one strict source intersection, `4.0.0-rc24-2773-beta.4`: StepSecurity reports three malicious `2773` beta versions, while Socket independently names that exact version.[107] [108] Socket explicitly links the package to the ongoing PolinRider supply-chain attack, which is already represented by the governed `common_stack_generate_plugin_polinrider_hijack_2026` family.[108] The screen therefore excludes it as a **new independent family** before registry access. It does not decide a later existing-family addition, because the present task is limited to genuinely separate candidates and does not authorize related-family expansion by inference.
+
+The governed cohort remains **31 positive package-event records in 25 incident families**, with **29 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **24 future validation units**. No official registry request, cutoff, or pre-event source object was selected. This exclusion adds no record, family, unit, snapshot, declaration, range approximation, graph edge, control, benign label, installation history, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. It does not dispute the reported version or establish campaign completeness, current publisher state, downstream exposure, causality, or statistical independence.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -361,3 +367,5 @@ The protocol now governs **31 positive package-event records in 25 incident fami
 [104]: https://www.aikido.dev/blog/catching-a-rat-remote-access-trojian-rand-user-agent-supply-chain-compromise "Aikido rand-user-agent incident report"
 [105]: https://www.bleepingcomputer.com/news/security/supply-chain-attack-hits-npm-package-with-45-000-weekly-downloads/ "BleepingComputer rand-user-agent incident report"
 [106]: https://registry.npmjs.org/rand-user-agent "npm registry rand-user-agent metadata"
+[107]: https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise "StepSecurity Joyfill compromised npm packages report"
+[108]: https://socket.dev/blog/joyfill-npm-beta-releases-compromised "Socket Joyfill PolinRider-related incident report"
