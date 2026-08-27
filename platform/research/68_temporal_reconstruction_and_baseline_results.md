@@ -859,3 +859,11 @@ Red Hat and Aikido independently identify `@redhat-cloud-services/config-manager
 [152] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
 [153] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [154] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client).
+
+## Red Hat Entitlements Client admission — 27 August 2026
+
+The strict screen admits `@redhat-cloud-services/entitlements-client@4.0.11` and `4.0.12` only as the finite independent-source intersection: Unit 42 lists `4.0.11`, `4.0.12`, and `4.0.14`, whereas Aikido lists `4.0.11` and `4.0.12`. [155] [156] Red Hat’s incident bulletin is contextual only and is not used to infer exact versions. Registry time maps place `4.0.11` at `2026-06-01T10:54:20.421Z`; applying the strict one-millisecond cutoff selects retained `4.0.10` at `2026-05-29T12:49:50.405Z`. [157] The existing `mini_shai_hulud_atool_2026` family receives one member and no new validation unit. The reconstruction is **46/31/44/258 direct declarations/254 isolated approximations/1,848 bounded edges/30 validation units**. These counts remain registry-only sensitivity artifacts, not historic installs, lockfiles, reach, blast radius, controls, scores, models, or predictive metrics.
+
+[155] [Unit 42 report](https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/).
+[156] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[157] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client).

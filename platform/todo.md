@@ -18,6 +18,8 @@
 - [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
 - [x] Screen @redhat-cloud-services/config-manager-client June 2026 exact-version evidence, strict registry cutoff, retained source object, and documented existing-family treatment
 - [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
+- [x] Screen @redhat-cloud-services/entitlements-client June 2026 exact-version evidence, strict registry cutoff, retained source object, and documented existing-family treatment
+- [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
 - [x] Screen @cloudplatform-single-spa/search May 2026 against independently corroborated exact-version intersection
 - [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment

@@ -505,3 +505,11 @@ StepSecurity documents `echarts-for-react@3.0.7` in its observed AntV Mini Shai-
 [155]: https://access.redhat.com/security/vulnerabilities/RHSB-2026-006 "Red Hat bulletin"
 [156]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
 [157]: https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client "npm registry metadata"
+
+### Red Hat Entitlements Client admission — 27 August 2026
+
+`171_redhat_entitlements_client_june_2026_candidate_assessment.json` admits `@redhat-cloud-services/entitlements-client@4.0.11` and `4.0.12` as one bounded row. The set is restricted to the finite intersection of independently reviewed version lists: Unit 42 lists `4.0.11`, `4.0.12`, and `4.0.14`, whereas Aikido lists `4.0.11` and `4.0.12`. [158] [159] Red Hat’s bulletin is retained for incident context but is not an exact-version source. Official registry metadata fixes `4.0.11` at `2026-06-01T10:54:20.421Z`, applies the exact cutoff `2026-06-01T10:54:20.420Z`, and selects retained all-stream `4.0.10`. [160] The row joins the existing `mini_shai_hulud_atool_2026` family and adds neither a new family nor a validation unit. The governed totals are **46 records, 31 families, 44 exact snapshots, 258 direct declarations, 254 isolated cutoff-valid SemVer approximations, 1,848 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved ranges and seven unresolved bounded edges remain limits, not reach measures. No control, benign label, historic installation, blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[158]: https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/ "Unit 42 report"
+[159]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
+[160]: https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client "npm registry metadata"

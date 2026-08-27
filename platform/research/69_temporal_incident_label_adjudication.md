@@ -351,3 +351,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [116] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
 [117] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [118] [npm registry metadata, `@redhat-cloud-services/config-manager-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client).
+
+> **Red Hat Entitlements Client amendment — 27 August 2026.** `@redhat-cloud-services/entitlements-client@4.0.11` and `4.0.12` are included as one bounded row in the existing `mini_shai_hulud_atool_2026` family. The exact set is restricted to the finite intersection of Unit 42’s `4.0.11`, `4.0.12`, and `4.0.14` list with Aikido’s `4.0.11` and `4.0.12` list; Red Hat’s bulletin provides event context only and does not serve as an exact-version source. [119] [120] Official registry metadata retains `4.0.10` before the strict cutoff at `2026-06-01T10:54:20.420Z`. [121] This entry establishes no new family, validation unit, campaign-completeness claim, cross-family relationship, or statistical-independence claim. The register consequently contains **46 records in 31 families**, with **44 exact snapshots, 258 direct declarations, 254 isolated cutoff-valid SemVer approximations, 1,848 bounded registry-only sensitivity edges, and 30 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[119] [Unit 42 report](https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/).
+[120] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[121] [npm registry metadata, `@redhat-cloud-services/entitlements-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client).

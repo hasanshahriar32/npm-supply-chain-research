@@ -734,3 +734,13 @@ The governed cohort is **45 records, 31 families, 43 exact snapshots, 256 direct
 157. Red Hat, *RHSB-2026-006 Supply chain compromise of @redhat-cloud-services npm packages*: <https://access.redhat.com/security/vulnerabilities/RHSB-2026-006>.
 158. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
 159. npm registry metadata, `@redhat-cloud-services/config-manager-client`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fconfig-manager-client>.
+
+## Red Hat Entitlements Client admission — 2026-08-27
+
+The initial candidate was paused because Red Hat’s primary bulletin, while relevant for the Miasma/Mini Shai-Hulud context, does not expose an exact version table. The independently reviewed exact-version evidence instead supports a finite intersection: Unit 42 lists `@redhat-cloud-services/entitlements-client` versions `4.0.11`, `4.0.12`, and `4.0.14`, while Aikido lists `4.0.11` and `4.0.12`. [160] [161] The governed affected set is therefore only `4.0.11` and `4.0.12`; no conclusion is drawn about `4.0.14`. Official npm registry metadata timestamps `4.0.11` at `2026-06-01T10:54:20.421Z`; the strict cutoff is `2026-06-01T10:54:20.420Z`, and a retained `4.0.10` version object is selected. [162] The row joins the documented `mini_shai_hulud_atool_2026` family and adds no family or validation unit. This family assignment makes no claim about a common actor, campaign completeness, or statistical independence.
+
+Regeneration yields **46 records, 31 families, 44 exact snapshots, 258 direct declarations, 254 isolated cutoff-valid SemVer approximations, 1,848 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved direct ranges and seven unresolved bounded edges remain technical limits rather than reach or blast-radius measures. No control, benign label, historical installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric is created.
+
+160. Unit 42, *Miasma: npm Supply Chain Attack*: <https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/>.
+161. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
+162. npm registry metadata, `@redhat-cloud-services/entitlements-client`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client>.
