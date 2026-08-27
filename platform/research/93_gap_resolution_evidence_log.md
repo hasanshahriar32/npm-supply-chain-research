@@ -669,3 +669,11 @@ The governed cohort is **40 records, 29 families, 38 exact snapshots, 219 direct
 137. StepSecurity, *Multiple redhat-cloud-services npm Packages compromised*: <https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised>.
 138. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
 139. npm registry metadata, `@redhat-cloud-services/chrome`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome>.
+
+## T-in-one candidate exclusion — 2026-08-27
+
+Microsoft and SafeDep independently identify `@t-in-one/add_application@5.7.1` in the May 2026 Moika dependency-confusion context. [140] [141] Official registry metadata timestamps the affected release at `2026-05-29T09:01:56.660Z`, which fixes the cutoff at `2026-05-29T09:01:56.659Z`; it retains only `0.0.1-security` at `2026-05-29T23:48:46.613Z`, after the cutoff. [142] The strict retained-source-object requirement therefore excludes the candidate before any primary-row or family treatment. The strict cohort remains **40 records, 29 families, 38 exact snapshots, 219 direct declarations and isolated cutoff-valid SemVer approximations, 1,652 bounded registry-only sensitivity edges, and 28 future validation units**. No control, benign label, historical installation, resolved lock, reach, blast-radius measure, score, rank, model, interval, calibration result, or predictive metric was produced.
+
+140. Microsoft, *Malicious npm packages abuse dependency confusion to profile developer environments*: <https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/>.
+141. SafeDep, *183 npm Packages Target Cloud and Finance via oob.moika.tech*: <https://safedep.io/oob-moika-tech-dependency-confusion-campaign>.
+142. npm registry metadata, `@t-in-one/add_application`: <https://registry.npmjs.org/%40t-in-one%2Fadd_application>.

@@ -12,6 +12,10 @@ OpenSearch and GitHub independently identify `@opensearch-project/opensearch@3.5
 
 StepSecurity and Aikido independently identify `@redhat-cloud-services/chrome@2.3.1` and `2.3.2`. Official registry metadata fixes the earliest affected release at `2026-06-01T10:54:42.121Z`; the one-millisecond cutoff selects retained `2.3.0`. Red Hat’s Miasma/Mini Shai-Hulud description places the row in the existing Mini Shai-Hulud family without a new family or validation unit. Governed regeneration produces **40 records, 29 families, 38 snapshots, 219 declarations, 1,652 bounded edges, and 28 validation units**, while creating no controls, installations, reach, blast-radius, score, model, or predictive output. The full suite passed **76 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
 
+## Bounded t-in-one May 2026 exclusion
+
+Microsoft and SafeDep corroborate `@t-in-one/add_application@5.7.1`, but the official registry response retains no version object before the exact `2026-05-29T09:01:56.659Z` cutoff. The sole retained `0.0.1-security` object is later, so the candidate is excluded without changing the **40/29/38/219/1,652/28** cohort, ledger, family, validation-unit, dependency, or graph artifacts. The full suite passed **77 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures again verified only unauthenticated Clerk sign-in boundaries—not authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.

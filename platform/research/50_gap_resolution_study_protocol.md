@@ -450,3 +450,11 @@ StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`; registry met
 [135]: https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised "StepSecurity report"
 [136]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
 [137]: https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome "npm registry metadata"
+
+### T-in-one candidate exclusion — 27 August 2026
+
+Microsoft and SafeDep identify `@t-in-one/add_application@5.7.1` within the documented May 2026 Moika dependency-confusion context. [138] [139] Official registry metadata timestamps that release at `2026-05-29T09:01:56.660Z`, so the strict cutoff is `2026-05-29T09:01:56.659Z`; the current response retains only `0.0.1-security`, published after that cutoff. [140] With no retained strict pre-event source object, the candidate is excluded before ledger, snapshot, dependency, graph, family, or validation-unit mutation. This exclusion creates no controls, benign labels, historical installations, reach, blast-radius, scores, ranks, models, intervals, calibration results, or predictive metrics, and does not recast the candidate as benign or safe.
+
+[138]: https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/ "Microsoft report"
+[139]: https://safedep.io/oob-moika-tech-dependency-confusion-campaign "SafeDep report"
+[140]: https://registry.npmjs.org/%40t-in-one%2Fadd_application "npm registry metadata"

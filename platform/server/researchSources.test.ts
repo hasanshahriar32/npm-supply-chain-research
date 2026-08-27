@@ -854,4 +854,15 @@ describe("repository-backed research sources", () => {
     });
     expect(assessment.prohibitedInterpretations).toContain("No controls, benign labels, scores, models, rankings, intervals, calibration results, or predictive metrics are created.");
   });
+
+  it("excludes the corroborated t-in-one candidate when no strict pre-event source object is retained", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/164_t_in_one_add_application_may_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_retained_strict_pre_event_source_object",
+      candidate: { recordId: "t-in-one-add-application-2026-05-29", packageName: "@t-in-one/add_application", affectedVersions: ["5.7.1"], earliestAffectedVersion: { version: "5.7.1", publishedUtc: "2026-05-29T09:01:56.660Z" }, strictFeatureCutoffUtc: "2026-05-29T09:01:56.659Z", selectedPreEventVersion: null, selectedPreEventVersionObjectRetained: false, documentedRelatedFamily: "moika_dependency_confusion_2026", campaignCompletenessClaim: false, statisticalIndependenceClaim: false },
+      strictEligibility: { finiteExactAffectedVersionsIndependentlyCorroborated: true, officialAffectedVersionTimestampsRetained: true, selectedPreEventVersionObjectRetained: false, familyTreatmentExplicitlyDocumented: true, eligibleForGovernedReconstruction: false },
+      zeroOutputs: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("The missing strict pre-event source object does not convert the candidate into a benign, safe, unchanged, no-known-event, or control row.");
+  });
 });

@@ -307,3 +307,12 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [95] [npm registry metadata, `@opensearch-project/opensearch`](https://registry.npmjs.org/@opensearch-project%2fopensearch).
 
 > **OpenSearch amendment — 27 August 2026.** The register now contains **39 records in 29 families**, with **37 exact snapshots, 218 direct declarations and isolated cutoff-valid SemVer approximations, 1,651 bounded registry-only sensitivity edges, and 28 future validation units**. This is a provenance and reconstruction update only; it creates no control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric.
+
+> **Red Hat Chrome and t-in-one amendment — 27 August 2026.** `@redhat-cloud-services/chrome@2.3.1` and `2.3.2` are included as one Mini Shai-Hulud-family row after independent exact-version corroboration and retained `2.3.0` source selection. [96] [97] [98] `@t-in-one/add_application@5.7.1` is excluded despite exact-version corroboration because no retained version object precedes its one-millisecond cutoff. [99] [100] [101] The register consequently contains **40 records in 29 families**, with **38 exact snapshots, 219 direct declarations and isolated cutoff-valid SemVer approximations, 1,652 bounded registry-only sensitivity edges, and 28 future validation units**. Neither decision creates a control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric.
+
+[96] [StepSecurity report](https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised).
+[97] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[98] [npm registry metadata, `@redhat-cloud-services/chrome`](https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome).
+[99] [Microsoft report](https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/).
+[100] [SafeDep report](https://safedep.io/oob-moika-tech-dependency-confusion-campaign).
+[101] [npm registry metadata, `@t-in-one/add_application`](https://registry.npmjs.org/%40t-in-one%2Fadd_application).

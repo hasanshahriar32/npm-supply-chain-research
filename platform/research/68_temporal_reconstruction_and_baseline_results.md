@@ -804,3 +804,11 @@ StepSecurity and Aikido independently list `@redhat-cloud-services/chrome@2.3.1`
 [132] [StepSecurity report](https://www.stepsecurity.io/blog/multiple-redhat-cloud-services-npm-packages-compromised).
 [133] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [134] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fchrome).
+
+## T-in-one candidate exclusion — 27 August 2026
+
+Microsoft and SafeDep independently support the finite `@t-in-one/add_application@5.7.1` target in the May 2026 Moika context, but official registry metadata supplies no retained version object at or before the `2026-05-29T09:01:56.659Z` cutoff; its only retained object is the later `0.0.1-security`. [135] [136] [137] The candidate is excluded without reconstruction. The cohort remains **40/29/38/219/1,652/28** and does not imply a control, historic install, reach, blast-radius, score, model, or predictive result.
+
+[135] [Microsoft report](https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/).
+[136] [SafeDep report](https://safedep.io/oob-moika-tech-dependency-confusion-campaign).
+[137] [npm registry metadata](https://registry.npmjs.org/%40t-in-one%2Fadd_application).
