@@ -511,6 +511,20 @@ Aikido and Microsoft Security independently identify `@asyncapi/generator@3.3.1`
 
 This adds one bounded separate family, one exact source snapshot, 26 direct declarations, 26 isolated range approximations, 434 bounded sensitivity edges, and one future validation unit. The bounded graph retains two unresolved edges and one capped root; neither condition is interpreted as installation, reach, completeness, or exposure. Reported Miasma-branding and `prt-scan` overlap and unresolved attribution do **not** establish a relationship to an existing governed family, campaign completeness, causality, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded dYdX v4 client January–February 2026 cross-ecosystem malicious-publication admission
+
+Socket and The Hacker News independently identify `@dydxprotocol/v4-client-js@3.4.1`, `@1.22.1`, `@1.15.2`, and `@1.0.31` as compromised npm releases.[109] [110] The target is limited to that exact four-version intersection; the reported PyPI release, all other npm versions, and the earlier dYdX-related incident are not inferred into this row. The bounded official npm registry metadata response timestamps earliest affected `1.0.31` at `2026-01-27T13:22:18.888Z`; strict subtraction yields cutoff `2026-01-27T13:22:18.887Z`, selecting retained `@dydxprotocol/v4-client-js@3.4.0` as the exact pre-event source object.[111]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 33 records in 27 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 31 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 200 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 1,553 edges across 22 edge-bearing roots | Bounded descriptor only; not reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 26 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded separate family, one exact source snapshot, 21 direct declarations, 21 isolated range approximations, 145 bounded sensitivity edges, and one future validation unit. The preserved graph-wide two unresolved edges and one capped root do not establish installation, reach, exposure, or completeness. The reports characterize the maintainer-compromise attribution as unconfirmed; neither that characterization, the cross-ecosystem context, nor a reference to a prior dYdX-related event establishes a relationship to an existing governed family, campaign completeness, causality, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -719,3 +733,9 @@ This adds one bounded separate family, one exact source snapshot, 26 direct decl
 [107] [Microsoft Security, “Unpacking the AsyncAPI npm supply chain compromise and import-time payload delivery,” 15 July 2026](https://www.microsoft.com/en-us/security/blog/2026/07/15/unpacking-asyncapi-npm-supply-chain-compromise-import-time-payload-delivery/).
 
 [108] [npm registry metadata, `@asyncapi/generator`](https://registry.npmjs.org/%40asyncapi%2Fgenerator).
+
+[109] [Socket, “Malicious dYdX Packages Published to npm and PyPI After Maintainer Compromise,” 6 February 2026](https://socket.dev/blog/malicious-dydx-packages-published-to-npm-and-pypi).
+
+[110] [The Hacker News, “Compromised dYdX npm and PyPI Packages Deliver Wallet Stealers and RAT Malware,” 6 February 2026](https://thehackernews.com/2026/02/compromised-dydx-npm-and-pypi-packages.html).
+
+[111] [npm registry metadata, `@dydxprotocol/v4-client-js`](https://registry.npmjs.org/%40dydxprotocol%2Fv4-client-js).
