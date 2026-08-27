@@ -434,3 +434,11 @@ StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`; registry met
 [129]: https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi "StepSecurity report"
 [130]: https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk "Wiz report"
 [131]: https://registry.npmjs.org/simple-swizzle "npm registry metadata"
+
+### OpenSearch JavaScript client admission — 27 August 2026
+
+`162_opensearch_client_may_2026_candidate_assessment.json` admits one package-event record in one distinct `opensearch_npm_development_package_compromise_2026` family. OpenSearch and GitHub’s reviewed advisory independently name exactly `@opensearch-project/opensearch@3.5.3`, `3.6.2`, `3.7.0`, and `3.8.0`; official registry metadata fixes the earliest affected release, `3.6.2`, at `2026-05-12T00:29:34.210Z`. [132] [133] [134] The strict cutoff is therefore `2026-05-12T00:29:34.209Z`, and the all-stream retained object is `3.6.0`. The admission adds one record, family, exact snapshot, and future validation unit only. The governed totals are **39 records, 29 families, 37 exact snapshots, 218 direct declarations and isolated cutoff-valid SemVer approximations, 1,651 bounded registry-only sensitivity edges, and 28 future validation units**. It establishes no broader campaign, other OpenSearch package, control, benign label, historical installation, reach, blast-radius value, score, rank, model, interval, calibration result, or predictive metric.
+
+[132]: https://forum.opensearch.org/t/urgent-security-notice-regarding-malicious-npm-packages/34807 "OpenSearch security notice"
+[133]: https://github.com/advisories/GHSA-2qw9-7rhx-g3c9 "GitHub reviewed advisory"
+[134]: https://registry.npmjs.org/@opensearch-project%2fopensearch "npm registry metadata"

@@ -4,6 +4,10 @@
 
 On 2026-08-20, an authenticated Clerk administrator loaded `/workspace/benchmark-findings`. The protected dashboard rendered the real repository snapshot values and interactive charts derived from all 25,228 records in `data/metrics_summary.csv.zip`: blast-radius frequency, packages with the highest observed transitive reach, and top attacker-ROI proxy values. The page includes the required evidence caveat that these deterministic structural metrics are not model-performance or exploitation predictions.
 
+## Bounded OpenSearch JavaScript client May 2026 admission
+
+OpenSearch and GitHub independently identify `@opensearch-project/opensearch@3.5.3`, `3.6.2`, `3.7.0`, and `3.8.0`; official registry metadata fixes `3.6.2` at `2026-05-12T00:29:34.210Z`, so the strict cutoff is one millisecond earlier and selects retained `3.6.0`. The separate family yields **39 records, 29 families, 37 snapshots, 218 declarations, 1,651 edges, and 28 validation units**. No controls, installations, reach or blast-radius values, scores, models, or predictive outputs were created. The full suite passed **75 tests** and the constrained build retained nonempty required artifacts. The four 1280×720 route captures verify only unauthenticated Clerk sign-in boundaries for workspace pages and standalone `/admin`; they do not verify authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.

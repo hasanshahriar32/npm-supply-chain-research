@@ -649,3 +649,13 @@ Microsoft describes the campaign’s `mr.4nd3r50n` releases as `100.100.100`, wh
 
 132. Microsoft, *Malicious npm packages abuse dependency confusion*, 29 May 2026: <https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/>.
 133. Snyk, *Malicious Package in @cloudplatform-single-spa/search*: <https://security.snyk.io/vuln/SNYK-JS-CLOUDPLATFORMSINGLESPASEARCH-17116282>.
+
+## OpenSearch JavaScript client admission — 2026-08-27
+
+OpenSearch’s project security notice and GitHub’s reviewed advisory independently specify the same finite `@opensearch-project/opensearch` affected-version set: `3.5.3`, `3.6.2`, `3.7.0`, and `3.8.0`. [134] [135] The official npm registry time map places the earliest affected version, `3.6.2`, at `2026-05-12T00:29:34.210Z`; the strict feature cutoff is exactly one millisecond earlier, `2026-05-12T00:29:34.209Z`, and the current all-stream response retains `3.6.0` as the selected pre-event source object. [136]
+
+This supports one `opensearch_npm_development_package_compromise_2026` record, family, exact snapshot, and future validation unit. It supports neither a broader campaign nor other OpenSearch package rows. After the governed regeneration, the strict cohort is **39 records, 29 families, 37 exact snapshots, 218 direct declarations and isolated cutoff-valid SemVer approximations, 1,651 bounded registry-only sensitivity edges, and 28 future validation units**. No control, benign label, historical installation, resolved lock, reach or blast-radius measure, score, rank, model, interval, calibration result, or predictive metric was produced.
+
+134. OpenSearch, *Urgent security notice regarding malicious npm packages*: <https://forum.opensearch.org/t/urgent-security-notice-regarding-malicious-npm-packages/34807>.
+135. GitHub Advisory Database, *GHSA-2qw9-7rhx-g3c9*: <https://github.com/advisories/GHSA-2qw9-7rhx-g3c9>.
+136. npm registry metadata, `@opensearch-project/opensearch`: <https://registry.npmjs.org/@opensearch-project%2fopensearch>.

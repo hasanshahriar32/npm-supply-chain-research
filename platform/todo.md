@@ -1,5 +1,7 @@
 # Project TODO
 
+- [x] Screen @opensearch-project/opensearch May 2026 exact versions, registry cutoff, retained source object, and independent corroboration
+- [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen @cloudplatform-single-spa/search May 2026 against independently corroborated exact-version intersection
 - [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment
