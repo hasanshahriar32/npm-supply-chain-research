@@ -395,3 +395,11 @@ GitHub’s reviewed advisory and BleepingComputer independently identify `@dydxp
 [115]: https://github.com/advisories/GHSA-xjr5-5w2w-3233 "GitHub Advisory Database, Malware in @dydxprotocol/solo"
 [116]: https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/ "BleepingComputer dYdX npm report"
 [117]: https://registry.npmjs.org/%40dydxprotocol%2Fsolo "npm registry @dydxprotocol/solo metadata"
+
+## Bounded TanStack History May 2026 family-member admission — 27 August 2026
+
+TanStack and StepSecurity independently identify `@tanstack/history@1.161.9` and `1.161.12`; official npm registry metadata fixes the earliest publication at `2026-05-11T19:20:39.565Z`, and the one-millisecond cutoff selects retained `1.161.6`.[118] [119] [120] StepSecurity expressly frames this as TeamPCP Mini Shai-Hulud. Accordingly, the row is admitted to the existing `mini_shai_hulud_atool_2026` family, rather than as a new family or validation unit. The active cohort is 35 records, 28 families, 33 snapshots, 211 direct declarations and approximations, 1,643 bounded sensitivity edges, and 27 validation units. Campaign completeness, actor linkage beyond the sources, independence, controls, installations, reach, scores, models, calibration, ranking, intervals, and predictive metrics are not inferred.
+
+[118]: https://tanstack.com/blog/npm-supply-chain-compromise-postmortem "TanStack npm supply-chain compromise postmortem"
+[119]: https://www.stepsecurity.io/blog/mini-shai-hulud-is-back-a-self-spreading-supply-chain-attack-hits-the-npm-ecosystem "StepSecurity TeamPCP Mini Shai-Hulud report"
+[120]: https://registry.npmjs.org/%40tanstack%2Fhistory "npm registry @tanstack/history metadata"

@@ -603,3 +603,11 @@ GitHub’s reviewed malware advisory and BleepingComputer identify only `@dydxpr
 ## Bounded got-fetch July 2025 relatedness-pending exclusion — 27 August 2026
 
 Checkmarx and Snyk independently support `got-fetch@5.1.11` and `5.1.12`; official registry metadata timestamps the earliest at `2025-07-17T17:28:28.289Z`, with cutoff `2025-07-17T17:28:28.288Z` selecting retained `6.0.2`. However, Checkmarx documents other affected packages, including an existing governed `eslint-config-prettier` family record, while the retained sources do not adjudicate a family relationship. `154_got_fetch_july_2025_candidate_assessment.json` therefore excludes the lead pending independently reviewable relatedness adjudication. The cohort remains unchanged; no controls, installs, reach, scores, models, rankings, intervals, calibration, or predictive metrics were created.
+
+## Bounded TanStack History May 2026 family-member admission — source provenance, 27 August 2026
+
+TanStack and StepSecurity independently identify only `@tanstack/history@1.161.9` and `1.161.12`; official npm registry metadata timestamps the first at `2026-05-11T19:20:39.565Z`, and cutoff `2026-05-11T19:20:39.564Z` selects retained `1.161.6`. `155_tanstack_history_may_2026_candidate_assessment.json` is metadata-only and records StepSecurity’s explicit TeamPCP Mini Shai-Hulud label. Regeneration adds one record and one exact source snapshot, but zero families, declarations, approximations, recursive sensitivity edges, or validation units; active totals are **35/28/33/211/1,643/27**. It creates zero controls, installations, reach, blast-radius values, scores, models, rankings, intervals, calibration outputs, or predictive metrics and infers neither campaign completeness nor statistical independence.
+
+118. TanStack, *Postmortem: TanStack npm supply-chain compromise*, 11 May 2026: <https://tanstack.com/blog/npm-supply-chain-compromise-postmortem>.
+119. StepSecurity, *TeamPCP's Mini Shai-Hulud Is Back*, 11 May 2026: <https://www.stepsecurity.io/blog/mini-shai-hulud-is-back-a-self-spreading-supply-chain-attack-hits-the-npm-ecosystem>.
+120. npm, *Registry metadata for @tanstack/history*: <https://registry.npmjs.org/%40tanstack%2Fhistory>.

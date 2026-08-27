@@ -1,5 +1,9 @@
 # Project TODO
 
+- [x] Screen @tanstack/history May 2026 against the exact-version, registry-time, retained-object, and documented-family gates
+- [x] Publish only the resulting governed admission or exclusion, rebuild dependent artifacts only if admitted, and preserve all no-inference limits
+- [x] Validate, synchronize, and checkpoint the next bounded research decision
+
 - [x] Audit the existing research repository assets and document application-source assumptions
 - [x] Define an extensible research-platform schema for users, documents, benchmark snapshots, incidents, experiments, and editorial content
 - [x] Configure Manus OAuth access controls for private workspace routes
