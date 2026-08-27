@@ -415,6 +415,20 @@ GitHub’s reviewed malware advisory identifies `html-to-gutenberg@4.2.11` and `
 
 This adds one bounded May 2026 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
 
+## Amendment: bounded common-stack generate-plugin May 2026 hijacked-publication admission
+
+Sonatype identifies `@common-stack/generate-plugin@9.0.2-alpha.21` and `9.0.2-alpha.22` as hijacked malicious releases. GitHub’s reviewed malware advisory independently includes the same two versions in its package-specific affected-version set. [88] [89] The strict ledger target is their two-version intersection only: it does not add additional advisory-only releases by inference. Bounded official npm registry metadata timestamps `9.0.2-alpha.21` at `2026-05-21T15:54:08.581Z`; strict subtraction yields cutoff `2026-05-21T15:54:08.580Z`, selecting retained `@common-stack/generate-plugin@9.0.2-alpha.18` as the exact pre-event source object. [90]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 28 records in 22 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 26 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 126 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 760 edges across 19 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 21 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded May 2026 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality. No relationship to another governed family is asserted.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -581,3 +595,9 @@ This adds one bounded May 2026 family and future validation unit. It creates **z
 [86] [The Hacker News, “Hijacked npm and Go Packages Use VS Code Tasks to Deploy Python Infostealer,” 29 June 2026](https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html).
 
 [87] [npm registry metadata, `html-to-gutenberg`](https://registry.npmjs.org/html-to-gutenberg).
+
+[88] [Sonatype, “Hijacked npm Package Attempts to Deliver PolinRider-Linked RAT,” 21 May 2026](https://www.sonatype.com/blog/hijacked-npm-package-attempts-to-deliver-polinrider-linked-rat).
+
+[89] [GitHub Advisory Database, “Malware in @common-stack/generate-plugin,” GHSA-6p55-6hvr-3xmg](https://github.com/advisories/GHSA-6p55-6hvr-3xmg).
+
+[90] [npm registry metadata, `@common-stack/generate-plugin`](https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin).

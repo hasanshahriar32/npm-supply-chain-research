@@ -497,3 +497,15 @@ JFrog identifies `html-to-gutenberg@4.2.11` as a hijacked npm release and dates 
 88. JFrog Security Research, *Hijacked npm Packages Use Novel VSCode Autorun and Blockchain Dead Drops to Deploy a Credential/Crypto Stealer*, 24 June 2026: <https://research.jfrog.com/post/hijacked-npm-vscode-tasks-blockchain/>.
 89. The Hacker News, *Hijacked npm and Go Packages Use VS Code Tasks to Deploy Python Infostealer*, 29 June 2026: <https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html>.
 90. npm, *Registry metadata for html-to-gutenberg*: <https://registry.npmjs.org/html-to-gutenberg>.
+
+## Bounded common-stack generate-plugin May 2026 admission — source provenance, 27 August 2026
+
+The `@common-stack/generate-plugin` screen is bounded to one package-event candidate and does not expand into a PolinRider campaign census. Sonatype identifies the hijacked malicious releases `9.0.2-alpha.21` and `9.0.2-alpha.22`. GitHub’s reviewed malware advisory independently lists the same versions within a finite package-specific affected-version set. [91] [92] The governed candidate is the strict two-version intersection only: no additional advisory-listed release is inferred into this event row.
+
+Bounded official npm registry metadata timestamps `9.0.2-alpha.21` at `2026-05-21T15:54:08.581Z`; the strict one-millisecond cutoff is `2026-05-21T15:54:08.580Z`, selecting retained `@common-stack/generate-plugin@9.0.2-alpha.18` as the exact pre-event source object. [93] The registry response was used only for time-map selection, retained-source availability, exact direct declarations, and declared-range sensitivity inputs. No package payload was downloaded, extracted, installed, or executed.
+
+`136_common_stack_generate_plugin_may_2026_candidate_assessment.json` preserves the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one separate family, one exact source snapshot, two direct declarations, two isolated cutoff-valid SemVer approximations, 39 bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **28 records, 22 families, 26 exact snapshots, 126 direct declarations, 760 bounded sensitivity edges, and 21 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. No relationship to another governed family is asserted.
+
+91. Sonatype, *Hijacked npm Package Attempts to Deliver PolinRider-Linked RAT*, 21 May 2026: <https://www.sonatype.com/blog/hijacked-npm-package-attempts-to-deliver-polinrider-linked-rat>.
+92. GitHub Advisory Database, *Malware in @common-stack/generate-plugin*, GHSA-6p55-6hvr-3xmg: <https://github.com/advisories/GHSA-6p55-6hvr-3xmg>.
+93. npm, *Registry metadata for @common-stack/generate-plugin*: <https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin>.

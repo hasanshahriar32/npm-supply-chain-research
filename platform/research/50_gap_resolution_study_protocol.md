@@ -229,6 +229,12 @@ The strict ledger now admits `html-to-gutenberg@4.2.11` and `4.2.14` as one dist
 
 The protocol now governs **27 positive package-event records in 21 incident families**, with **25 exact retained pre-event snapshots**, **124 direct declarations**, **124 isolated cutoff-valid SemVer approximations**, **721 bounded depth-three registry-only sensitivity edges**, and **20 future validation units**. The html-to-gutenberg row adds one separate family and one unit; no relationship to another governed family is asserted. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### common-stack generate-plugin May 2026 admission — 27 August 2026
+
+The strict ledger now admits `@common-stack/generate-plugin@9.0.2-alpha.21` and `9.0.2-alpha.22` as one distinct May 2026 hijacked-publication family. Sonatype identifies those two releases as malicious, and GitHub’s reviewed malware advisory independently includes the same two releases in its package-specific affected-version list.[91] [92] The governed target is the strict two-version intersection only; no later advisory-only versions are inferred into the primary row. The earliest official registry publication is `9.0.2-alpha.21` at `2026-05-21T15:54:08.581Z`; the exact one-millisecond cutoff selects retained `9.0.2-alpha.18` as the strict pre-event source object.[93]
+
+The protocol now governs **28 positive package-event records in 22 incident families**, with **26 exact retained pre-event snapshots**, **126 direct declarations**, **126 isolated cutoff-valid SemVer approximations**, **760 bounded depth-three registry-only sensitivity edges**, and **21 future validation units**. The common-stack generate-plugin row adds one separate family and one unit; no relationship to another governed family is asserted. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -315,3 +321,6 @@ The protocol now governs **27 positive package-event records in 21 incident fami
 [88]: https://research.jfrog.com/post/hijacked-npm-vscode-tasks-blockchain/ "JFrog html-to-gutenberg hijack report"
 [89]: https://thehackernews.com/2026/06/hijacked-npm-and-go-packages-use-vs.html "The Hacker News html-to-gutenberg incident report"
 [90]: https://registry.npmjs.org/html-to-gutenberg "npm registry html-to-gutenberg metadata"
+[91]: https://www.sonatype.com/blog/hijacked-npm-package-attempts-to-deliver-polinrider-linked-rat "Sonatype common-stack generate-plugin hijack report"
+[92]: https://github.com/advisories/GHSA-6p55-6hvr-3xmg "GitHub Advisory Database common-stack generate-plugin malware advisory"
+[93]: https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin "npm registry common-stack generate-plugin metadata"
