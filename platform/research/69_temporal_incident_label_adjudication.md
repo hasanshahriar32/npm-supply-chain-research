@@ -328,3 +328,8 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [105] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
 [106] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
 [107] [npm registry metadata, `easy-day-js`](https://registry.npmjs.org/easy-day-js).
+
+> **Echarts-for-react exclusion — 27 August 2026.** The candidate is not added because StepSecurity’s `3.0.7` observation does not intersect GitLab Advisory Database’s finite `3.1.7` and `3.2.7` affected set. [108] [109] Mini Shai-Hulud context cannot substitute a finite exact package-version target. No registry request, cutoff, source object, ledger row, family, validation unit, control, benign label, historical installation, reach, blast-radius value, score, model, rank, interval, calibration result, or predictive metric is created. The register remains **42 records in 30 families**, with **40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**.
+
+[108] [StepSecurity report](https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem).
+[109] [GitLab Advisory Database `GMS-2026-530`](https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/).

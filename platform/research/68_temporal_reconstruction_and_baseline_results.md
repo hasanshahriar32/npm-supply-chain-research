@@ -828,3 +828,10 @@ StepSecurity and Snyk independently identify `easy-day-js@1.11.22` in the alread
 [141] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
 [142] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
 [143] [npm registry metadata](https://registry.npmjs.org/easy-day-js).
+
+## Echarts-for-react candidate exclusion — 27 August 2026
+
+StepSecurity’s observed `echarts-for-react@3.0.7` and GitLab Advisory Database’s finite `3.1.7` and `3.2.7` affected versions do not intersect. [144] [145] The candidate fails the independent exact-version gate before registry reconstruction, notwithstanding the shared Mini Shai-Hulud context. The cohort remains **42/30/40/248 direct declarations/244 isolated approximations/1,810 bounded edges/29 validation units**; it creates no historic-install, lockfile, reach, blast-radius, control, score, model, or predictive result.
+
+[144] [StepSecurity report](https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem).
+[145] [GitLab Advisory Database `GMS-2026-530`](https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/).

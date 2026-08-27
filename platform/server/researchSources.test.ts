@@ -885,4 +885,15 @@ describe("repository-backed research sources", () => {
     });
     expect(assessment.prohibitedInterpretations).toContain("No controls, benign labels, scores, models, rankings, intervals, calibration results, or predictive metrics are created.");
   });
+
+  it("excludes echarts-for-react before registry reconstruction when independent finite exact versions disagree", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/167_echarts_for_react_may_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_independently_corroborated_finite_exact_affected_version_intersection",
+      candidate: { recordId: "echarts-for-react-2026-05-19", packageName: "echarts-for-react", stepSecurityObservedVersion: "3.0.7", gitLabAdvisoryAffectedVersions: ["3.1.7", "3.2.7"], exactAffectedVersionIntersection: [], officialRegistryMetadataRequested: false, strictFeatureCutoffUtc: null, selectedPreEventVersion: null, selectedPreEventVersionObjectRetained: false, campaignCompletenessClaim: false, statisticalIndependenceClaim: false },
+      evidenceGate: { independentlyCorroboratedPackageSpecificIncidentSource: true, independentlyCorroboratedFiniteExactAffectedVersionIntersection: false, officialRegistryMetadataInspected: false, eligibleForGovernedReconstruction: false },
+      zeroOutputs: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("The Mini Shai-Hulud event context cannot be used to substitute an affected version set from another package or source.");
+  });
 });

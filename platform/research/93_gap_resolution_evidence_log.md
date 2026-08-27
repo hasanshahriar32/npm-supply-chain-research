@@ -697,3 +697,10 @@ The governed cohort is **42 records, 30 families, 40 exact snapshots, 248 direct
 146. StepSecurity, *Mastra npm Supply Chain Attack: 140+ Packages Backdoored via easy-day-js Typosquat*: <https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js>.
 147. Snyk, *Mastra npm Scope Takeover*: <https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/>.
 148. npm registry metadata, `easy-day-js`: <https://registry.npmjs.org/easy-day-js>.
+
+## Echarts-for-react candidate exclusion — 2026-08-27
+
+StepSecurity documents `echarts-for-react@3.0.7` in an affected AntV Mini Shai-Hulud installation flow, whereas GitLab Advisory Database identifies the finite affected pair `3.1.7` and `3.2.7`. [149] [150] No exact version is independently corroborated across the sources. The candidate is excluded before an official npm registry request, temporal cutoff, retained-source-object selection, or any ledger and reconstruction operation. The cohort remains **42 records, 30 families, 40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. No control, benign label, historic installation, resolved lock, reach, blast-radius measure, score, rank, model, interval, calibration result, or predictive metric was created.
+
+149. StepSecurity, *Shai-Hulud: Here We Go Again. Mass npm Supply Chain Attack Hits the AntV Ecosystem*: <https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem>.
+150. GitLab Advisory Database, *GMS-2026-530: echarts-for-react contains malware after npm account takeover*: <https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/>.

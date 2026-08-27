@@ -474,3 +474,10 @@ Microsoft and SafeDep identify `@t-in-one/add_application@5.7.1` within the docu
 [144]: https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js "StepSecurity report"
 [145]: https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/ "Snyk report"
 [146]: https://registry.npmjs.org/easy-day-js "npm registry metadata"
+
+### Echarts-for-react candidate exclusion — 27 August 2026
+
+StepSecurity documents `echarts-for-react@3.0.7` in its observed AntV Mini Shai-Hulud installation flow, while GitLab Advisory Database `GMS-2026-530` lists `echarts-for-react@3.1.7` and `3.2.7` as affected. [147] [148] The finite exact version sets have no intersection. The candidate is therefore excluded before any npm registry request, cutoff calculation, source-object selection, ledger mutation, or reconstruction. The strict cohort remains **42 records, 30 families, 40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. This exclusion creates no control, benign label, historic installation, reach, blast-radius value, score, rank, model, interval, calibration result, or predictive metric, and it does not reclassify the documented event as benign or safe.
+
+[147]: https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem "StepSecurity report"
+[148]: https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/ "GitLab advisory"
