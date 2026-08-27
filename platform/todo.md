@@ -12,6 +12,8 @@
 - [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
 - [x] Screen echarts-for-react May 2026 exact-version evidence against independent AntV Mini Shai-Hulud reporting
 - [x] Publish only the resulting bounded exclusion after validation and synchronization
+- [x] Screen node-ipc May 2026 exact-version evidence, strict registry cutoff, retained source object, and separate-family treatment
+- [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
 - [x] Screen @cloudplatform-single-spa/search May 2026 against independently corroborated exact-version intersection
 - [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment

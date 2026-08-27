@@ -704,3 +704,13 @@ StepSecurity documents `echarts-for-react@3.0.7` in an affected AntV Mini Shai-H
 
 149. StepSecurity, *Shai-Hulud: Here We Go Again. Mass npm Supply Chain Attack Hits the AntV Ecosystem*: <https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem>.
 150. GitLab Advisory Database, *GMS-2026-530: echarts-for-react contains malware after npm account takeover*: <https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/>.
+
+## Node-ipc May 2026 admission — 2026-08-27
+
+StepSecurity and Snyk independently identify the exact affected set `node-ipc@9.1.6`, `9.2.3`, and `12.0.1`. [151] [152] Official npm registry metadata timestamps the earliest affected release `12.0.1` at `2026-05-14T14:25:30.311Z`; the exact cutoff is `2026-05-14T14:25:30.310Z` and the latest retained all-stream version object is `12.0.0`. [153] The sources expressly separate this event from the March 2022 node-ipc incident, supporting one new family and one validation unit only, without actor-continuity, campaign-completeness, or statistical-independence claims.
+
+The governed cohort is **43 records, 31 families, 41 exact snapshots, 252 direct declarations, 248 isolated cutoff-valid SemVer approximations, 1,824 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved direct ranges and seven unresolved bounded edges remain technical limits, not reach or blast-radius measures. No control, benign label, historic installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric was created.
+
+151. StepSecurity, *Active Supply Chain Attack: Malicious node-ipc Versions Published to npm*: <https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack>.
+152. Snyk, *Malicious node-ipc Versions Published to npm*: <https://snyk.io/blog/malicious-node-ipc-versions-published-npm/>.
+153. npm registry metadata, `node-ipc`: <https://registry.npmjs.org/node-ipc>.

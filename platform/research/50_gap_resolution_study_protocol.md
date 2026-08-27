@@ -481,3 +481,11 @@ StepSecurity documents `echarts-for-react@3.0.7` in its observed AntV Mini Shai-
 
 [147]: https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem "StepSecurity report"
 [148]: https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/ "GitLab advisory"
+
+### Node-ipc May 2026 admission — 27 August 2026
+
+`168_node_ipc_may_2026_candidate_assessment.json` admits `node-ipc@9.1.6`, `9.2.3`, and `12.0.1` as one bounded record. StepSecurity and Snyk independently identify the same finite set; official registry metadata fixes the earliest publication at `2026-05-14T14:25:30.311Z`, applies the exact cutoff `2026-05-14T14:25:30.310Z`, and selects retained `12.0.0`. [149] [150] [151] Both reports distinguish this incident from node-ipc’s March 2022 peacenotwar event, so it is one separate family and one future validation unit only. The governed totals are **43 records, 31 families, 41 exact snapshots, 252 direct declarations, 248 isolated cutoff-valid SemVer approximations, 1,824 bounded registry-only sensitivity edges, and 30 future validation units**. The four unresolved ranges and seven unresolved bounded edges remain limitations, not reach measures. No control, benign label, historic installation, blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[149]: https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack "StepSecurity report"
+[150]: https://snyk.io/blog/malicious-node-ipc-versions-published-npm/ "Snyk report"
+[151]: https://registry.npmjs.org/node-ipc "npm registry metadata"

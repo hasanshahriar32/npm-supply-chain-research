@@ -835,3 +835,11 @@ StepSecurity’s observed `echarts-for-react@3.0.7` and GitLab Advisory Database
 
 [144] [StepSecurity report](https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem).
 [145] [GitLab Advisory Database `GMS-2026-530`](https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/).
+
+## Node-ipc May 2026 admission — 27 August 2026
+
+StepSecurity and Snyk independently identify `node-ipc@9.1.6`, `9.2.3`, and `12.0.1`; registry metadata sets the earliest affected publication at `2026-05-14T14:25:30.311Z`, the one-millisecond cutoff at `2026-05-14T14:25:30.310Z`, and retained `12.0.0` as the all-stream source object. [146] [147] [148] This is one separate May 2026 family and one validation unit because the sources distinguish it from the historical March 2022 node-ipc event. The reconstruction is **43/31/41/252 direct declarations/248 isolated approximations/1,824 bounded edges/30 validation units**. The results remain registry-only sensitivity artifacts rather than historic installs, lockfiles, reach, blast radius, controls, scores, models, or predictive metrics.
+
+[146] [StepSecurity report](https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack).
+[147] [Snyk report](https://snyk.io/blog/malicious-node-ipc-versions-published-npm/).
+[148] [npm registry metadata](https://registry.npmjs.org/node-ipc).

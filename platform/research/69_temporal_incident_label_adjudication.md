@@ -333,3 +333,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 
 [108] [StepSecurity report](https://www.stepsecurity.io/blog/shai-hulud-here-we-go-again-mass-npm-supply-chain-attack-hits-the-antv-ecosystem).
 [109] [GitLab Advisory Database `GMS-2026-530`](https://advisories.gitlab.com/npm/echarts-for-react/GMS-2026-530/).
+
+> **Node-ipc May 2026 amendment — 27 August 2026.** `node-ipc@9.1.6`, `9.2.3`, and `12.0.1` are included as one bounded record in a new `node_ipc_may_2026_maintainer_account_compromise` family after independent exact-version corroboration and strict retained-object selection. [110] [111] [112] Source text distinguishes the event from March 2022 node-ipc peacenotwar, so it establishes neither continuity nor relation between those families. The register consequently contains **43 records in 31 families**, with **41 exact snapshots, 252 direct declarations, 248 isolated cutoff-valid SemVer approximations, 1,824 bounded registry-only sensitivity edges, and 30 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[110] [StepSecurity report](https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack).
+[111] [Snyk report](https://snyk.io/blog/malicious-node-ipc-versions-published-npm/).
+[112] [npm registry metadata, `node-ipc`](https://registry.npmjs.org/node-ipc).

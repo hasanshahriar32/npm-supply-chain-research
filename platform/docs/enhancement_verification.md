@@ -28,6 +28,10 @@ StepSecurity and Snyk independently identify `easy-day-js@1.11.22`; official reg
 
 StepSecurity documents `echarts-for-react@3.0.7`, while the independent GitLab advisory identifies only `3.1.7` and `3.2.7`. With no exact-version intersection, the candidate is excluded before registry retrieval, cutoff selection, source-object retention, ledger mutation, or reconstruction. The cohort remains **42/30/40/248/244/1,810/29** with zero prohibited outputs. The full suite passed **80 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
 
+## Bounded node-ipc May 2026 admission
+
+StepSecurity and Snyk independently identify `node-ipc@9.1.6`, `9.2.3`, and `12.0.1`; official registry metadata fixes the earliest publication, exact cutoff, and retained `12.0.0` source object. This event is distinct from March 2022 node-ipc, adding one separate family and validation unit. Governed regeneration yields **43 records, 31 families, 41 snapshots, 252 declarations, 248 isolated approximations, 1,824 bounded edges, and 30 validation units**; four unresolved ranges and seven unresolved edges remain limitations only. The full suite passed **81 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.
