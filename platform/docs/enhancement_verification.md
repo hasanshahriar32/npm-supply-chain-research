@@ -366,3 +366,7 @@ The authenticated `/workspace/methodology` page was reloaded after the same publ
 
 - StepSecurity and Wiz independently identify `ansi-styles@6.2.2`; bounded registry metadata fixes `2025-09-08T13:12:10.343Z` and selects retained `6.2.1` one millisecond before cutoff. The row joins the existing Qix family without a new family or validation unit.
 - The rebuilt cohort is **36 records, 28 families, 34 exact snapshots, 211 declarations, 1,643 sensitivity edges, and 27 units**. `pnpm test` passed all **75 tests**, and the constrained production build retained nonempty required artifacts. Screenshots verify only unauthenticated Clerk boundaries.
+
+## Bounded backslash September 2025 family-member admission — 27 August 2026
+
+- StepSecurity and Wiz independently identify `backslash@0.2.1`; official registry metadata selects retained `0.2.0` one millisecond before cutoff. The row joins the Qix family without a new family or validation unit. The rebuilt cohort is **37/28/35/211/1,643/27**. All 75 tests and the constrained build passed; required artifacts are nonempty, and screenshots verify only unauthenticated Clerk boundaries.

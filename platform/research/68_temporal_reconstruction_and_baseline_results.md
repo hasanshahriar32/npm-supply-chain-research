@@ -770,3 +770,11 @@ StepSecurity and Wiz independently identify `ansi-styles@6.2.2`; official regist
 [120] [StepSecurity, “20+ Popular NPM Packages Compromised,” 8 September 2025](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
 [121] [Wiz, “Widespread npm Supply Chain Attack,” 9 September 2025](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
 [122] [npm registry metadata, `ansi-styles`](https://registry.npmjs.org/ansi-styles).
+
+## Bounded backslash September 2025 family-member admission
+
+StepSecurity and Wiz independently identify `backslash@0.2.1`; official registry metadata selects retained `0.2.0` at the strict cutoff.[123] [124] [125] The existing Qix family now has **37 records, 28 families, 35 snapshots, 211 declarations, 1,643 edges, and 27 units**; no controls or predictive outputs are created.
+
+[123] [StepSecurity report](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+[124] [Wiz report](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+[125] [npm registry metadata](https://registry.npmjs.org/backslash).

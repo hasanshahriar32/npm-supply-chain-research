@@ -626,3 +626,11 @@ StepSecurity and Wiz independently identify `ansi-styles@6.2.2`; official regist
 123. StepSecurity, *20+ Popular NPM Packages Compromised*, 8 September 2025: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
 124. Wiz, *Widespread npm Supply Chain Attack*, 9 September 2025: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
 125. npm, *Registry metadata for ansi-styles*: <https://registry.npmjs.org/ansi-styles>.
+
+## Bounded backslash September 2025 family-member admission
+
+StepSecurity and Wiz independently identify `backslash@0.2.1`. Registry metadata fixes `2025-09-08T13:20:31.923Z`; the cutoff selects retained `0.2.0`. `159_backslash_september_2025_candidate_assessment.json` records the metadata-only decision. The existing Qix family gains one record and one snapshot, yielding **37/28/35/211/1,643/27**, without controls, reach, scores, models, or predictive output.
+
+126. StepSecurity, *20+ Popular NPM Packages Compromised*: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
+127. Wiz, *Widespread npm Supply Chain Attack*: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
+128. npm, *Registry metadata for backslash*: <https://registry.npmjs.org/backslash>.

@@ -276,3 +276,15 @@ StepSecurity and Wiz independently specify the release; registry metadata select
 [84] [StepSecurity, “20+ Popular NPM Packages Compromised”](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
 [85] [Wiz, “Widespread npm Supply Chain Attack”](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
 [86] [npm registry metadata, `ansi-styles`](https://registry.npmjs.org/ansi-styles).
+
+## Bounded backslash September 2025 family-member admission
+
+| Record | Affected release | Strict source object | Disposition |
+|---|---|---|---|
+| `backslash-2025-09-08` | `backslash@0.2.1` | `0.2.0` | Bounded Qix-family member; no new family or validation unit. |
+
+StepSecurity and Wiz independently specify the release, and registry metadata selects `0.2.0` one millisecond before publication.[87] [88] [89] The register is **37 records in 28 families** with 35 exact snapshots.
+
+[87] [StepSecurity report](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+[88] [Wiz report](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+[89] [npm registry metadata](https://registry.npmjs.org/backslash).
