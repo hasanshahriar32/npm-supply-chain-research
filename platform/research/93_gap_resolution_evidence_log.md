@@ -714,3 +714,13 @@ The governed cohort is **43 records, 31 families, 41 exact snapshots, 252 direct
 151. StepSecurity, *Active Supply Chain Attack: Malicious node-ipc Versions Published to npm*: <https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack>.
 152. Snyk, *Malicious node-ipc Versions Published to npm*: <https://snyk.io/blog/malicious-node-ipc-versions-published-npm/>.
 153. npm registry metadata, `node-ipc`: <https://registry.npmjs.org/node-ipc>.
+
+## Red Hat Compliance Client admission — 2026-08-27
+
+Red Hat and Aikido independently identify the finite set `@redhat-cloud-services/compliance-client@4.0.3` and `4.0.4` in the June 2026 Miasma/Mini Shai-Hulud context. [154] [155] Official npm registry metadata timestamps the earliest affected version `4.0.3` at `2026-06-01T10:55:21.357Z`; the exact cutoff is `2026-06-01T10:55:21.356Z` and retained `4.0.2` is selected. [156] The candidate joins the existing Mini Shai-Hulud family, adding neither a new family nor validation unit and making no campaign-completeness or statistical-independence claim.
+
+The governed cohort is **44 records, 31 families, 42 exact snapshots, 254 direct declarations, 250 isolated cutoff-valid SemVer approximations, 1,832 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved direct ranges and seven unresolved bounded edges remain technical limits, not reach or blast-radius measures. No control, benign label, historic installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric was created.
+
+154. Red Hat, *RHSB-2026-006 Supply chain compromise of @redhat-cloud-services npm packages*: <https://access.redhat.com/security/vulnerabilities/RHSB-2026-006>.
+155. Aikido, *Red Hat npm Packages Compromised to Spread a Credential-Stealing Worm*: <https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm>.
+156. npm registry metadata, `@redhat-cloud-services/compliance-client`: <https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client>.

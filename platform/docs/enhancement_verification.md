@@ -32,6 +32,10 @@ StepSecurity documents `echarts-for-react@3.0.7`, while the independent GitLab a
 
 StepSecurity and Snyk independently identify `node-ipc@9.1.6`, `9.2.3`, and `12.0.1`; official registry metadata fixes the earliest publication, exact cutoff, and retained `12.0.0` source object. This event is distinct from March 2022 node-ipc, adding one separate family and validation unit. Governed regeneration yields **43 records, 31 families, 41 snapshots, 252 declarations, 248 isolated approximations, 1,824 bounded edges, and 30 validation units**; four unresolved ranges and seven unresolved edges remain limitations only. The full suite passed **81 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
 
+## Bounded Red Hat Compliance Client June 2026 admission
+
+Red Hat and Aikido independently identify `@redhat-cloud-services/compliance-client@4.0.3` and `4.0.4`; official registry metadata fixes the one-millisecond cutoff and retains `4.0.2` as the source object. The row joins the existing Mini Shai-Hulud family, adding neither a family nor validation unit. Governed regeneration yields **44 records, 31 families, 42 snapshots, 254 declarations, 250 isolated approximations, 1,832 bounded edges, and 30 validation units**; four unresolved ranges and seven unresolved edges remain limitations only. The full suite passed **82 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.

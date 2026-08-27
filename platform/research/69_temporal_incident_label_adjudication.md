@@ -339,3 +339,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [110] [StepSecurity report](https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack).
 [111] [Snyk report](https://snyk.io/blog/malicious-node-ipc-versions-published-npm/).
 [112] [npm registry metadata, `node-ipc`](https://registry.npmjs.org/node-ipc).
+
+> **Red Hat Compliance Client amendment — 27 August 2026.** `@redhat-cloud-services/compliance-client@4.0.3` and `4.0.4` are included as one bounded row in the existing `mini_shai_hulud_atool_2026` family after independent exact-version corroboration and strict retained-object selection. [113] [114] [115] This entry establishes no new family, validation unit, campaign-completeness claim, cross-family relationship, or statistical-independence claim. The register consequently contains **44 records in 31 families**, with **42 exact snapshots, 254 direct declarations, 250 isolated cutoff-valid SemVer approximations, 1,832 bounded registry-only sensitivity edges, and 30 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[113] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
+[114] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[115] [npm registry metadata, `@redhat-cloud-services/compliance-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client).

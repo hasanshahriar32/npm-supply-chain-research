@@ -489,3 +489,11 @@ StepSecurity documents `echarts-for-react@3.0.7` in its observed AntV Mini Shai-
 [149]: https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack "StepSecurity report"
 [150]: https://snyk.io/blog/malicious-node-ipc-versions-published-npm/ "Snyk report"
 [151]: https://registry.npmjs.org/node-ipc "npm registry metadata"
+
+### Red Hat Compliance Client admission — 27 August 2026
+
+`169_redhat_compliance_client_june_2026_candidate_assessment.json` admits `@redhat-cloud-services/compliance-client@4.0.3` and `4.0.4` as one bounded row. Red Hat’s primary bulletin and Aikido independently identify the finite pair in the June 2026 Miasma/Mini Shai-Hulud context; official registry metadata fixes the earliest publication at `2026-06-01T10:55:21.357Z`, applies the cutoff `2026-06-01T10:55:21.356Z`, and selects retained `4.0.2`. [152] [153] [154] The row joins the existing Mini Shai-Hulud family and adds neither a family nor a validation unit. The governed totals are **44 records, 31 families, 42 exact snapshots, 254 direct declarations, 250 isolated cutoff-valid SemVer approximations, 1,832 bounded registry-only sensitivity edges, and 30 future validation units**. Four unresolved ranges and seven unresolved bounded edges remain limits, not reach measures. No control, benign label, historic installation, blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[152]: https://access.redhat.com/security/vulnerabilities/RHSB-2026-006 "Red Hat bulletin"
+[153]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
+[154]: https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client "npm registry metadata"

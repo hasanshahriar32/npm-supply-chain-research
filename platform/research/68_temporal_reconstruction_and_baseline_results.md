@@ -843,3 +843,11 @@ StepSecurity and Snyk independently identify `node-ipc@9.1.6`, `9.2.3`, and `12.
 [146] [StepSecurity report](https://www.stepsecurity.io/blog/node-ipc-npm-supply-chain-attack).
 [147] [Snyk report](https://snyk.io/blog/malicious-node-ipc-versions-published-npm/).
 [148] [npm registry metadata](https://registry.npmjs.org/node-ipc).
+
+## Red Hat Compliance Client admission — 27 August 2026
+
+Red Hat and Aikido independently identify `@redhat-cloud-services/compliance-client@4.0.3` and `4.0.4` in the June 2026 Miasma/Mini Shai-Hulud event. Registry metadata fixes the earliest affected publication at `2026-06-01T10:55:21.357Z`, the one-millisecond cutoff at `2026-06-01T10:55:21.356Z`, and retained `4.0.2` as the all-stream source object. [149] [150] [151] The row joins the existing Mini Shai-Hulud family only and adds no validation unit. The reconstruction is **44/31/42/254 direct declarations/250 isolated approximations/1,832 bounded edges/30 validation units**. These registry-only sensitivity artifacts are not historic installs, lockfiles, reach, blast radius, controls, scores, models, or predictive metrics.
+
+[149] [Red Hat bulletin](https://access.redhat.com/security/vulnerabilities/RHSB-2026-006).
+[150] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
+[151] [npm registry metadata](https://registry.npmjs.org/%40redhat-cloud-services%2Fcompliance-client).
