@@ -2,13 +2,13 @@
   "study": "campaign-relatedness-and-grouped-inference-protocol",
   "artifactVersion": 1,
   "executionStatus": "protocol_only_no_control_frame_or_model_eligible_dataset",
-  "generatedAtUtc": "2026-08-27T04:10:58.248Z",
+  "generatedAtUtc": "2026-08-27T07:24:43.191Z",
   "sourceInputs": {
     "strictLedger": {
       "path": "research/64_temporal_package_event_ledger.csv",
-      "sha256": "d85ddba9c5e1027f774f9c1869c9cfacc1122addedde9245f8282238d1d2cdc0",
-      "recordCount": 28,
-      "familyCount": 22
+      "sha256": "a47b70cb6557c018d8e2e8f6a0c1348a453bcdd7dae8677ea48bd54a16e62424",
+      "recordCount": 29,
+      "familyCount": 23
     },
     "keyvAssessment": {
       "path": "research/92_keyv_compromise_candidate_assessment.json",
@@ -26,6 +26,11 @@
       "recordId": "axios-2026-03-31",
       "incidentFamily": "axios_2026",
       "eventStartUtc": "2026-03-31T00:00:00Z"
+    },
+    {
+      "recordId": "bitwarden-cli-2026-04-22",
+      "incidentFamily": "bitwarden_cli_checkmarx_supply_chain_2026",
+      "eventStartUtc": "2026-04-22T21:22:59.021Z"
     },
     {
       "recordId": "chalk-2025-09-08",
@@ -166,6 +171,14 @@
         "plain-crypto-js-2026-03-31"
       ],
       "recordCount": 2,
+      "splitRule": "All member records must remain in the same development, validation, or final-test partition."
+    },
+    {
+      "familyId": "bitwarden_cli_checkmarx_supply_chain_2026",
+      "recordIds": [
+        "bitwarden-cli-2026-04-22"
+      ],
+      "recordCount": 1,
       "splitRule": "All member records must remain in the same development, validation, or final-test partition."
     },
     {
@@ -360,12 +373,18 @@
   ],
   "validationUnits": {
     "unitDefinition": "Connected components of the documented family-relatedness graph, not package-event rows.",
-    "unitCount": 21,
+    "unitCount": 22,
     "units": [
       {
         "validationClusterId": "axios_2026",
         "familyIds": [
           "axios_2026"
+        ]
+      },
+      {
+        "validationClusterId": "bitwarden_cli_checkmarx_supply_chain_2026",
+        "familyIds": [
+          "bitwarden_cli_checkmarx_supply_chain_2026"
         ]
       },
       {

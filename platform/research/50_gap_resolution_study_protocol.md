@@ -241,6 +241,12 @@ The bounded `sbx-mask` screen has independently documented finite affected versi
 
 The resulting `138_sbx_mask_march_2026_candidate_assessment.json` is an exclusion, not a ledger addition. The governed cohort therefore remains **28 positive package-event records in 22 incident families, 26 exact retained snapshots, 126 direct declarations and isolated approximations, 760 bounded registry-only sensitivity edges, and 21 future validation units**. It creates zero snapshots, declarations, graph edges, controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics. Current registry retention is an eligibility constraint only: it does not dispute the incident, make an unretained release benign, or establish current publisher state, causal effects, or a non-event outcome.
 
+### Bitwarden CLI April 2026 admission — 27 August 2026
+
+The strict ledger now admits `@bitwarden/cli@2026.4.0` as one bounded April 2026 npm distribution-path compromise record. Bitwarden’s incident statement identifies the malicious distribution of that exact npm release during a limited 22 April window, while StepSecurity independently identifies the same package and version as compromised; the NVD-sourced public CVE record corroborates the same release.[97] [98] [99] The official npm registry time map lists `2026.4.0` at `2026-04-22T21:22:59.021Z`; the exact one-millisecond cutoff selects retained `@bitwarden/cli@2026.3.0` as the strict pre-event source object.[100]
+
+The protocol now governs **29 positive package-event records in 23 incident families**, with **27 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **22 future validation units**. The Bitwarden CLI row adds one bounded separate family and one unit. The documented broader Checkmarx context neither authorizes an additional package row nor establishes a relationship to an existing governed family or statistical independence. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -333,3 +339,7 @@ The resulting `138_sbx_mask_march_2026_candidate_assessment.json` is an exclusio
 [94]: https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages "Sonatype sbx-mask incident report"
 [95]: https://github.com/advisories/GHSA-r934-qgg3-v7fg "GitHub Advisory Database sbx-mask malware advisory"
 [96]: https://registry.npmjs.org/sbx-mask "npm registry sbx-mask metadata"
+[97]: https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127 "Bitwarden Statement on Checkmarx Supply Chain Incident"
+[98]: https://www.stepsecurity.io/blog/bitwarden-cli-hijacked-on-npm-bun-staged-credential-stealer-targets-developers-github-actions-and-ai-tools "StepSecurity Bitwarden CLI incident report"
+[99]: https://github.com/advisories/GHSA-999x-2wm3-jfx8 "GitHub Advisory Database CVE-2026-42994"
+[100]: https://registry.npmjs.org/%40bitwarden%2Fcli "npm registry Bitwarden CLI metadata"

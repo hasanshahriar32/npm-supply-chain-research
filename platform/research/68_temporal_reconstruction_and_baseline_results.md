@@ -441,6 +441,20 @@ Sonatype reports `sbx-mask` as a malicious npm package in a suspected trusted-ma
 
 This strict exclusion creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. It does not dispute the independently documented incident and does not assert any relationship to another governed family.
 
+## Amendment: bounded Bitwarden CLI April 2026 npm-distribution compromise admission
+
+Bitwarden’s public incident statement identifies malicious npm distribution of `@bitwarden/cli@2026.4.0` during a limited 22 April 2026 window. StepSecurity independently identifies the same exact npm release as compromised, while the NVD-sourced public CVE record corroborates the release and the documented Checkmarx incident context. [94] [95] [96] The bounded official npm registry metadata response timestamps `2026.4.0` at `2026-04-22T21:22:59.021Z`; strict subtraction yields cutoff `2026-04-22T21:22:59.020Z`, selecting retained `@bitwarden/cli@2026.3.0` as the exact pre-event source object. [97]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 29 records in 23 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 27 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 153 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 974 edges across 20 edge-bearing roots | Not dependency reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 22 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded separate family and future validation unit. The documented broader Checkmarx context does **not** expand this row into additional package records, authorize assignment to another governed family, or establish statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -619,3 +633,11 @@ This strict exclusion creates **zero** controls, benign labels, historical insta
 [92] [GitHub Advisory Database, “Malware in sbx-mask,” GHSA-r934-qgg3-v7fg](https://github.com/advisories/GHSA-r934-qgg3-v7fg).
 
 [93] [npm registry metadata, `sbx-mask`](https://registry.npmjs.org/sbx-mask).
+
+[94] [Bitwarden, “Bitwarden Statement on Checkmarx Supply Chain Incident,” 23 April 2026](https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127).
+
+[95] [StepSecurity, “Bitwarden CLI Hijacked on npm,” 23 April 2026](https://www.stepsecurity.io/blog/bitwarden-cli-hijacked-on-npm-bun-staged-credential-stealer-targets-developers-github-actions-and-ai-tools).
+
+[96] [GitHub Advisory Database, CVE-2026-42994](https://github.com/advisories/GHSA-999x-2wm3-jfx8).
+
+[97] [npm registry metadata, `@bitwarden/cli`](https://registry.npmjs.org/%40bitwarden%2Fcli).

@@ -521,3 +521,16 @@ Bounded official npm registry metadata timestamps the earliest affected version,
 94. Sonatype, *Sonatype Discovers Two Malicious npm Packages*, 19 March 2026: <https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages>.
 95. GitHub Advisory Database, *Malware in sbx-mask*, GHSA-r934-qgg3-v7fg: <https://github.com/advisories/GHSA-r934-qgg3-v7fg>.
 96. npm, *Registry metadata for sbx-mask*: <https://registry.npmjs.org/sbx-mask>.
+
+## Bounded Bitwarden CLI April 2026 admission — source provenance, 27 August 2026
+
+The `@bitwarden/cli` screen is bounded to the one package-event candidate `2026.4.0`. Bitwarden’s incident statement identifies malicious npm distribution of that exact release during a limited 22 April 2026 window. StepSecurity independently identifies `@bitwarden/cli@2026.4.0` as compromised on npm; the NVD-sourced public CVE advisory separately corroborates the same release and the documented Checkmarx incident context. [97] [98] [99] No other package from that context is added, grouped, or inferred.
+
+Bounded official npm registry metadata timestamps `2026.4.0` at `2026-04-22T21:22:59.021Z`; the strict one-millisecond cutoff is `2026-04-22T21:22:59.020Z`, selecting retained `@bitwarden/cli@2026.3.0` as the exact pre-event source object. [100] The registry response was used only for time-map selection, retained-source availability, exact direct declarations, and declared-range sensitivity inputs. No package payload was downloaded, extracted, installed, or executed.
+
+`140_bitwarden_cli_april_2026_candidate_assessment.json` preserves the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one bounded separate family, one exact source snapshot, 27 direct declarations, 27 isolated cutoff-valid SemVer approximations, 214 bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **29 records, 23 families, 27 exact snapshots, 153 direct declarations, 974 bounded sensitivity edges, and 22 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. The documented Checkmarx context does not establish a relationship to another governed family or statistical independence.
+
+97. Bitwarden, *Bitwarden Statement on Checkmarx Supply Chain Incident*, 23 April 2026: <https://community.bitwarden.com/t/bitwarden-statement-on-checkmarx-supply-chain-incident/96127>.
+98. StepSecurity, *Bitwarden CLI Hijacked on npm*, 23 April 2026: <https://www.stepsecurity.io/blog/bitwarden-cli-hijacked-on-npm-bun-staged-credential-stealer-targets-developers-github-actions-and-ai-tools>.
+99. GitHub Advisory Database, *CVE-2026-42994*: <https://github.com/advisories/GHSA-999x-2wm3-jfx8>.
+100. npm, *Registry metadata for @bitwarden/cli*: <https://registry.npmjs.org/%40bitwarden%2Fcli>.
