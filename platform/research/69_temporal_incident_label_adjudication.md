@@ -253,3 +253,14 @@ TanStack and StepSecurity independently specify the pair; official registry meta
 [79] [TanStack, “Postmortem: TanStack npm supply-chain compromise”](https://tanstack.com/blog/npm-supply-chain-compromise-postmortem).
 [80] [StepSecurity, “TeamPCP's Mini Shai-Hulud Is Back”](https://www.stepsecurity.io/blog/mini-shai-hulud-is-back-a-self-spreading-supply-chain-attack-hits-the-npm-ecosystem).
 [81] [npm registry metadata, `@tanstack/history`](https://registry.npmjs.org/%40tanstack%2Fhistory).
+
+## Bounded @ctrl/tinycolor September 2025 exact-version exclusion
+
+| Candidate | Public evidence retained | Strict disposition |
+|---|---|---|
+| `@ctrl/tinycolor` | StepSecurity names the package in the Shai-Hulud event; CISA independently records the event without a package-version list. | Excluded: no independently corroborated finite exact affected-version set, so no registry cutoff or source object. |
+
+The shared campaign name does not supply family treatment, actor identity, completeness, or independence. The register remains **35 records in 28 families** and 33 exact snapshots; no control or predictive inference is authorized.[82] [83]
+
+[82] [StepSecurity, “Shai-Hulud: Self-Replicating Worm Compromises 500+ NPM Packages,” 15 September 2025](https://www.stepsecurity.io/blog/ctrl-tinycolor-and-40-npm-packages-compromised).
+[83] [CISA, “Widespread Supply Chain Compromise Impacting npm Ecosystem,” 23 September 2025](https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem).

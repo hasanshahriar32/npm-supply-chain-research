@@ -357,6 +357,17 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("No controls, benign labels, scores, models, rankings, intervals, calibration results, or predictive metrics are created.");
   });
 
+  it("excludes @ctrl/tinycolor before registry reconstruction when no finite exact version set is independently corroborated", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/157_ctrl_tinycolor_september_2025_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_independently_corroborated_finite_exact_affected_version_set",
+      candidate: { packageName: "@ctrl/tinycolor", affectedVersionIntersection: [], officialRegistryMetadataRequested: false, strictFeatureCutoffUtc: null, selectedPreEventVersion: null, familyTreatment: "unadjudicated_from_shared_campaign_name_alone" },
+      strictEligibility: { finiteExactAffectedVersionsIndependentlyCorroborated: false, eligibleForGovernedReconstruction: false },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("Do not infer a package version, range, event cutoff, pre-event source object, or registry retention state from package-level reporting.");
+  });
+
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
     const graph = await import("node:fs/promises").then((fs) => fs.readFile("research/67_cutoff_direct_dependency_graph_manifest.json", "utf8")).then(JSON.parse);
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);

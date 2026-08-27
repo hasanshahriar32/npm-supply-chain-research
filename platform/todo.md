@@ -1,5 +1,8 @@
 # Project TODO
 
+- [x] Screen @ctrl/tinycolor September 2025 against finite version-scope and explicit family gates
+- [x] Publish only a provenance-preserving admission or exclusion, without registry inference if exact version scope is unavailable
+- [x] Validate, synchronize, and checkpoint the bounded candidate-screen result
 - [x] Screen @tanstack/history May 2026 against the exact-version, registry-time, retained-object, and documented-family gates
 - [x] Publish only the resulting governed admission or exclusion, rebuild dependent artifacts only if admitted, and preserve all no-inference limits
 - [x] Validate, synchronize, and checkpoint the next bounded research decision
