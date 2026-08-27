@@ -599,3 +599,7 @@ GitHub’s reviewed malware advisory and BleepingComputer identify only `@dydxpr
 115. GitHub Advisory Database, *Malware in @dydxprotocol/solo*: <https://github.com/advisories/GHSA-xjr5-5w2w-3233>.
 116. BleepingComputer, *npm packages used by crypto exchanges compromised*: <https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/>.
 117. npm, *Registry metadata for @dydxprotocol/solo*: <https://registry.npmjs.org/%40dydxprotocol%2Fsolo>.
+
+## Bounded got-fetch July 2025 relatedness-pending exclusion — 27 August 2026
+
+Checkmarx and Snyk independently support `got-fetch@5.1.11` and `5.1.12`; official registry metadata timestamps the earliest at `2025-07-17T17:28:28.289Z`, with cutoff `2025-07-17T17:28:28.288Z` selecting retained `6.0.2`. However, Checkmarx documents other affected packages, including an existing governed `eslint-config-prettier` family record, while the retained sources do not adjudicate a family relationship. `154_got_fetch_july_2025_candidate_assessment.json` therefore excludes the lead pending independently reviewable relatedness adjudication. The cohort remains unchanged; no controls, installs, reach, scores, models, rankings, intervals, calibration, or predictive metrics were created.
