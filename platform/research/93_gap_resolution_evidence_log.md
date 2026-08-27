@@ -642,3 +642,10 @@ StepSecurity and Wiz independently identify `simple-swizzle@0.2.3`. Registry met
 129. StepSecurity, *20+ Popular NPM Packages Compromised*: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
 130. Wiz, *Widespread npm Supply Chain Attack*: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
 131. npm, *Registry metadata for simple-swizzle*: <https://registry.npmjs.org/simple-swizzle>.
+
+## Bounded @cloudplatform-single-spa/search May 2026 source-disagreement exclusion
+
+Microsoft describes the campaign’s `mr.4nd3r50n` releases as `100.100.100`, while Snyk identifies `@cloudplatform-single-spa/search@99.99.99`; there is no independently corroborated exact-version intersection.[132] [133] The candidate is excluded before any registry request, cutoff, source-object selection, ledger row, or reconstruction. The strict cohort remains unchanged at **38/28/36/212/1,644/27**.
+
+132. Microsoft, *Malicious npm packages abuse dependency confusion*, 29 May 2026: <https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/>.
+133. Snyk, *Malicious Package in @cloudplatform-single-spa/search*: <https://security.snyk.io/vuln/SNYK-JS-CLOUDPLATFORMSINGLESPASEARCH-17116282>.

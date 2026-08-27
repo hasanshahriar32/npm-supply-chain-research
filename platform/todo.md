@@ -1,5 +1,7 @@
 # Project TODO
 
+- [x] Screen @cloudplatform-single-spa/search May 2026 against independently corroborated exact-version intersection
+- [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment
 - [x] Publish only the resulting bounded decision after required validation and synchronization
 - [x] Screen backslash September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment
