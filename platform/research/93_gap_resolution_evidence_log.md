@@ -567,3 +567,15 @@ The `@joyfill/components` screen is bounded to the source intersection `4.0.0-rc
 
 107. StepSecurity, *Compromised npm Packages: @joyfill/components and @joyfill/layouts Ship an Obfuscated Remote Access Trojan*, 28 July 2026: <https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise>.
 108. Socket, *Two Joyfill npm Beta Releases Compromised to Deliver DEV#POPPER Remote Access Trojan*, 28 July 2026: <https://socket.dev/blog/joyfill-npm-beta-releases-compromised>.
+
+## Bounded AsyncAPI generator July 2026 admission — source provenance, 27 August 2026
+
+The `@asyncapi/generator` screen is limited to `3.3.1`. Aikido identifies that exact release among the affected AsyncAPI npm packages, while Microsoft Security independently lists the same package/version as affected. [109] [110] Other AsyncAPI packages named by the sources are not added. Aikido describes reported tooling overlap and unresolved attribution; neither establishes a relationship to an existing governed family, campaign completeness, causal attribution, or statistical independence.
+
+Bounded official npm registry metadata timestamps `3.3.1` at `2026-07-14T07:10:48.853Z`; the strict one-millisecond cutoff is `2026-07-14T07:10:48.852Z`, selecting retained `@asyncapi/generator@3.3.0` as the exact pre-event source object. [111] The registry response was used only for time-map selection, retained-source availability, exact direct declarations, and declared-range sensitivity inputs. No package payload was downloaded, extracted, installed, or executed.
+
+`148_asyncapi_generator_july_2026_candidate_assessment.json` preserves the zero-output eligibility decision before governed reconstruction. The completed regeneration admits one record, one bounded separate family, one exact source snapshot, 26 direct declarations, 26 isolated cutoff-valid SemVer approximations, 434 bounded registry-only sensitivity edges, and one future validation unit. The active cohort is **32 records, 26 families, 30 exact snapshots, 179 direct declarations, 1,408 bounded sensitivity edges, and 25 validation units**. It creates zero controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. The bounded graph has two unresolved edges and one capped root; those limits are not interpreted as installation, reach, exposure, or completeness.
+
+109. Aikido, *AsyncAPI npm packages backdoored via GitHub Actions*, 14 July 2026: <https://www.aikido.dev/blog/asyncapi-npm-packages-backdoored-via-github-actions>.
+110. Microsoft Security, *Unpacking the AsyncAPI npm supply chain compromise and import-time payload delivery*, 15 July 2026: <https://www.microsoft.com/en-us/security/blog/2026/07/15/unpacking-asyncapi-npm-supply-chain-compromise-import-time-payload-delivery/>.
+111. npm, *Registry metadata for @asyncapi/generator*: <https://registry.npmjs.org/%40asyncapi%2Fgenerator>.

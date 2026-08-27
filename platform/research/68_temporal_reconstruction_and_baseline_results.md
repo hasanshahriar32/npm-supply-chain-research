@@ -497,6 +497,20 @@ StepSecurity identifies three malicious `@joyfill/components` beta releases, and
 
 This exclusion creates **zero** ledger records, families, validation units, source snapshots, declarations, range approximations, graph edges, controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. It does not dispute the reported malicious version or establish a complete campaign, current publisher state, downstream exposure, causal effect, or statistical-independence conclusion.
 
+## Amendment: bounded AsyncAPI generator July 2026 GitHub Actions release-pipeline-compromise admission
+
+Aikido and Microsoft Security independently identify `@asyncapi/generator@3.3.1` as an affected AsyncAPI npm release.[106] [107] The target is limited to their exact one-version intersection; other AsyncAPI packages in the reports are not inferred into this row. The bounded official npm registry metadata response timestamps `3.3.1` at `2026-07-14T07:10:48.853Z`; strict subtraction yields cutoff `2026-07-14T07:10:48.852Z`, selecting retained `@asyncapi/generator@3.3.0` as the exact pre-event source object.[108]
+
+| Governed quantity after admission | Value | Boundary retained |
+|---|---:|---|
+| Strict package-event ledger | 32 records in 26 families | Positive evidence only; not a control frame. |
+| Exact retained pre-event snapshots | 30 | Two label-only exceptions remain. |
+| Direct declarations and isolated SemVer approximations | 179 each | Declarations and cutoff-valid approximations, not installations or locks. |
+| Depth-three registry-only sensitivity graph | 1,408 edges across 21 edge-bearing roots | Bounded descriptor only; not reach, centrality, blast radius, or a predictive feature set. |
+| Future validation units | 25 | Related-family safeguards remain mandatory; no split or model was generated. |
+
+This adds one bounded separate family, one exact source snapshot, 26 direct declarations, 26 isolated range approximations, 434 bounded sensitivity edges, and one future validation unit. The bounded graph retains two unresolved edges and one capped root; neither condition is interpreted as installation, reach, completeness, or exposure. Reported Miasma-branding and `prt-scan` overlap and unresolved attribution do **not** establish a relationship to an existing governed family, campaign completeness, causality, or statistical independence. The admission creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -699,3 +713,9 @@ This exclusion creates **zero** ledger records, families, validation units, sour
 [104] [StepSecurity, “Compromised npm Packages: @joyfill/components and @joyfill/layouts Ship an Obfuscated Remote Access Trojan,” 28 July 2026](https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise).
 
 [105] [Socket, “Two Joyfill npm Beta Releases Compromised to Deliver DEV#POPPER Remote Access Trojan,” 28 July 2026](https://socket.dev/blog/joyfill-npm-beta-releases-compromised).
+
+[106] [Aikido, “AsyncAPI npm packages backdoored via GitHub Actions,” 14 July 2026](https://www.aikido.dev/blog/asyncapi-npm-packages-backdoored-via-github-actions).
+
+[107] [Microsoft Security, “Unpacking the AsyncAPI npm supply chain compromise and import-time payload delivery,” 15 July 2026](https://www.microsoft.com/en-us/security/blog/2026/07/15/unpacking-asyncapi-npm-supply-chain-compromise-import-time-payload-delivery/).
+
+[108] [npm registry metadata, `@asyncapi/generator`](https://registry.npmjs.org/%40asyncapi%2Fgenerator).

@@ -265,6 +265,12 @@ The bounded `@joyfill/components` screen identified one strict source intersecti
 
 The governed cohort remains **31 positive package-event records in 25 incident families**, with **29 exact retained pre-event snapshots**, **153 direct declarations**, **153 isolated cutoff-valid SemVer approximations**, **974 bounded depth-three registry-only sensitivity edges**, and **24 future validation units**. No official registry request, cutoff, or pre-event source object was selected. This exclusion adds no record, family, unit, snapshot, declaration, range approximation, graph edge, control, benign label, installation history, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. It does not dispute the reported version or establish campaign completeness, current publisher state, downstream exposure, causality, or statistical independence.
 
+### AsyncAPI generator July 2026 admission — 27 August 2026
+
+The strict ledger now admits `@asyncapi/generator@3.3.1` as one bounded GitHub Actions release-pipeline-compromise family. Aikido and Microsoft Security independently identify the exact affected release; the governed target is their single-version intersection only.[109] [110] The official npm registry time map lists `3.3.1` at `2026-07-14T07:10:48.853Z`; the exact one-millisecond cutoff selects retained `@asyncapi/generator@3.3.0` as the strict pre-event source object.[111]
+
+The protocol now governs **32 positive package-event records in 26 incident families**, with **30 exact retained pre-event snapshots**, **179 direct declarations**, **179 isolated cutoff-valid SemVer approximations**, **1,408 bounded depth-three registry-only sensitivity edges**, and **25 future validation units**. This row adds one bounded family, one exact source snapshot, 26 direct declarations, 26 isolated approximations, 434 bounded sensitivity edges, and one unit. Other AsyncAPI packages named in the reports are not added. Reported tooling overlap and unresolved attribution do not establish a relationship to any governed family, campaign completeness, causal attribution, or statistical independence. The row adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -369,3 +375,6 @@ The governed cohort remains **31 positive package-event records in 25 incident f
 [106]: https://registry.npmjs.org/rand-user-agent "npm registry rand-user-agent metadata"
 [107]: https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise "StepSecurity Joyfill compromised npm packages report"
 [108]: https://socket.dev/blog/joyfill-npm-beta-releases-compromised "Socket Joyfill PolinRider-related incident report"
+[109]: https://www.aikido.dev/blog/asyncapi-npm-packages-backdoored-via-github-actions "Aikido AsyncAPI npm packages backdoored via GitHub Actions"
+[110]: https://www.microsoft.com/en-us/security/blog/2026/07/15/unpacking-asyncapi-npm-supply-chain-compromise-import-time-payload-delivery/ "Microsoft Security AsyncAPI npm supply chain compromise analysis"
+[111]: https://registry.npmjs.org/%40asyncapi%2Fgenerator "npm registry AsyncAPI generator metadata"

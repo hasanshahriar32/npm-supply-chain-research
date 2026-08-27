@@ -2,13 +2,13 @@
   "study": "campaign-relatedness-and-grouped-inference-protocol",
   "artifactVersion": 1,
   "executionStatus": "protocol_only_no_control_frame_or_model_eligible_dataset",
-  "generatedAtUtc": "2026-08-27T07:55:33.027Z",
+  "generatedAtUtc": "2026-08-27T08:15:29.305Z",
   "sourceInputs": {
     "strictLedger": {
       "path": "research/64_temporal_package_event_ledger.csv",
-      "sha256": "d5416da723e06dfcc7c58c1d0f40d9085db0a053cf56c2a5b32b4637f4ee0285",
-      "recordCount": 31,
-      "familyCount": 25
+      "sha256": "39b8d1b7db9df6182ea1cc4a6de9b1cc714fc4ee14f48a64b1728c8ceace1ead",
+      "recordCount": 32,
+      "familyCount": 26
     },
     "keyvAssessment": {
       "path": "research/92_keyv_compromise_candidate_assessment.json",
@@ -21,6 +21,11 @@
       "recordId": "amapcn-2026-05-19",
       "incidentFamily": "mini_shai_hulud_atool_2026",
       "eventStartUtc": "2026-05-19T01:56:40.925Z"
+    },
+    {
+      "recordId": "asyncapi-generator-2026-07-14",
+      "incidentFamily": "asyncapi_github_actions_release_pipeline_compromise_2026",
+      "eventStartUtc": "2026-07-14T07:10:48.853Z"
     },
     {
       "recordId": "axios-2026-03-31",
@@ -174,6 +179,14 @@
     }
   ],
   "familyInventory": [
+    {
+      "familyId": "asyncapi_github_actions_release_pipeline_compromise_2026",
+      "recordIds": [
+        "asyncapi-generator-2026-07-14"
+      ],
+      "recordCount": 1,
+      "splitRule": "All member records must remain in the same development, validation, or final-test partition."
+    },
     {
       "familyId": "axios_2026",
       "recordIds": [
@@ -399,8 +412,14 @@
   ],
   "validationUnits": {
     "unitDefinition": "Connected components of the documented family-relatedness graph, not package-event rows.",
-    "unitCount": 24,
+    "unitCount": 25,
     "units": [
+      {
+        "validationClusterId": "asyncapi_github_actions_release_pipeline_compromise_2026",
+        "familyIds": [
+          "asyncapi_github_actions_release_pipeline_compromise_2026"
+        ]
+      },
       {
         "validationClusterId": "axios_2026",
         "familyIds": [
