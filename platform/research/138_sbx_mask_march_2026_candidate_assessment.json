@@ -1,0 +1,102 @@
+{
+  "study": "sbx-mask-march-2026-bounded-package-event-candidate-assessment",
+  "artifactVersion": 1,
+  "artifactDate": "2026-08-27",
+  "decision": "exclude_from_primary_temporal_ledger_due_to_no_retained_strict_pre_event_source_object",
+  "candidate": {
+    "recordId": "sbx-mask-2026-03-18",
+    "packageName": "sbx-mask",
+    "eventFamilyCandidate": "sbx_mask_march_2026_maintainer_compromise",
+    "affectedVersions": [
+      "1.0.0",
+      "1.0.1",
+      "1.0.2"
+    ],
+    "affectedVersionScopeRule": "finite_version_set_independently_reported_by_sonatype_and_github_reviewed_advisory",
+    "earliestAffectedVersion": {
+      "version": "1.0.0",
+      "publishedUtc": "2026-03-19T14:46:00.636Z"
+    },
+    "strictFeatureCutoffUtc": "2026-03-19T14:46:00.635Z",
+    "selectedPreEventVersion": null,
+    "selectedPreEventVersionObjectRetained": false,
+    "distinctFromExistingLedgerFamilies": "not_asserted_related_to_any_governed_family"
+  },
+  "corroboration": {
+    "sonatype": {
+      "publishedDate": "2026-03-19",
+      "statement": "Research report identifies sbx-mask as a malicious npm package in a suspected trusted-maintainer-account compromise."
+    },
+    "githubAdvisory": {
+      "reviewedDate": "2026-03-24",
+      "statement": "Reviewed malware advisory GHSA-r934-qgg3-v7fg independently lists sbx-mask versions 1.0.0, 1.0.1, and 1.0.2."
+    },
+    "officialRegistry": {
+      "boundedMetadataOnly": true,
+      "affectedPublicationTimes": {
+        "1.0.0": "2026-03-19T14:46:00.636Z",
+        "1.0.1": "2026-03-19T14:53:28.861Z",
+        "1.0.2": "2026-03-19T15:41:42.325Z"
+      },
+      "affectedVersionObjectsRetained": {
+        "1.0.0": false,
+        "1.0.1": false,
+        "1.0.2": false
+      },
+      "selectedPreEventVersion": null,
+      "selectedPreEventVersionObjectRetained": false,
+      "retainedVersionObjectKeys": [
+        "0.0.1-security"
+      ]
+    }
+  },
+  "sourceProvenance": {
+    "sonatype": {
+      "url": "https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages",
+      "separatelyReviewedWebText": true,
+      "directScriptRequestAttempted": false,
+      "responseSha256": null
+    },
+    "githubAdvisory": {
+      "url": "https://github.com/advisories/GHSA-r934-qgg3-v7fg",
+      "separatelyReviewedWebText": true,
+      "directScriptRequestAttempted": false,
+      "responseSha256": null
+    },
+    "npmRegistry": {
+      "url": "https://registry.npmjs.org/sbx-mask",
+      "responseSha256": "c29f8da4346cd99b7771d5786a22c4b88be690ddb269d4886829d8160499e4d1"
+    }
+  },
+  "strictEligibility": {
+    "finiteExactAffectedVersionsIndependentlyCorroborated": true,
+    "officialAffectedVersionTimestampsRetained": true,
+    "selectedPreEventVersion": null,
+    "selectedPreEventVersionObjectRetained": false,
+    "eligibleForGovernedReconstruction": false
+  },
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 0,
+    "primaryLedgerFamiliesAdded": 0,
+    "futureValidationUnitsAdded": 0,
+    "exactPreEventSourceSnapshotsCreated": 0,
+    "dependencyDeclarationsCreated": 0,
+    "isolatedSemverApproximationsCreated": 0,
+    "recursiveGraphEdgesCreated": 0,
+    "controlsCreated": 0,
+    "benignLabelsCreated": 0,
+    "historicalInstallTracesCreated": 0,
+    "reachOrBlastRadiusValuesCreated": 0,
+    "scoresComputed": 0,
+    "modelsFitted": 0,
+    "rankingsComputed": 0,
+    "uncertaintyIntervalsComputed": 0,
+    "calibrationResultsCreated": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "nextDecisionBoundary": "The candidate cannot enter the strict ledger without a retained selected pre-event source object.",
+  "prohibitedInterpretations": [
+    "Registry metadata establishes publication-time selection and retained-object availability only; it does not establish historical installations, downstream reach, blast radius, current maintainer state, or a causal effect.",
+    "An eligible source-object screen alone does not create a cutoff-valid control population, benign label, score, model, rank, interval, calibration result, or predictive metric."
+  ]
+}

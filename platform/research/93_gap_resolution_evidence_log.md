@@ -509,3 +509,15 @@ Bounded official npm registry metadata timestamps `9.0.2-alpha.21` at `2026-05-2
 91. Sonatype, *Hijacked npm Package Attempts to Deliver PolinRider-Linked RAT*, 21 May 2026: <https://www.sonatype.com/blog/hijacked-npm-package-attempts-to-deliver-polinrider-linked-rat>.
 92. GitHub Advisory Database, *Malware in @common-stack/generate-plugin*, GHSA-6p55-6hvr-3xmg: <https://github.com/advisories/GHSA-6p55-6hvr-3xmg>.
 93. npm, *Registry metadata for @common-stack/generate-plugin*: <https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin>.
+
+## Bounded sbx-mask March 2026 source-object exclusion — 27 August 2026
+
+The `sbx-mask` screen is bounded to a single package-event candidate; it neither combines the candidate with `touch-adv` nor asserts a relationship to any governed family. Sonatype reports `sbx-mask` as a malicious npm package in a suspected trusted-maintainer-account compromise. GitHub’s reviewed malware advisory independently identifies the finite affected set `1.0.0`, `1.0.1`, and `1.0.2`. [94] [95]
+
+Bounded official npm registry metadata timestamps the earliest affected version, `1.0.0`, at `2026-03-19T14:46:00.636Z`; the strict one-millisecond cutoff is `2026-03-19T14:46:00.635Z`. The current response retains only `0.0.1-security`, which is not before the cutoff, leaving no selected pre-event version and no retained strict source object. [96] No package payload was downloaded, extracted, installed, or executed.
+
+`138_sbx_mask_march_2026_candidate_assessment.json` therefore records a strict primary-ledger exclusion. The governed cohort remains **28 records, 22 families, 26 exact snapshots, 126 direct declarations, 760 bounded sensitivity edges, and 21 validation units**. The exclusion creates zero primary records, families, snapshots, declarations, isolated SemVer approximations, graph edges, controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration outputs, or predictive metrics. Current retention does not dispute the incident or imply benignness, a non-event, current publisher state, reach, or causality.
+
+94. Sonatype, *Sonatype Discovers Two Malicious npm Packages*, 19 March 2026: <https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages>.
+95. GitHub Advisory Database, *Malware in sbx-mask*, GHSA-r934-qgg3-v7fg: <https://github.com/advisories/GHSA-r934-qgg3-v7fg>.
+96. npm, *Registry metadata for sbx-mask*: <https://registry.npmjs.org/sbx-mask>.

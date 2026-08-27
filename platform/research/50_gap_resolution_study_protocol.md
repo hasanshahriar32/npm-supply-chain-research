@@ -235,6 +235,12 @@ The strict ledger now admits `@common-stack/generate-plugin@9.0.2-alpha.21` and 
 
 The protocol now governs **28 positive package-event records in 22 incident families**, with **26 exact retained pre-event snapshots**, **126 direct declarations**, **126 isolated cutoff-valid SemVer approximations**, **760 bounded depth-three registry-only sensitivity edges**, and **21 future validation units**. The common-stack generate-plugin row adds one separate family and one unit; no relationship to another governed family is asserted. It adds no control, benign label, installation history, resolved lock, reach value, authority value, score, rank, interval, calibration result, model, or predictive metric. The no-control/no-model gate remains blocked.
 
+### sbx-mask March 2026 source-object exclusion — 27 August 2026
+
+The bounded `sbx-mask` screen has independently documented finite affected versions but fails the retained-source-object gate. Sonatype reports `sbx-mask` as a malicious package in a suspected trusted-maintainer-account compromise, while GitHub’s reviewed malware advisory independently identifies exactly `1.0.0`, `1.0.1`, and `1.0.2`.[94] [95] Official npm registry metadata timestamps the earliest affected version, `1.0.0`, at `2026-03-19T14:46:00.636Z`; strict subtraction yields `2026-03-19T14:46:00.635Z`. The response retains only `0.0.1-security`, which is later than the cutoff, so no strict pre-event version can be selected and no pre-event version object is retained.[96]
+
+The resulting `138_sbx_mask_march_2026_candidate_assessment.json` is an exclusion, not a ledger addition. The governed cohort therefore remains **28 positive package-event records in 22 incident families, 26 exact retained snapshots, 126 direct declarations and isolated approximations, 760 bounded registry-only sensitivity edges, and 21 future validation units**. It creates zero snapshots, declarations, graph edges, controls, benign labels, historical installations, dependency reach or blast-radius values, authority values, scores, models, rankings, intervals, calibration results, or predictive metrics. Current registry retention is an eligibility constraint only: it does not dispute the incident, make an unretained release benign, or establish current publisher state, causal effects, or a non-event outcome.
+
 ## References
 
 [1]: https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman "Zimmermann et al., Small World with High Risks"
@@ -324,3 +330,6 @@ The protocol now governs **28 positive package-event records in 22 incident fami
 [91]: https://www.sonatype.com/blog/hijacked-npm-package-attempts-to-deliver-polinrider-linked-rat "Sonatype common-stack generate-plugin hijack report"
 [92]: https://github.com/advisories/GHSA-6p55-6hvr-3xmg "GitHub Advisory Database common-stack generate-plugin malware advisory"
 [93]: https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin "npm registry common-stack generate-plugin metadata"
+[94]: https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages "Sonatype sbx-mask incident report"
+[95]: https://github.com/advisories/GHSA-r934-qgg3-v7fg "GitHub Advisory Database sbx-mask malware advisory"
+[96]: https://registry.npmjs.org/sbx-mask "npm registry sbx-mask metadata"

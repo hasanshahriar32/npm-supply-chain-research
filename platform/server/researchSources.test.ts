@@ -622,4 +622,26 @@ describe("repository-backed research sources", () => {
       zeroOutputs: { ledgerRows: 0, families: 0, validationUnits: 0, snapshots: 0, controls: 0, models: 0, predictiveMetrics: 0 },
     });
   });
+
+  it("excludes the independently corroborated sbx-mask candidate when the strict cutoff has no retained pre-event source object", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/138_sbx_mask_march_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_retained_strict_pre_event_source_object",
+      candidate: {
+        recordId: "sbx-mask-2026-03-18",
+        packageName: "sbx-mask",
+        eventFamilyCandidate: "sbx_mask_march_2026_maintainer_compromise",
+        affectedVersions: ["1.0.0", "1.0.1", "1.0.2"],
+        earliestAffectedVersion: { version: "1.0.0", publishedUtc: "2026-03-19T14:46:00.636Z" },
+        strictFeatureCutoffUtc: "2026-03-19T14:46:00.635Z",
+        selectedPreEventVersion: null,
+        selectedPreEventVersionObjectRetained: false,
+        distinctFromExistingLedgerFamilies: "not_asserted_related_to_any_governed_family",
+      },
+      strictEligibility: { finiteExactAffectedVersionsIndependentlyCorroborated: true, officialAffectedVersionTimestampsRetained: true, selectedPreEventVersion: null, selectedPreEventVersionObjectRetained: false, eligibleForGovernedReconstruction: false },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, isolatedSemverApproximationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, benignLabelsCreated: 0, historicalInstallTracesCreated: 0, reachOrBlastRadiusValuesCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, calibrationResultsCreated: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.corroboration.officialRegistry.retainedVersionObjectKeys).toEqual(["0.0.1-security"]);
+    expect(assessment.nextDecisionBoundary).toContain("cannot enter the strict ledger");
+  });
 });

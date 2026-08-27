@@ -48,6 +48,8 @@ Each recorded outcome uses the event anchor only to define a feature cutoff. The
 
 The 2026 Axios family includes two distinct package roles. `axios` is a publisher-compromise target, while `plain-crypto-js` is retained as the injected malicious dependency. Treating both as interchangeable targets would blur causal role and inflate inference. The same care applies to the 2021 records: the shared campaign identifier is retained so a future split or bootstrap can operate at the family level.
 
+The bounded March 2026 `sbx-mask` screen is deliberately **not** a register row. Sonatype reports the malicious package in a suspected trusted-maintainer-account compromise, while GitHub’s reviewed advisory independently identifies the finite affected set `1.0.0`, `1.0.1`, and `1.0.2`. [55] [56] The official registry time map fixes the earliest at `2026-03-19T14:46:00.636Z`, but the resulting strict cutoff has no retained earlier version object: the current response holds only `0.0.1-security`. [57] This current-retention constraint neither disputes the incident nor supplies a substitute source, historical installation evidence, a control, or a non-event label.
+
 The current reconstruction has **26 exact pre-event source snapshots** across **28 records**. `node-ipc@10.1.0` is the exact source object immediately before the March 2022 `node-ipc@10.1.1` cutoff and is distinct from the current 2026 `node-ipc@12.0.0` source object. `debug@4.4.1` is the strict source object immediately before the independently corroborated `debug@4.4.2` cutoff; `@solana/web3.js@2.1.0-canary-20241203100809` is the all-stream strict source object immediately before the earliest independently corroborated Solana cutoff and declares 18 runtime dependencies; `@lottiefiles/lottie-player@2.0.4` is the strict source object immediately before the October 2024 cutoff; `country-currency-map@2.1.7` is the strict source object immediately before the March 2025 cutoff; `html-to-gutenberg@4.2.10` is the strict source object immediately before the May 2026 cutoff; `@common-stack/generate-plugin@9.0.2-alpha.18` is the strict source object immediately before the May 2026 cutoff; and the all-stream cutoff before `nx@21.5.0` selects `nx@21.5.0-canary.20250826-af44608`. The 126 direct declarations, 126 isolated cutoff-valid range approximations, and 760 depth-three registry-only sensitivity edges remain reconstruction artifacts—not installations, dependency reach, blast-radius values, or model features with causal or predictive interpretation.
 
 ## Relationship to the graph and calibration artifacts
@@ -178,3 +180,9 @@ The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) st
 [53] [GitHub Advisory Database, “Malware in @common-stack/generate-plugin,” GHSA-6p55-6hvr-3xmg](https://github.com/advisories/GHSA-6p55-6hvr-3xmg).
 
 [54] [npm registry metadata, `@common-stack/generate-plugin`](https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin).
+
+[55] [Sonatype, “Sonatype Discovers Two Malicious npm Packages,” 19 March 2026](https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages).
+
+[56] [GitHub Advisory Database, “Malware in sbx-mask,” GHSA-r934-qgg3-v7fg](https://github.com/advisories/GHSA-r934-qgg3-v7fg).
+
+[57] [npm registry metadata, `sbx-mask`](https://registry.npmjs.org/sbx-mask).

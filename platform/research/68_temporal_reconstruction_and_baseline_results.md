@@ -429,6 +429,18 @@ Sonatype identifies `@common-stack/generate-plugin@9.0.2-alpha.21` and `9.0.2-al
 
 This adds one bounded May 2026 family and future validation unit. It creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. Registry metadata establishes time-map selection and retained-object availability only; it is not evidence of historical installation, downstream reach, current maintainer state, or causality. No relationship to another governed family is asserted.
 
+## Exclusion: bounded sbx-mask March 2026 source-retention screen
+
+Sonatype reports `sbx-mask` as a malicious npm package in a suspected trusted-maintainer-account compromise, while GitHub’s reviewed malware advisory independently identifies the finite affected-version set `1.0.0`, `1.0.1`, and `1.0.2`. [91] [92] Official npm registry metadata timestamps the earliest listed release, `1.0.0`, at `2026-03-19T14:46:00.636Z`; strict subtraction yields cutoff `2026-03-19T14:46:00.635Z`. The current response retains only `0.0.1-security`, which is not before that cutoff, so there is no selected strict pre-event version or retained source object. [93]
+
+| Governing decision | Result | Boundary retained |
+|---|---|---|
+| Primary ledger admission | Excluded | No retained source object can be substituted or inferred. |
+| Cohort totals | Unchanged: 28 records, 22 families, 26 exact snapshots, 126 declarations/approximations, 760 bounded edges, 21 validation units | No new record, family, snapshot, declaration, range selection, or graph edge. |
+| Permitted interpretation | Current retention eligibility only | Not evidence of historical installation, downstream reach, current publisher state, benignness, a non-event, or causality. |
+
+This strict exclusion creates **zero** controls, benign labels, historical installations, reach or blast-radius values, authority values, scores, rankings, intervals, calibration results, model fits, or predictive metrics. It does not dispute the independently documented incident and does not assert any relationship to another governed family.
+
 ## References
 
 [1] [CISA, “Malware Discovered in Popular npm Package ua-parser-js,” 22 October 2021](https://www.cisa.gov/news-events/alerts/2021/10/22/malware-discovered-popular-npm-package-ua-parser-js).
@@ -601,3 +613,9 @@ This adds one bounded May 2026 family and future validation unit. It creates **z
 [89] [GitHub Advisory Database, “Malware in @common-stack/generate-plugin,” GHSA-6p55-6hvr-3xmg](https://github.com/advisories/GHSA-6p55-6hvr-3xmg).
 
 [90] [npm registry metadata, `@common-stack/generate-plugin`](https://registry.npmjs.org/%40common-stack%2Fgenerate-plugin).
+
+[91] [Sonatype, “Sonatype Discovers Two Malicious npm Packages,” 19 March 2026](https://www.sonatype.com/blog/sonatype-discovers-two-malicious-npm-packages).
+
+[92] [GitHub Advisory Database, “Malware in sbx-mask,” GHSA-r934-qgg3-v7fg](https://github.com/advisories/GHSA-r934-qgg3-v7fg).
+
+[93] [npm registry metadata, `sbx-mask`](https://registry.npmjs.org/sbx-mask).
