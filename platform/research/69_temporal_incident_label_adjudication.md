@@ -264,3 +264,15 @@ The shared campaign name does not supply family treatment, actor identity, compl
 
 [82] [StepSecurity, “Shai-Hulud: Self-Replicating Worm Compromises 500+ NPM Packages,” 15 September 2025](https://www.stepsecurity.io/blog/ctrl-tinycolor-and-40-npm-packages-compromised).
 [83] [CISA, “Widespread Supply Chain Compromise Impacting npm Ecosystem,” 23 September 2025](https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem).
+
+## Bounded ansi-styles September 2025 family-member admission
+
+| Record | Affected release | Strict source object | Disposition |
+|---|---|---|---|
+| `ansi-styles-2025-09-08` | `ansi-styles@6.2.2` | `6.2.1` | Bounded member of the documented Qix family; no new family or validation unit. |
+
+StepSecurity and Wiz independently specify the release; registry metadata selects `6.2.1` at the one-millisecond cutoff.[84] [85] [86] The register contains **36 records in 28 families** and 34 exact snapshots. No control or predictive inference is authorized.
+
+[84] [StepSecurity, “20+ Popular NPM Packages Compromised”](https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi).
+[85] [Wiz, “Widespread npm Supply Chain Attack”](https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk).
+[86] [npm registry metadata, `ansi-styles`](https://registry.npmjs.org/ansi-styles).

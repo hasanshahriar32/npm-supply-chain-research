@@ -1,5 +1,8 @@
 # Project TODO
 
+- [x] Screen ansi-styles September 2025 exact-version evidence, registry cutoff, retained source object, and explicit Qix-family treatment
+- [x] Publish only the resulting bounded admission or exclusion and run dependent reconstructions only if admitted
+- [x] Validate, synchronize, and checkpoint the ansi-styles decision
 - [x] Screen @ctrl/tinycolor September 2025 against finite version-scope and explicit family gates
 - [x] Publish only a provenance-preserving admission or exclusion, without registry inference if exact version scope is unavailable
 - [x] Validate, synchronize, and checkpoint the bounded candidate-screen result

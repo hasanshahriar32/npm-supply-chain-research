@@ -410,3 +410,11 @@ StepSecurity’s public report names `@ctrl/tinycolor` in the September 2025 Sha
 
 [121]: https://www.stepsecurity.io/blog/ctrl-tinycolor-and-40-npm-packages-compromised "StepSecurity September 2025 Shai-Hulud report"
 [122]: https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem "CISA September 2025 widespread npm compromise alert"
+
+## Bounded ansi-styles September 2025 family-member admission — 27 August 2026
+
+StepSecurity and Wiz independently identify `ansi-styles@6.2.2` in the September 2025 malicious-publish event; registry metadata fixes its publication at `2025-09-08T13:12:10.343Z` and selects retained `6.2.1` one millisecond before cutoff.[123] [124] [125] The row joins the already governed Qix family without a new family or validation unit. The active cohort is 36 records, 28 families, 34 snapshots, 211 declarations, 1,643 sensitivity edges, and 27 units; no controls or predictive outputs are created.
+
+[123]: https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi "StepSecurity September 2025 affected-version report"
+[124]: https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk "Wiz September 2025 affected-version report"
+[125]: https://registry.npmjs.org/ansi-styles "npm registry ansi-styles metadata"

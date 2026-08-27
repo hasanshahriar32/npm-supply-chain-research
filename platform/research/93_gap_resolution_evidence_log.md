@@ -618,3 +618,11 @@ StepSecurity publicly names `@ctrl/tinycolor` in the September 2025 Shai-Hulud e
 
 121. StepSecurity, *Shai-Hulud: Self-Replicating Worm Compromises 500+ NPM Packages*, 15 September 2025: <https://www.stepsecurity.io/blog/ctrl-tinycolor-and-40-npm-packages-compromised>.
 122. CISA, *Widespread Supply Chain Compromise Impacting npm Ecosystem*, 23 September 2025: <https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem>.
+
+## Bounded ansi-styles September 2025 family-member admission — source provenance, 27 August 2026
+
+StepSecurity and Wiz independently identify `ansi-styles@6.2.2`; official registry metadata timestamps it at `2025-09-08T13:12:10.343Z`, and cutoff `2025-09-08T13:12:10.342Z` selects retained `6.2.1`. `158_ansi_styles_september_2025_candidate_assessment.json` is metadata-only. Regeneration adds one record and one snapshot, but zero families, declarations, edges, or validation units; totals are **36/28/34/211/1,643/27**. No controls, installation, reach, scores, models, rankings, intervals, calibration, or predictive outputs are created.
+
+123. StepSecurity, *20+ Popular NPM Packages Compromised*, 8 September 2025: <https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi>.
+124. Wiz, *Widespread npm Supply Chain Attack*, 9 September 2025: <https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk>.
+125. npm, *Registry metadata for ansi-styles*: <https://registry.npmjs.org/ansi-styles>.

@@ -1,0 +1,8 @@
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+const text = await readFile('/home/ubuntu/ansi-styles-registry-metadata.json', 'utf8');
+const data = JSON.parse(text), version = '6.2.2', publishedUtc = data.time[version];
+const cutoff = new Date(Date.parse(publishedUtc) - 1).toISOString();
+const pre = Object.entries(data.time).filter(([v,t]) => !['created','modified'].includes(v) && Date.parse(t) <= Date.parse(cutoff)).sort((a,b) => Date.parse(a[1])-Date.parse(b[1])).at(-1)?.[0] ?? null;
+const out = {study:'ansi-styles-september-2025-candidate-assessment',artifactVersion:1,artifactDate:new Date().toISOString().slice(0,10),candidate:{packageName:'ansi-styles',affectedVersions:[version],earliestAffectedVersion:{version,publishedUtc},strictFeatureCutoffUtc:cutoff,selectedPreEventVersion:pre,selectedPreEventVersionObjectRetained:Boolean(pre && data.versions[pre]),existingFamily:'qix_npm_phishing_september_2025'},sourceProvenance:{stepSecurity:'https://www.stepsecurity.io/blog/20-popular-npm-packages-compromised-chalk-debug-strip-ansi-color-convert-wrap-ansi',wiz:'https://www.wiz.io/blog/widespread-npm-supply-chain-attack-breaking-down-impact-scope-across-debug-chalk',npmRegistry:{url:'https://registry.npmjs.org/ansi-styles',responseSha256:createHash('sha256').update(text).digest('hex')}},strictEligibility:{finiteExactAffectedVersionsIndependentlyCorroborated:true,officialAffectedVersionTimestampsRetained:true,selectedPreEventVersionObjectRetained:Boolean(pre && data.versions[pre]),familyTreatmentExplicitlyDocumented:true}};
+await writeFile('research/158_ansi_styles_september_2025_candidate_assessment.json', JSON.stringify(out,null,2)+'\n'); console.log(JSON.stringify(out.candidate));
