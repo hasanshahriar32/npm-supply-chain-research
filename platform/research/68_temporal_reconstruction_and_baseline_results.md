@@ -812,3 +812,11 @@ Microsoft and SafeDep independently support the finite `@t-in-one/add_applicatio
 [135] [Microsoft report](https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/).
 [136] [SafeDep report](https://safedep.io/oob-moika-tech-dependency-confusion-campaign).
 [137] [npm registry metadata](https://registry.npmjs.org/%40t-in-one%2Fadd_application).
+
+## Mastra Core admission — 27 August 2026
+
+StepSecurity and Snyk independently identify `@mastra/core@1.42.1`; official registry metadata fixes the earliest affected publication at `2026-06-17T01:15:13.011Z`, the strict one-millisecond cutoff at `2026-06-17T01:15:13.010Z`, and the all-stream retained source object at `0.0.0-caleb-channels-on-lease-20260616160652`. [138] [139] [140] One distinct Mastra scope-compromise family and one validation unit are added; the sources support neither relationship to another governed family nor claims of campaign completeness or statistical independence. The reconstruction is now **41/30/39/248 direct declarations/244 isolated approximations/1,810 bounded edges/29 validation units**. Four unresolved ranges and seven unresolved bounded edges are documented data limits, not lockfiles, reach, blast radius, scores, controls, models, or predictive metrics.
+
+[138] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
+[139] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
+[140] [npm registry metadata](https://registry.npmjs.org/%40mastra%2Fcore).

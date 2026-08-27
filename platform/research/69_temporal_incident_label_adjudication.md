@@ -316,3 +316,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [99] [Microsoft report](https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/).
 [100] [SafeDep report](https://safedep.io/oob-moika-tech-dependency-confusion-campaign).
 [101] [npm registry metadata, `@t-in-one/add_application`](https://registry.npmjs.org/%40t-in-one%2Fadd_application).
+
+> **Mastra Core amendment — 27 August 2026.** `@mastra/core@1.42.1` is included as a separate `mastra_scope_easy_day_js_compromise_2026` family after independent exact-version corroboration and strict retained-object selection. [102] [103] [104] The record is one future validation unit only; it establishes no broader package census, actor identity, cross-family relationship, campaign completeness, or statistical independence. The register consequently contains **41 records in 30 families**, with **39 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[102] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
+[103] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
+[104] [npm registry metadata, `@mastra/core`](https://registry.npmjs.org/%40mastra%2Fcore).

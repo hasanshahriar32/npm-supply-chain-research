@@ -16,6 +16,10 @@ StepSecurity and Aikido independently identify `@redhat-cloud-services/chrome@2.
 
 Microsoft and SafeDep corroborate `@t-in-one/add_application@5.7.1`, but the official registry response retains no version object before the exact `2026-05-29T09:01:56.659Z` cutoff. The sole retained `0.0.1-security` object is later, so the candidate is excluded without changing the **40/29/38/219/1,652/28** cohort, ledger, family, validation-unit, dependency, or graph artifacts. The full suite passed **77 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures again verified only unauthenticated Clerk sign-in boundaries—not authenticated private-content rendering.
 
+## Bounded Mastra Core June 2026 admission
+
+StepSecurity and Snyk independently identify `@mastra/core@1.42.1`; official registry metadata fixes the one-millisecond cutoff and retains the all-stream pre-event source object `0.0.0-caleb-channels-on-lease-20260616160652`. The event is represented as one separate Mastra scope-compromise family and one validation unit. Governed regeneration yields **41 records, 30 families, 39 snapshots, 248 declarations, 244 isolated approximations, 1,810 bounded edges, and 29 validation units**, with four unresolved ranges and seven unresolved bounded edges retained strictly as limitations. The full suite passed **78 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.

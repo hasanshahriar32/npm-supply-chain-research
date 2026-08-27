@@ -677,3 +677,13 @@ Microsoft and SafeDep independently identify `@t-in-one/add_application@5.7.1` i
 140. Microsoft, *Malicious npm packages abuse dependency confusion to profile developer environments*: <https://www.microsoft.com/en-us/security/blog/2026/05/29/33-malicious-npm-packages-abuse-dependency-confusion-profile-developer-environments/>.
 141. SafeDep, *183 npm Packages Target Cloud and Finance via oob.moika.tech*: <https://safedep.io/oob-moika-tech-dependency-confusion-campaign>.
 142. npm registry metadata, `@t-in-one/add_application`: <https://registry.npmjs.org/%40t-in-one%2Fadd_application>.
+
+## Mastra Core admission — 2026-08-27
+
+StepSecurity and Snyk independently identify `@mastra/core@1.42.1` in the June 2026 scope-compromise event. [143] [144] Official npm registry metadata timestamps the affected release at `2026-06-17T01:15:13.011Z`, giving an exact cutoff of `2026-06-17T01:15:13.010Z`; the latest retained all-stream version object before that cutoff is `0.0.0-caleb-channels-on-lease-20260616160652`. [145] This supports one distinct family and one validation unit only, without claims about other Mastra packages, actor identity, campaign completeness, or statistical independence.
+
+The governed cohort is **41 records, 30 families, 39 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. The generated diagnostics retain four unresolved direct ranges and seven unresolved bounded edges; neither count measures reach or blast radius. No control, benign label, historic installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric was created.
+
+143. StepSecurity, *Mastra npm Supply Chain Attack: 140+ Packages Backdoored via easy-day-js Typosquat*: <https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js>.
+144. Snyk, *Mastra npm Scope Takeover*: <https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/>.
+145. npm registry metadata, `@mastra/core`: <https://registry.npmjs.org/%40mastra%2Fcore>.
