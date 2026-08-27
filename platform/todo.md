@@ -8,6 +8,8 @@
 - [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen @mastra/core June 2026 exact-version evidence, strict registry cutoff, retained source object, and documented family treatment
 - [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
+- [x] Screen easy-day-js June 2026 exact-version evidence, strict registry cutoff, retained source object, and documented Mastra-family treatment
+- [x] Publish only the resulting bounded admission or exclusion after governed regeneration, validation, and synchronization
 - [x] Screen @cloudplatform-single-spa/search May 2026 against independently corroborated exact-version intersection
 - [x] Publish only the resulting bounded admission or exclusion after validation and synchronization
 - [x] Screen simple-swizzle September 2025 exact-version evidence, registry cutoff, retained source object, and existing Qix-family treatment

@@ -20,6 +20,10 @@ Microsoft and SafeDep corroborate `@t-in-one/add_application@5.7.1`, but the off
 
 StepSecurity and Snyk independently identify `@mastra/core@1.42.1`; official registry metadata fixes the one-millisecond cutoff and retains the all-stream pre-event source object `0.0.0-caleb-channels-on-lease-20260616160652`. The event is represented as one separate Mastra scope-compromise family and one validation unit. Governed regeneration yields **41 records, 30 families, 39 snapshots, 248 declarations, 244 isolated approximations, 1,810 bounded edges, and 29 validation units**, with four unresolved ranges and seven unresolved bounded edges retained strictly as limitations. The full suite passed **78 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
 
+## Bounded easy-day-js June 2026 admission
+
+StepSecurity and Snyk independently identify `easy-day-js@1.11.22`; official registry metadata fixes the one-millisecond cutoff and retains `1.11.21` as its pre-event source object. The row joins the existing Mastra family, so it changes neither family nor validation-unit count. Governed regeneration yields **42 records, 30 families, 40 snapshots, 248 declarations, 244 isolated approximations, 1,810 bounded edges, and 29 validation units**; the four unresolved ranges and seven unresolved edges remain limitations only. The full suite passed **79 tests**, the constrained production build retained nonempty required artifacts, and four 1280×720 captures verified only unauthenticated Clerk sign-in boundaries for workspace routes and standalone `/admin`, not authenticated private-content rendering.
+
 ## Separate administration and ingestion
 
 The authenticated administrator loaded `/admin` in a distinct dark-masthead console, separate from the research workspace frame. The console displayed its governance summary and one real pending snapshot created from the private repository metrics archive by the new authenticated ingestion route.

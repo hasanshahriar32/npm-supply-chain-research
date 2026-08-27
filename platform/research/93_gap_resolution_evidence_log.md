@@ -687,3 +687,13 @@ The governed cohort is **41 records, 30 families, 39 exact snapshots, 248 direct
 143. StepSecurity, *Mastra npm Supply Chain Attack: 140+ Packages Backdoored via easy-day-js Typosquat*: <https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js>.
 144. Snyk, *Mastra npm Scope Takeover*: <https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/>.
 145. npm registry metadata, `@mastra/core`: <https://registry.npmjs.org/%40mastra%2Fcore>.
+
+## Easy-day-js admission — 2026-08-27
+
+StepSecurity and Snyk independently identify `easy-day-js@1.11.22` as the exact malicious dependency in the documented Mastra scope event. [146] [147] Official registry metadata timestamps the affected release at `2026-06-17T01:01:33.087Z`, fixes the cutoff at `2026-06-17T01:01:33.086Z`, and retains `1.11.21` immediately before that boundary. [148] This supports one additional package-event row in the existing Mastra family only, with no new family or validation unit and no claim about unlisted Mastra packages, campaign completeness, actor identity, or statistical independence.
+
+The governed cohort is **42 records, 30 families, 40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. Four unresolved direct ranges and seven unresolved bounded edges remain technical limits, not measures of reach or blast radius. No control, benign label, historic installation, resolved lock, score, rank, model, interval, calibration result, or predictive metric was created.
+
+146. StepSecurity, *Mastra npm Supply Chain Attack: 140+ Packages Backdoored via easy-day-js Typosquat*: <https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js>.
+147. Snyk, *Mastra npm Scope Takeover*: <https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/>.
+148. npm registry metadata, `easy-day-js`: <https://registry.npmjs.org/easy-day-js>.

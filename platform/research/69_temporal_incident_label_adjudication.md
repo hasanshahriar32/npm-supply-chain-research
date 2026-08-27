@@ -322,3 +322,9 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [102] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
 [103] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
 [104] [npm registry metadata, `@mastra/core`](https://registry.npmjs.org/%40mastra%2Fcore).
+
+> **Easy-day-js amendment — 27 August 2026.** `easy-day-js@1.11.22` is included as a second bounded row in the existing `mastra_scope_easy_day_js_compromise_2026` family. StepSecurity and Snyk independently identify the exact release, while the registry cutoff selects retained `1.11.21`. [105] [106] [107] This preserves the existing-family treatment and creates no additional validation unit, campaign-completeness claim, cross-family relationship, or statistical-independence claim. The register consequently contains **42 records in 30 families**, with **40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. No control, benign label, historical installation, reach or blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[105] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
+[106] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
+[107] [npm registry metadata, `easy-day-js`](https://registry.npmjs.org/easy-day-js).

@@ -466,3 +466,11 @@ Microsoft and SafeDep identify `@t-in-one/add_application@5.7.1` within the docu
 [141]: https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js "StepSecurity report"
 [142]: https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/ "Snyk report"
 [143]: https://registry.npmjs.org/%40mastra%2Fcore "npm registry metadata"
+
+### Easy-day-js admission — 27 August 2026
+
+`166_easy_day_js_june_2026_candidate_assessment.json` admits `easy-day-js@1.11.22` as one bounded row. StepSecurity and Snyk independently identify the exact release in the documented Mastra scope event; official registry metadata timestamps it at `2026-06-17T01:01:33.087Z`, fixes the cutoff at `2026-06-17T01:01:33.086Z`, and selects retained `1.11.21`. [144] [145] [146] The row joins the existing `mastra_scope_easy_day_js_compromise_2026` family and adds neither a new family nor a validation unit. The governed totals are **42 records, 30 families, 40 exact snapshots, 248 direct declarations, 244 isolated cutoff-valid SemVer approximations, 1,810 bounded registry-only sensitivity edges, and 29 future validation units**. The four unresolved ranges and seven unresolved bounded edges remain limits, not reach measures. No control, benign label, historic installation, blast-radius value, score, rank, model, interval, calibration result, or predictive metric is created.
+
+[144]: https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js "StepSecurity report"
+[145]: https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/ "Snyk report"
+[146]: https://registry.npmjs.org/easy-day-js "npm registry metadata"

@@ -820,3 +820,11 @@ StepSecurity and Snyk independently identify `@mastra/core@1.42.1`; official reg
 [138] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
 [139] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
 [140] [npm registry metadata](https://registry.npmjs.org/%40mastra%2Fcore).
+
+## Easy-day-js admission — 27 August 2026
+
+StepSecurity and Snyk independently identify `easy-day-js@1.11.22` in the already governed Mastra scope event. Official registry metadata fixes publication at `2026-06-17T01:01:33.087Z`, the one-millisecond cutoff at `2026-06-17T01:01:33.086Z`, and retained `1.11.21` as the all-stream source object. [141] [142] [143] The record joins the existing Mastra family only; it adds no distinct family or validation unit. The reconstruction is **42/30/40/248 direct declarations/244 isolated approximations/1,810 bounded edges/29 validation units**. These registry-only results are not historic installs, lockfiles, reach, blast radius, controls, scores, models, or predictive metrics.
+
+[141] [StepSecurity report](https://www.stepsecurity.io/blog/mastra-npm-packages-compromised-using-easy-day-js).
+[142] [Snyk report](https://snyk.io/blog/a-forgotten-contributor-account-compromised-the-entire-mastra-npm-package-scope/).
+[143] [npm registry metadata](https://registry.npmjs.org/easy-day-js).
