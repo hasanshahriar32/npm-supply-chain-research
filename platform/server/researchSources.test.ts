@@ -36,6 +36,7 @@ describe("repository-backed research sources", () => {
     expect(names).toContain("rand-user-agent 2025");
     expect(names).toContain("AsyncAPI generator 2026");
     expect(names).toContain("dYdX v4 client 2026");
+    expect(names).toContain("dYdX Solo 2022");
   });
 
   it("marks the graph-attention experiment as blocked until prerequisites are met", () => {
@@ -43,10 +44,10 @@ describe("repository-backed research sources", () => {
     expect(hgat?.status).toBe("blocked");
   });
 
-  it("reconciles the temporal-feasibility card with the thirty-three-record no-fit ledger", () => {
+  it("reconciles the temporal-feasibility card with the thirty-four-record no-fit ledger", () => {
     const temporal = getExperiments().find((experiment) => experiment.id === "temporal-feasibility");
-    expect(temporal?.evaluation).toContain("Thirty-three package-event records");
-    expect(temporal?.note).toContain("twenty-seven campaign families");
+    expect(temporal?.evaluation).toContain("Thirty-four package-event records");
+    expect(temporal?.note).toContain("twenty-eight campaign families");
     expect(temporal?.note).toContain("March 2022 node-ipc");
     expect(temporal?.note).toContain("shared Qix-related family");
     expect(temporal?.note).toContain("Debug/chalk");
@@ -280,6 +281,29 @@ describe("repository-backed research sources", () => {
     expect(assessment.prohibitedInterpretations).toContain("The unconfirmed maintainer-compromise attribution and cross-ecosystem context do not authorize expansion into additional package records, assignment to an existing governed family, campaign completeness, or a statistical-independence claim.");
   });
 
+  it("admits the bounded dYdX Solo event only with its independently corroborated two-version intersection, retained strict predecessor, and no companion-package expansion", async () => {
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/152_dydx_solo_september_2022_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "eligible_for_governed_primary_temporal_ledger_reconstruction",
+      candidate: {
+        recordId: "dydx-solo-2022-09-23",
+        packageName: "@dydxprotocol/solo",
+        eventFamilyCandidate: "dydx_solo_september_2022_npm_account_compromise",
+        affectedVersions: ["0.41.1", "0.41.2"],
+        affectedVersionScopeRule: "strict_two_version_intersection_of_independently_reviewed_sources_only",
+        earliestAffectedVersion: { version: "0.41.1", publishedUtc: "2022-09-23T10:39:42.987Z" },
+        strictFeatureCutoffUtc: "2022-09-23T10:39:42.986Z",
+        selectedPreEventVersion: "0.41.0",
+        selectedPreEventVersionObjectRetained: true,
+        documentedIncidentContext: "dydx_owned_npm_package_event_with_mend_reported_account_compromise",
+        distinctFromExistingLedgerFamilies: "not_asserted_related_to_any_governed_family",
+      },
+      strictEligibility: { finiteExactAffectedVersionsIndependentlyCorroborated: true, officialAffectedVersionTimestampsRetained: true, selectedPreEventVersion: "0.41.0", selectedPreEventVersionObjectRetained: true, eligibleForGovernedReconstruction: true },
+      currentDecision: { primaryLedgerRecordsAdded: 0, primaryLedgerFamiliesAdded: 0, futureValidationUnitsAdded: 0, exactPreEventSourceSnapshotsCreated: 0, dependencyDeclarationsCreated: 0, isolatedSemverApproximationsCreated: 0, recursiveGraphEdgesCreated: 0, controlsCreated: 0, modelsFitted: 0, predictiveMetricsComputed: 0 },
+    });
+    expect(assessment.prohibitedInterpretations).toContain("The documented dYdX package context and temporal difference from the governed 2026 dYdX record do not authorize expansion into additional package records, assignment to an existing governed family, campaign completeness, actor linkage, or a statistical-independence claim.");
+  });
+
   it("excludes the bounded Joyfill lead as a new independent family when independent reporting documents PolinRider relatedness before registry access", async () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/146_joyfill_components_july_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
@@ -319,7 +343,8 @@ describe("repository-backed research sources", () => {
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("Joyfill July 2026 relatedness exclusion") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("AsyncAPI generator July 2026 GitHub Actions release-pipeline-compromise admission") });
     await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("dYdX v4 client January–February 2026 cross-ecosystem malicious-publication admission") });
-    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("33 package-event records in 27 incident families") });
+    await expect(getDocument("gap-analysis")).resolves.toMatchObject({ markdown: expect.stringContaining("dYdX Solo September 2022 npm account-compromise admission") });
+    await expect(getDocument("incident-labels")).resolves.toMatchObject({ markdown: expect.stringContaining("34 records in 28 families") });
   });
 
   it("preserves the generated direct-edge fidelity boundary and no-fit calibration result", async () => {
@@ -327,12 +352,12 @@ describe("repository-backed research sources", () => {
     const rangeResolution = await import("node:fs/promises").then((fs) => fs.readFile("research/70_cutoff_direct_dependency_range_resolution_manifest.json", "utf8")).then(JSON.parse);
     const rangeDiagnostic = await import("node:fs/promises").then((fs) => fs.readFile("research/71_direct_range_resolution_diagnostic.json", "utf8")).then(JSON.parse);
     const gate = await import("node:fs/promises").then((fs) => fs.readFile("research/66_temporal_baseline_and_calibration_gate.json", "utf8")).then(JSON.parse);
-    expect(graph.summary).toMatchObject({ packageEventRecords: 33, exactSourceSnapshots: 31, unavailableSourceSnapshots: 2, declaredDirectEdges: 200, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
+    expect(graph.summary).toMatchObject({ packageEventRecords: 34, exactSourceSnapshots: 32, unavailableSourceSnapshots: 2, declaredDirectEdges: 211, resolvedTargetVersions: 0, computedTransitiveReachValues: 0 });
     expect(graph.prohibitedInterpretations).toContain("This artifact is not a lockfile, a package-manager resolution, or a transitive dependency graph.");
-    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 200, resolvedIsolatedSemverRanges: 200, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
+    expect(rangeResolution.summary).toMatchObject({ inputDeclaredEdges: 211, resolvedIsolatedSemverRanges: 211, unresolvedTargetRanges: 0, computedTransitiveReachValues: 0 });
     expect(rangeResolution.prohibitedInterpretations).toContain("This artifact is not a package-lock, npm --before execution trace, or reproducible installation result.");
-    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 200, isolatedCutoffSemverApproximations: 200, computedTransitiveReachValues: 0 } });
-    expect(gate).toMatchObject({ strictPackageEventRecords: 33, adjudicatedIncidentFamilyCount: 27, exactPreEventSnapshots: 31, exactSnapshotIncidentFamilyCount: 26, calibrationInference: "blocked" });
+    expect(rangeDiagnostic).toMatchObject({ summary: { declaredDirectEdges: 211, isolatedCutoffSemverApproximations: 211, computedTransitiveReachValues: 0 } });
+    expect(gate).toMatchObject({ strictPackageEventRecords: 34, adjudicatedIncidentFamilyCount: 28, exactPreEventSnapshots: 32, exactSnapshotIncidentFamilyCount: 27, calibrationInference: "blocked" });
     expect(gate.adjudicatedIncidentFamilies).toContain("colors_faker_protestware_2022");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("node_ipc_march_2022_maintainer_protestware");
@@ -353,6 +378,7 @@ describe("repository-backed research sources", () => {
     expect(gate.adjudicatedIncidentFamilies).toContain("rand_user_agent_unauthorized_npm_publications_2025");
     expect(gate.adjudicatedIncidentFamilies).toContain("asyncapi_github_actions_release_pipeline_compromise_2026");
     expect(gate.adjudicatedIncidentFamilies).toContain("dydx_v4_client_npm_pypi_maintainer_compromise_2026");
+    expect(gate.adjudicatedIncidentFamilies).toContain("dydx_solo_september_2022_npm_account_compromise");
     expect(gate.blockingConditions).toContain("No cutoff-valid, independently adjudicated control population is available.");
   });
 
@@ -384,9 +410,9 @@ describe("repository-backed research sources", () => {
     const fs = await import("node:fs/promises");
     const manifest = JSON.parse(await fs.readFile("research/74_bounded_recursive_registry_semver_graph_manifest.json", "utf8"));
     const diagnostic = JSON.parse(await fs.readFile("research/75_bounded_recursive_registry_graph_diagnostic.json", "utf8"));
-    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 31, reconstructedEdges: 1553, unresolvedEdges: 2, maxObservedDepth: 3 });
+    expect(manifest.summary).toMatchObject({ exactRootSnapshots: 32, reconstructedEdges: 1643, unresolvedEdges: 2, maxObservedDepth: 3 });
     expect(manifest.prohibitedInterpretations).toContain("This graph is not a package-lock, npm install execution trace, or reproducible historical node_modules tree.");
-    expect(diagnostic.summary).toMatchObject({ boundedEdges: 1553, directDepthOneEdges: 200, depthTwoEdges: 564, depthThreeEdges: 789, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
+    expect(diagnostic.summary).toMatchObject({ boundedEdges: 1643, directDepthOneEdges: 211, depthTwoEdges: 592, depthThreeEdges: 840, globalReachValuesComputed: 0, predictiveMetricsComputed: 0 });
     expect(diagnostic.interpretation).toContain("not historical installed-tree size");
   });
 
@@ -403,7 +429,7 @@ describe("repository-backed research sources", () => {
   it("uses the DataDog manifest only as positive-membership corroboration", async () => {
     const fs = await import("node:fs/promises");
     const overlap = JSON.parse(await fs.readFile("research/80_datadog_positive_membership_overlap.json", "utf8"));
-    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 33, exactAffectedVersionMembership: 14, packagePresentVersionsUnspecified: 3, packagePresentNoExactVersionMatch: 1, packageNotPresent: 15, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
+    expect(overlap.summary).toMatchObject({ primaryRecordsChecked: 34, exactAffectedVersionMembership: 14, packagePresentVersionsUnspecified: 3, packagePresentNoExactVersionMatch: 1, packageNotPresent: 16, newPrimaryLabelsCreated: 0, controlsCreated: 0 });
     expect(overlap.interpretation).toContain("no event time");
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "axios-2026-03-31")).toMatchObject({ positive_membership_status: "exact_affected_version_membership" });
     expect(overlap.records.find((record: { record_id: string }) => record.record_id === "node-ipc-2026-05-14")).toMatchObject({ positive_membership_status: "exact_affected_version_membership", permitted_use: "candidate_positive_membership_corroboration_only" });
@@ -504,8 +530,8 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/94_campaign_relatedness_and_grouped_inference_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_control_frame_or_model_eligible_dataset",
-      sourceInputs: { strictLedger: { recordCount: 33, familyCount: 27 } },
-      validationUnits: { unitCount: 26 },
+      sourceInputs: { strictLedger: { recordCount: 34, familyCount: 28 } },
+      validationUnits: { unitCount: 27 },
       currentDecision: { controlsCreated: 0, modelsFitted: 0, temporalSplitsGenerated: 0, uncertaintyIntervalsComputed: 0, rankingsComputed: 0, predictiveMetricsComputed: 0, status: "blocked_pending_control_frame_and_model_eligibility" },
     });
     expect(protocol.documentedCrossFamilyRelatedness).toContainEqual(expect.objectContaining({
@@ -521,12 +547,12 @@ describe("repository-backed research sources", () => {
     const audit = await import("node:fs/promises").then((fs) => fs.readFile("research/95_release_authority_metadata_availability_audit.json", "utf8")).then(JSON.parse);
     expect(audit).toMatchObject({
       executionStatus: "availability_audit_only_no_feature_values_deltas_scores_or_models",
-      input: { exactPreEventSourceSnapshots: 31 },
+      input: { exactPreEventSourceSnapshots: 32 },
       summary: {
-        exactPreEventSourceSnapshots: 31,
-        predecessorAvailable: 31,
-        repositoryDescriptorComparisonAvailable: 29,
-        gitHeadComparisonAvailable: 23,
+        exactPreEventSourceSnapshots: 32,
+        predecessorAvailable: 32,
+        repositoryDescriptorComparisonAvailable: 30,
+        gitHeadComparisonAvailable: 24,
         publishConfigComparisonAvailable: 7,
         featureValuesExtracted: 0,
         deltasClassified: 0,
@@ -544,7 +570,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/96_release_authority_delta_semantics_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "protocol_only_no_metadata_values_compared_or_deltas_classified",
-      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 31, predecessorAvailable: 31, repositoryDescriptorComparisonAvailable: 29, gitHeadComparisonAvailable: 23, publishConfigComparisonAvailable: 7 } } },
+      inputGate: { strictAvailabilityAudit: { observedAvailabilitySummary: { exactPreEventSourceSnapshots: 32, predecessorAvailable: 32, repositoryDescriptorComparisonAvailable: 30, gitHeadComparisonAvailable: 24, publishConfigComparisonAvailable: 7 } } },
       currentDecision: { observedDeltaValuesExtracted: 0, observedDeltasClassified: 0, authorityScoresComputed: 0, controlsCreated: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.deltaOntology).toHaveLength(6);
@@ -556,7 +582,7 @@ describe("repository-backed research sources", () => {
     const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/97_official_npm_provenance_attestation_access_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
       decision: "metadata_only_version_specific_attestation_access_not_established",
-      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 31, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
+      boundedAccessDecision: { strictPreEventVersionsEligibleForFutureScreen: 32, documentedMetadataOnlyVersionSpecificRetrievalPath: false, endpointGuessingPermitted: false, packagePayloadDownloadPermitted: false, installationPermitted: false, signatureVerificationRunPermitted: false },
       counts: { versionSpecificEndpointRequestsAttempted: 0, undocumentedEndpointsGuessed: 0, packagePayloadsDownloaded: 0, packagesInstalled: 0, attestationBundlesRetrieved: 0, signatureVerificationRuns: 0, attestationStatesClassified: 0, controlsCreated: 0, authorityScoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(assessment.prohibitedInterpretations).toContain("Do not infer that any strict pre-event version lacks an attestation because no metadata-only access path was established.");
@@ -566,7 +592,7 @@ describe("repository-backed research sources", () => {
     const census = await import("node:fs/promises").then((fs) => fs.readFile("research/98_full_ledger_source_object_retention_census.json", "utf8")).then(JSON.parse);
     expect(census).toMatchObject({
       executionStatus: "current_registry_retention_census_only_no_package_feature_or_outcome_analysis",
-      summary: { incidentRecords: 33, incidentFamilies: 27, currentRegistryResponsesWithProvenance: 33, strictPreEventSourceObjectsRetained: 31, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
+      summary: { incidentRecords: 34, incidentFamilies: 28, currentRegistryResponsesWithProvenance: 34, strictPreEventSourceObjectsRetained: 32, labelOnlyExceptions: 2, currentRetentionIsNotHistoricalEvidence: true },
       exceptionCategories: { timeMapSelectionButStrictObjectRetentionFailure: ["plain-crypto-js-2026-03-31"], noPreCutoffVersionSelectionInCurrentResponse: ["emcd-vue-auth-2026-06-01"] },
       currentDecision: { packageMetadataValuesExtracted: 0, maintainerOrPublisherValuesExtracted: 0, repositoryOrWorkflowValuesExtracted: 0, provenanceOrAttestationStatesClassified: 0, packageFeaturesDerived: 0, controlsCreated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, predictiveMetricsComputed: 0 },
     });
@@ -589,7 +615,7 @@ describe("repository-backed research sources", () => {
     const protocol = await import("node:fs/promises").then((fs) => fs.readFile("research/100_future_outcome_manifest_sealing_protocol.json", "utf8")).then(JSON.parse);
     expect(protocol).toMatchObject({
       executionStatus: "future_only_protocol_no_outcome_sources_contacted_rows_labels_controls_or_joins_created",
-      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 26 } },
+      protocolInputs: { relatednessProtocol: { futureValidationUnitCount: 27 } },
       currentDecision: { outcomeSourcesContacted: 0, sourceInventoryRecordsCreated: 0, candidateDocketsCreated: 0, adjudicatorDecisionsRecorded: 0, outcomeRowsCreated: 0, positiveOutcomeRowsCreated: 0, eligibleNonEventRowsCreated: 0, unknownOutcomeRowsCreated: 0, controlsCreated: 0, coverageRecordsCreated: 0, manifestRevisionsSealed: 0, featureOutcomeJoinsCreated: 0, temporalSplitsGenerated: 0, scoresComputed: 0, modelsFitted: 0, rankingsComputed: 0, uncertaintyIntervalsComputed: 0, predictiveMetricsComputed: 0 },
     });
     expect(protocol.targetAndHorizonContract.targetVocabulary.unknown_outcome).toContain("not benign");
@@ -601,12 +627,12 @@ describe("repository-backed research sources", () => {
     const policy = await import("node:fs/promises").then((fs) => fs.readFile("research/101_future_public_safe_aggregate_release_policy.json", "utf8")).then(JSON.parse);
     expect(policy).toMatchObject({
       executionStatus: "future_only_policy_no_release_rows_labels_controls_aggregates_or_model_results_created",
-      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 26 } },
+      policyInputs: { groupedInferenceProtocol: { futureValidationUnitCount: 27 } },
       currentDecision: { releasePlansCreated: 0, releaseLedgerEntriesCreated: 0, sourceObjectsInspectedForRelease: 0, outcomeRowsReleased: 0, controlRowsReleased: 0, authorityValuesReleased: 0, aggregateCellsComputed: 0, aggregateCellsReleased: 0, smallCellReviewsPerformed: 0, differencingReviewsPerformed: 0, modelResultsReleased: 0, rankingsReleased: 0, uncertaintyIntervalsReleased: 0, predictiveMetricsReleased: 0 },
     });
     expect(policy.releaseClasses).toHaveLength(4);
     expect(policy.releaseClasses.find((releaseClass: { releaseClass: string }) => releaseClass.releaseClass === "P3_aggregate_benchmark_results")?.futureEligibility).toContain("Not enabled");
-    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current 33 positive records, 27 families, or 26 future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
+    expect(policy.disclosureSafeguards.smallCellAndCompositionControls).toContain("Treat any aggregate based on the current 34 positive records, 28 families, or 27 future validation units as non-releasable under P2 unless a later independent disclosure review establishes a valid broader eligible frame.");
     expect(policy.prohibitedInterpretations).toContain("The current policy version permits no P3 model-result release and no public row-level outcome, control, authority, feature, family, validation-unit, split, score, rank, interval, calibration, or metric disclosure.");
   });
 

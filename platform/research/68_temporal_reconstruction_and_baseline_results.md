@@ -739,3 +739,11 @@ This adds one bounded separate family, one exact source snapshot, 21 direct decl
 [110] [The Hacker News, “Compromised dYdX npm and PyPI Packages Deliver Wallet Stealers and RAT Malware,” 6 February 2026](https://thehackernews.com/2026/02/compromised-dydx-npm-and-pypi-packages.html).
 
 [111] [npm registry metadata, `@dydxprotocol/v4-client-js`](https://registry.npmjs.org/%40dydxprotocol%2Fv4-client-js).
+
+## Bounded dYdX Solo September 2022 npm account-compromise admission
+
+GitHub’s reviewed advisory and BleepingComputer independently converge on `@dydxprotocol/solo@0.41.1` and `0.41.2`.[112] [113] Official registry metadata fixes the earliest release at `2022-09-23T10:39:42.987Z`; the strict cutoff selects retained `0.41.0`.[114] This bounded addition brings the cohort to **34 records, 28 families, 32 snapshots, 211 declarations and approximations, 1,643 sensitivity edges, and 27 validation units**. No companion packages, relatedness, independence, controls, installations, reach, blast-radius values, scores, models, calibration, ranking, intervals, or predictive metrics are created.
+
+[112] [GitHub Advisory Database, “Malware in @dydxprotocol/solo”](https://github.com/advisories/GHSA-xjr5-5w2w-3233).
+[113] [BleepingComputer, “npm packages used by crypto exchanges compromised”](https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/).
+[114] [npm registry metadata, `@dydxprotocol/solo`](https://registry.npmjs.org/%40dydxprotocol%2Fsolo).

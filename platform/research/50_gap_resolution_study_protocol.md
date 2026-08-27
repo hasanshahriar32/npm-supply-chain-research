@@ -387,3 +387,11 @@ The protocol now governs **33 positive package-event records in 27 incident fami
 [112]: https://socket.dev/blog/malicious-dydx-packages-published-to-npm-and-pypi "Socket dYdX npm and PyPI package compromise report"
 [113]: https://thehackernews.com/2026/02/compromised-dydx-npm-and-pypi-packages.html "The Hacker News dYdX npm and PyPI package compromise report"
 [114]: https://registry.npmjs.org/%40dydxprotocol%2Fv4-client-js "npm registry dYdX v4 client metadata"
+
+## Bounded dYdX Solo September 2022 admission — 27 August 2026
+
+GitHub’s reviewed advisory and BleepingComputer independently identify `@dydxprotocol/solo@0.41.1` and `0.41.2`; bounded npm registry metadata fixes the earliest publication at `2022-09-23T10:39:42.987Z` and selects retained `0.41.0` one millisecond before cutoff.[115] [116] [117] The active cohort is 34 records, 28 families, 32 snapshots, 211 direct declarations and approximations, 1,643 bounded sensitivity edges, and 27 validation units. Companion packages, relatedness, independence, controls, installations, reach, scores, models, calibration, ranking, intervals, and predictive metrics are not inferred.
+
+[115]: https://github.com/advisories/GHSA-xjr5-5w2w-3233 "GitHub Advisory Database, Malware in @dydxprotocol/solo"
+[116]: https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/ "BleepingComputer dYdX npm report"
+[117]: https://registry.npmjs.org/%40dydxprotocol%2Fsolo "npm registry @dydxprotocol/solo metadata"

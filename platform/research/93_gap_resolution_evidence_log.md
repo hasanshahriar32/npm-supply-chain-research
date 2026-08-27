@@ -591,3 +591,11 @@ Bounded official npm registry metadata timestamps earliest affected `1.0.31` at 
 112. Socket, *Malicious dYdX Packages Published to npm and PyPI After Maintainer Compromise*, 6 February 2026: <https://socket.dev/blog/malicious-dydx-packages-published-to-npm-and-pypi>.
 113. The Hacker News, *Compromised dYdX npm and PyPI Packages Deliver Wallet Stealers and RAT Malware*, 6 February 2026: <https://thehackernews.com/2026/02/compromised-dydx-npm-and-pypi-packages.html>.
 114. npm, *Registry metadata for @dydxprotocol/v4-client-js*: <https://registry.npmjs.org/%40dydxprotocol%2Fv4-client-js>.
+
+## Bounded dYdX Solo September 2022 admission — source provenance, 27 August 2026
+
+GitHub’s reviewed malware advisory and BleepingComputer identify only `@dydxprotocol/solo@0.41.1` and `0.41.2`; Mend supplies package-level account-compromise context. Official npm registry metadata timestamps `0.41.1` at `2022-09-23T10:39:42.987Z`; cutoff `2022-09-23T10:39:42.986Z` selects retained `0.41.0`. `152_dydx_solo_september_2022_candidate_assessment.json` is metadata-only. Regeneration adds one record, family, snapshot, 11 declarations, 11 approximations, 90 sensitivity edges, and one validation unit; active totals are **34/28/32/211/1,643/27**. It creates no controls, installations, reach, blast-radius values, scores, models, rankings, intervals, calibration outputs, or predictive metrics, and infers no companion-package scope, family linkage, actor linkage, completeness, or independence.
+
+115. GitHub Advisory Database, *Malware in @dydxprotocol/solo*: <https://github.com/advisories/GHSA-xjr5-5w2w-3233>.
+116. BleepingComputer, *npm packages used by crypto exchanges compromised*: <https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/>.
+117. npm, *Registry metadata for @dydxprotocol/solo*: <https://registry.npmjs.org/%40dydxprotocol%2Fsolo>.

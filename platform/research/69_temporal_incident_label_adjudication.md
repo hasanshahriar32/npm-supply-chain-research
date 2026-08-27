@@ -229,3 +229,15 @@ The complete overlap artifact (`80_datadog_positive_membership_overlap.json`) st
 [74] [The Hacker News, “Compromised dYdX npm and PyPI Packages Deliver Wallet Stealers and RAT Malware,” 6 February 2026](https://thehackernews.com/2026/02/compromised-dydx-npm-and-pypi-packages.html).
 
 [75] [npm registry metadata, `@dydxprotocol/v4-client-js`](https://registry.npmjs.org/%40dydxprotocol%2Fv4-client-js).
+
+## Bounded dYdX Solo September 2022 admission
+
+| Record | Affected releases | Strict source object | Disposition |
+|---|---|---|---|
+| `dydx-solo-2022-09-23` | `@dydxprotocol/solo@0.41.1`, `0.41.2` | `0.41.0` | One bounded separate 2022 family and validation unit; companion packages stay out of scope. |
+
+GitHub’s reviewed advisory and BleepingComputer independently specify the pair; official registry metadata selects `0.41.0` at the strict one-millisecond cutoff.[76] [77] [78] The register now contains **34 records in 28 families** and 32 exact snapshots. Package context and temporal difference from 2026 dYdX do not establish relatedness, independence, or campaign completeness; no control or predictive inference is authorized.
+
+[76] [GitHub Advisory Database, “Malware in @dydxprotocol/solo”](https://github.com/advisories/GHSA-xjr5-5w2w-3233).
+[77] [BleepingComputer, “npm packages used by crypto exchanges compromised”](https://www.bleepingcomputer.com/news/security/npm-packages-used-by-crypto-exchanges-compromised/).
+[78] [npm registry metadata, `@dydxprotocol/solo`](https://registry.npmjs.org/%40dydxprotocol%2Fsolo).
