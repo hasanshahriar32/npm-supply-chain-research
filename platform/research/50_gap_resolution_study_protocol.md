@@ -145,6 +145,10 @@ The work is publishable if it releases a provenance-complete benchmark and demon
 | WP5: Temporal pilot | One frozen-cutoff, grouped incident-family evaluation | Strict and approximate fidelity results reported separately |
 | WP6: Model comparison | Baseline ladder with reproducible configuration | HGAT only runs after Tier 0–4 completion |
 
+## Cross-ecosystem implementation amendment — 16 September 2026
+
+Atomic Arch is retained as a governed contextual event rather than admitted to the npm primary temporal ledger. Arch’s official notice, Sonatype, SecurityWeek, StepSecurity, and independent malware analysis corroborate a June 2026 AUR campaign involving orphaned-package adoption, modified build instructions, and install-time retrieval of malicious npm/Bun artifacts. Reported scope changed from more than 400 packages to approximately 1,500 across multiple waves, so the available evidence does not provide a finite retained version-level census. The event therefore contributes to a future registry-agnostic propagation layer with separate AUR ownership, install-time external-fetch, and cross-registry artifact features. It creates no npm ledger row, family, validation unit, control, model, reach estimate, blast-radius value, or predictive metric. The Atomic Arch study is published in `research/172_atomic_arch_aur_cross_ecosystem_study.md`, and its machine-readable gate decision is in `research/173_atomic_arch_aur_candidate_assessment.json`.
+
 ## Temporal implementation amendment — 24 August 2026
 
 The expanded reconstruction stage contains sixteen adjudicated package-event records in eleven incident families; fourteen strict pre-event package-version objects were reconstructed from official npm registry version-time maps. The independently corroborated `node-ipc` family adds three affected releases and selects `node-ipc@12.0.0` immediately before the earliest malicious publication cutoff. [12] [13] The independently corroborated `@emcd-vue/auth` dependency-confusion family is retained as label-only because the current registry response lacks a usable pre-cutoff version object. [15] [16] A frozen Wiz IOC CSV and OpenSSF `MAL-2025-191155` independently agree on `wenk@1.0.9` and `wenk@1.0.10` in the November 2025 Shai-Hulud second wave; the official registry timestamp of `wenk@1.0.9` defines the strict cutoff and selects `wenk@1.0.8` as an exact pre-event source object. [20] [21] SafeDep and OpenSSF `MAL-2026-4127` agree on Mini Shai-Hulud `atool` package `amapcn@0.2.2` and `0.3.2`; the official registry timestamp of `amapcn@0.2.2` defines the cutoff and selects `amapcn@0.1.2` as the exact pre-event source object. [22] [23] Frozen OpenSSF `MAL-2025-6020`, a dated StepSecurity report, and the `is` maintainer’s remediation changelog agree on `is@3.3.1` and `5.0.0`; the earliest official registry timestamp selects `is@3.3.0` as the exact pre-event source object. [25] [26] [27] Frozen OpenSSF `MAL-2026-11524`, frozen Wiz `keyv-packages.csv`, and independent Snyk research agree on `keyv@6.0.0`; the official registry timestamp selects `keyv@6.0.0-rc.1` as its exact pre-event source object. [28] [29] [30] [31] Snyk and Sonatype independently document related intentional breaking publications for `colors` and `faker`, while Russ Cox independently records intentional sabotage of both packages. [56] [57] [58] Official registry times select `colors@1.4.0` and `faker@5.5.3` as their strict pre-event objects. [59] [60] The two package-event records form one shared-maintainer family and one future validation unit. Wiz describes the Keyv payload as Mini Shai-Hulud-descended, so the dated `keyv_cacheable_august_2026` family remains separate for campaign grouping but is not asserted statistically independent of `mini_shai_hulud_atool_2026`. The companion artifact records 29 exact source-version direct dependency declarations. A separate bounded pass selected a highest satisfying target version for each of the 29 ranges using only target versions whose registry timestamp is at or before the relevant cutoff. These target values are labeled **`registry_reconstructed_cutoff_semver_approximation`** and must not be interpreted as package-lock entries, historical npm installation results, or transitive graph edges.
@@ -513,3 +517,58 @@ StepSecurity documents `echarts-for-react@3.0.7` in its observed AntV Mini Shai-
 [158]: https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/ "Unit 42 report"
 [159]: https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm "Aikido report"
 [160]: https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client "npm registry metadata"
+
+
+### Got-fetch July 2025 family-member amendment
+
+The protocol now admits `got-fetch@5.1.11` and `5.1.12` as one bounded package-event row under the existing `eslint_config_prettier_compromise_2025` family. Checkmarx and Snyk independently identify the exact two-version set [1] [2]. BleepingComputer and StepSecurity document that got-fetch was hijacked in the same broader npm phishing campaign as eslint-config-prettier [3] [4], so this record creates no new family or validation unit and does not assert campaign completeness, actor certainty, or statistical independence.
+
+Official npm registry metadata fixes the earliest affected publication at `2025-07-17T17:28:28.289Z`; the strict pre-event cutoff is exactly one millisecond earlier, `2025-07-17T17:28:28.288Z`, and the all-stream rule selects retained `got-fetch@6.0.2`. Registry metadata is used only for temporal selection, retained-object availability, runtime dependency declarations, and bounded SemVer reconstruction. No package archive, payload, installation, historical reach, blast-radius estimate, control observation, score, model, ranking, interval, calibration result, or predictive metric is introduced.
+
+[1]: https://checkmarx.com/zero-post/supply-chain-phishing-campaign-drops-more-malware-into-npm-got-fetch-5-1/ "Checkmarx: Supply Chain Phishing Campaign Drops More Malware Into NPM: got-fetch 5.1"
+[2]: https://security.snyk.io/vuln/SNYK-JS-GOTFETCH-10873306 "Snyk: Embedded Malicious Code in got-fetch"
+[3]: https://www.bleepingcomputer.com/news/security/popular-npm-linter-packages-hijacked-via-phishing-to-drop-malware/ "BleepingComputer: Popular npm linter packages hijacked via phishing to drop malware"
+[4]: https://www.stepsecurity.io/blog/supply-chain-security-alert-eslint-config-prettier-package-shows-signs-of-compromise "StepSecurity: eslint-config-prettier Package Shows Signs of Compromise"
+
+
+### Joyfill Components July 2026 candidate exclusion — 31 August 2026
+
+The candidate `@joyfill/components` is excluded from a **new independent primary-ledger family** because StepSecurity and Socket independently identify the finite intersection `4.0.0-rc24-2773-beta.4` and explicitly relate the event to the existing PolinRider family represented by `@common-stack/generate-plugin` [161] [162]. This is a family-scope exclusion, not a finding that the reported release was benign, safe, unchanged, or a non-event. The documented relationship does not establish campaign completeness, a complete related-package census, or statistical independence.
+
+The protocol therefore performs no official npm registry request for this candidate, no strict-cutoff or retained-source selection, and no dependent reconstruction. No ledger row, exact snapshot, dependency declaration, SemVer approximation, graph edge, control, installation trace, reach or blast-radius value, score, model, ranking, interval, calibration result, or predictive metric is created.
+
+[161]: https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise "StepSecurity: Joyfill npm supply-chain compromise"
+[162]: https://socket.dev/blog/joyfill-npm-beta-releases-compromised "Socket: Joyfill npm beta releases compromised"
+
+
+### crossenv July 2017 candidate exclusion — 13 September 2026
+
+The npm incident notice, an independent technical account, and Snyk independently identify `crossenv@6.1.1` as a malicious typo-squatted publication [173] [174] [175]. Official npm metadata fixes the affected publication at `2017-07-19T06:49:52.698Z` and the strict one-millisecond cutoff at `2017-07-19T06:49:52.697Z`. The time map points to `crossenv@6.0.7` immediately before the cutoff, but the retained response has no version object for `6.0.7`; only `1.0.0`, `1.0.1`, and security placeholders remain. The candidate is excluded before primary reconstruction.
+
+This source-retention exclusion does not dispute the incident evidence or create a benign, safe, unchanged, control, installation, reach, score, model, ranking, calibration, interval, or predictive record. It also does not assert campaign completeness or independence across the broader hacktask package set.
+
+[173]: https://blog.npmjs.org/post/163723642530/crossenv-malware-on-the-npm-registry "npm: crossenv malware on the npm registry"
+[174]: https://iamakulov.com/notes/npm-malicious-packages/ "Ilya Akulov: Malicious packages on npm"
+[175]: https://security.snyk.io/vuln/npm:crossenv:20170802 "Snyk advisory npm:crossenv:20170802"
+
+
+### flatmap-stream October 2018 candidate exclusion — 13 September 2026
+
+The npm incident notice, Snyk’s postmortem, and Microsoft’s notice independently identify `flatmap-stream@0.1.1` as a malicious release associated with the event-stream incident [179] [180] [181]. The candidate is related to the existing `event_stream_2018` family; it must not create a new campaign family or validation unit. The bounded official npm response has no time-map entry for `0.1.1` or any `0.1.x` version and retains no historically relevant `0.1.x` version object. A later security-holder entry cannot establish the event-time cutoff or a strict pre-event source object. The candidate is excluded before primary reconstruction.
+
+This exclusion does not dispute the incident evidence, assign a benign label, or infer a control, installation, reach, score, model, ranking, interval, calibration result, or predictive metric.
+
+[179]: https://blog.npmjs.org/post/180565383195/details-about-the-event-stream-incident "npm: Details about the event-stream incident"
+[180]: https://snyk.io/blog/a-post-mortem-of-the-malicious-event-stream-backdoor/ "Snyk: A post-mortem of the malicious event-stream backdoor"
+[181]: https://devblogs.microsoft.com/devops/blocking-malicious-versions-of-event-stream-and-flatmap-stream-packages/ "Microsoft: Blocking malicious versions of event-stream and flatmap-stream packages"
+
+
+### peacenotwar March 2022 candidate exclusion — 13 September 2026
+
+Snyk’s incident report and advisory, together with the CNCF compromise catalogue, document the `peacenotwar` behavior and its node-ipc context [185] [186] [187]. The advisory scope is all versions rather than a finite event-specific release set. Official npm metadata begins with retained `peacenotwar@9.1.1` at `2022-03-08T16:38:45.767Z`, making the strict cutoff `2022-03-08T16:38:45.766Z`; no strictly earlier source object exists. The candidate is excluded before primary reconstruction and does not create a new family or validation unit.
+
+This exclusion does not dispute the documented behavior, assign benignness, or infer controls, installations, reach, scores, models, rankings, intervals, calibration results, or predictive metrics. Downstream node-ipc evidence is not substituted for an exact peacenotwar target.
+
+[185]: https://snyk.io/blog/peacenotwar-malicious-npm-node-ipc-package-vulnerability/ "Snyk: peacenotwar malicious npm node-ipc package vulnerability"
+[186]: https://security.snyk.io/vuln/SNYK-JS-PEACENOTWAR-2426724 "Snyk advisory SNYK-JS-PEACENOTWAR-2426724"
+[187]: https://tag-security.cncf.io/community/catalog/compromises/2022/node-ipc-peacenotwar/ "CNCF TAG Security compromise catalogue: node-ipc/peacenotwar"

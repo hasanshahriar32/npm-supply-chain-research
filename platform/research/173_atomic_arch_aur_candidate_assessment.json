@@ -1,0 +1,50 @@
+{
+  "candidate": {
+    "recordId": "atomic-arch-aur-june-2026",
+    "ecosystem": "AUR-to-npm cross-ecosystem",
+    "campaignName": "Atomic Arch",
+    "reportedScope": ["more than 400 AUR packages", "approximately 1500 packages across multiple waves"],
+    "crossRegistryArtifact": "atomic-lockfile",
+    "eventDate": "2026-06-11",
+    "evidenceUrls": [
+      "https://archlinux.org/news/active-aur-malicious-packages-incident/",
+      "https://www.sonatype.com/blog/atomic-arch-npm-campaign-adds-malicious-dependency",
+      "https://www.securityweek.com/atomic-arch-supply-chain-attack-hits-1500-aur-packages/",
+      "https://ioctl.fail/preliminary-analysis-of-aur-malware/",
+      "https://www.stepsecurity.io/blog/400-aur-packages-hijacked-atomic-arch-campaign"
+    ]
+  },
+  "decision": "retain_as_governed_cross_ecosystem_context_exclude_from_npm_primary_temporal_ledger",
+  "strictEligibility": {
+    "independentContextCorroboration": true,
+    "finiteExactAURPackageSetIndependentlyCorroborated": false,
+    "exactNpmAffectedVersionIntersectionAdjudicated": false,
+    "officialNpmCutoffAndRetainedPreEventObject": false,
+    "cutoffValidControlFrame": false,
+    "eligibleForNpmPrimaryLedger": false,
+    "eligibleForFutureMultiregistryPropagationLayer": true
+  },
+  "reasoning": [
+    "The documented delivery control plane is AUR ownership and PKGBUILD/install-script modification, not an npm-only publisher event.",
+    "Reported package counts changed across waves and are campaign-scope estimates rather than a retained version-level census.",
+    "The malicious npm dependency is recorded as a cross-registry execution component without importing it into the npm primary label ledger.",
+    "AUR ownership transfer, install-time external fetch, and payload capability are separate features and must not be collapsed into a compromise or reach label."
+  ],
+  "currentDecision": {
+    "primaryLedgerRecordsAdded": 0,
+    "primaryLedgerFamiliesAdded": 0,
+    "futureValidationUnitsAdded": 0,
+    "exactPreEventSourceSnapshotsCreated": 0,
+    "crossRegistryContextRecordsAdded": 1,
+    "controlsCreated": 0,
+    "modelsFitted": 0,
+    "predictiveMetricsComputed": 0
+  },
+  "prohibitedInterpretations": [
+    "The 400-plus or approximately 1500 figures are not historical installation counts, downstream reach, blast radius, prevalence, or model targets.",
+    "AUR or yay usage is not evidence that a host was compromised.",
+    "The presence of atomic-lockfile in the delivery path does not by itself establish an independently adjudicated npm incident record.",
+    "No package payload was installed or executed for this study."
+  ],
+  "retrievalDate": "2026-09-16"
+}

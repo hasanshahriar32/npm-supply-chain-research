@@ -1,8 +1,8 @@
 {
   "study": "country-currency-map-march-2025-bounded-package-event-candidate-assessment",
   "artifactVersion": 1,
-  "artifactDate": "2026-08-26",
-  "decision": "eligible_for_governed_primary_temporal_ledger_reconstruction",
+  "artifactDate": "2026-08-31",
+  "decision": "exclude_from_primary_temporal_ledger_due_to_duplicate_existing_country_currency_map_event_record",
   "candidate": {
     "recordId": "country-currency-map-2025-03-26",
     "packageName": "country-currency-map",
@@ -17,7 +17,8 @@
     "strictFeatureCutoffUtc": "2025-03-25T09:03:00.517Z",
     "selectedPreEventVersion": "2.1.7",
     "selectedPreEventVersionObjectRetained": true,
-    "distinctFromExistingLedgerFamilies": true
+    "distinctFromExistingLedgerFamilies": false,
+    "duplicateOfExistingLedgerRecord": "country-currency-map-2025-03-25"
   },
   "corroboration": {
     "sonatype": {
@@ -87,7 +88,8 @@
     "officialAffectedVersionTimestampsRetained": true,
     "selectedPreEventVersion": "2.1.7",
     "selectedPreEventVersionObjectRetained": true,
-    "eligibleForGovernedReconstruction": true
+    "eligibleForGovernedReconstruction": false,
+    "duplicateExistingLedgerRecord": true
   },
   "currentDecision": {
     "primaryLedgerRecordsAdded": 0,
@@ -108,7 +110,7 @@
     "calibrationResultsCreated": 0,
     "predictiveMetricsComputed": 0
   },
-  "nextDecisionBoundary": "Any admission must atomically update the strict ledger and every dependent artifact; it must still create zero controls, installations, reach measures, scores, models, rankings, intervals, calibration results, and predictive metrics.",
+  "nextDecisionBoundary": "The candidate is already represented by country-currency-map-2025-03-25; do not add a duplicate primary-ledger record, family, validation unit, registry snapshot, or graph artifact.",
   "prohibitedInterpretations": [
     "Registry metadata establishes publication-time selection and retained-object availability only; it does not establish historical installations, downstream reach, blast radius, current maintainer state, or a causal effect.",
     "An eligible source-object screen alone does not create a cutoff-valid control population, benign label, score, model, rank, interval, calibration result, or predictive metric."

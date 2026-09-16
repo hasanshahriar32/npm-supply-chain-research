@@ -357,3 +357,43 @@ StepSecurity and Wiz independently specify the release, and registry metadata se
 [119] [Unit 42 report](https://unit42.paloaltonetworks.com/miasma-npm-supply-chain-attack/).
 [120] [Aikido report](https://www.aikido.dev/blog/red-hat-npm-packages-compromised-credential-stealing-worm).
 [121] [npm registry metadata, `@redhat-cloud-services/entitlements-client`](https://registry.npmjs.org/%40redhat-cloud-services%2Fentitlements-client).
+
+
+### Got-fetch July 2025 amendment
+
+`got-fetch-2025-07-17` is included as a confirmed targeted-compromise record with affected releases `5.1.11` and `5.1.12`. Checkmarx and Snyk independently identify that finite exact set [47] [48]. The event is assigned to the existing `eslint_config_prettier_compromise_2025` family because BleepingComputer and StepSecurity document the same broader July 2025 npm phishing campaign [49] [50]. This family assignment creates no new validation unit and does not claim campaign completeness, actor certainty, or statistical independence.
+
+The earliest affected publication is `2025-07-17T17:28:28.289Z`; the strict pre-event cutoff is `2025-07-17T17:28:28.288Z`, and official all-stream registry metadata retains `got-fetch@6.0.2` as the source object. This label is an evidence anchor only. It is not a benign label, control observation, historical installation trace, reach value, blast-radius estimate, score, model output, ranking, interval, calibration result, or predictive metric.
+
+[47]: https://checkmarx.com/zero-post/supply-chain-phishing-campaign-drops-more-malware-into-npm-got-fetch-5-1/ "Checkmarx: Supply Chain Phishing Campaign Drops More Malware Into NPM: got-fetch 5.1"
+[48]: https://security.snyk.io/vuln/SNYK-JS-GOTFETCH-10873306 "Snyk: Embedded Malicious Code in got-fetch"
+[49]: https://www.bleepingcomputer.com/news/security/popular-npm-linter-packages-hijacked-via-phishing-to-drop-malware/ "BleepingComputer: Popular npm linter packages hijacked via phishing to drop malware"
+[50]: https://www.stepsecurity.io/blog/supply-chain-security-alert-eslint-config-prettier-package-shows-signs-of-compromise "StepSecurity: eslint-config-prettier Package Shows Signs of Compromise"
+
+
+### Joyfill Components July 2026 candidate exclusion — 31 August 2026
+
+`@joyfill/components@4.0.0-rc24-2773-beta.4` is excluded from a new independent primary-ledger row. StepSecurity reports three malicious beta versions, while Socket independently identifies the finite intersection at `4.0.0-rc24-2773-beta.4` and explicitly links the package to the PolinRider campaign [165] [166]. Because that campaign is already represented by the governed `common_stack_generate_plugin_polinrider_hijack_2026` family, the screen creates no new family, record, validation unit, registry snapshot, or event label. The exclusion does not assert benignness, safety, unchanged contents, campaign completeness, or statistical independence.
+
+[165]: https://www.stepsecurity.io/blog/joyfill-npm-supply-chain-compromise "StepSecurity: Joyfill npm supply-chain compromise"
+[166]: https://socket.dev/blog/joyfill-npm-beta-releases-compromised "Socket: Joyfill npm beta releases compromised"
+
+
+## sbx-mask March 2026 candidate exclusion
+
+Sonatype and GitHub’s reviewed advisory independently identify `sbx-mask@1.0.0`, `1.0.1`, and `1.0.2`. Official npm metadata places the earliest affected publication at `2026-03-19T14:46:00.636Z`; the strict cutoff is `2026-03-19T14:46:00.635Z`, but no retained pre-event version object exists. Only `0.0.1-security` remains retained. The candidate is excluded from the primary temporal ledger, with no incident-label row, validation unit, benign label, control, installation trace, reach measure, score, model, ranking, interval, calibration result, or predictive metric. This is a source-retention exclusion, not a benignness determination. [169] [170]
+
+
+## crossenv July 2017 candidate exclusion
+
+The npm incident notice, an independent technical account, and Snyk identify `crossenv@6.1.1` as a malicious typo-squatted release. The official registry time map fixes the event at `2017-07-19T06:49:52.698Z`; the strict cutoff is `2017-07-19T06:49:52.697Z`, and the immediately preceding mapped version is `6.0.7`. Because the retained registry response has no `6.0.7` version object, the candidate is excluded from the primary incident-label register. This is a source-retention exclusion, not a benignness or no-event label, and it creates no validation unit, control, installation trace, reach measure, score, model, ranking, interval, calibration result, or predictive metric. [173] [174] [175]
+
+
+## flatmap-stream October 2018 candidate exclusion
+
+The npm incident notice, Snyk’s postmortem, and Microsoft’s notice identify `flatmap-stream@0.1.1` as a malicious release in the event-stream incident. The candidate remains related to the existing `event_stream_2018` family, but the bounded official registry response has no `0.1.x` time-map entry and retains no historically relevant `0.1.x` version object. It is excluded from the primary incident-label register because no official exact event-time cutoff or strict pre-event source object can be selected. This is not a benignness determination and creates no new row, family, validation unit, control, installation trace, reach measure, score, model, ranking, interval, calibration result, or predictive metric. [179] [180] [181]
+
+
+## peacenotwar March 2022 candidate exclusion
+
+Snyk’s incident report and advisory and the CNCF compromise catalogue document `peacenotwar` in the node-ipc protestware context. The advisory is scoped to all versions rather than a finite exact event-specific release set. Official npm metadata begins with retained `9.1.1` at `2022-03-08T16:38:45.767Z`, yielding a strict cutoff of `2022-03-08T16:38:45.766Z` with no earlier retained source object. The candidate is excluded from the primary incident-label register, does not create a new family or validation unit, and does not receive a benign, control, installation, reach, score, model, ranking, interval, calibration, or predictive label. [185] [186] [187]
