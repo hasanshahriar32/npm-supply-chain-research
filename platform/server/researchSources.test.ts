@@ -17,6 +17,27 @@ describe("repository-backed research sources", () => {
     expect(assessment.strictEligibility.eligibleForFutureMultiregistryPropagationLayer).toBe(true);
   });
 
+  it("excludes noblox.js-proxy-server when the exact malicious version lacks independent corroboration", async () => {
+    const documents = await getDocuments();
+    expect(documents.find((document) => document.slug === "noblox-js-proxy-server-screen")?.sourceFile).toBe("174_noblox_js_proxy_server_january_2024_candidate_screen_notes.md");
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/175_noblox_js_proxy_server_january_2024_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(assessment).toMatchObject({
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_independent_exact_version_corroboration",
+      candidate: {
+        packageName: "noblox.js-proxy-server",
+        affectedVersionsReportedByPrimaryCandidateSource: ["4.15.4"],
+        strictFeatureCutoffUtc: "2024-01-17T03:39:58.206Z",
+        selectedPreEventVersion: "4.15.3",
+        selectedPreEventVersionObjectRetained: true
+      },
+      strictEligibility: {
+        finiteExactAffectedVersionsIndependentlyCorroborated: false,
+        eligibleForGovernedReconstruction: false
+      },
+      currentDecision: { primaryLedgerRecordsAdded: 0, predictiveMetricsComputed: 0 }
+    });
+  });
+
   it("loads current benchmark snapshot values from the source manifest", async () => {
     const snapshot = await getSourceSnapshot();
     expect(snapshot.packages).toBe(25228);

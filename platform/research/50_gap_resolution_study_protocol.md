@@ -572,3 +572,8 @@ This exclusion does not dispute the documented behavior, assign benignness, or i
 [185]: https://snyk.io/blog/peacenotwar-malicious-npm-node-ipc-package-vulnerability/ "Snyk: peacenotwar malicious npm node-ipc package vulnerability"
 [186]: https://security.snyk.io/vuln/SNYK-JS-PEACENOTWAR-2426724 "Snyk advisory SNYK-JS-PEACENOTWAR-2426724"
 [187]: https://tag-security.cncf.io/community/catalog/compromises/2022/node-ipc-peacenotwar/ "CNCF TAG Security compromise catalogue: node-ipc/peacenotwar"
+
+
+## Candidate-screen amendment — 19 September 2026
+
+The bounded `noblox.js-proxy-server` January 2024 screen retains Socket’s exact `4.15.4` candidate claim and official npm timing, which selects retained `4.15.3` immediately before the strict one-millisecond cutoff. Checkmarx independently corroborates a broader Roblox-package impersonation campaign but not `noblox.js-proxy-server@4.15.4`; the 2021 Sonatype and BleepingComputer records concern distinct `noblox.js-proxy` and `noblox.js-proxies` packages, and the all-version `noblox.js-proxy-agent` advisory is not transferable. The candidate is therefore excluded for lack of independent exact-version corroboration. No primary ledger row, family, validation unit, snapshot, graph artifact, control, score, model, ranking, interval, calibration result, or predictive metric is created.

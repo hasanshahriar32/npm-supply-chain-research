@@ -306,3 +306,6 @@
 
 - [x] Select and scope the next unprocessed npm supply-chain candidate under the exact-version evidence protocol
 - [x] Complete the next candidate admission or exclusion, regenerate dependent artifacts, validate, and publish the result
+
+- [x] Screen noblox.js-proxy-server January 2024 using independent exact-version corroboration, official registry timing, and retained-predecessor gates
+- [x] Publish the bounded noblox exclusion, platform source mapping, regression coverage, validation, and synchronization
