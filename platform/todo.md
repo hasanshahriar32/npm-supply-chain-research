@@ -309,3 +309,6 @@
 
 - [x] Screen noblox.js-proxy-server January 2024 using independent exact-version corroboration, official registry timing, and retained-predecessor gates
 - [x] Publish the bounded noblox exclusion, platform source mapping, regression coverage, validation, and synchronization
+
+- [x] Screen the distinct noblox.js-proxy and noblox.js-proxies October 2021 candidate using package-specific corroboration and strict registry-retention gates
+- [x] Publish the bounded 2021 Noblox exclusion, platform source mapping, regression coverage, validation, and synchronization

@@ -577,3 +577,8 @@ This exclusion does not dispute the documented behavior, assign benignness, or i
 ## Candidate-screen amendment — 19 September 2026
 
 The bounded `noblox.js-proxy-server` January 2024 screen retains Socket’s exact `4.15.4` candidate claim and official npm timing, which selects retained `4.15.3` immediately before the strict one-millisecond cutoff. Checkmarx independently corroborates a broader Roblox-package impersonation campaign but not `noblox.js-proxy-server@4.15.4`; the 2021 Sonatype and BleepingComputer records concern distinct `noblox.js-proxy` and `noblox.js-proxies` packages, and the all-version `noblox.js-proxy-agent` advisory is not transferable. The candidate is therefore excluded for lack of independent exact-version corroboration. No primary ledger row, family, validation unit, snapshot, graph artifact, control, score, model, ranking, interval, calibration result, or predictive metric is created.
+
+
+## Candidate-screen amendment — 19 September 2026, 2021 Noblox pair
+
+The distinct `noblox.js-proxy` / `noblox.js-proxies` October 2021 candidate is excluded from the primary temporal ledger. Sonatype and BleepingComputer independently corroborate the package names and malicious campaign context, but the retrieved evidence does not provide a package-specific finite exact-version intersection for both packages. Official npm time maps place all retained versions at the initial publication timestamp for each package, leaving no retained strict pre-event source object under the one-millisecond cutoff. The result creates no ledger rows, family, validation unit, source snapshot, graph artifact, controls, scores, models, intervals, calibration outputs, or predictive metrics.
