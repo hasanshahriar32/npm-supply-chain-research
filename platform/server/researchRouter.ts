@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCurrentSnapshot, listBlogPosts, listContentRecords, listManagedRecords, listResearchUsers, listSnapshotHistory, reviewContentRecord, reviewSnapshot, saveBlogPost, saveContentRecord, updateResearchUserRole } from "./platformDb";
-import { getChartData, getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
+import { getChartData, getDocument, getDocuments, getEvidenceFile, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
 import { ingestMetricsArchive } from "./researchIngestion";
 import { setClerkResearchUserRole } from "./clerkAuth";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./trpc";
@@ -26,6 +26,7 @@ export const appRouter = router({
     incidents: protectedProcedure.query(() => getIncidents()),
     experiments: protectedProcedure.query(() => getExperiments()),
     queueAudit: protectedProcedure.query(() => getQueueAudit()),
+    evidence: protectedProcedure.input(z.object({ file: z.string().min(1) })).query(({ input }) => getEvidenceFile(input.file)),
   }),
   admin: router({
     overview: adminProcedure.query(async () => {

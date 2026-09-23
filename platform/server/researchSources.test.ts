@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
+import { getDocument, getDocuments, getEvidenceFile, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
 
 describe("repository-backed research sources", () => {
   it("loads the required literature matrix from research/11_literature_matrix.csv", async () => {
@@ -13,6 +13,13 @@ describe("repository-backed research sources", () => {
     expect(rows.length).toBeGreaterThanOrEqual(20);
     expect(rows.find((row) => row.noteFile === "161_cloudplatform_search_may_2026_candidate_screen_notes.md")).toMatchObject({ assessmentFile: "178_cloudplatform_search_may_2026_candidate_assessment.json", disposition: "excluded", ledgerRecords: 0 });
     expect(rows.some((row) => row.disposition === "awaiting assessment")).toBe(false);
+  });
+
+  it("serves governed evidence files and rejects path traversal", async () => {
+    const note = await getEvidenceFile("161_cloudplatform_search_may_2026_candidate_screen_notes.md");
+    expect(note?.format).toBe("markdown");
+    expect(note?.content).toContain("@cloudplatform-single-spa/search");
+    expect(await getEvidenceFile("../package.json")).toBeNull();
   });
 
   it("publishes Atomic Arch as contextual evidence without admitting it to the npm primary ledger", async () => {

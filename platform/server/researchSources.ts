@@ -80,6 +80,15 @@ export async function getQueueAudit() {
   }));
 }
 
+export async function getEvidenceFile(fileName: string) {
+  const safeName = path.basename(fileName);
+  if (safeName !== fileName || !/\.(md|json)$/.test(safeName)) return null;
+  try {
+    const content = await fs.readFile(path.join(researchRoot, safeName), "utf8");
+    return { fileName: safeName, content, format: safeName.endsWith(".json") ? "json" as const : "markdown" as const };
+  } catch { return null; }
+}
+
 export function getIncidents(): IncidentLabel[] { return [
   { id: "atomic-arch-aur-2026", name: "Atomic Arch AUR 2026", incidentType: "Cross-ecosystem AUR ownership and install-time dependency compromise", eventDate: "2026-06-11", scope: "Public reporting describes more than 400 and later approximately 1,500 AUR packages across multiple waves; the campaign used orphaned-package adoption and install-time npm/Bun fetches.", assessment: "Contextual review record only. It is excluded from the npm primary temporal ledger because the reported scope is not a finite retained version-level census and the delivery control plane is AUR ownership/build metadata rather than an npm-only event.", evidenceSource: "Arch Linux official notice, Sonatype, SecurityWeek, StepSecurity, and independent malware analysis", status: "review" },
   { id: "noblox-js-proxy-server-2024", name: "noblox.js-proxy-server 2024", incidentType: "Brandjacking and combosquatting candidate", eventDate: "2024-01-17", scope: "Socket identifies noblox.js-proxy-server@4.15.4; Checkmarx corroborates a broader Roblox-package impersonation campaign but not this exact release.", assessment: "Excluded from the npm primary temporal ledger because the exact affected version is not independently corroborated. Registry timing and retained predecessor evidence are preserved without creating a label or model target.", evidenceSource: "Socket, Checkmarx, Sonatype, BleepingComputer, GitHub Advisory Database, and official npm registry metadata", status: "review" },

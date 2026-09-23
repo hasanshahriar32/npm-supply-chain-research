@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type QueueRow = { noteFile: string; assessmentFile: string | null; packageName: string; decision: string; disposition: string; ledgerRecords: number };
@@ -13,6 +14,6 @@ export function QueueAudit({ rows }: { rows: QueueRow[] }) {
       <button className={filter === "excluded" ? "audit-filter active" : "audit-filter"} onClick={() => setFilter("excluded")}>Excluded <strong>{counts.excluded ?? 0}</strong></button>
       <button className={filter === "awaiting assessment" ? "audit-filter active" : "audit-filter"} onClick={() => setFilter("awaiting assessment")}>Awaiting <strong>{counts["awaiting assessment"] ?? 0}</strong></button>
     </div>
-    <section className="section-card"><div className="matrix-wrap"><table className="matrix audit-table"><thead><tr><th>Candidate note</th><th>Package / scope</th><th>Assessment artifact</th><th>Disposition</th><th>Primary rows</th></tr></thead><tbody>{visible.map((row) => <tr key={row.noteFile}><td><code>{row.noteFile}</code></td><td>{row.packageName}</td><td>{row.assessmentFile ? <code>{row.assessmentFile}</code> : <span className="muted">Not found</span>}</td><td><span className={row.disposition === "excluded" ? "tag tag-review" : "tag"}>{row.disposition}</span><small className="audit-decision">{row.decision}</small></td><td>{row.ledgerRecords}</td></tr>)}</tbody></table></div></section>
+    <section className="section-card"><div className="matrix-wrap"><table className="matrix audit-table"><thead><tr><th>Candidate note</th><th>Package / scope</th><th>Assessment artifact</th><th>Disposition</th><th>Primary rows</th></tr></thead><tbody>{visible.map((row) => <tr key={row.noteFile}><td><Link href={`/workspace/evidence/${encodeURIComponent(row.noteFile)}`}><code>{row.noteFile}</code></Link></td><td>{row.packageName}</td><td>{row.assessmentFile ? <Link href={`/workspace/evidence/${encodeURIComponent(row.assessmentFile)}`}><code>{row.assessmentFile}</code></Link> : <span className="muted">Not found</span>}</td><td><span className={row.disposition === "excluded" ? "tag tag-review" : "tag"}>{row.disposition}</span><small className="audit-decision">{row.decision}</small></td><td>{row.ledgerRecords}</td></tr>)}</tbody></table></div></section>
   </>;
 }
