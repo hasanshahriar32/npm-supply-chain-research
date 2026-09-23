@@ -10,6 +10,7 @@ const sections = [
   ["Methodology", "/workspace/methodology"],
   ["Incident Labels", "/workspace/incident-labels"],
   ["Experiment Results", "/workspace/experiment-results"],
+  ["Candidate Queue Audit", "/workspace/queue-audit"],
 ] as const;
 
 export function WorkspaceLayout({ children, user }: { children: ReactNode; user: { name: string; role: string } }) {

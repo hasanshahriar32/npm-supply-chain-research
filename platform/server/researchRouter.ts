@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCurrentSnapshot, listBlogPosts, listContentRecords, listManagedRecords, listResearchUsers, listSnapshotHistory, reviewContentRecord, reviewSnapshot, saveBlogPost, saveContentRecord, updateResearchUserRole } from "./platformDb";
-import { getChartData, getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getSourceSnapshot } from "./researchSources";
+import { getChartData, getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
 import { ingestMetricsArchive } from "./researchIngestion";
 import { setClerkResearchUserRole } from "./clerkAuth";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./trpc";
@@ -25,6 +25,7 @@ export const appRouter = router({
     document: protectedProcedure.input(z.object({ slug: z.string() })).query(({ input }) => getDocument(input.slug)),
     incidents: protectedProcedure.query(() => getIncidents()),
     experiments: protectedProcedure.query(() => getExperiments()),
+    queueAudit: protectedProcedure.query(() => getQueueAudit()),
   }),
   admin: router({
     overview: adminProcedure.query(async () => {

@@ -6,6 +6,7 @@ import { useRouter } from "next/router";
 import { LiteratureMatrix } from "../../components/LiteratureMatrix";
 import { MarkdownReader } from "../../components/MarkdownReader";
 import { SupplyChainCharts } from "../../components/SupplyChainCharts";
+import { QueueAudit } from "../../components/QueueAudit";
 import { WorkspaceLayout } from "../../components/WorkspaceLayout";
 import { getClerkResearchUser } from "../../server/clerkAuth";
 import { trpc } from "../../lib/trpc";
@@ -40,6 +41,14 @@ function ExperimentPanel({ markdown }: { markdown?: string }) {
   return <><PanelTitle title="Experiment Results" note="Measured comparisons and planned work are shown separately. The current repository contains no released model metrics, so no performance value is inferred or fabricated." /><section className="section-card"><h2>Measured comparisons</h2>{measured.length ? <div className="matrix-wrap"><table className="matrix"><thead><tr><th>Model</th><th>Feature set</th><th>Evaluation</th><th>Recorded outcome</th></tr></thead><tbody>{measured.map((experiment) => <tr key={experiment.id}><td>{experiment.model}</td><td>{experiment.featureSet}</td><td>{experiment.evaluation}</td><td>{experiment.note}</td></tr>)}</tbody></table></div> : <div className="admin-empty">No measured model comparison is recorded in the current research corpus. When a reproducible run is committed, its manifest and metrics will appear here.</div>}</section><section className="section-card"><h2>Research queue</h2><div className="matrix-wrap"><table className="matrix"><thead><tr><th>Model</th><th>Feature set</th><th>Evaluation</th><th>State</th><th>Prerequisite</th></tr></thead><tbody>{queue.map((experiment) => <tr key={experiment.id}><td>{experiment.model}</td><td>{experiment.featureSet}</td><td>{experiment.evaluation}</td><td><span className="tag">{experiment.status}</span></td><td>{experiment.note}</td></tr>)}</tbody></table></div></section>{markdown ? <MarkdownReader markdown={markdown} /> : null}</>;
 }
 
+function QueueAuditPanel() {
+  const query = trpc.research.queueAudit.useQuery();
+  if (!query.data) return <Loading />;
+  const rows = query.data as Array<{ disposition: string; ledgerRecords: number }>;
+  const awaiting = rows.filter((row) => row.disposition === "awaiting assessment").length;
+  return <><PanelTitle title="Candidate Queue Audit" note="Repository-backed completeness view linking every candidate note to its assessment artifact and governed disposition. No unmatched note is silently treated as an admission." /><div className="metric-grid"><div className="metric"><label>Candidate notes</label><strong>{rows.length}</strong><small>Discovered in research/</small></div><div className="metric"><label>Assessments linked</label><strong>{rows.length - awaiting}</strong><small>Machine-readable decisions</small></div><div className="metric"><label>Awaiting assessment</label><strong>{awaiting}</strong><small>Requires evidence work</small></div><div className="metric"><label>Ledger rows represented</label><strong>{rows.reduce((sum, row) => sum + row.ledgerRecords, 0)}</strong><small>Admitted rows only</small></div></div><QueueAudit rows={query.data} /></>;
+}
+
 export default function WorkspacePage({ user }: { user: User }) {
   const router = useRouter(); const section = typeof router.query.section === "string" ? router.query.section : "literature-review";
   const document = trpc.research.document.useQuery({ slug: section }, { enabled: ["literature-review", "gap-analysis", "methodology", "incident-labels", "experiment-results"].includes(section) });
@@ -49,6 +58,7 @@ export default function WorkspacePage({ user }: { user: User }) {
   else if (section === "benchmark-findings") body = <BenchmarkPanel />;
   else if (section === "incident-labels") body = <IncidentPanel markdown={document.data?.markdown} />;
   else if (section === "experiment-results") body = <ExperimentPanel markdown={document.data?.markdown} />;
+  else if (section === "queue-audit") body = <QueueAuditPanel />;
   else body = document.data ? <><PanelTitle title={document.data.title} note={document.data.summary} /><MarkdownReader markdown={document.data.markdown} /></> : <Loading />;
   return <><Head><title>{`${section.replace(/-/g, " ")} · Supply Chain Research Hub`}</title></Head><WorkspaceLayout user={user}>{body}</WorkspaceLayout></>;
 }

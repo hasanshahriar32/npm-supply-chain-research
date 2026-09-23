@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getSourceSnapshot } from "./researchSources";
+import { getDocument, getDocuments, getExperiments, getIncidents, getLiterature, getQueueAudit, getSourceSnapshot } from "./researchSources";
 
 describe("repository-backed research sources", () => {
   it("loads the required literature matrix from research/11_literature_matrix.csv", async () => {
     const studies = await getLiterature();
     expect(studies.length).toBeGreaterThanOrEqual(15);
     expect(studies.find((study) => study.study_id === "L15")?.study).toContain("Current project repository");
+  });
+
+  it("links candidate notes to assessments in the queue audit", async () => {
+    const rows = await getQueueAudit();
+    expect(rows.length).toBeGreaterThanOrEqual(20);
+    expect(rows.find((row) => row.noteFile === "161_cloudplatform_search_may_2026_candidate_screen_notes.md")).toMatchObject({ assessmentFile: "178_cloudplatform_search_may_2026_candidate_assessment.json", disposition: "excluded", ledgerRecords: 0 });
+    expect(rows.some((row) => row.disposition === "awaiting assessment")).toBe(false);
   });
 
   it("publishes Atomic Arch as contextual evidence without admitting it to the npm primary ledger", async () => {

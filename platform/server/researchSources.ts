@@ -10,7 +10,7 @@ const documents: ResearchDocument[] = [
   { slug: "atomic-arch-case-study", title: "Atomic Arch Case Study", category: "governance", sourceFile: "172_atomic_arch_aur_cross_ecosystem_study.md", summary: "Governed cross-ecosystem analysis of AUR ownership hijacking, install-time npm delivery, and the boundary against npm-ledger contamination." },
   { slug: "noblox-js-proxy-server-screen", title: "Noblox.js Proxy Server Screen", category: "governance", sourceFile: "174_noblox_js_proxy_server_january_2024_candidate_screen_notes.md", summary: "Bounded exclusion of a 2024 Roblox-package impersonation candidate because exact malicious version scope lacks independent corroboration." },
   { slug: "cloudplatform-search-screen", title: "Cloudplatform Search Screen", category: "governance", sourceFile: "161_cloudplatform_search_may_2026_candidate_screen_notes.md", summary: "Bounded exclusion of a dependency-confusion candidate because independent sources disagree on the exact affected version." },
-  { slug: "noblox-js-proxy-2021-screen", title: "Noblox.js Proxy 2021 Screen", category: "governance", sourceFile: "176_noblox_js_proxy_2021_candidate_screen_notes.md", summary: "Bounded exclusion of the October 2021 Roblox typosquat packages because exact package-specific scope and retained strict predecessors are unavailable." },
+  { slug: "noblox-js-proxy-2021-screen", title: "Noblox.js Proxy 2021 Screen", category: "governance", sourceFile: "124_noblox_related_candidate_discovery_notes.md", summary: "Discovery record for the October 2021 Roblox typosquat packages; the canonical exclusion assessment is retained separately in the governed assessment registry." },
   { slug: "benchmark-findings", title: "Benchmark Findings", category: "benchmark", sourceFile: "51_current_snapshot_findings.md", summary: "Reproducible current-snapshot leverage findings with strict limits on predictive interpretation." },
   { slug: "methodology", title: "Methodology", category: "methodology", sourceFile: "50_gap_resolution_study_protocol.md", summary: "Time-aware targets, feature ledger, queue definitions, temporal controls, and evaluation protocol." },
   { slug: "incident-labels", title: "Incident Labels", category: "governance", sourceFile: "69_temporal_incident_label_adjudication.md", summary: "An expanded, family-aware register of independently sourced package-event labels and adjudication limits." },
@@ -54,6 +54,30 @@ export async function getSourceSnapshot(): Promise<BenchmarkSnapshot> {
   const raw = await fs.readFile(path.join(researchRoot, "benchmark_snapshot_manifest.json"), "utf8");
   const manifest = JSON.parse(raw) as { packages: number; versions: number; maintainers: number; dependencyEdges: number; repositoryMappings: number; workflowChecks: number; workflowDetections: number; advisoryRecords: number; metricsRecords: number };
   return { packages: manifest.packages, versions: manifest.versions, maintainers: manifest.maintainers, dependencyEdges: manifest.dependencyEdges, repositoryMappings: manifest.repositoryMappings, workflowChecks: manifest.workflowChecks, workflowCoverage: manifest.workflowDetections / manifest.workflowChecks, advisoryRecords: manifest.advisoryRecords, metricsRecords: manifest.metricsRecords };
+}
+
+function normalizeCandidateStem(fileName: string) {
+  return fileName.toLowerCase().replace(/^\d+_/, "").replace(/_candidate_(screen_notes|discovery_notes)\.md$/, "").replace(/_(candidate_)?assessment\.json$/, "").replace(/[^a-z0-9]+/g, " ").split(" ").filter((token) => token.length > 2 && !["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december", "notes", "screen", "candidate", "assessment"].includes(token)).join(" ");
+}
+
+export async function getQueueAudit() {
+  const files = await fs.readdir(researchRoot);
+  const notes = files.filter((file) => /_candidate_(screen_notes|discovery_notes)\.md$/.test(file)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const assessments = files.filter((file) => /candidate_assessment\.json$/.test(file));
+  const parsedAssessments = await Promise.all(assessments.map(async (file) => {
+    try {
+      const data = JSON.parse(await fs.readFile(path.join(researchRoot, file), "utf8")) as { decision?: string; candidate?: { packageName?: string; packageNames?: string[] }; currentDecision?: { primaryLedgerRecordsAdded?: number } };
+      return { file, stem: normalizeCandidateStem(file), decision: data.decision ?? "unrecorded", packageName: data.candidate?.packageName ?? data.candidate?.packageNames?.join(", ") ?? "unidentified", ledgerRecords: data.currentDecision?.primaryLedgerRecordsAdded ?? 0 };
+    } catch { return { file, stem: normalizeCandidateStem(file), decision: "invalid assessment", packageName: "unidentified", ledgerRecords: 0 }; }
+  }));
+  return Promise.all(notes.map(async (note) => {
+    const stem = normalizeCandidateStem(note);
+    const ranked = parsedAssessments.map((assessment) => ({ assessment, overlap: stem.split(" ").filter((token) => assessment.stem.includes(token)).length })).sort((a, b) => b.overlap - a.overlap);
+    const match = ranked[0]?.overlap ? ranked[0].assessment : null;
+    const decision = match?.decision ?? "awaiting assessment";
+    const disposition = !match ? "awaiting assessment" : decision.startsWith("exclude") ? "excluded" : decision.startsWith("admit") || decision.startsWith("retain") ? "admitted/contextual" : "reviewed";
+    return { noteFile: note, assessmentFile: match?.file ?? null, packageName: match?.packageName ?? "unmatched candidate note", decision, disposition, ledgerRecords: match?.ledgerRecords ?? 0 };
+  }));
 }
 
 export function getIncidents(): IncidentLabel[] { return [
