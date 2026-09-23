@@ -38,18 +38,21 @@ describe("repository-backed research sources", () => {
     });
   });
 
-  it("excludes the 2021 Noblox typosquat pair when package scope and strict predecessors are unavailable", async () => {
+  it("excludes cloudplatform-search when independent sources have no exact-version intersection", async () => {
     const documents = await getDocuments();
-    expect(documents.find((document) => document.slug === "noblox-js-proxy-2021-screen")?.sourceFile).toBe("176_noblox_js_proxy_2021_candidate_screen_notes.md");
-    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/177_noblox_js_proxy_2021_candidate_assessment.json", "utf8")).then(JSON.parse);
+    expect(documents.find((document) => document.slug === "cloudplatform-search-screen")?.sourceFile).toBe("161_cloudplatform_search_may_2026_candidate_screen_notes.md");
+    const assessment = await import("node:fs/promises").then((fs) => fs.readFile("research/178_cloudplatform_search_may_2026_candidate_assessment.json", "utf8")).then(JSON.parse);
     expect(assessment).toMatchObject({
-      decision: "exclude_from_primary_temporal_ledger_due_to_no_independent_exact_version_corroboration_and_no_retained_strict_pre_event_source_object",
+      decision: "exclude_from_primary_temporal_ledger_due_to_no_finite_exact_version_intersection",
       candidate: {
-        packageNames: ["noblox.js-proxy", "noblox.js-proxies"]
+        packageName: "@cloudplatform-single-spa/search",
+        sourceVersionClaims: { microsoft: ["100.100.100"], snyk: ["99.99.99"] }
       },
       strictEligibility: {
+        independentlyCorroboratedPackageName: true,
         finiteExactAffectedVersionsIndependentlyCorroborated: false,
-        selectedPreEventVersionObjectRetained: false,
+        sourceVersionIntersection: [],
+        officialRegistryMetadataRequested: false,
         eligibleForGovernedReconstruction: false
       },
       currentDecision: { primaryLedgerRecordsAdded: 0, predictiveMetricsComputed: 0 }

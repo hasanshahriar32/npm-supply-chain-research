@@ -582,3 +582,8 @@ The bounded `noblox.js-proxy-server` January 2024 screen retains Socket’s exac
 ## Candidate-screen amendment — 19 September 2026, 2021 Noblox pair
 
 The distinct `noblox.js-proxy` / `noblox.js-proxies` October 2021 candidate is excluded from the primary temporal ledger. Sonatype and BleepingComputer independently corroborate the package names and malicious campaign context, but the retrieved evidence does not provide a package-specific finite exact-version intersection for both packages. Official npm time maps place all retained versions at the initial publication timestamp for each package, leaving no retained strict pre-event source object under the one-millisecond cutoff. The result creates no ledger rows, family, validation unit, source snapshot, graph artifact, controls, scores, models, intervals, calibration outputs, or predictive metrics.
+
+
+## Candidate-screen amendment — 19 September 2026, cloudplatform-search
+
+The `@cloudplatform-single-spa/search` May 2026 candidate is excluded before registry retrieval because Microsoft reports `100.100.100` while Snyk reports `99.99.99`; the independently corroborated exact-version intersection is empty. The mismatch is retained as a source-scope limitation rather than resolved by selecting one source, taking a union, or inferring a version from package history. No cutoff, source object, ledger row, family, validation unit, graph artifact, control, score, model, ranking, interval, calibration result, or predictive metric is created.

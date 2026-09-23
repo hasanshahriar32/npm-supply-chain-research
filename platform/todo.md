@@ -312,3 +312,6 @@
 
 - [x] Screen the distinct noblox.js-proxy and noblox.js-proxies October 2021 candidate using package-specific corroboration and strict registry-retention gates
 - [x] Publish the bounded 2021 Noblox exclusion, platform source mapping, regression coverage, validation, and synchronization
+
+- [x] Screen @cloudplatform-single-spa/search May 2026 against the exact-version intersection gate
+- [x] Publish the bounded cloudplatform-search exclusion, platform source mapping, regression coverage, validation, and synchronization
