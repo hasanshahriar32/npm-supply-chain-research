@@ -9,7 +9,8 @@ export function QueueAudit({ rows }: { rows: QueueRow[] }) {
   const visible = filter === "all" ? rows : rows.filter((row) => row.disposition === filter);
   const summary = [{ label: "Admitted / contextual", key: "admitted/contextual" }, { label: "Excluded", key: "excluded" }, { label: "Reviewed", key: "reviewed" }, { label: "Awaiting assessment", key: "awaiting assessment" }];
   const download = (format: "csv" | "json") => {
-    const payload = format === "json" ? JSON.stringify(visible, null, 2) : ["noteFile,assessmentFile,packageName,decision,disposition,ledgerRecords", ...visible.map((row) => [row.noteFile, row.assessmentFile ?? "", row.packageName, row.decision, row.disposition, row.ledgerRecords].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const exportedAtUtc = new Date().toISOString(); const repositoryCommit = "36a4a40f3fb04331905c624ddf4a1d981a7bcb11";
+    const payload = format === "json" ? JSON.stringify({ exportedAtUtc, repositoryCommit, filter, rowCount: visible.length, rows: visible }, null, 2) : [`# exportedAtUtc=${exportedAtUtc}`, `# repositoryCommit=${repositoryCommit}`, `# filter=${filter}`, `# rowCount=${visible.length}`, "noteFile,assessmentFile,packageName,decision,disposition,ledgerRecords", ...visible.map((row) => [row.noteFile, row.assessmentFile ?? "", row.packageName, row.decision, row.disposition, row.ledgerRecords].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))].join("\n");
     const blob = new Blob([payload], { type: format === "json" ? "application/json" : "text/csv" });
     const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `candidate-queue-${filter}.${format}`; anchor.click(); URL.revokeObjectURL(url);
   };
