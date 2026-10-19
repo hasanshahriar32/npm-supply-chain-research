@@ -1,0 +1,55 @@
+# Extended benchmark protocol
+
+Preserved from the pre-guideline draft; the conference paper contains a shorter discussion to meet the six-page limit. This is author-side working material, not anonymous review material.
+
+```latex
+\section{Design of a Future Evidence-Aware Benchmark}
+\label{sec:future}
+This section is a proposed protocol. It is not an implemented or evaluated learning system. Figure~\ref{fig:pipeline} separates its evidence gate from the completed offline audit.
+
+\subsection{Freeze the Population and Outcome First}
+Before inspecting future incidents, freeze a registry-derived package population at cutoff $t$, inclusion criteria, observation unit, and follow-up horizon. The primary outcome should be documented compromise of an established package's publication path. Malicious packages created from inception, ordinary vulnerabilities, downstream exposure, and maintainer protestware should be separately stratified. A 30-day primary horizon and 90-day sensitivity horizon are reasonable design choices, but require registration before scoring.
+
+For each incident, retain affected package versions, event and disclosure times, source URLs, evidence grade, campaign linkage, adjudicator decisions, and uncertainty intervals when exact timing is unavailable. Controls should be eligible packages observed over the same horizon under a documented surveillance protocol. Unknown outcomes must remain unknown. Sampling controls after seeing cases requires explicit sampling probabilities and a correspondingly restricted interpretation; case--control prevalence does not automatically support population calibration.
+
+\subsection{Freeze Features and Their Availability}
+For each package--cutoff pair, preserve source objects and retrieval provenance independently from outcome evidence. The feature record should include dependency-resolution mode, repository mapping, maintainer versus publisher semantics, missingness, and source-specific timing. Table~\ref{tab:fidelity} gives the minimum distinctions. A version-time map can identify an eligible source release but cannot by itself prove historical workflow content, installation state, or authority.
+
+\begin{table}[t]
+\caption{Required evidence distinctions in the proposed benchmark. Current audit findings do not fill missing historical fields.}
+\label{tab:fidelity}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}p{0.27\columnwidth}Y@{}}
+\toprule
+Evidence & Permitted interpretation \\
+\midrule
+Stored package projection & Reach in the observed union graph \\
+Retained source declaration & Declared range in an identified version object \\
+Cutoff SemVer selection & An explicitly bounded resolution approximation \\
+Historical lockfile & Resolution recorded for a particular project and context \\
+Dated workflow YAML & Observable configuration at a documented revision \\
+Authority evidence & Specific release-path observation, with scope and predecessor \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Historical dependency resources should be reused where their dates and semantics match the target population~\cite{rahman2026}. npm documentation distinguishes a lockfile's exact generated tree from a version constraint~\cite{npmlock}. None of these automatically identifies which private systems executed a release. Workflow features should encode observable permissions, relevant trigger/checkout combinations, action immutability, and missingness. Authority features should preserve predecessor evidence and mark unavailable comparisons as unknown~\cite{santos2026}.
+
+\subsection{Compare Transparent Models Before Graph Learning}
+The baseline suite should include a seeded random queue, package age and release activity, direct and transitive reach, maintainer portfolio descriptors, a weak-link metadata baseline, and regularized logistic regression. Popularity requires an actually dated source; current download counts cannot be backdated. Gradient-boosted trees provide a further tabular comparator when the outcome sample permits fitting.
+
+Only then should a relation-aware graph model be tested against matched features and observation windows. A possible heterogeneous graph links package versions, maintainer identities, and repositories using dependency, maintenance, and mapping relations. Temporal message passing must respect the same cutoff rules as every baseline. Heterogeneity motivates a modeling option, not an assumption that graph attention is necessary. Attention coefficients should not be treated as causal explanations.
+
+The main ablations should add maintainer, workflow, and authority evidence separately to a dependency-only model, plus missingness-only and metadata-only controls. A model's benefit must persist beyond simple release activity and observation coverage. Separate queues should also be compared at the same review budget before learning a fused score. A useful outcome may be that an interpretable queue or late evidence gate works as well as a complex model.
+
+\subsection{Evaluate Decision Value Without Leakage}
+Use chronological training, validation, and untouched test windows. Keep related campaign records within one evaluation unit, and conduct a package-disjoint sensitivity analysis to test identity memorization. Repeated cutoffs and overlapping horizons require purging or other explicit separation so that the same outcome is not shared across partitions. All preprocessing, coefficient tuning, thresholds, and calibration must use training or validation data only.
+
+For a fully adjudicated test population, report Precision@$K$, Recall@$K$, ranking utility at several registered budgets, and PR-AUC relative to the observed base rate. State how unknown outcomes affect the denominator. Probability calibration requires representative prevalence or valid sampling correction; otherwise restrict the claim to ranking within the sampled population. Report uncertainty by resampling independent campaign groups or time blocks, explain the effective number of units, and avoid package-row bootstrap intervals that treat one campaign as many independent attacks.
+
+SupplyTGN and PatchRisk already establish relevant temporal evaluation precedents~\cite{supplytgn2026,patchrisk2026}. The additional research question here is whether separately timed workflow and authority evidence helps adjudicated compromise review after artifact consistency and population eligibility are established. Success would be incremental decision value under these controls; a null result would still clarify the limits of public metadata.
+
+\subsection{Executable Release Gate}
+A future predictive run should require a manifest binding source hashes, observation population, feature cutoffs, outcome protocol, campaign groups, split assignments, ranking configuration, and evaluation code. Reject missing historical evidence rather than substituting current values. A publication artifact should include all eligible predictions and exclusions, even when results are null. This paper's audit demonstrates the prerequisite consistency checks; it does not claim that the full predictive gate has already been implemented.
+
+```

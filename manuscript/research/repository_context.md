@@ -22,7 +22,7 @@ Assessment date: **20 October 2026**. Audited revision: `fc6b9de5758f00a6ca902dc
 
 The manuscript's Python audit independently traversed all package roots, recomputed all seven SQLite metric fields, compared every package with the compressed CSV, evaluated deterministic and tie-sensitive queue overlap, and swept eleven score weights. It inventoried the temporal CSVs without refetching incident reports or source registry responses. Figures use the resulting aggregate JSON.
 
-No original data export, collector, metrics program, website, or previous research note was modified. New outputs live in `manuscript/`, with one README link at the repository root and an Overleaf ZIP at the root.
+No original data export, collector, metrics program, website, or previous research note was modified. New outputs live in `manuscript/`, with a README link at the repository root and separate author-working and anonymous typesetting ZIPs at the root.
 
 ## Example-project adaptation
 

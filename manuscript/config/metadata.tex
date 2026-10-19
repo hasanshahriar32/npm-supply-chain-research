@@ -1,4 +1,11 @@
-% Replace only after confirming the actual author list, affiliations, and venue.
-% Author details from the GOAD example belong to a different project.
+% Default: anonymous initial submission. main_authors.tex selects the named draft.
 \newcommand{\PaperTitle}{Auditing the Blast Radius: Artifact Consistency in npm Supply-Chain Prioritization}
-\newcommand{\PaperAuthors}{\IEEEauthorblockN{Anonymous Authors}\IEEEauthorblockA{Research manuscript draft}}
+\newcommand{\PaperAuthors}{\IEEEauthorblockN{Anonymous Authors}}
+\newcommand{\PaperPDFAuthors}{}
+\newcommand{\PaperPDFSubject}{Anonymous review manuscript}
+\ifdefined\IncludePaperAuthors
+  \input{config/authors}
+  \renewcommand{\PaperAuthors}{\NamedPaperAuthors}
+  \renewcommand{\PaperPDFAuthors}{\NamedPaperPDFAuthors}
+  \renewcommand{\PaperPDFSubject}{Author-attributed manuscript draft}
+\fi

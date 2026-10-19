@@ -1,13 +1,11 @@
-# Author and venue preparation
+# Initial submission and camera-ready preparation
 
-The deliverable is a full research draft, not an assertion of submission readiness.
+The paper now follows the supplied ICEEICT 2027 technical limits. The [author record](author_details.md) lists Shahriar Hasan (ECE), then Ashikul Islam (CSE), both at Hajee Mohammad Danesh Science and Technology University, as supplied by the user. Review [guideline_compliance.md](guideline_compliance.md) and the generated PDF-check report for remaining requirements.
 
-- Replace `config/metadata.tex` with the confirmed author names, affiliations, and contact details. The GOAD authors were not imported.
-- Choose the actual venue, track, page budget, and anonymization requirements. `IEEEtran[conference]` supplies the requested IEEE appearance; venue-specific compliance still needs checking.
-- Decide whether the empirical audit is the submission's primary contribution. If the intended paper is instead a model-performance paper, complete the proposed data and evaluation gates before changing the result claims.
-- Recheck the bibliography and scientific interpretation with the authors. Preprints are identified in the BibTeX file.
-- Resolve access and redistribution rights before publishing source databases or incident evidence. The Overleaf package contains the manuscript and aggregate audit outputs rather than raw archives.
-- For a double-blind venue, anonymize repository references, local example paths in supplementary notes, contributor details, and any source identifiers required by its policy. Anonymous title text alone does not anonymize the artifact.
-- Follow the chosen venue's policy on disclosure of writing and coding assistance. Actual contributors remain responsible for the submitted claims.
+For initial double-blind review, keep `config/metadata.tex` anonymous and PDF author metadata empty. Review the actual PDF and any requested supplement for indirect identifiers. The full working Overleaf ZIP contains local context; the separate anonymous typesetting ZIP omits those notes. Use `main_authors.tex` / `main_authors.pdf` for the named author-review draft and later camera-ready preparation. Do not replace the anonymous initial-submission PDF with it. Email addresses and a corresponding-author designation remain unspecified.
 
-No cover letter, acceptance claim, funding statement, or author declaration has been fabricated or sent.
+The acknowledgment records LLM assistance in literature discovery, audit-code development, drafting, and editing. This conflicts with the guide's restriction to non-intellectual use. Resolve eligibility with the venue and complete human review before submitting; do not substitute a false proofreading-only declaration.
+
+The actual authors must confirm contributions, ordering, submission approval, originality, and absence of simultaneous submission. Obtain a similarity report below 30%, ensure the required CMT accounts exist, and plan for presentation if accepted. These are unverified author actions, not technical checks this workspace can certify.
+
+The scientific draft remains a measured artifact audit and a proposed follow-up benchmark. No model-performance claim, approval declaration, similarity score, funding statement, acceptance, or submission has been fabricated.
