@@ -1,34 +1,13 @@
-\section{Graph Metrics and Evidence}
-\label{sec:evidence}
-A dependency edge $(u,v)\in E$ points from dependent package $u$ to dependency $v$. The implementation projects stored version pairs onto package names. For observed packages $P$, its reverse transitive dependent set is
-\begin{equation}
-\reach(p)=\{q\in P\setminus\{p\}:q\leadsto p\}.
-\end{equation}
-Let $M(p)$ be the observed maintainer set and $d(m)$ its member's package portfolio size. The implemented statistics are
-\begin{equation}
-W_{\max}(p)=\max_{m\in M(p)}d(m),\qquad
-W_{\Sigma}(p)=\sum_{m\in M(p)}d(m),
-\end{equation}
-with zero for an empty maintainer set. Summed portfolios can overlap; registry identities do not establish historical publication authority.
+\section{Data and Graph Construction}
+\subsection{Collection and Observation Scope}
+Our collection pipeline seeds a queue from an npm high-impact package list, expands dependencies through the deps.dev API, retrieves npm registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. The sample contains \StudyPackages{} package identifiers, 22,340 package-version metadata rows, \StudyMaintainers{} maintainer usernames, and 79,405 package--maintainer relations. Queue insertion timestamps span 13--16 June 2026; they do not establish a common acquisition cutoff for every field. We analyze the frozen archive on 20 October 2026 and retain its checksum in the execution manifest. The identifiers include 2,745 bundled-context names emitted by deps.dev; they are graph nodes rather than separate global registry coordinates~\cite{depsdev}. They have no registry metadata in our collection. We retain their context-qualified identities instead of aliasing them to global leaf names. This selected expansion is not a random sample of all npm packages.
 
-The workflow flag $h(q)$ is one if any stored version of package $q$ has a positive workflow-directory observation. Workflow reach is
-\begin{equation}
-B(p)=\sum_{q\in\reach(p)}h(q).
-\end{equation}
-It counts packages associated with directory observations, not distinct organizations, actual installations, or privileged executions. Multiple packages may map to one repository.
+The dependency data contain 121,885 directed version-edge rows and 88,113 distinct package-name adjacencies. We use explicit adjacency entries from dependency responses~\cite{depsdev}. A stored target-node \code{DIRECT}/\code{INDIRECT} label describes its relationship to the original resolution root; filtering edges by that label would not recover a global graph of direct adjacencies. We reverse declaring-to-dependency edges to measure downstream reach, retaining all explicit adjacencies.
 
-The field named \code{attacker_roi} stores the legacy score
-\begin{equation}
-S_{\alpha}(p)=\alpha\frac{W_{\max}(p)}{\max_q W_{\max}(q)}+
-(1-\alpha)\frac{B(p)}{\max_q B(q)}.
-\label{eq:score}
-\end{equation}
-Zero denominators become one. The default is $\alpha=0.5$. Neither component observes success probability or attack cost, so no attacker-return interpretation is established.
+\subsection{Endpoints and Missing Evidence}
+We evaluate three endpoint universes: all package names, packages with any positive workflow observation, and distinct repository keys associated with those positive observations. The \StudyWorkflowPackages{} positive packages map to \StudyWorkflowRepos{} repositories. Keys are case-folded owner/name pairs with a trailing transport \code{.git} removed. This lexical mapping deduplicates shared repositories; it does not verify redirects, commits, jobs, or independent CI installations.
 
-Structural exposure, workflow configuration, release-authority change, and future documented compromise are different decision targets. For a future event time $T_p$, cutoff $t$, and horizon $H$, the proposed outcome is
-\begin{equation}
-Y_{p,t,H}=\ind\{T_p\in(t,t+H]\}.
-\end{equation}
-Unknown outcomes remain unknown. A reviewed zero means no documented qualifying event under a stated surveillance protocol, not intrinsic benignness.
+There are 3,081 packages without an observed maintainer mapping and 3,772 without a completed workflow flag. A stored zero flag can conflate an absent directory with an unavailable repository. We therefore use positive observations for workflow endpoints and do not treat zero or missing values as proof of safety or workflow absence. Of the 7,171 positive repositories, 7,158 are reachable from an observed maintainer portfolio. Coverage percentages use all 7,171; all-source exclusion requires a nonempty observed source set.
 
-Each feature needs source, capture time, validity interval, fidelity, and missingness. A later registry query is not automatically an immutable historical snapshot. Likewise, a byte checksum establishes source identity rather than historical availability. We separate measured audit findings, repository-record inventories, and proposed experiments throughout.
+\subsection{Two Graph Representations}
+Our primary graph collapses retained versions into package-name nodes. For sensitivity analysis, we construct 40,806 exact (package, version) nodes and permit traversal only when adjacent version keys match. Each maintained package seeds every version present in that graph. Reach includes maintained seeds, and the same positive endpoint definition is used for both representations. Version continuity can remove paths created by joining incompatible versions, but both graphs combine retained resolution contexts and acquisition times. The version graph is a sensitivity representation, not a historical installation or ground truth.

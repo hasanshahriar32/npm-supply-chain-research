@@ -1,0 +1,60 @@
+{
+  "budget_grid": [
+    1,
+    5,
+    10,
+    25,
+    50,
+    100
+  ],
+  "client_study_date": "2026-10-20",
+  "elapsed_seconds": 48.29,
+  "estimands": {
+    "candidate_exclusion": "Remove 1/5/10 largest portfolio identities only from selectable controls, retain all source scenarios and endpoint denominators; no inference of bot/person or trustworthiness.",
+    "email_hash_sensitivity": "Group identical stored email hashes as a hypothetical control unit; identity linkage not independently established; budget is groups and scenario denominator changes.",
+    "endpoint_coverage": "C(S)=|union_{m in S} E_m|, prospective structural reach of selected hardening/review scenarios. A covered endpoint can still be exposed through any unhardened source.",
+    "full_protection": "P(S)=|{e: A_e is nonempty and A_e subset S}| with A_e={m:e in E_m}. Residual possible exposure is full reachable universe minus P. Structural all-source exclusion, not a security guarantee.",
+    "repository_endpoint": "Case-folded owner/repo, trailing .git removed; union over positively flagged package-version mappings; distinct repositories deduplicate monorepos.",
+    "scenario_exposure_reduction": "H(S)=sum_{m in S}|E_m|/sum_m|E_m|. Uniform mutually exclusive identity-loss scenarios, hardening a selected source prevents that source scenario; other scenarios unaffected. No empirical scenario probabilities.",
+    "uncertainty": "Random mean, SD and central 95% empirical simulation range describe random-baseline variability; deterministic snapshot results have no sampling confidence interval.",
+    "workflow_presence": "Any observed package-version row with positive GitHub workflow flag; does not imply secret access, exploitability, code execution, or historical presence."
+  },
+  "executed_at_utc": "2026-10-19T18:48:48.959813+00:00",
+  "graph": "All stored version edges collapsed to directed package adjacency; reverse reach includes seed portfolios; SCC condensation with exact integer bitsets",
+  "limitations": [
+    "Convenience snapshot with no shared collection cutoff; not full npm population or a temporal causal design.",
+    "Package union can combine incompatible versions; collector did not preserve extraction-root provenance.",
+    "Registry maintainer membership does not establish active publishing permissions, token scopes, shared credential control, or attack probabilities.",
+    "Graph reach indicates possible structural dependency paths and does not establish exploit propagation or CI secret access.",
+    "Workflow absence/unknown and repository metadata gaps are observational missingness, not demonstrated safety.",
+    "Exact greedy coverage and exact maintainer union are established methods, not a new optimization algorithm.",
+    "No incident labels, prediction, model fitting, expected real-world incidents, or causal security effects are claimed."
+  ],
+  "outputs_sha256": {
+    "ablations.csv": "16b5661255472ca4dda0824c3bc5a31684e5be54d40e909587636fb4fd8e6879",
+    "concentration.csv": "71b613a27cc2a2ad1623cbc471b2c40acd952fc5579adbf94807dbfd9bdc3120",
+    "deterministic_curves.csv": "7c2167b00a34b8922ae2365fc46a13da853d108a00766e5dfbe0509d8b977624",
+    "identity_grouping_sensitivity.csv": "1231fe7e07eb2ae8c22b4b9d8f2fb118751a6e3a9991dff1b47907b360021379",
+    "independent_validation.json": "af9ab89c2e31bad307c126beddf44b7eec1c6c1b992f44a4d63eefde46306aea",
+    "random_analytic_expectations.csv": "5ca527f4c8a7aa05f78b45d79f1975aa14513cf8f1a35dad252f44608f22e418",
+    "random_summary.csv": "d6670c041a134df843343b5f3d03fe0e06a3ad54597b35fcd9bafd787337778c",
+    "random_trials.csv": "1263c333360ff6ec34135bd7159471b76deea70bae361bf8b1e7fcfc19c61aa9",
+    "repository_mapping_sensitivity.csv": "85c9c2edfa8378432a99b7ad6391d4b23dcfe67f93b147b00181008819bb1c0c",
+    "results.json": "ed1d1ae3259635168497565e373881132f60c6effc747c74ff4a2c3e1c8836e7",
+    "run_config.json": "88e166164ad7de03b5898f77878a99b5e9e5c9452641db32aac58e3a7dfe90b0",
+    "version_representation_curves.csv": "61b464215639ae265908c5e482656eac4e6ca96e73ce672efb639b57687341d1"
+  },
+  "python_version": "3.14.8 (main, Oct  2 2026, 10:23:31) [GCC 16.2.1 20260810]",
+  "random_generator": "Python random.Random; independent seeds 0..trials-1; same sampled orders across endpoints",
+  "random_trials": 200,
+  "repository_head": "8187fba934f1e03fdad7aee78cace1f289ba7eda",
+  "source_database_mode": "Extracted in temporary directory, immutable read-only SQLite connection; source archive unmodified",
+  "source_sha256": {
+    "data/npm_ecosystem.db.zip": "ab45439cf94cf43f3133b0aaff644557d55e86e99430a0a7937bfd0ce5266315",
+    "scripts/collect_data.py": "794f6b8ec9510b3f2fbb7cbcc6058925469c7d1cf5d6dee9902a2e1dcc642909",
+    "scripts/study_structural_interventions.py": "52a3663e68f5d3d8858d979849c8fa71b6c6358dcb8388c131a69df311d19492",
+    "uncompressed_sqlite": "43db35c02285a4bd7c9485281d409d94e2b0434246b22d1ae9d99e97cdbfe5e7"
+  },
+  "study": "Exact structural identity-hardening and endpoint-coverage comparison",
+  "tie_policy": "Descending score then ascending username Unicode order; reverse-order aggregate sensitivity included; no names released"
+}

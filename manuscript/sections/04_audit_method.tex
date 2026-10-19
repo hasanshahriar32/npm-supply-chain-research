@@ -1,24 +1,39 @@
-\section{Audit Methodology}
-\label{sec:method}
-\subsection{Inputs and Independent Reconstruction}
-The study uses a compressed metric CSV and SQLite archive supplied together. The database contains 25,228 packages, 22,340 package-version rows, 12,217 maintainers, 79,405 package--maintainer relations, 121,885 dependency rows, and 153,488 advisories. High-impact seeding and dependency discovery produce a convenience sample, not an npm census. The audit date, 20 October 2026, is distinct from collection time.
-
-The offline audit extracts SQLite temporarily and opens it read-only. It verifies package uniqueness and equal populations, derives maintainer portfolios, projects dependency edges onto package-name pairs, and traverses reverse edges with duplicate suppression. The starting package is excluded even in cycles. Workflow flags and all seven metrics are reconstructed independently of the production program. Integer values are compared exactly and database scores at absolute tolerance $10^{-12}$.
-
-CSV scores have six decimal places. Cross-artifact comparisons therefore use tolerance $5.00001\times10^{-7}$ and separately compare database scores rounded to six decimals. Input hashes, code, and aggregate results are retained in the audit record. No package is installed, payload retrieved, or source archive modified.
-
-\subsection{Queues, Ties, and Sensitivity}
-For budget $K=\lceil0.01|P|\rceil=253$, let $Q_K^A(f)$ denote the top-$K$ set under field $f$ in artifact $A$. Scores descend; ties use ascending Unicode code-point package-name order. We report intersection and Jaccard overlap,
+\section{Objectives and Experimental Method}
+\subsection{Maintainer Exposure Sets}
+Let $M$ be the observed usernames and $P_m$ the packages linked to $m$. For an endpoint universe $U$, we construct
 \begin{equation}
-J(Q,Q')=\frac{|Q\cap Q'|}{|Q\cup Q'|},
+ E_m=\bigcup_{p\in P_m}\reach_U(p),\qquad
+ A_e=\{m\in M:e\in E_m\},
 \end{equation}
-and repeat with descending names. These comparisons measure consistency rather than security effectiveness.
+where $\reach_U(p)$ contains reverse-reachable endpoints of $p$, including its eligible seed endpoint. Repository endpoints are deduplicated across every package and path. We condense strongly connected components and propagate exact integer bitsets through the resulting directed acyclic graph. A separate propagation of source-identity bitsets checks the endpoint incidence relation.
 
-If $a$ packages exceed the boundary score, $b$ tie there, and $s=K-a$ slots remain, uniform tie breaking includes a tied package with probability $s/b$. Inclusion probabilities above and below the boundary are one and zero. Independently randomizing each queue's ties gives
+\subsection{Three Quantities for the Same Selection}
+For selected identities $S\subseteq M$, distinct endpoint coverage is
 \begin{equation}
-\mathbb{E}[|Q\cap Q'|]=\sum_{p\in P}\pi_p\pi'_p.
-\label{eq:ties}
+ C(S)=\left|\bigcup_{m\in S}E_m\right|.
 \end{equation}
-This is combinatorial sensitivity, not a confidence interval.
+It measures the breadth of structural scenarios represented by a review or control selection. Overlap across identities contributes once.
 
-We sweep $\alpha\in\{0,0.1,\ldots,1\}$ using each artifact's own maxima without outcome tuning. Spearman correlations use average ranks. Separately, we inventory incident-companion CSVs, count records and family identifiers, and compare recorded source timestamps with cutoffs. We do not repeat incident adjudication or authenticate the original registry responses.
+To model source-account hardening, suppose exactly one observed username is selected uniformly as a hypothetical compromise origin. Assume a perfect control prevents that origin when selected, while all other scenarios and graph paths remain unchanged. The proportional reduction in expected endpoint count is then
+\begin{equation}
+ H(S)=\frac{\sum_{m\in S}|E_m|}{\sum_{m\in M}|E_m|}.
+ \label{eq:exposure}
+\end{equation}
+The fixed uniform prior cancels in this ratio. It is a stipulated weighting, not an estimated account-compromise probability. Descending exact $|E_m|$ is optimal for $H$ under equal costs because its numerator is additive. Hardening does not remove a node or protect other origins passing through its packages.
+
+Finally, we count endpoints for which every observed source has been selected:
+\begin{equation}
+ P(S)=\sum_{e\in U}\ind[A_e\ne\varnothing\ \land\ A_e\subseteq S].
+ \label{eq:exclusion}
+\end{equation}
+We call this \emph{all-source exclusion}. Endpoints without observed sources are excluded rather than counted as protected. Under the idealized model, $C(S)-P(S)$ covered endpoints remain reachable from an unselected source. Neither quantity establishes real control effectiveness.
+
+The distinction appears in a small example. For exposure sets $\{1,2,3,4\}$, $\{1,2,3\}$, and $\{5,6\}$, coverage greedy selects the first and third at budget two, covering six endpoints with six selected identity--endpoint pairs. Exact-union ranking selects the first and second, covering four endpoints with seven pairs. The objective determines the preferred selection.
+
+\subsection{Selection Rules and Budget Grid}
+We compare portfolio size, summed per-package reach, maximum per-package reach, exact portfolio-union reach, and greedy maximum marginal coverage. The sum baseline double-counts overlap within a portfolio. Greedy repeatedly adds the identity contributing the most newly covered endpoints. Coverage is monotone submodular, so this established method has the standard $1-1/e$ lower bound relative to optimal coverage~\cite{nemhauser1978}; that guarantee does not apply to $H$ or $P$. We do not optimize $P$ globally.
+
+Selections are nested at budgets $1,5,10,25,50,100$, with equal identity costs. Deterministic ties use ascending username order. We sample 200 seeded uniform orders without replacement, reusing each order across endpoint universes, and calculate exact random expectations from source multiplicities using hypergeometric probabilities. Random central 95\% simulation ranges describe selection variability on this graph, not confidence intervals for npm or real attacks. Our saved analysis plan is exploratory and recorded before this execution; it is not an external preregistration.
+
+\subsection{Reproducibility and Checks}
+The read-only implementation uses Python's standard library and records source/output hashes, seeds, environment, and definitions. We verify 288 graph roots independently by breadth-first search, match all 25,228 stored package transitive counts, and check source/endpoint duality, union bounds, nested curves, and $P\le C$. Separate tests cover the objective counterexample, cycles, version splicing, and 60 seeded small graphs comprising 675 independently traversed roots. The study evaluates 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.

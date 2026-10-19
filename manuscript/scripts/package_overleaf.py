@@ -22,7 +22,8 @@ print(f"Wrote {target.name}: {len(paths)} files, {target.stat().st_size:,} bytes
 anonymous_target = PAPER.parent / "NPM_Supply_Chain_IEEE_Anonymous_Source.zip"
 anonymous_roots = {"config", "sections", "bibliography", "figures", "tables"}
 anonymous_top = {"main.tex", "main.pdf", "compile.sh"}
-anonymous_inputs = {"results/numbers.tex", "results/field_rows.tex"}
+anonymous_inputs = {"results/numbers.tex", "results/field_rows.tex",
+    "results/research_numbers.tex", "results/research_method_rows.tex"}
 private_inputs = {"config/authors.tex"}
 anonymous_paths = [p for p in paths if p.relative_to(PAPER).parts[0] in anonymous_roots
     or p.relative_to(PAPER).as_posix() in anonymous_top | anonymous_inputs]

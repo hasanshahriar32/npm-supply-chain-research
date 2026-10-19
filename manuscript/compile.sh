@@ -2,9 +2,14 @@
 set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 paper_entry=${1:-main.tex}
+if [[ "$paper_entry" == "--both" ]]; then
+  bash "$0" main.tex
+  bash "$0" main_authors.tex
+  exit 0
+fi
 case "$paper_entry" in
   main.tex|main_authors.tex) ;;
-  *) echo 'Usage: bash compile.sh [main.tex|main_authors.tex]' >&2; exit 2 ;;
+  *) echo 'Usage: bash compile.sh [main.tex|main_authors.tex|--both]' >&2; exit 2 ;;
 esac
 paper_job=${paper_entry%.tex}
 mkdir -p build
