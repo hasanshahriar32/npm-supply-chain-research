@@ -1,0 +1,77 @@
+\section{Empirical Results}
+\label{sec:results}
+\subsection{RQ1: Metric and Artifact Consistency}
+All seven database metric fields reproduce with zero mismatches under the declared tolerances. The two archives contain identical sets of 25,228 package names. Their maintainer portfolio, direct-dependent, and transitive-dependent values agree for every package. The workflow-derived quantities do not (Table~\ref{tab:fields}).
+
+The CSV has 20 nonzero workflow-reach entries (0.0793\% of packages), while the database has 17,809 (70.5922\%). Their maxima are two and 3,310, respectively. Workflow-bearing direct-dependent counts disagree for 15,014 packages; 15 CSV entries and 15,017 database entries are positive. The equal-weight score differs for the same 17,809 packages as workflow reach, even after accounting for six-decimal CSV serialization. This pattern localizes the disagreement to workflow-derived metrics in these artifacts; it does not establish when or why the divergence occurred.
+
+\begin{table}[t]
+\caption{Cross-artifact comparison. Positive counts and package-level disagreements; score differences allow CSV rounding.}
+\label{tab:fields}
+\centering\scriptsize
+\begin{tabularx}{\columnwidth}{@{}Yrrr@{}}
+\toprule
+Field & CSV $>0$ & DB $>0$ & Different \\
+\midrule
+\FieldComparisonRows
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The database contains 15,300 positive workflow observations across version rows, 6,223 checked negatives, and 817 unchecked rows. Positive observations cover 15,233 distinct packages. Therefore the sparse CSV workflow reach cannot be interpreted as evidence that workflow information is generally absent from the stored database. Figure~\ref{fig:observability} contrasts the artifact-level summaries.
+
+The platform snapshot manifest assigns a June 2026 snapshot date, while every stored metric row carries \code{2026-07-14 06:39:51} as its calculation timestamp. These describe different events, and the repository does not supply enough capture history to establish a coherent historical collection time for all inputs. We use archive digests as identities and report this timing limitation explicitly. We neither overwrite the supplied exports nor silently select a shared historical date.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{artifact_comparison.pdf}
+\caption{Positive metric counts from the two archives. The same package population and unchanged dependency metrics coexist with large workflow-derived disagreement.}
+\label{fig:observability}
+\end{figure}
+
+\subsection{RQ2: Queue Drift at a Fixed Review Budget}
+At $K=253$, the equal-weight score queues intersect in 65 packages, or 25.69\% of each queue. Their Jaccard overlap is 0.1474. Thus 188 selected entries change when choosing one archive rather than the other. The workflow-reach queues share 20 packages and have Jaccard overlap 0.0412. By contrast, the dependency-reach queues match exactly (Table~\ref{tab:queues}).
+
+\begin{table}[t]
+\caption{Cross-artifact top-253 queue overlap under the specified name ordering. Expected overlap independently randomizes boundary ties.}
+\label{tab:queues}
+\centering\footnotesize
+\begin{tabularx}{\columnwidth}{@{}Yrrr@{}}
+\toprule
+Queue & Shared & Jaccard & Expected shared \\
+\midrule
+Equal-weight score & 65 & 0.1474 & 55.14 \\
+Dependency reach & 253 & 1.0000 & 253.00 \\
+Workflow reach & 20 & 0.0412 & 22.15 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Boundary ties qualify these exact set comparisons. In the CSV score queue, only 16 packages exceed the boundary value of 0.5; 967 tie there and compete for 237 remaining slots. The database queue has 250 above-boundary packages and six tied packages competing for three slots. Reversing the name ordering changes the shared score count from 65 to 53. Equation~\ref{eq:ties} gives an expected count of 55.14 under independent uniform tie breaking. These are alternative queue constructions, not repeated statistical samples.
+
+For CSV workflow reach, all 20 positive entries fit within the budget and the remaining 233 slots come from 25,208 zeros. Hence most selected entries have no positive signal from that field. A deterministic top-$K$ list can conceal this lack of resolution. Review interfaces should report score tiers and the number of tied slots rather than implying a meaningful strict order.
+
+The weight sweep demonstrates that the disagreement persists beyond one coefficient (Figure~\ref{fig:weights}). For $\alpha=0$ through 0.3, shared membership is 20/253; at 0.5 it is 65/253; and at 0.9 it is 95/253. At $\alpha=1$, the queues match because the score depends only on the identical maintainer component. This is a consistency endpoint, not evidence that a maintainer-only queue is operationally superior. We do not optimize weights against incident labels.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{weight_sensitivity.pdf}
+\caption{Cross-artifact queue overlap as the maintainer coefficient increases. Each artifact uses its own normalization maxima. The matching endpoint removes the inconsistent workflow component.}
+\label{fig:weights}
+\end{figure}
+
+Within each archive, the legacy score also differs from dependency reach. Their top-253 intersections are 16 for the CSV and 63 for the database. Spearman correlations are 0.0825 and 0.2521, respectively. These describe distinct rankings and the influence of artifact choice. They do not show that either score predicts compromise, or that agreement with centrality is a desirable outcome.
+
+\subsection{Concentration and Graph-Semantics Checks}
+The top 123 maintainers, representing the rounded-up one-percent maintainer budget, account for 18,027 of 79,405 package--maintainer relations (22.70\%). The largest portfolio contains 967 packages. These measured concentrations motivate attention to shared identities, while leaving actual publication authority and compromise likelihood unresolved.
+
+The 121,885 stored dependency rows reduce to 88,113 distinct package-name pairs. The collector stores the destination node's \code{DIRECT}/\code{INDIRECT} status from a deps.dev root query in each row's \code{relation} field. Official API semantics define that status relative to the queried root, whereas graph edges identify the node declaring a dependency~\cite{depsdev}. Consequently, filtering stored rows to \code{relation=DIRECT} would not generally recover all direct edges of the union graph. Our audit follows the implemented projection over every stored edge; it makes no claim of historical installed-tree fidelity. More broadly, projecting multiple versions can join paths that no single installation realized.
+
+\subsection{RQ3: Temporal Evidence Supports an Inventory, Not a Fit}
+The current snapshot companion contains 47 package-event records across 31 family identifiers, of which 45 have source objects tagged \code{registry_reconstructed_exact}. Those retained records span 30 family identifiers and contribute 258 runtime dependency declarations. Their recorded source publication timestamps precede their cutoffs. This check establishes consistency among the recorded fields; it does not independently authenticate their source responses or reconstruct historical workflow and authority states.
+
+The repository supplies no cutoff-valid non-event comparison population for those events. Its two non-retained source records remain label-only exceptions. Family identifiers are not asserted to be independent attacks: the existing research notes identify campaign relatedness, and protestware, malicious new publications, and publisher compromise also differ in target meaning. Pooling these categories without an explicit estimand would obscure what a model learned.
+
+The larger advisory table does not remove this limitation. Only 164 advisory package names overlap the metric population, 153,422 rows carry the broad classification \code{compromise}, and its schema has no affected-version relation. These imported records can support candidate discovery, but their volume does not establish version-specific outcomes or a defensible non-event population.
+
+We therefore fit no model and report no PR-AUC, Recall@$K$, calibration curve, or predictive confidence interval. A positive-only convenience sample cannot determine a population false-positive rate or calibrated event probability. The measured contribution remains the descriptive audit, while the next section specifies the evidence needed to evaluate the original prediction question.

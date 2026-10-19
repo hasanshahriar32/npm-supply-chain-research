@@ -1,0 +1,18 @@
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+ box/.style={draw=auditblue,rounded corners=2pt,fill=auditblue!4,align=center,font=\footnotesize,minimum height=11mm,text width=32mm},
+ arr/.style={-{Latex[length=2mm]},thick,draw=auditblue},node distance=7mm]
+\node[box] (a) {Compressed CSV\\and SQLite archives};
+\node[box,right=of a] (b) {Hashes, populations,\\schema inspection};
+\node[box,right=of b] (c) {Independent graph\\metric recomputation};
+\node[box,right=of c] (d) {Field disagreement,\\queue and tie audits};
+\draw[arr] (a)--(b);\draw[arr] (b)--(c);\draw[arr] (c)--(d);
+\node[box,below=8mm of b] (e) {Incident companion\\inventory};
+\node[box,right=of e,draw=auditgold,fill=auditgold!5] (f) {Population, timing,\\outcome eligibility};
+\node[box,right=of f,draw=auditgold,fill=auditgold!5] (g) {Future benchmark\\requires new evidence};
+\draw[arr] (e)--(f);\draw[arr] (f)--(g);
+\end{tikzpicture}
+\caption{Completed audit (upper path) and benchmark feasibility assessment (lower path). The lower path does not produce a trained model. Source hashes and fidelity labels accompany aggregate outputs.}
+\label{fig:pipeline}
+\end{figure*}

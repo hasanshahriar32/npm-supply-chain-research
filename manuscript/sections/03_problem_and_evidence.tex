@@ -1,0 +1,41 @@
+\section{Problem Definition and Evidence Model}
+\label{sec:evidence}
+\subsection{Observed Graph and Legacy Metrics}
+Let $P$, $M$, and $R$ denote observed packages, registry maintainer identities, and mapped repositories. A dependency edge $(u,v)\in E$ points from a dependent package to its dependency. The implemented graph projects all stored version pairs onto package names. Its reverse transitive dependent set is
+\begin{equation}
+\reach(p)=\{q\in P\setminus\{p\}:q\leadsto p\}.
+\end{equation}
+Let $M(p)$ be the observed maintainer set and $d(m)$ the number of packages associated with identity $m$. The implemented portfolio statistics are
+\begin{equation}
+W_{\max}(p)=\max_{m\in M(p)}d(m),\qquad
+W_{\Sigma}(p)=\sum_{m\in M(p)}d(m),
+\end{equation}
+with zero for an empty maintainer set. $W_{\Sigma}$ can count overlapping portfolios repeatedly; neither statistic demonstrates that an observed identity has usable publication authority at an earlier date.
+
+For a package $q$, the collector-derived flag $h(q)$ is one when any stored version has a positive public workflow-directory observation. The implemented workflow reach is
+\begin{equation}
+B(p)=\sum_{q\in\reach(p)}h(q).
+\end{equation}
+This is a count of packages with a repository-level directory observation. It does not establish that a workflow installs $p$, uses the relevant release, executes successfully, or has privileged credentials. Several packages may map to the same repository. Thus $B$ does not count distinct organizations, workflows, installations, or compromised systems.
+
+The legacy score, stored under \code{attacker_roi}, is
+\begin{equation}
+S_{\alpha}(p)=\alpha\frac{W_{\max}(p)}{\max_q W_{\max}(q)}+
+(1-\alpha)\frac{B(p)}{\max_q B(q)}.
+\label{eq:score}
+\end{equation}
+Zero denominators are replaced with one. We evaluate the implementation default $\alpha=0.5$ and a descriptive weight sweep. Neither score component observes attack cost or success probability, so the score has no established return-on-investment interpretation.
+
+\subsection{Separating Four Decision Targets}
+Structural exposure asks where code could flow within the observed graph. Workflow review asks which public configurations deserve inspection. Release-authority review asks whether a release path differs from its predecessor. Future documented compromise asks whether an eligible package experiences a specified incident after a cutoff. These targets require different evidence and denominators. A score useful for one target need not predict another.
+
+In a future compromise study, define an at-risk population $\mathcal{P}_t$ before outcome inspection and an adjudicated event time $T_p$. For a horizon $H$,
+\begin{equation}
+Y_{p,t,H}=\ind\{T_p\in(t,t+H]\}.
+\end{equation}
+An unresolved outcome remains unknown rather than becoming zero. Even a reviewed zero means no documented qualifying event under the stated surveillance protocol, not proof of intrinsic benignness.
+
+\subsection{Evidence and Availability}
+Every proposed feature should retain its value, source, capture time, claimed validity interval, fidelity class, and missingness reason. A version published before $t$ but queried after $t$ is a retrospective source object, not automatically an immutable historical snapshot. Historical authority and workflow claims require dated supporting records of their own. A SHA-256 digest establishes the identity of retained bytes; it does not establish that those bytes were public or unchanged at a past cutoff.
+
+We distinguish measured audit findings, inventories of existing repository records, literature-supported premises, and proposed experiments. This prevents a label registry from becoming an evaluated prediction corpus merely because both are stored alongside graph data.

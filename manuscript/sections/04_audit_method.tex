@@ -1,0 +1,32 @@
+\section{Audit Methodology}
+\label{sec:method}
+\subsection{Inputs and Scope}
+The audit uses the committed \path{data/metrics_summary.csv.zip} and \path{data/npm_ecosystem.db.zip}. Their SHA-256 digests begin \code{43e1845a1067} and \code{ab45439cf94c}, respectively; full digests and the repository revision are recorded in the supplied JSON manifest. The study date is 20 October 2026. It is not asserted to be a data-collection date.
+
+The database has 25,228 packages, 22,340 package-version rows, 12,217 maintainers, 79,405 package--maintainer relations, 121,885 version-specific dependency rows, and 153,488 advisories. The initial seed mechanism uses a high-impact package list and dependency discovery. Accordingly, the population is a convenience sample produced by that collector, not an npm census or probability sample.
+
+\subsection{Independent Metric Reconstruction}
+The audit extracts the database into a temporary directory and opens it read-only. It verifies uniqueness and equality of package populations, derives portfolio sizes from stored maintainer relations, projects dependency edges onto package-name pairs, and traverses reverse edges with duplicate suppression. It excludes the starting package even in a cycle, applies the workflow flag as implemented, and recomputes all seven fields independently of the production metric program. Integer fields are compared exactly and database scores at absolute tolerance $10^{-12}$.
+
+The CSV stores scores to six decimal places. Cross-artifact score differences therefore use tolerance $5.00001\times10^{-7}$; we additionally compare the database score rounded to six decimals with the export. This distinguishes numeric serialization from substantive disagreement. The audit never installs a package, retrieves a tarball, or modifies either source archive.
+
+\subsection{Review Queues and Boundary Ties}
+For budget $K=\lceil0.01|P|\rceil=253$, let $Q_K^A(f)$ be the top-$K$ package set under field $f$ in artifact $A$. Scores descend; equal values use ascending Unicode code-point order of package names. This is explicit because locale-dependent ordering can change boundary membership. We report intersection and Jaccard overlap,
+\begin{equation}
+J(Q,Q')=\frac{|Q\cap Q'|}{|Q\cup Q'|},
+\end{equation}
+and repeat with descending package names. Neither comparison evaluates security effectiveness.
+
+For each boundary, let $a$ packages score strictly above the $K$th score, $b$ tie at that score, and $s=K-a$ slots remain. Under uniform tie breaking, an above-boundary package has inclusion probability one, a tied package $s/b$, and any other package zero. For independently broken ties in two queues,
+\begin{equation}
+\mathbb{E}[|Q\cap Q'|]=\sum_{p\in P}\pi_p\pi'_p.
+\label{eq:ties}
+\end{equation}
+This is a combinatorial sensitivity calculation, not a confidence interval. A deterministic name rule makes a queue reproducible but does not give otherwise tied packages an evidence-based priority.
+
+\subsection{Weight and Incident-Inventory Audits}
+We recompute Equation~\ref{eq:score} separately within each archive at $\alpha\in\{0,0.1,\ldots,1\}$, retaining each archive's own maxima. No weight is selected using incident outcomes. Spearman correlations use average ranks for ties.
+
+The separate temporal inventory reads the package-event snapshot CSV and direct-declaration CSV under \code{platform/research/}. It counts records and family identifiers, checks recorded source timestamps against cutoffs, and hashes those inputs. It does not repeat the upstream incident adjudication or retrieve the original registry responses. Its results characterize repository readiness, not independent verification of every incident claim.
+
+\input{figures/evidence_pipeline}

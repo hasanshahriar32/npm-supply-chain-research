@@ -6,6 +6,9 @@ This repository contains the codebase and methodology for the academic thesis: *
 This project builds a cross-domain heterogeneous graph fusing npm software dependency topologies with GitHub infrastructure CI/CD exposure data. The goal is to probabilistically forecast optimal entry points for an attacker to maximize their credential-harvesting Return on Investment (ROI).
 
 ## Project Structure
+
+The IEEE-style paper project is in **[`manuscript/`](manuscript/README.md)**, with a compiled PDF, modular LaTeX sections, bibliography, figures, novelty assessment, and a reproducible audit. Its audit identifies inconsistencies between the supplied CSV and SQLite metrics; consult that report before combining those exports or interpreting the legacy score as a predictive result.
+
 The repository is organized into the following directories:
 
 - **`scripts/`**: Contains the Python scripts used for data collection and analysis.
