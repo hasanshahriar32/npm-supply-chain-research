@@ -1,8 +1,18 @@
-# IEEE manuscript: Auditing the Blast Radius
+# IEEE manuscript: Maintainer Prioritization in npm Supply Chains
 
-This is a complete IEEE conference-style research draft for this repository. Its modular sections, configuration, figures, bibliography, and build entry point follow the organization of `/home/m4x1d/Desktop/GOAD/manuscript/`. The layout uses the actual `IEEEtran` conference class, A4 paper, standard 10-point text, and two columns; the GOAD example uses a one-column `article` class. No GOAD scientific content, author identities, or results were copied.
+The current paper is **Maintainer Prioritization in npm Supply Chains: Coverage, Exposure, and Graph Representation**. It reports our executed structural experiments, their observation assumptions and measured limitations. The earlier cross-export consistency audit remains supporting quality control; it is no longer the paper's central research contribution.
 
-Open **[main_authors.pdf](main_authors.pdf)** for the paper with the supplied authors. **[main.pdf](main.pdf)** remains the anonymous initial-submission version required by the guideline. Edit **[main.tex](main.tex)** to change section order and **[config/metadata.tex](config/metadata.tex)** for the title and review/camera-ready author block. The PDF retains an anonymous author block and empty author metadata for initial double-blind review. Author-side notes are kept separate from the anonymous typesetting bundle.
+Read [main_authors.pdf](main_authors.pdf) for the named draft or [main.pdf](main.pdf) for anonymous review. Both use the same paper body and bibliography. The [full research report](research/2026-10-20_full_research_report.md) gives actual results, validation, literature positioning, acquired data and unfinished work.
+
+## Scientific result and scope
+
+We compare five deterministic maintainer-selection baselines and 200 seeded random orders at budgets 1, 5, 10, 25, 50 and 100. The objectives are distinct endpoint review coverage, exposure share under a stipulated uniform account-loss scenario, and exclusion of every observed source identity. Exact account unions and marginal-coverage greedy are established methods; the contribution is the measured objective tradeoff and its representation sensitivities.
+
+At budget 100, greedy covers **5,538 of 7,171** workflow-associated repository keys (**77.23%**), while exact-union ranking covers **4,407** (**61.46%**). Their uniform-scenario exposure reductions are **11.48%** and **33.79%**, respectively. Only **800** of greedy's covered repositories satisfy all-source exclusion in the observed model; **4,738** remain reachable from an unselected identity. These are structural scenario results, not observed attacks prevented.
+
+The graph contains **25,228 identifiers**, including **2,745 bundled-context strings** rather than independently registered package names. Removing those nodes preserves every maintainer/workflow-repository incidence set and C/H/P values for a fixed identity selection; it does not establish invariance of summed or maximum individual-package rankings. Preserving version continuity changes reach for **8,587 roots** and reduces identity/repository exposure pairs by **42.44%**. Neither representation reconstructs installed trees or a common historical cutoff. Workflow presence does not establish execution, credentials or publishing permission.
+
+A frozen acquisition-feasibility wave selected 100 graph identifiers before requests: 90 ordinary-name metadata responses succeeded, two ordinary names returned 404 and eight bundled-context strings returned 405. All 100 outcomes remain pending, with 90-day follow-up ending **18 January 2027, 00:48:38.569362 Asia/Dhaka**. No GNN was trained and no forecast performance or deployed-control effect is claimed.
 
 ## Authors and manuscript versions
 
@@ -11,94 +21,79 @@ Open **[main_authors.pdf](main_authors.pdf)** for the paper with the supplied au
 | 1 | Shahriar Hasan | Department of ECE |
 | 2 | Ashikul Islam | Department of CSE |
 
-Both authors are affiliated with **Hajee Mohammad Danesh Science and Technology University**. The sequence and department abbreviations follow the supplied details. No email addresses or corresponding-author designation were supplied. See [submission_files/author_details.md](submission_files/author_details.md) and [submission_files/authors.json](submission_files/authors.json).
+Both authors are affiliated with **Hajee Mohammad Danesh Science and Technology University**. Emails and corresponding-author designation have not been supplied. [submission_files/authors.json](submission_files/authors.json) and [author_details.md](submission_files/author_details.md) preserve the author record.
 
-`main_authors.tex` selects the named author block from `config/authors.tex`; `main.tex` defaults to anonymous review. Both share the same paper text, figures, and bibliography. The named draft is for author review and later camera-ready preparation, without implying acceptance or submission approval. The full Overleaf ZIP includes both versions; the anonymous ZIP excludes the named entry point, PDF, configuration, and author records.
+`main.tex` defaults to anonymous review. `main_authors.tex` enables [config/authors.tex](config/authors.tex). The named version supports author review and later camera-ready preparation; it does not imply acceptance or submission approval.
 
-## Applied submission guideline
+The full [Overleaf ZIP](../NPM_Supply_Chain_IEEE_Overleaf.zip) includes both entry points and author working material. The separate [anonymous source ZIP](../NPM_Supply_Chain_IEEE_Anonymous_Source.zip) omits author configuration, named PDF and research working notes. Use the anonymous PDF for the supplied initial-review guideline.
 
-The requirements in [guideline/guide.md](guideline/guide.md) and [guideline/template_link.txt](guideline/template_link.txt) are now applied to the paper. The revised PDF is **five A4 pages**, including all tables, figures, acknowledgment, and 15 references. Font inspection confirms all 18 fonts in the anonymous PDF are embedded and none is Type 3; the named PDF has 19 embedded fonts and no Type 3 fonts. Both are five pages and below 3 MB (approximately 108 KB anonymous, 109 KB named). The standard IEEE text size and margins have been retained.
+## Compile both versions
 
-The guide corresponds to the [ICEEICT 2027 initial-submission requirements](https://iceeict.mist.ac.bd/authors/paper-submission/). [submission_files/guideline_compliance.md](submission_files/guideline_compliance.md) maps each requirement to evidence or an outstanding author action. [results/submission_compliance.json](results/submission_compliance.json) records automated PDF checks.
-
-**LLM policy remains unresolved.** The guide limits LLM assistance to non-intellectual purposes; this project used assistance for literature discovery, audit-code development, and drafting as well as editing. The acknowledgment states the actual roles. It does not assert that human review has already occurred or that the narrower policy has been met. Authors must resolve that mismatch before submission. No similarity score, authorship approval, originality declaration, or CMT status has been assumed.
-
-## What the paper contributes
-
-The paper reports a new, independently executed consistency audit of the two local compressed data artifacts. All seven SQLite metrics reproduce from the stored inputs, but the CSV and SQLite disagree on workflow reach for 17,809 of 25,228 packages. Their default-score top-253 queues share 65 packages under the stated name-order tie rule. Figures and sensitivity analysis show how the inconsistency changes review queues.
-
-The draft also inventories the existing incident companion: 47 package-event records, 31 family identifiers, 45 retained source objects, and 258 declared dependency edges. These are counts of repository records, not independent re-adjudication of those incidents. No eligible comparison population exists in the companion. The paper therefore separates completed measurement results from a proposed temporal compromise benchmark. It does not invent trained HGAT results, accuracy, attacker ROI, or a completed three-queue evaluation.
-
-The literature screen includes newer work such as [PatchRisk](https://arxiv.org/abs/2609.13719), [SupplyTGN](https://ssrn.com/abstract=7194447), [On Good Authority](https://arxiv.org/abs/2606.22593v2), and [CHRONO-RESOLUTION](https://arxiv.org/abs/2607.15315). The resulting novelty claim is deliberately limited to this empirical audit and its queue consequences. See [research/novelty_assessment.md](research/novelty_assessment.md).
-
-## Folder structure
-
-```text
-manuscript/
-  main.tex                         IEEEtran conference entry point
-  main.pdf                         anonymous initial-submission PDF
-  main_authors.tex                  named author draft entry point
-  main_authors.pdf                  compiled draft with supplied authors
-  config/                          package setup and author/title metadata
-  sections/                        abstract, eight sections, LLM acknowledgment
-  bibliography/references.bib       15 checked primary references
-  tables/                          literature positioning table
-  figures/                         vector PDF figures, PNG previews, TikZ diagram
-  results/                         aggregate JSON/CSV and generated LaTeX values
-  research/                        repository context, novelty, and claim evidence
-  scripts/                         offline audit, figures, checks, ZIP packaging
-  submission_files/                venue requirements and compliance notes
-  guideline/                       supplied guide and IEEE template link
-  compile.sh                       LaTeX build with compiler fallbacks
-  Makefile                         convenient rebuild targets
-  requirements-figures.txt          optional figure-rendering dependency
-  build/                           ignored compiler intermediates
-```
-
-## Compile and use Overleaf
-
-From this folder:
+From the repository root:
 
 ```bash
-bash compile.sh                  # anonymous main.pdf
-bash compile.sh main_authors.tex # named main_authors.pdf
+bash manuscript/compile.sh                  # anonymous main.pdf
+bash manuscript/compile.sh main_authors.tex # named main_authors.pdf
+bash manuscript/compile.sh --both           # both PDFs
+make -C manuscript both                    # both PDFs and PDF checks
+make -C manuscript package                 # both source ZIPs
 ```
 
-The script supports `latexmk`, Tectonic, or `pdflatex` plus `bibtex`, and copies the selected entry point's PDF from `build/` into this folder. A standard TeX Live installation with IEEEtran, TikZ, booktabs, tabularx, hyperref, and xurl is sufficient. Tectonic fetches TeX resources on its first run and then caches them. An explicit binary can be selected with `TECTONIC=/path/to/tectonic bash compile.sh`.
+The script supports `latexmk`, Tectonic, or `pdflatex` plus `bibtex`; it copies each selected PDF from `build/` into this folder. Select an explicit Tectonic binary with `TECTONIC=/path/to/tectonic`. A standard TeX installation needs IEEEtran and the packages listed in [config/preamble.tex](config/preamble.tex). Committed figure PDFs allow ordinary compilation without Python plotting dependencies.
 
-For Overleaf, upload `../NPM_Supply_Chain_IEEE_Overleaf.zip` as a new project, select `main.tex` for anonymous review or `main_authors.tex` for the named draft, and compile with pdfLaTeX. This full working package includes local research context and is **not an anonymous review supplement**. `../NPM_Supply_Chain_IEEE_Anonymous_Source.zip` is a separate typesetting-only package that omits those working notes and provenance identifiers. The ZIP is self-contained for **typesetting**, including figures, numeric tables, bibliography, and this documentation. Recomputing the audit additionally requires the source repository and its data archives; the database is not duplicated in the ZIP.
+For Overleaf, upload the full ZIP as a new project and select `main.tex` or `main_authors.tex` as the main document. Both source ZIPs are self-contained for typesetting. Recomputing experiments additionally requires the repository's data archives; the large database is not duplicated in the writing ZIPs.
 
-## Reproduce the empirical work
-
-Run from the repository checkout; the scripts resolve paths from their own locations:
+## Reproduce the executed research
 
 ```bash
-python3 manuscript/scripts/audit_artifacts.py
-python3 manuscript/scripts/verify_manuscript.py
+python3 scripts/study_structural_interventions.py
+python3 scripts/study_graph_validity.py
+python3 scripts/validate_research_study.py
+python3 scripts/validate_observation_semantics.py
+make -C manuscript reproduce
 ```
 
-The audit requires Python 3.11 or newer and uses only its standard library, extracts SQLite to a temporary directory, opens it read-only, and makes no network requests. It validates all 25,228 package traversals, compares fields using an explicit score-rounding tolerance, and emits aggregate results. No package payload is acquired or executed. Source files remain unchanged.
+The first four commands run from the repository root and use Python's standard library. The complete Make target runs the supporting archive audit, structural and validity experiments, independent semantic checks, figure rendering, source verification, both PDF builds and PDF checks. Figure rendering additionally needs [requirements-figures.txt](requirements-figures.txt).
 
-To rerender the two statistical figures, use a virtual environment with the version recorded in `requirements-figures.txt`, then run:
+The offline studies extract the original archive into a temporary directory and open SQLite read-only. They preserve source archives and the historical collector, execute no npm package code and make no network requests in their ordinary mode. Manifests bind source/code hashes, seeds, definitions and results. Optional source probes and prospective collection are separate network operations; `make reproduce` does not repeat or overwrite the frozen acquisition wave.
+
+The future collector [collect_data_v2.py](../scripts/collect_data_v2.py) fixes lexical repository parsing and preserves unavailable/error/observed workflow states. Response fixtures and parser regression cases pass. No new live GitHub workflow collection was run, and corrected URLs do not automatically repair old flags.
+
+## Folder structure and evidence
+
+| Location | Purpose |
+|---|---|
+| [main.tex](main.tex), [main_authors.tex](main_authors.tex) | Anonymous and named IEEEtran entry points |
+| [config/](config/) | Packages, title metadata and author block |
+| [sections/](sections/), [bibliography/](bibliography/) | Shared paper body and references |
+| [figures/](figures/), [tables/](tables/) | Vector figures and typeset tables |
+| [results/structural_interventions/](results/structural_interventions/) | Six-budget curves, random trials, exact expectations and sensitivities |
+| [results/graph_validity/](results/graph_validity/) | All-root graph checks, observation-unit census and source probes |
+| [results/prospective_cohort/](results/prospective_cohort/) | Frozen selection, actual responses and pending outcomes |
+| [research/](research/) | Full report, targeted literature review, novelty and claim/evidence records |
+| [scripts/](scripts/) | Figure rendering, source/PDF validation and source packaging |
+| [guideline/](guideline/), [submission_files/](submission_files/) | Supplied requirements, authorship and compliance records |
+
+The [literature extension](research/2026-10-20_literature_extension.md) and [18-source verification record](research/2026-10-20_verified_sources.csv) establish the closest prior methods. The [research status](research/2026-10-20_research_status.json) distinguishes completed structural work from future forecasting. The [user-added audit reports](../reports/README.md) preserve their original inspected versions; their older extracted paper text is not substituted for the current source.
+
+The GOAD example informed modular folder organization only. Scientific content, author details and results belong to our study. Earlier background documents in the root `research/` and `platform/research/` contain proposals and historical assessments; achieved status comes from the current report and executable outputs.
+
+## Submission checks and outstanding author decisions
+
+The paper uses the IEEE conference class, A4 paper, standard text size and two columns. The supplied [guide](guideline/guide.md) requires at most six pages including references, a PDF below 3 MB, embedded fonts without Type 3 and anonymous initial review. Current measured page counts, dimensions, sizes and fonts appear in [submission_compliance.json](results/submission_compliance.json) and [author_versions_validation.json](results/author_versions_validation.json).
 
 ```bash
-python3 manuscript/scripts/render_figures.py
+make -C manuscript verify
+make -C manuscript submission-check
+python3 manuscript/scripts/check_author_versions.py
 ```
 
-The delivered figures were generated with Python 3.14.8 and Matplotlib 3.11.2. The delivered PDF was compiled using Tectonic 0.17.0. Figure PDFs are already committed to this writing package, so Python plotting dependencies are unnecessary for ordinary LaTeX compilation. `make reproduce` runs audit, rendering, verification, compilation, and PDF checks. `make authors-pdf` builds the named version; `make submission-check` checks the anonymous PDF. `make package` creates both source ZIPs.
+Technical checks do not certify originality, a similarity percentage, author approval or venue acceptance. [guideline_compliance.md](submission_files/guideline_compliance.md) records the remaining author-controlled requirements.
 
-## Evidence and editing rules
+**LLM policy is unresolved:** the guide permits non-intellectual assistance, while assistance here included literature discovery, study design, code, analysis, drafting and editing. The acknowledgment discloses those roles. The authors must resolve this mismatch before submission; neither human approval nor compliance is assumed.
 
-`results/artifact_audit.json` binds the analysis to full archive hashes and a repository revision. The audit date is 20 October 2026, not an asserted collection date. The platform's June snapshot date and SQLite's July metric calculation timestamp should not be treated as a single historical cutoff.
+## Reproducible research figures
 
-The root `research/` contains earlier plans; `platform/research/` contains an expanded, partly inconsistent research record. The paper does not silently reconcile those documents by choosing the largest count. It uses independently recomputed archive facts for audit claims and labels companion counts as an inventory. [research/claim_evidence.csv](research/claim_evidence.csv) maps claims to sources and limitations.
+The paper now includes a system overview and three measured analyses: budget tradeoffs, source-set partitions, and version-representation sensitivity. See the [figure gallery and source mapping](figures/README.md) for PDF/SVG/PNG previews and the optional illustrative C/H/P mechanism.
 
-Before initial submission, retain anonymous paper metadata, review all scientific claims and indirect identifiers, resolve the LLM-policy mismatch, obtain the required similarity report, and confirm the author-controlled declarations. Keep the supplied names confined to the named draft until the review stage permits author identification. The extended pre-guideline methodology is preserved in [research/extended_benchmark_design.md](research/extended_benchmark_design.md). The current draft is an empirical measurement paper with a proposed follow-up benchmark, not a completed prediction study.
-
-## Check the submission PDF
-
-```bash
-python3 manuscript/scripts/check_submission.py
-```
-
-Run from the repository root. The checker uses Poppler's `pdfinfo`, `pdffonts`, and `pdftotext` to verify the actual page count, every page's dimensions, byte size, font types and embedding, author metadata, and basic identity patterns. It also checks the LLM acknowledgment and compiled reference/overflow diagnostics. A technical pass does not certify similarity, authorship, venue eligibility, or complete anonymity.
+Regenerate all figures and numeric tables with `python3 manuscript/scripts/render_research_figures.py` from the repository root, or `make -C manuscript figures`. The two focused renderers use Matplotlib drawing primitives and saved research results. [figure_manifest.json](results/figure_manifest.json) binds every current export to its input and renderer hashes; source verification checks those bindings and the repository partition counts. Figure generation makes no network requests.

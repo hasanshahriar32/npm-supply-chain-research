@@ -35,5 +35,15 @@ We compare portfolio size, summed per-package reach, maximum per-package reach, 
 
 Selections are nested at budgets $1,5,10,25,50,100$, with equal identity costs. Deterministic ties use ascending username order. We sample 200 seeded uniform orders without replacement, reusing each order across endpoint universes, and calculate exact random expectations from source multiplicities using hypergeometric probabilities. Random central 95\% simulation ranges describe selection variability on this graph, not confidence intervals for npm or real attacks. Our saved analysis plan is exploratory and recorded before this execution; it is not an external preregistration.
 
+% Declare the wide budget plot early so it can float beside the results.
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{objective_tradeoff.pdf}
+\caption{Workflow-repository coverage and conditional exposure reduction favor different selections. Lines connect the six evaluated budgets. The random baseline shows exact finite-population expectations, without confidence bands.}
+\label{fig:budget}
+\end{figure*}
+
 \subsection{Reproducibility and Checks}
 The read-only implementation uses Python's standard library and records source/output hashes, seeds, environment, and definitions. We verify 288 graph roots independently by breadth-first search, match all 25,228 stored package transitive counts, and check source/endpoint duality, union bounds, nested curves, and $P\le C$. Separate tests cover the objective counterexample, cycles, version splicing, and 60 seeded small graphs comprising 675 independently traversed roots. The study evaluates 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.
+
+Three isolated full reruns reproduce the aggregate results byte for byte. On our Linux x86-64 host with Python 3.14.8, wall time averages 39.50 seconds (sample standard deviation 0.98 seconds), with maximum process peak RSS of 1,038.4 MiB. These descriptive measurements include extraction, every baseline and sensitivity, and output serialization. Filesystem caches are uncontrolled; they do not estimate per-package inference or online collection cost.

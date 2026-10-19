@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
+import platform
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/npm-paper-matplotlib")
 import matplotlib
@@ -158,10 +160,38 @@ def main():
                          "axes.labelsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8,
                          "legend.fontsize": 8, "axes.spines.top": False, "axes.spines.right": False,
                          "pdf.fonttype": 42, "ps.fonttype": 42})
-    review_coverage(data)
-    representation_sensitivity(data)
     write_tex(data)
-    print("Generated review_coverage and representation_sensitivity (3.45-inch vector PDF + PNG), research_numbers.tex and research_method_rows.tex.")
+    # The current paper uses these research-derived diagrams and analysis plots.
+    # Earlier chart functions above remain available for the historical figures.
+    import render_system_figures
+    import render_analysis_figures
+    render_system_figures.main()
+    render_analysis_figures.main()
+    stems = {
+        "study_system": {"kind": "Implemented pipeline schematic with empirical counts", "in_paper": True},
+        "objective_tradeoff": {"kind": "Measured budget curves and analytic random expectations", "in_paper": True},
+        "coverage_partition": {"kind": "Measured source-incidence partition at budget 100", "in_paper": True},
+        "representation_detail": {"kind": "Measured version-continuity sensitivity", "in_paper": True},
+        "objective_mechanism": {"kind": "Illustrative counterexample computed from declared sets", "in_paper": False},
+    }
+    def sha(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    inputs = [PAPER / "results/structural_interventions/results.json",
+              PAPER / "results/graph_validity/identifier_scope.json"]
+    scripts = [Path(__file__).resolve(), PAPER / "scripts/render_system_figures.py",
+               PAPER / "scripts/render_analysis_figures.py"]
+    outputs = [FIGURES / f"{stem}.{suffix}" for stem in stems for suffix in ("pdf", "svg", "png")]
+    outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json"]
+    manifest = {
+        "generator": "Matplotlib drawing primitives and plots; no external imagery or network calls",
+        "python_version": platform.python_version(), "matplotlib_version": matplotlib.__version__,
+        "figures": stems,
+        "inputs_sha256": {str(p.relative_to(PAPER.parent)): sha(p) for p in inputs},
+        "scripts_sha256": {str(p.relative_to(PAPER.parent)): sha(p) for p in scripts},
+        "outputs_sha256": {str(p.relative_to(PAPER)): sha(p) for p in outputs},
+    }
+    (RESULTS / "figure_manifest.json").write_text(json.dumps(manifest, indent=2)+"\n")
+    print("Generated five reproducible PDF/SVG/PNG figure sets, numeric TeX inputs and figure_manifest.json.")
 
 
 if __name__ == "__main__":

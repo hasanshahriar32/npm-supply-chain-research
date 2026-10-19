@@ -3,8 +3,8 @@ set -euo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 paper_entry=${1:-main.tex}
 if [[ "$paper_entry" == "--both" ]]; then
-  bash "$0" main.tex
-  bash "$0" main_authors.tex
+  bash ./compile.sh main.tex
+  bash ./compile.sh main_authors.tex
   exit 0
 fi
 case "$paper_entry" in

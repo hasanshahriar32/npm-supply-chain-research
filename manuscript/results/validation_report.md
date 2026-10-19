@@ -1,33 +1,38 @@
-# Validation record after applying the supplied guideline
+# Research and manuscript validation — 20 October 2026
 
-Completed on **20 October 2026**.
+The current paper reports completed maintainer-prioritization experiments in our npm graph. The earlier artifact-consistency audit remains supporting quality control. The user-added Reports 01–02 are preserved; [Task 03](../../reports/03_q1_statistical_and_ablation_gap_analysis.md) qualifies their interpretation and records current statistical/operational evidence.
 
-| Check | Result |
+| Check | Actual result |
 |---|---|
-| Source binding | All 12 audit-input hashes match the workspace files. |
-| Database recomputation | Recorded zero mismatches across seven metric fields for 25,228 packages; the formatting revision changes no audit inputs or results. |
-| Numeric inputs and references | Generated quantities agree with the audit JSON; all 15 bibliography keys resolve. |
-| LaTeX | Tectonic 0.17.0 compiled the revised IEEEtran conference paper. Standard 10-point text and IEEE margins retained. |
-| Page count and size | Five pages; all A4. Figures, tables, acknowledgment, and references are included in that count. |
-| File size | Approximately 108 KB, below 3 MB; exact bytes and PDF hash recorded in `submission_compliance.json`. |
-| Fonts | All 18 fonts embedded; no Type 3 fonts. |
-| PDF author metadata | Empty; visible author block reads Anonymous Authors. |
-| Identity-pattern screen | No local home paths or email-address patterns found in PDF text. Manual indirect-identity review remains necessary. |
-| Layout diagnostics | No unresolved citations/references or overfull boxes. |
-| Visual inspection | Revised title/abstract, metric definitions, literature/result tables, both plots, disclosure, and references inspected. |
-| Disclosure | Truthful LLM acknowledgment added; the non-intellectual-use restriction remains unresolved. |
-| Source packages | Full author working ZIP and separate anonymous typesetting ZIP generated. |
-| Independent rebuild | Anonymous source ZIP extracted outside the repository, compiled to five A4 pages, and produced PDF text identical to the workspace build. |
-| ZIP checks | Both archives pass integrity checks; the anonymous bundle excludes working notes, audit metadata, local paths, and known local identity strings from its text inputs. |
+| Frozen scientific input/output and figure evidence | 61 hashes checked; no mismatches |
+| Deterministic/random grids | 150 deterministic and 6,000 random budget rows; all C/H/P identities and exact-union additive dominance pass |
+| Independent semantic validation | Hand-derived objective/version counterexamples, cycles, 60 random graphs and 675 independently traversed roots pass |
+| In-study graph validation | 288 independently traversed roots; all 25,228 original stored reach counts reproduced |
+| Identifier scope | 22,483 ordinary-shaped names plus 2,745 context identifiers; removing context nodes preserves every primary maintainer–workflow-repository set |
+| Prospective records | Frozen before requests; 90 metadata captures, eight contextual 405s and two ordinary 404s; all 100 outcomes pending |
+| Three full isolated reruns | Scientific result JSON byte-identical; 39.50-second mean, 0.98-second sample SD, 1,038.43-MiB maximum RSS on one host |
+| Active bibliography | 13 cited primary references; 18 verified literature/source records |
+| Anonymous PDF | 6 A4 pages, 177,170 bytes; all 26 fonts embedded, no Type 3 |
+| Named PDF | 6 A4 pages, 178,566 bytes; all 27 fonts embedded, no Type 3 |
+| Identity checks | Named author order, ECE/CSE departments and shared university present; supplied identities absent from anonymous PDF and author metadata |
+| LaTeX diagnostics | No unresolved citations/references or overfull boxes; standard IEEEtran conference A4 10pt layout |
 
-The build emits some underfull-line messages and XeLaTeX startup font-family substitution messages. These do not indicate failed embedding or missing mathematical symbols; actual PDF fonts are checked separately.
+Reproducible checks are `python3 manuscript/scripts/verify_manuscript.py`, `python3 scripts/validate_research_study.py`, `python3 scripts/validate_observation_semantics.py`, `python3 manuscript/scripts/check_submission.py`, and `python3 manuscript/scripts/check_author_versions.py`. The three-run measurement command is `python3 scripts/profile_structural_study.py`.
 
-Technical checks do not establish similarity, authorship, human approval, originality, or LLM-policy eligibility. `submission_compliance.json` therefore keeps `submission_ready` false even when technical checks pass. Incident sources have not been independently re-adjudicated and the predictive benchmark remains unevaluated.
+Both PDFs were compiled with `bash manuscript/compile.sh --both`, Tectonic 0.17.0 and a writable temporary TeX cache. The relative-path `--both` invocation is verified from the repository root. GNU Make is unavailable on this host, so Make recipes were not executed; their constituent Python and shell commands were used directly. Fonts were inspected in the actual PDFs. The first-page author layout, experiment figures and final-page references were visually inspected. Underfull text warnings and fontconfig startup warnings remain benign; no missing glyph or font-embedding defect was observed.
 
-## Author update
+The full working Overleaf ZIP contains both manuscript versions; the separate anonymous ZIP excludes named configurations, author records and working research notes. [package_validation.json](package_validation.json) records checksums, content checks and standalone anonymous-source compilation separately after packaging. That external report is intentionally excluded from the ZIPs to avoid circular archive checksums.
 
-The user supplied Shahriar Hasan (Department of ECE), followed by Ashikul Islam (Department of CSE), both at Hajee Mohammad Danesh Science and Technology University. These details are stored in `submission_files/authors.json` and `config/authors.tex`.
+The observation-helper URL/response fixtures pass. The v2 collector was not used for fresh live GitHub workflow acquisition, and it does not repair historical flags automatically. Source archives and the original collector remain unchanged. Pending prospective surveillance ends on 18 January 2027; no trained forecast or real-world control effect is established.
 
-`main_authors.pdf` renders the two names with department superscripts and a shared university line; its PDF author metadata contains both names in the supplied order. The named version is five A4 pages, 109,163 bytes, with 19 embedded fonts and no Type 3 fonts. Its first-page layout was inspected. `main.pdf` remains five A4 pages with anonymous authors and empty author metadata; the recorded names and institution are absent from its text. `author_versions_validation.json` records both versions' checksums and checks.
+Technical success does not certify human approval, authorship, similarity, venue eligibility or indirect anonymity. The guideline's non-intellectual-only LLM restriction remains unresolved because assistance included study design, code and analysis as well as literature discovery and drafting. The acknowledgment records those actual roles.
 
-The full source package includes both entry points. The anonymous source package explicitly excludes the named author configuration, author record, entry point, PDF, and author-side working notes. No emails, corresponding author, contribution roles, or publication approvals were inferred.
+## Research figure revision
+
+Four code-generated figures are integrated into both PDFs: the implemented structural-measurement system, two objective budget curves, a source-set coverage partition, and graph-representation sensitivity. A fifth illustrative C/H/P mechanism is available as an optional figure outside the paper. All five are supplied as vector PDF, editable SVG and 300-dpi PNG, with a [gallery and source map](../figures/README.md).
+
+The renderers read the frozen structural results and identifier-scope census. Every plotted data row and partition is retained in `system_figure_data.json` or `analysis_figure_data.json`; `figure_manifest.json` binds inputs, renderer code and exports by SHA-256. Source verification checks all figure hashes and the exact partition totals. A repeat render produced byte-identical exports. Every generated PDF figure has embedded fonts and no Type 3 font; `figure_render_validation.json` records this check.
+
+The system graph is explicitly schematic, its counts are empirical, maintainer links denote observed membership, and dependency traversal follows dependency to dependent. Source partition bars conserve 7,158 reachable repositories and exclude the 13 repositories without observed source identities. The optional six-endpoint example is illustrative and computed from its declared sets; it is not presented as a measured npm subgraph. No research result or source archive was changed by this visual revision.
+
+The new system diagram and analysis pages were visually inspected at their intended print dimensions. An obsolete forced reference break was removed to retain the six-page limit with standard fonts and margins. Plot placement was adjusted to keep the budget chart near the results. Both named and anonymous PDFs pass the actual submission checks.

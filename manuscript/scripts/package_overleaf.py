@@ -11,6 +11,7 @@ if not (PAPER / "main.pdf").exists():
 allowed_roots = {"config", "sections", "bibliography", "figures", "tables", "results", "research", "scripts", "submission_files", "guideline"}
 allowed_top = {"main.tex", "main.pdf", "main_authors.tex", "main_authors.pdf", "README.md", "compile.sh", "Makefile", "requirements-figures.txt"}
 paths = sorted(p for p in PAPER.rglob("*") if p.is_file() and "__pycache__" not in p.parts
+    and p.relative_to(PAPER).as_posix() != "results/package_validation.json"
     and (p.relative_to(PAPER).parts[0] in allowed_roots or p.relative_to(PAPER).as_posix() in allowed_top))
 with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED) as archive:
     for path in paths:

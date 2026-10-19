@@ -6,7 +6,7 @@ This record documents work executed for our npm supply-chain study. It separates
 
 **How do dependency representation and the unit of workflow observation change defensive review and idealized hardening decisions?** The original account/package graph supports an empirical comparison of maintainer review strategies, while the new work here establishes which graph and endpoint assumptions those results depend on. This is a structural decision study. It does not require inventing compromise probabilities, treating advisory absence as benignness, or presenting a trained predictor that has not been evaluated.
 
-The most consequential new representation result is that deleting version identities creates additional paths for **8,587 of 25,228 package roots (34.04%)**. Their top-253 reach queues share only **155 packages**. The dependency graph and account-package memberships are our study data; scientific prose should introduce their acquisition, construction and semantics directly, rather than speak of somebody else's platform or a supplied SQL file.
+The most consequential new representation result is that deleting version identities creates additional paths for **8,587 of 25,228 graph-identifier roots (34.04%)**. Their top-253 reach queues share only **155 identifiers**. The dependency graph and account-package memberships are our study data; scientific prose should introduce their acquisition, construction and semantics directly, rather than speak of somebody else's platform or a supplied SQL file.
 
 ## Completed graph experiments
 
@@ -18,13 +18,21 @@ python3 scripts/study_graph_validity.py
 
 The analysis extracts the database to a temporary directory, opens it read-only, and leaves the source archive unchanged. `manuscript/results/graph_validity/summary.json` binds results to archive and script SHA-256 values. For every one of the 25,228 roots, both the package reach count and workflow-positive package count exactly reproduce the archived database. The version-continuous name set is checked to be a subset of the projected name set for every root.
 
+### Identifier scope and sampling-frame validity
+
+The archive's `package_name` field contains **25,228 graph identifiers**, not 25,228 independently registered npm package names. A lexical census finds **2,745 bundled-context strings containing `>`** and **22,483 ordinary-shaped names**. No context string has a matching metadata row or maintainer membership in this archive. Their presence affects graph and missingness denominators, so all-root results retain the original graph identifier unit. The census is recorded in [identifier_scope.json](../results/graph_validity/identifier_scope.json) and reproduced by `scripts/check_identifier_scope.py`. Removing every context node leaves all maintainer/workflow-repository incidence sets identical, retaining all 462,170 pairs, so repository-level `C/H/P` results are unchanged for a fixed identity selection. Summed or maximum individual-package ranking invariance has not been established. Workflow-package incidence loses 28 pairs; context removal does not preserve every endpoint definition and is not asserted to repair resolution semantics.
+
+This finding also limits the frozen feasibility wave: eight of its 100 selected identifiers are context strings. A new registry-level wave should validate its sampling units before selection and use a separate manifest. The original selection is retained as evidence of the defect. Nothing in this lexical classification independently verifies every ordinary-shaped name as a currently registered package.
+
 ### Version identities and reach
 
 Let a retained dependency edge point from a dependent version to its dependency version. The package graph collapses all versions with the same name. The comparison graph keeps exact `(package, version)` identities. For a root package, the version-continuous experiment starts from **all observed versions** of that root, traverses reverse edges, and then deduplicates the reached package names. The root package name is excluded from both counts. This gives the projection a conservative comparison: no observed root version is arbitrarily discarded.
 
 | Measurement | Result |
 |---|---:|
-| Queued package names | 25,228 |
+| Queued graph identifiers | 25,228 |
+| Ordinary-shaped names without a bundled-context separator | 22,483 |
+| Bundled-context strings containing `>` | 2,745 |
 | Distinct name-level dependency edges | 88,113 |
 | Distinct version-level dependency edges | 121,885 |
 | Version nodes, including isolated metadata versions | 40,806 |
@@ -59,11 +67,11 @@ Ties use descending numeric score followed by ascending Unicode package name. Th
 
 The original URL parser stops a repository name at its first period. For example, `https://github.com/tj/commander.js.git` becomes `tj/commander`, and `https://github.com/isaacs/fs.realpath.git` becomes `isaacs/fs`. Comparing the retained raw repository URL with a parser that preserves periods identifies **658 package records with different repository targets**, including **60 workflow-positive rows**. Exact counterexamples are in `repository_parser_disagreements.csv`.
 
-Correcting a lexical URL does **not** repair the old workflow observation. A flag obtained for a truncated repository must not be reassigned to the corrected repository without a new query. The main historical inputs are left unchanged. The experiment owner has been given the parser and exclusion rule so that conservative exclusion can be tested separately. Repository-key normalization here is lexical and case insensitive; redirects, repository transfers and immutable GitHub repository identities have not been validated.
+Correcting a lexical URL does **not** repair the old workflow observation. A flag obtained for a truncated repository must not be reassigned to the corrected repository without a new query. The main historical inputs are left unchanged. The structural study conservatively excludes the 60 positive version observations, removing 24 distinct repository keys. At budget 100, greedy then covers 5,524 of 7,147 retained keys and satisfies all-source exclusion for 799; no positive flag is transferred to a corrected target. Repository-key normalization here is lexical and case insensitive; redirects, repository transfers and immutable GitHub repository identities have not been validated.
 
 ### Missingness and semantics
 
-There are 813 metadata packages with only NULL workflow flags and 2,959 queued packages without a metadata row, leaving **3,772 package names without a positive or zero flag**. Another **6,223 packages have only zero flags**. The collector maps missing GraphQL repository objects and HTTP 404 to zero, as well as genuinely missing workflow directories. Zero therefore conflates absence with unavailability. It does not establish no CI, low risk, an inaccessible secret, or an uncompromised package.
+There are 813 metadata packages with only NULL workflow flags and 2,959 queued packages without a metadata row, leaving **3,772 graph identifiers without a positive or zero flag**. Another **6,223 packages have only zero flags**. The collector maps missing GraphQL repository objects and HTTP 404 to zero, as well as genuinely missing workflow directories. Zero therefore conflates absence with unavailability. It does not establish no CI, low risk, an inaccessible secret, or an uncompromised package.
 
 In 8,473 rooted neighborhoods, at least one reached package has only NULL/missing flags. The output's `workflow_reach_upper_with_unknown` adds only these NULL/missing cases to the observed positive count. It is a conditional bound if zero flags are trusted. Allowing uncertainty in the zero flags requires the full projected name reach as an even looser within-graph upper bound. Neither bound covers packages outside our observed graph.
 
@@ -112,9 +120,9 @@ The [OpenSSF corpus scope](https://github.com/ossf/malicious-packages) and [OSV 
 
 ## Completed prospective data collection, with outcomes pending
 
-Rather than stop at a generic request for future data, this work **collected a new small prospective feasibility cohort**. It selected 100 names uniformly without replacement from our fixed 25,228-name study population, with seed **20261020**, and wrote the selection manifest before the first metadata request. Names were not selected using future outcomes, and unavailable packages were not replaced.
+Rather than stop at a generic request for future data, this work **collected a new small prospective feasibility cohort**. It selected 100 graph identifiers uniformly without replacement from our fixed 25,228-identifier study population, with seed **20261020**, and wrote the selection manifest before the first metadata request. Names were not selected using future outcomes, and unavailable packages were not replaced.
 
-The collection obtained **90 successful official npm `/latest` responses**, plus **eight HTTP 405** and **two HTTP 404** responses. Sanitized records include feature-capture timestamps, response hashes, version identifiers, public maintainer usernames, a distinct version-publisher username when present, lexical repository keys, dependency counts and metadata availability indicators. It does not retain email addresses, raw registry bodies, script bodies or tarballs and does not execute package code.
+The selection contains **92 ordinary-shaped names and eight bundled-context strings**. Ordinary names obtained **90 successful official npm `/latest` responses** and **two HTTP 404** responses. Every sampled bundled-context string obtained **HTTP 405**. The eight context strings are invalid registry sampling units rather than eight confirmed unavailable npm packages; they remain in the frozen selection and are not replaced. Sanitized records include feature-capture timestamps, response hashes, version identifiers, public maintainer usernames, a distinct version-publisher username when present, lexical repository keys, dependency counts and metadata availability indicators. It does not retain email addresses, raw registry bodies, script bodies or tarballs and does not execute package code.
 
 The feature cutoff is the latest finished response: **20 October 2026, 00:48:38.569362 Asia/Dhaka** (`2026-10-19T18:48:38.569362+00:00`). The 90-day follow-up interval is `(cutoff, cutoff + 90 days]`, ending **18 January 2027, 00:48:38.569362 Asia/Dhaka**. All **100 outcomes remain pending**. No probabilities, fitted models, positive labels, negative labels or forecast-performance metrics were produced.
 
@@ -125,7 +133,7 @@ This is a completed acquisition feasibility step, not a powered or fully preregi
 ## What is completed and what remains
 
 - **Completed:** all-root graph representation experiment; cycle/SCC checks; repository observation-unit analysis; concrete collector linkage-defect evidence; metadata/version coverage census; primary-source access tests; 100-name prospective selection and 90 successful metadata captures; explicit pending-outcome records.
-- **Also completed in this research turn:** the maintainer-review and idealized-hardening comparison at six budgets, with 200 seeded random trials, version-continuity and repository-link sensitivity results, exact union objectives and separate full-protection statistics. The executable is `scripts/study_structural_interventions.py`; its final numeric tables and checks are in `manuscript/results/structural_interventions/`. This document leaves those numbers bound to that experiment's manifest rather than duplicating a partial run.
+- **Also completed:** the maintainer-review and idealized-hardening comparison at six budgets, with 200 seeded random trials, version-continuity and repository-link sensitivity results, exact union objectives and separate all-source exclusion statistics. The executable is `scripts/study_structural_interventions.py`; its final numeric tables and checks are in `manuscript/results/structural_interventions/`. This document leaves those numbers bound to that experiment's manifest rather than duplicating a partial run.
 - **Still pending:** outcome follow-up through January 2027; final prospective surveillance and analysis registration; historical workflow or publication-authority reconstruction; independently evaluated compromise prediction; real hardening outcomes or causal intervention validation.
 
 The paper should report completed structural experiments as our research results, and describe the prospective collection as groundwork whose outcomes are not yet observed. Every risk, compromise-probability, credential-exposure, actual propagation or deployed-hardening claim still requires observations beyond the structural graphs.

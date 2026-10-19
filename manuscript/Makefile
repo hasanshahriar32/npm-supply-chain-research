@@ -1,4 +1,4 @@
-.PHONY: pdf authors-pdf both audit study figures reproduce verify submission-check package clean
+.PHONY: pdf authors-pdf both audit study profile figures reproduce verify submission-check package clean
 pdf:
 	bash compile.sh
 	python3 scripts/check_submission.py
@@ -15,8 +15,11 @@ study:
 	python3 ../scripts/validate_observation_semantics.py
 	python3 ../scripts/study_structural_interventions.py
 	python3 ../scripts/study_graph_validity.py
+	python3 ../scripts/check_identifier_scope.py
 figures:
 	python3 scripts/render_research_figures.py
+profile:
+	python3 ../scripts/profile_structural_study.py
 reproduce:
 	python3 scripts/audit_artifacts.py
 	$(MAKE) study
@@ -31,5 +34,6 @@ submission-check:
 	python3 scripts/check_submission.py
 package:
 	python3 scripts/package_overleaf.py
+	python3 scripts/validate_packages.py
 clean:
 	rm -rf build

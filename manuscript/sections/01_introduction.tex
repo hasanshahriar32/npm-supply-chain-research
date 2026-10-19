@@ -1,6 +1,13 @@
 \section{Introduction}
 Shared dependencies concentrate software supply-chain exposure in a relatively small number of upstream packages and maintainer accounts. Prior npm research demonstrates both this concentration and the potential reach of selected maintainers~\cite{zimmermann2019,zahan2022}. A registry operator or security team with a limited budget must nevertheless decide what the selection should accomplish. Reviewing distinct downstream repositories, reducing expected exposure across hypothetical account compromises, and eliminating every modeled source of exposure at a repository require different measurements.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{study_system.pdf}
+\caption{Implemented structural-measurement pipeline. Counts describe our observed sample; the typed graph is schematic. Dependency arrows follow dependency-to-dependent exposure. Conditional exposure reduction and all-source exclusion use the stated source-hardening model.}
+\label{fig:system}
+\end{figure*}
+
 Consider two accounts whose packages reach nearly identical downstream repositories. Selecting both can be valuable when each account represents an independent possible origin of compromise. The second account contributes little additional repository coverage, however. Conversely, a selection that broadens coverage can leave most covered repositories reachable through unselected accounts. A coverage percentage therefore needs an explicit interpretation before it can inform an account-hardening decision.
 
 We investigate this distinction through a reproducible structural study of our npm data. We construct maintainer portfolio unions, deduplicate workflow-associated packages into repository endpoints, and evaluate established selection rules against three separately defined quantities: distinct coverage, additive scenario exposure reduction, and exclusion of all observed source identities. We then test whether the conclusions depend on collapsing package versions, counting monorepo packages separately, limiting graph depth, or changing visibility and selection assumptions.

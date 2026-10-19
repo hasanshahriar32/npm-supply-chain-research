@@ -4,17 +4,17 @@ Updated **20 October 2026, Asia/Dhaka**. This author-side document separates exe
 
 ## Completed structural experiments
 
-`scripts/study_structural_interventions.py` compares portfolio size, summed package reach, exact portfolio-union reach, greedy marginal coverage and 200 seeded random baselines at budgets 1, 5, 10, 25, 50 and 100. It evaluates package/repository endpoints, observation depth, version continuity, repository-link consistency, dominant portfolios and hypothetical email-hash grouping. Results and source manifests are in `manuscript/results/structural_interventions/`.
+`scripts/study_structural_interventions.py` compares portfolio size, summed package reach, maximum package reach, exact portfolio-union reach, greedy marginal coverage and 200 seeded random baselines at budgets 1, 5, 10, 25, 50 and 100. It evaluates package/repository endpoints, observation depth, version continuity, repository-link consistency, dominant portfolios and hypothetical email-hash grouping. Results and source manifests are in `manuscript/results/structural_interventions/`.
 
 Let `E_m` be the endpoints structurally reachable from an observed source identity `m`. Three estimands have different interpretations:
 
 1. **Uniform scenario exposure share:** `H(S) = sum(m in S)|E_m| / sum(m)|E_m|`. This assumes mutually exclusive, equally weighted identity-loss scenarios and ideal prevention of selected source scenarios. It is not an estimated attack distribution.
 2. **Distinct endpoint coverage:** `C(S) = |union(m in S) E_m|`. This is a review-coverage measure. Unselected identities can still reach a covered endpoint.
-3. **All-source full protection:** define `A_e = {m : e in E_m}`; then `P(S) = |{e : A_e is nonempty and A_e is a subset of S}|`. This stronger graph-model condition remains conditional on observed completeness and idealized control.
+3. **All-source exclusion:** define `A_e = {m : e in E_m}`; then `P(S) = |{e : A_e is nonempty and A_e is a subset of S}|`. This stronger graph-model condition remains conditional on observed completeness and idealized control.
 
 These are established optimization objectives and baselines. The empirical contribution is their behavior under overlapping portfolios and measurement assumptions. None measures deployed security improvement or causal attack prevention.
 
-`scripts/study_graph_validity.py` independently evaluates all 25,228 package roots. Version continuity changes reverse-reached name counts for 8,587 roots. The 15,233 workflow-positive package names map to 7,171 repository keys before mapping exclusions. The original URL parser has 658 mismatched targets, including 60 positive flags. Results are in `manuscript/results/graph_validity/`.
+`scripts/study_graph_validity.py` independently evaluates all 25,228 graph-identifier roots. Version continuity changes reverse-reached name counts for 8,587 roots. The 15,233 workflow-positive package names map to 7,171 repository keys before mapping exclusions. The context-node census finds 2,745 bundled-context strings, with no metadata or maintainer membership. Removing them preserves every primary maintainer/workflow-repository incidence set, although package-level incidence changes. The original URL parser has 658 mismatched targets, including 60 positive flags. Results are in `manuscript/results/graph_validity/`.
 
 ## Prospective cohort: collection completed, outcomes pending
 
@@ -22,12 +22,12 @@ The first acquisition-feasibility wave has actually been collected:
 
 | Item | Frozen value or actual result |
 |---|---|
-| Sampling frame | All 25,228 package names in our immutable original archive |
+| Sampling frame | All 25,228 graph identifiers in our immutable original archive, including 2,745 bundled-context strings |
 | Selection | Uniform sample without replacement; seed 20261020; manifest written before requests |
-| Selected names | 100 |
+| Selected identifiers | 100: 92 ordinary-shaped names and eight bundled-context strings |
 | Capture endpoint | Official npm `/latest`; sequential requests separated by at least 0.2 seconds |
 | Successful responses | 90 HTTP 200 |
-| Missing metadata | Eight HTTP 405 and two HTTP 404; no replacement |
+| Other responses | Eight bundled-context strings returned HTTP 405; two ordinary names returned HTTP 404; no replacement |
 | Feature cutoff | 20 October 2026, 00:48:38.569362 Asia/Dhaka |
 | Follow-up | `(cutoff, cutoff + 90 days]` |
 | Horizon end | 18 January 2027, 00:48:38.569362 Asia/Dhaka |
@@ -35,6 +35,8 @@ The first acquisition-feasibility wave has actually been collected:
 | Models/performance | Zero fitted models; zero forecasting metrics |
 
 The collector is `scripts/freeze_prospective_cohort.py`. In `manuscript/results/prospective_cohort/`, `selection_manifest.json` fixes sampling and target description before acquisition; `capture_records.jsonl` records times, HTTP statuses, successful-response hashes and allowlisted features; `cohort_status.json` fixes the final capture as the common availability cutoff. Existing manifests cannot be overwritten by a repeat run.
+
+The frame defect is measured in [identifier_scope.json](../results/graph_validity/identifier_scope.json). Bundled-context identifiers are not registry package names; their failed requests do not estimate package unavailability. A future package-level wave should validate registry sampling units and freeze a separate selection, preserving this wave unchanged. The 22,483 ordinary-shaped archive identifiers are not all independently registry-validated.
 
 Maintainer usernames and the recorded version publisher have separate fields. Attestation-metadata presence is not cryptographic provenance verification. No email addresses, raw response bodies, install-script bodies or tarballs are retained. Joining the old graph later would supply **stale structural features available at the new cutoff**, not contemporaneous measurements or a reconstruction of old acquisition dates.
 
@@ -91,6 +93,6 @@ A future evaluation manifest must bind sources, feature availability, observatio
 
 ## Current status
 
-The structural decision experiments and graph-validity measurements are complete. The new prospective wave has 100 selected names, 90 successful current metadata captures and 100 pending outcomes. Historical incident artifacts remain candidate-discovery and development resources; they do not constitute evaluated publisher-compromise prediction.
+The structural decision experiments and graph-validity measurements are complete. The new prospective wave has 100 selected graph identifiers, 90 successful current metadata captures and 100 pending outcomes. Historical incident artifacts remain candidate-discovery and development resources; they do not constitute evaluated publisher-compromise prediction.
 
 Deployed hardening effects, historical credential/workflow authority and future forecasting performance remain unobserved. See [2026-10-20_research_status.json](2026-10-20_research_status.json) and [2026-10-20_groundwork_assessment.md](2026-10-20_groundwork_assessment.md).

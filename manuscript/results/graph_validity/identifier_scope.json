@@ -1,0 +1,124 @@
+{
+  "audit": "Registry-name scope and context-node influence audit",
+  "client_study_date": "2026-10-20",
+  "context_collection_state_counts": [
+    {
+      "fetched_dependencies": -1,
+      "fetched_registry": -1,
+      "identifiers": 2745
+    }
+  ],
+  "context_identifier_fraction": 0.10880767401300143,
+  "context_marker_identifier_count": 2745,
+  "context_metadata_rows": 0,
+  "context_package_maintainer_relations": 0,
+  "context_removal_ordinary_root_incidence_sensitivity": {
+    "workflow_packages": {
+      "changed_roots_with_observed_maintainer": 62,
+      "endpoints_with_changed_ordinary_root_source_set": 10,
+      "observed_endpoint_count": 15233,
+      "ordinary_root_endpoint_pairs_context_nodes_removed": 1438438,
+      "ordinary_root_endpoint_pairs_full_graph": 1438509,
+      "ordinary_roots_with_changed_endpoint_set": 62,
+      "reachable_endpoints_context_nodes_removed": 15233,
+      "reachable_endpoints_full_graph": 15233,
+      "removed_ordinary_root_endpoint_pairs": 71
+    },
+    "workflow_repositories": {
+      "changed_roots_with_observed_maintainer": 1,
+      "endpoints_with_changed_ordinary_root_source_set": 7,
+      "observed_endpoint_count": 7171,
+      "ordinary_root_endpoint_pairs_context_nodes_removed": 672919,
+      "ordinary_root_endpoint_pairs_full_graph": 672926,
+      "ordinary_roots_with_changed_endpoint_set": 1,
+      "reachable_endpoints_context_nodes_removed": 7171,
+      "reachable_endpoints_full_graph": 7171,
+      "removed_ordinary_root_endpoint_pairs": 7
+    }
+  },
+  "context_removal_source_incidence_sensitivity": {
+    "workflow_packages": {
+      "endpoints_with_changed_maintainer_source_set": 1,
+      "identity_endpoint_pairs_context_nodes_removed": 991003,
+      "identity_endpoint_pairs_full_graph": 991031,
+      "maintainers_with_changed_endpoint_set": 28,
+      "observed_endpoint_count": 15233,
+      "reachable_endpoints_context_nodes_removed": 15188,
+      "reachable_endpoints_full_graph": 15188,
+      "removed_identity_endpoint_pairs": 28
+    },
+    "workflow_repositories": {
+      "endpoints_with_changed_maintainer_source_set": 0,
+      "identity_endpoint_pairs_context_nodes_removed": 462170,
+      "identity_endpoint_pairs_full_graph": 462170,
+      "maintainers_with_changed_endpoint_set": 0,
+      "observed_endpoint_count": 7171,
+      "reachable_endpoints_context_nodes_removed": 7158,
+      "reachable_endpoints_full_graph": 7158,
+      "removed_identity_endpoint_pairs": 0
+    }
+  },
+  "context_workflow_positive_rows": 0,
+  "edge_orientation": "Influence direction: dependency -> dependent; rows retain original distinct version-edge multiplicity",
+  "executed_at_utc": "2026-10-19T23:16:28.657365+00:00",
+  "graph_identifier_count": 25228,
+  "identifier_classification": "Contains '>' marks a context-like identifier retained from dependency metadata; all remaining graph identifiers are called ordinary names, without asserting each remains a currently registered npm package.",
+  "limitations": [
+    "Context removal is a sensitivity, not a repaired dependency model; context nodes can encode bundle relationships and must not be aliased to ordinary package leaves.",
+    "Identical primary source-incidence sets imply identical C/H/P for any fixed maintainer selection, but all-package endpoint counts and rankings may change when context endpoints are excluded.",
+    "Registry failures and missing metadata do not imply safe, malicious, or benign outcomes."
+  ],
+  "method": "Temporary extraction; immutable read-only SQLite; exact SCC source-bitset propagation; no network and no package execution",
+  "ordinary_name_count": 22483,
+  "primary_workflow_repository_incidence_identical_after_context_removal": true,
+  "prospective_pilot": {
+    "all_100_outcomes_null_and_pending": true,
+    "capture_status_by_identifier_class": [
+      {
+        "capture_status": "metadata_unavailable",
+        "http_status": 405,
+        "identifier_class": "context",
+        "records": 8
+      },
+      {
+        "capture_status": "metadata_captured",
+        "http_status": 200,
+        "identifier_class": "ordinary",
+        "records": 90
+      },
+      {
+        "capture_status": "metadata_unavailable",
+        "http_status": 404,
+        "identifier_class": "ordinary",
+        "records": 2
+      }
+    ],
+    "context_identifiers_selected": 8,
+    "ordinary_names_selected": 92,
+    "original_frozen_sample_size": 100,
+    "reinterpretation": "Preserve the original sample and its failed observations. Context identifiers are not independent registry-package candidates. Do not replace them with their leaves or silently resample; any ordinary-name cohort requires a separately frozen selection."
+  },
+  "source_sha256": {
+    "data/npm_ecosystem.db.zip": "ab45439cf94cf43f3133b0aaff644557d55e86e99430a0a7937bfd0ce5266315",
+    "manuscript/results/prospective_cohort/capture_records.jsonl": "99a5130a6a49673f2ccb2cf4e43ff9dd8ef1b17d03ee7d4e464a7fcbf9eb5441",
+    "manuscript/results/prospective_cohort/selection_manifest.json": "60f1499b1b32d7450da7f1447fed46d0a9cf84718b3185c55ce0bf64c3d3e3b2",
+    "scripts/check_identifier_scope.py": "648d7af2ed09b9fb27a2975ca79cb389275958b1e5cd61942f43a4e6bc255bde"
+  },
+  "unique_package_edge_classes": {
+    "context_to_context": 3910,
+    "context_to_ordinary": 613,
+    "ordinary_to_context": 5,
+    "ordinary_to_ordinary": 83585
+  },
+  "validation": {
+    "source_archive_unchanged": true,
+    "toy_context_mediation_and_cycle_checks": true
+  },
+  "version_edge_classes": {
+    "context_to_context": 3910,
+    "context_to_ordinary": 615,
+    "ordinary_to_context": 5,
+    "ordinary_to_ordinary": 117355
+  },
+  "workflow_package_incidence_identical_after_context_removal": false
+}

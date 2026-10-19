@@ -18,15 +18,17 @@ Selection & $C$ & $C$ (\%) & $H$ (\%) & $P$\\
 
 Figure~\ref{fig:budget} shows the budget curves. At 25 identities, greedy covers 4,854 repositories, versus 4,284 for exact union and 4,067 for portfolio size. Their $H$ values are 6.08\%, 9.86\%, and 4.38\%. At 100, random mean coverage is 1,680.6, with a central 95\% simulation range of 659.8--2,610.7. The exact finite-population random expectation is 1,716.8, and expected $H$ is $100/12{,}217=0.819\%$. Simulated and exact means differ through random-order variation, rather than a sampling inference about npm.
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=\columnwidth]{review_coverage.pdf}
-\caption{Workflow-repository coverage and equal-scenario exposure reduction across identity budgets. The objectives favor different selections. Random curves show exact finite-population expectations.}
-\label{fig:budget}
-\end{figure}
+
 
 \subsection{RQ2: Covered Endpoints Retain Other Sources}
-Of the 5,538 repositories covered by greedy at budget 100, only 800 meet all-source exclusion; 4,738 remain reachable from an unselected identity. Across the 7,158 repositories with nonempty observed source sets, 6,358 retain such a source. Exact-union ranking excludes every observed source for 534 repositories. We make no claim that either selection optimizes $P$.
+Figure~\ref{fig:partition} partitions source-reachable repositories at budget 100. Of the 5,538 repositories covered by greedy, only 800 meet all-source exclusion; 4,738 remain reachable from an unselected identity. Across the 7,158 repositories with nonempty observed source sets, 6,358 retain such a source. Exact-union ranking excludes every observed source for 534 repositories. We make no claim that either selection optimizes $P$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{coverage_partition.pdf}
+\caption{Repository source-set partition at budget 100. Segment labels count $P$; boundary labels count $C$. Bars exclude 13 repositories without observed sources. Blue segments remain reachable through unselected identities.}
+\label{fig:partition}
+\end{figure}
 
 Cross-identity overlap explains the difference between broad coverage and additive scenario mass. At 100 identities, $1-C(S)/\sum_{m\in S}|E_m|$ is 89.57\% for greedy and 97.18\% for exact union. Repeated endpoints contribute to different possible account-loss scenarios in $H$, while contributing once in $C$. Such repetition is not an error for additive exposure. Reporting covered endpoints as universally protected would, however, overstate what a selected account control accomplishes.
 
@@ -37,8 +39,8 @@ At 100 identities, selecting and evaluating greedy on the version graph covers 5
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\columnwidth]{representation_sensitivity.pdf}
-\caption{Selections optimized and evaluated within each representation at budget 100. Similar aggregate coverage coexists with a 42.44\% decline in total identity--repository pairs. Both representations remain union graphs.}
+\includegraphics[width=\columnwidth]{representation_detail.pdf}
+\caption{Version continuity changes pair mass while aggregate coverage remains similar. The lower panel selects and evaluates within each representation at budget 100. Both graphs remain observed unions.}
 \label{fig:representation}
 \end{figure}
 
