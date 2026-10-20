@@ -1,13 +1,14 @@
 {
   "experiment": "Q1 Journal Expansion: Pareto Frontier and Heterogeneous Risk Weighting",
-  "timestamp_utc": "2026-10-20T21:01:54Z",
+  "timestamp_utc": "2026-10-20T21:25:38Z",
   "dataset": "data/npm_ecosystem.db.zip",
   "universe": {
     "maintainers": 12217,
     "packages": 25228,
     "workflow_repositories": 7171,
     "name_graph_pairs": 462170,
-    "version_graph_pairs": 266016
+    "version_graph_pairs": 266016,
+    "denom_pkg_sole": 106757
   },
   "pareto_name_graph": {
     "0.0": {
@@ -404,37 +405,75 @@
     }
   },
   "heterogeneous_weights": {
-    "Exact Union": {
+    "Exact Union (Unweighted)": {
+      "mode": "Unweighted",
       "C": 4407,
       "C_pct": 61.45586389624877,
       "H_uniform_pct": 33.78735097474955,
       "H_sole_pct": 77.29552437144812,
       "H_log_pct": 40.14502826244988,
+      "H_pkg_sole_pct": 27.3190516781101,
       "P": 534
     },
     "Greedy Coverage": {
+      "mode": "Unweighted",
       "C": 5538,
       "C_pct": 77.22772277227723,
       "H_uniform_pct": 11.484951424800398,
       "H_sole_pct": 74.19195612659647,
       "H_log_pct": 18.51724663576,
+      "H_pkg_sole_pct": 23.400807441198236,
       "P": 800
     },
     "Portfolio Size": {
+      "mode": "Unweighted",
       "C": 4579,
       "C_pct": 63.854413610375126,
       "H_uniform_pct": 7.959192504922432,
       "H_sole_pct": 70.26274789038283,
       "H_log_pct": 15.05820633849407,
+      "H_pkg_sole_pct": 13.719943422913719,
       "P": 577
     },
-    "Pareto (alpha=0.50)": {
+    "Pareto Hybrid (alpha=0.50)": {
+      "mode": "Unweighted",
       "C": 5020,
       "C_pct": 70.00418351694324,
       "H_uniform_pct": 31.19025466819569,
       "H_sole_pct": 80.41064800969939,
       "H_log_pct": 38.925091584458045,
+      "H_pkg_sole_pct": 28.512416047659638,
       "P": 626
+    },
+    "Weight-Aware Sole Optimum": {
+      "mode": "Weight-Aware",
+      "C": 4919,
+      "C_pct": 68.5957328127179,
+      "H_uniform_pct": 22.591254300365666,
+      "H_sole_pct": 88.0358167264676,
+      "H_log_pct": 33.09144550735385,
+      "H_pkg_sole_pct": 44.53103777738228,
+      "P": 707
+    },
+    "Weight-Aware Log Optimum": {
+      "mode": "Weight-Aware",
+      "C": 4603,
+      "C_pct": 64.18909496583461,
+      "H_uniform_pct": 31.909254170543306,
+      "H_sole_pct": 81.41621688902775,
+      "H_log_pct": 42.90870995224543,
+      "H_pkg_sole_pct": 33.167848478319925,
+      "P": 514
+    },
+    "Weight-Aware Package-Sole Optimum": {
+      "mode": "Weight-Aware",
+      "C": 4718,
+      "C_pct": 65.79277646074466,
+      "H_uniform_pct": 19.38658935023909,
+      "H_sole_pct": 80.02994416141458,
+      "H_log_pct": 23.61078985301488,
+      "H_pkg_sole_pct": 67.36513764905345,
+      "P": 642
     }
   }
 }
