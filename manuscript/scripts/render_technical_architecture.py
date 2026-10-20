@@ -82,14 +82,14 @@ def architecture_svg(data):
     # Logical boundaries rather than serial cards: the model and analysis share
     # a local research workspace; public services remain outside that boundary.
     g.add('<rect width="1420" height="670" fill="white"/>')
-    g.text(22, 33, 'A  PUBLIC OBSERVATIONS', 24, weight=700)
-    g.text(350, 33, 'B  COLLECTION + EVIDENCE', 24, weight=700)
-    g.text(845, 33, 'D  EXACT OFFLINE ANALYSIS', 24, weight=700)
+    g.text(22, 33, 'A  PUBLIC OBSERVATIONS', 23, weight=700)
+    g.text(350, 33, 'B  COLLECTION + EVIDENCE', 23, weight=700)
+    g.text(845, 33, 'D  EXACT OFFLINE ANALYSIS', 23, weight=700)
     g.add('<path d="M282 54V586" fill="none" stroke="#c8d2da" stroke-width="1.7" stroke-dasharray="6 5"/>')
 
     # External, explicitly named data resources.
     services = [
-        ('registry_server', 98, 'npm registry', 'maintainer metadata', '/latest + repository URL'),
+        ('registry_server', 98, 'npm registry', 'maintainer records', '/latest + repository URL'),
         ('api_service', 244, 'deps.dev API', 'dependency graph', 'versioned adjacency rows'),
         ('git_repository', 390, 'GitHub GraphQL', 'workflow directory', 'HEAD presence observation'),
     ]
@@ -155,12 +155,12 @@ def architecture_svg(data):
     # Topology -> local exact analysis. The gray route carries derived sets,
     # not malicious execution or a claimed CI credential path.
     g.route([(1333,469),(1410,469),(1410,292),(775,292),(775,164),(846,164)])
-    g.text(1105,285,'source–endpoint relations',16.5,color=MUTED,anchor='middle')
+    g.text(1105,285,'typed graph + repository map',16.5,color=MUTED,anchor='middle')
     g.icon('compute_server',845,101,104)
     g.text(897,234,'SCC engine',20.5,weight=700,anchor='middle')
     g.text(897,258,'DAG + endpoint bitsets',18,color=MUTED,anchor='middle')
     g.route([(953,160),(1029,160)])
-    g.text(990,142,'rank',17.5,color=MUTED,anchor='middle')
+    g.text(990,142,'sets',17.5,color=MUTED,anchor='middle')
     g.icon('ranking',1030,101,104)
     g.text(1081,234,'Identity ranking',20.5,weight=700,anchor='middle')
     g.text(1081,258,'5 rules + random',18,color=MUTED,anchor='middle')
@@ -209,7 +209,7 @@ def render_architecture(data):
     out=PAPER/'figures';out.mkdir(exist_ok=True)
     svg=out/'study_system.svg';svg.write_text(architecture_svg(data))
     env=dict(os.environ,SOURCE_DATE_EPOCH=EPOCH)
-    subprocess.run(['rsvg-convert','--format=pdf','--output',str(out/'study_system.pdf'),str(svg)],check=True,env=env)
+    subprocess.run(['rsvg-convert','--format=pdf1.5','--output',str(out/'study_system.pdf'),str(svg)],check=True,env=env)
     subprocess.run(['rsvg-convert','--format=png','--width=2130','--output',str(out/'study_system.png'),str(svg)],check=True,env=env)
     data['dimensions_inches']['study_system']=[7.1,3.35]
     return data

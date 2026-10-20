@@ -168,7 +168,7 @@ def main():
     render_system_figures.main()
     render_analysis_figures.main()
     stems = {
-        "study_system": {"kind": "Implemented pipeline schematic with empirical counts", "in_paper": True},
+        "study_system": {"kind": "Logical architecture with original infrastructure glyphs and empirical counts", "in_paper": True},
         "objective_tradeoff": {"kind": "Measured budget curves and analytic random expectations", "in_paper": True},
         "coverage_partition": {"kind": "Measured source-incidence partition at budget 100", "in_paper": True},
         "representation_detail": {"kind": "Measured version-continuity sensitivity", "in_paper": True},
@@ -179,11 +179,13 @@ def main():
     inputs = [PAPER / "results/structural_interventions/results.json",
               PAPER / "results/graph_validity/identifier_scope.json"]
     scripts = [Path(__file__).resolve(), PAPER / "scripts/render_system_figures.py",
-               PAPER / "scripts/render_analysis_figures.py"]
+               PAPER / "scripts/render_analysis_figures.py", PAPER / "scripts/render_technical_architecture.py",
+               PAPER / "scripts/technical_icons.py", PAPER / "scripts/export_drawio.py"]
     outputs = [FIGURES / f"{stem}.{suffix}" for stem in stems for suffix in ("pdf", "svg", "png")]
+    outputs += [FIGURES / "study_system.drawio"]
     outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json"]
     manifest = {
-        "generator": "Matplotlib drawing primitives and plots; no external imagery or network calls",
+        "generator": "Original native SVG topology through librsvg; Matplotlib statistical plots; no external imagery or network calls",
         "python_version": platform.python_version(), "matplotlib_version": matplotlib.__version__,
         "figures": stems,
         "inputs_sha256": {str(p.relative_to(PAPER.parent)): sha(p) for p in inputs},

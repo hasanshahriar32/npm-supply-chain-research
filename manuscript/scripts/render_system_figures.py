@@ -247,7 +247,7 @@ def main():
         })
     assert [(r["coverage"], r["removed_pairs"], r["all_source_exclusion"]) for r in selections] == [(4, 7, 4), (6, 6, 3)]
     data = {
-        "diagram_kind": "Implemented study pipeline; representative graph is schematic, counts are empirical",
+        "diagram_kind": "Implemented logical architecture; representative topology is illustrative, counts are empirical",
         "source_sha256": {
             str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in sources.values()
@@ -261,9 +261,10 @@ def main():
             "total_account_endpoint_pairs": sum(map(len, exposure_sets.values())),
             "selections": selections,
         },
-        "dimensions_inches": {"study_system": [7.1, 2.16], "objective_mechanism": [3.45, 2.18]},
+        "dimensions_inches": {"study_system": [7.1, 3.35], "objective_mechanism": [3.45, 2.18]},
     }
-    system_figure(data)
+    from render_technical_architecture import render_architecture
+    render_architecture(data)
     mechanism_figure(data)
     (RESULTS / "system_figure_data.json").write_text(json.dumps(data, indent=2) + "\n")
     print("Rendered study_system and objective_mechanism as PDF, SVG, and PNG.")
