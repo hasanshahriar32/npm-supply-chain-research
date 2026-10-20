@@ -1,0 +1,80 @@
+\section{Objectives and Optimization Framework}
+\label{sec:objectives}
+
+Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages authored by $m$, and let $\text{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
+
+\subsection{Formal Objective Definitions}
+We formalize three fundamental defensive quantities:
+
+\subsubsection{Submodular Distinct Coverage ($C(S)$)}
+Defenders seeking broad ecosystem review prioritize distinct downstream client repositories:
+\begin{equation}
+C(S) = \left| \bigcup_{m \in S} E_m \right|
+\end{equation}
+\textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and strictly submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
+\begin{equation}
+C(A \cup \{m\}) - C(A) \ge C(B \cup \{m\}) - C(B)
+\end{equation}
+The classic result of Nemhauser, Wolsey, and Fisher~\cite{nemhauser1978} establishes that the greedy algorithm selecting $m^* = \arg\max_{m \notin S} |E_m \setminus \bigcup_{u \in S} E_u|$ achieves a $(1 - 1/e) \approx 63.2\%$ approximation of the optimal coverage.
+
+\subsubsection{Modular Scenario Exposure Reduction ($H(S)$)}
+In threat models where each maintainer account represents an independent compromise event with prior probability weight $w_m$, defenders seek to eliminate the greatest expected downstream exposure mass:
+\begin{equation}
+H(S) = \frac{\sum_{m \in S} w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
+\end{equation}
+\textbf{Property:} $H(S)$ is normalized, monotone, and strictly \textit{modular} (additive linear). For any disjoint sets $A, B \subseteq M$, $H(A \cup B) = H(A) + H(B)$. Consequently, exact-union ranking (sorting maintainers in descending order of weighted reach $w_m |E_m|$) is mathematically guaranteed to achieve the exact global optimum for $H(S)$ at any budget $k$.
+
+\subsubsection{Supermodular All-Source Exclusion ($P(S)$)}
+A client repository $r$ is fully insulated against single-account compromise if and only if \textit{every} maintainer in its upstream dependency tree has adopted hardening controls:
+\begin{equation}
+P(S) = \sum_{r \in R_{\text{wf}}} \mathbb{I}[\text{Sources}(r) \subseteq S]
+\end{equation}
+\textbf{Property:} $P(S)$ is strictly \textit{supermodular}. Selecting maintainer $m$ contributes zero gain to $r$ until the final remaining unhardened maintainer of $r$ is selected, producing sharp threshold transitions:
+\begin{equation}
+P(A \cup \{m\}) - P(A) \le P(B \cup \{m\}) - P(B) \quad \text{for } A \subseteq B
+\end{equation}
+
+\subsection{Proposition 1: Monotone Submodularity of Hybrid Scalarization $J_\alpha(S)$}
+Because single-objective optimization induces severe polarization between $C(S)$ and $H(S)$, we formulate a hybrid scalarization function:
+\begin{equation}
+J_\alpha(S) = \alpha \cdot \frac{C(S)}{|R_{\text{wf}}|} + (1 - \alpha) \cdot H(S)
+\end{equation}
+where $\alpha \in [0, 1]$ parameterizes defensive posture between broad coverage ($\alpha = 1$) and scenario exposure reduction ($\alpha = 0$).
+
+\begin{proposition}
+For any $\alpha \in [0, 1]$, the marginal gain function $\Delta J_\alpha(m \mid S) = J_\alpha(S \cup \{m\}) - J_\alpha(S)$ is monotone non-decreasing and submodular.
+\end{proposition}
+\begin{IEEEproof}
+Let $A \subseteq B \subseteq M$ and $m \notin B$. The marginal gain is:
+\begin{equation}
+\Delta J_\alpha(m \mid S) = \alpha \frac{|E_m \setminus \bigcup_{u \in S} E_u|}{|R_{\text{wf}}|} + (1 - \alpha) \frac{w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
+\end{equation}
+The second term is constant with respect to $S$ (modular), so its marginal difference across $A$ and $B$ is exactly zero. The first term satisfies submodularity by set-theoretic inclusion:
+\begin{equation}
+|E_m \setminus \bigcup_{u \in A} E_u| \ge |E_m \setminus \bigcup_{u \in B} E_u|
+\end{equation}
+Because the sum of a submodular set function and a modular set function is submodular, $J_\alpha(S)$ is submodular for all $\alpha \in [0, 1]$. By the Nemhauser bound~\cite{nemhauser1978}, accelerated lazy greedy optimization achieves at least a $(1 - 1/e)$ approximation of the optimum scalarized objective.
+\end{IEEEproof}
+
+\subsection{Supermodular Minimum-Remaining-Source Heuristic for $P(S)$}
+Because $P(S)$ is supermodular, greedy coverage and exact union achieve all-source exclusion purely as an unoptimized side-effect. To directly optimize $P(S)$, we design an adaptive minimum-remaining-source heuristic. At each step, let $\text{rem}(r) = \text{Sources}(r) \setminus S$. The heuristic scores unselected maintainers by:
+\begin{equation}
+\text{Score}(m) = \sum_{r : \text{rem}(r) = \{m\}} 1 + \sum_{r : m \in \text{rem}(r), |\text{rem}(r)| > 1} \frac{1}{|\text{rem}(r)|}
+\end{equation}
+breaking ties by marginal coverage $|E_m \setminus \bigcup_{u \in S} E_u|$.
+
+\subsection{Heterogeneous Maintainer Risk Formulations}
+We evaluate three structural models of non-uniform maintainer risk:
+\begin{enumerate}
+    \item \textbf{Single-Maintainer Bottlenecks ($w_m^{\text{sole}}$):} Packages with $|M(p)| = 1$ lack peer review. We weight maintainers by $w_m^{\text{sole}} = 1 + |\{p \in P_m : |M(p)| = 1\}|$.
+    \item \textbf{Log-Portfolio Activity ($w_m^{\text{log}}$):} Token attack surface scales logarithmically with portfolio size: $w_m^{\text{log}} = 1 + \log_2(1 + |P_m|)$.
+    \item \textbf{Package-Level Sole-Maintainer Reach ($H_{\text{pkg-sole}}$):} Instead of weighting all reachable repositories of maintainer $m$, we isolate repositories reachable strictly through $m$'s sole-authored packages: $E_m^{\text{sole}} = \bigcup_{p \in P_m, |M(p)|=1} \reach(p)$.
+\end{enumerate}
+
+\subsection{Analytic Expectations and Empirical Standard Errors}
+Under a finite population of $|M| = 12,217$ maintainers, random selection of budget $k$ yields exact expected coverage and exposure under the hypergeometric distribution:
+\begin{align}
+E[H_{\text{rand}}(k)] &= \frac{k}{|M|}, \\
+E[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}} \left( 1 - \frac{\binom{|M| - |\text{Sources}(r)|}{k}}{\binom{|M|}{k}} \right).
+\end{align}
+For $k = 100$, exact finite-population expectations are $E[C] = 1,716.8$ and $E[H] = 0.819\%$. Across 200 simulation seeds, the sample mean coverage is 1,680.6 (sample standard deviation $\text{SD}_C = 530.7$, Monte Carlo Standard Error $\text{MCSE}_C = 37.5$), and sample mean exposure reduction is $0.819\%$ ($\text{SD}_H = 0.373\text{ pp}$, $\text{MCSE}_H = 0.026\text{ pp}$). Replicated offline execution across 3 independent runs averaged $39.50\text{ s}$ wall-clock time with $1,038.43\text{ MiB}$ peak RSS.

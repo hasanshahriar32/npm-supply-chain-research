@@ -1,0 +1,35 @@
+\section{Conclusion and Operational Guidance}
+\label{sec:conclusion}
+
+This paper presented an empirical and theoretical investigation of maintainer prioritization in registry-scale software supply chains, analyzing a connected graph of 25,228 npm packages, 12,217 maintainers, and 7,171 active GitHub Actions workflow repositories.
+
+\subsection{Summary of Findings}
+Our investigation addressed five central research questions, yielding five core structural insights:
+\begin{enumerate}
+    \item \textbf{Coverage vs. Exposure Trade-Off (RQ1):} At a modest budget of 100 maintainers ($0.819\%$ of the maintainer population), Greedy Coverage maximizes downstream perimeter reach ($77.23\%$ of repositories), but achieves only $11.48\%$ additive scenario exposure reduction. Conversely, Exact Union maximizes cumulative exposure reduction ($33.79\%$, a $2.94\times$ advantage) but covers only $61.46\%$ of repositories.
+    \item \textbf{Multi-Homing and Supermodular Exclusion (RQ2):} Consumer repositories depend on an average of $3.12$ distinct maintainers, meaning that covering a repository under $C(S)$ leaves substantial unmitigated compromise exposure. Direct supermodular optimization using an adaptive Minimum-Remaining-Source heuristic achieves $P(S) = 1{,}022$ fully protected repositories---a $+27.75\%$ gain over greedy coverage and $+91.39\%$ gain over exact union.
+    \item \textbf{Representation Fidelity and Selection Penalties (RQ3):} Collapsing version-specific dependencies into unversioned package names introduces massive topological distortion, inflating maintainer-repository exposure pairs by $42.44\%$ ($462{,}170 \rightarrow 266{,}016$) and causing phantom reach inflation of up to $+287.1\%$ on real-world compromised packages. Prioritizing maintainers directly on version-continuous graphs yields a $+13.43$ percentage point ($+64.2\%$ relative) gain in exposure reduction over name-projected selections.
+    \item \textbf{Pareto Sweet Spot and Sole-Maintainer Bottlenecks (RQ4):} Multi-objective scalarization with $\alpha=0.50$ captures $>90\%$ of both single-objective theoretical ceilings ($70.00\%$ coverage, $31.19\%$ exposure reduction). Furthermore, unweighted heuristics severely misspecify package-level single points of failure: unweighted greedy captures only $23.40\%$ of package-level sole-maintainer exposure ($H_{\text{pkg-sole}}$), whereas weight-aware optimization captures \textbf{$67.37\%$}---a $+40.05$ percentage point ($2.47\times$) increase.
+    \item \textbf{Temporal Feasibility and Release Authority (RQ5):} Bounded recursive SemVer graph reconstruction achieves $99.89\%$ completeness under strict pre-event horizons ($t_{\text{cutoff}} < t_{\text{incident}}$). Auditing 45 historical pre-incident snapshots reveals that while predecessor versions ($97.8\%$) and repository continuity ($93.3\%$) are widely available, $0.0\%$ possessed public cryptographic Sigstore provenance attestations, establishing the necessity of forward-looking prospective monitoring cohorts.
+\end{enumerate}
+
+\subsection{Actionable Guidance for Ecosystem Defenders}
+Our empirical findings translate directly into concrete, high-leverage defensive interventions:
+
+\subsubsection{For Package Registry Operators (e.g., npm, PyPI, Crates.io)}
+\begin{itemize}
+    \item \textbf{Targeted Hardware MFA Enforcement:} Rather than mandating multi-factor authentication uniformly across millions of accounts, registries should enforce mandatory WebAuthn/FIDO2 hardware keys and strict token binding (OIDC) on the top-100 maintainer cohort identified via multi-objective Pareto optimization ($\alpha=0.50$). This focused intervention secures over $88\%$ of sole-maintainer risk mass with minimal administrative friction.
+    \item \textbf{Differential Release-Authority Gating:} Registries should introduce automated release quarantine checks that inspect incoming publications for: (a) sudden maintainer roster changes on packages with historical sole maintainers, (b) repository URL mismatches or unanchored \texttt{gitHead} commits, and (c) unverified CI build provenance.
+    \item \textbf{Supermodular Defense for Critical Ecosystem Assets:} Registries should provide high-assurance dependency verification badges for consumer projects that achieve complete all-source exclusion ($P(S)$) through verified publisher pipelines.
+\end{itemize}
+
+\subsubsection{For Downstream Consumers and DevSecOps Organizations}
+\begin{itemize}
+    \item \textbf{Enforce Dependency Cooldown Periods:} Because supply-chain attacks are often detected and yanked within 24 to 72 hours of publication, automated dependency update bots (e.g., Dependabot, Renovate) should enforce a mandatory 3-to-7 day cooldown window for minor and patch updates on non-critical paths.
+    \item \textbf{Disable Arbitrary Lifecycle Scripts:} Organizations should configure package managers with \texttt{--ignore-scripts} by default, requiring explicit allowlisting for packages that necessitate native compilation during installation.
+    \item \textbf{Strict Lockfile Pinning and Integrity Verification:} All CI/CD workflows should enforce immutable lockfile resolution (\texttt{npm ci}) with cryptographic subresource integrity checks to prevent dynamic resolution shifts.
+    \item \textbf{Prioritize Auditing of Sole-Maintainer Dependencies:} Downstream dependency auditing should prioritize packages where $|M(p)| = 1$, actively sponsoring co-maintainers or contributing upstream code reviews to eliminate single-maintainer bottlenecks.
+\end{itemize}
+
+\subsection{Future Work}
+Future research directions include expanding multi-objective maintainer optimization across multi-language dependency graphs (e.g., Maven, PyPI, and Cargo), incorporating fine-grained dynamic call-graph reachability into exposure formulations, and evaluating the long-term efficacy of our pre-registered prospective cohort protocol through January 2027.

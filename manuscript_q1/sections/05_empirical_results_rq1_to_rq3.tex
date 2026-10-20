@@ -1,0 +1,99 @@
+\section{Empirical Results: RQ1 to RQ3}
+\label{sec:empirical_results}
+
+We first report our empirical findings for Research Questions 1 through 3 on the 25,228-package registry ecosystem, spanning multi-budget trade-offs, multi-homing mechanics, and representation fidelity.
+
+\subsection{RQ1: Coverage vs. Additive Exposure Trade-Off}
+Table~\ref{tab:multi_budget_comparison} reports empirical prioritization outcomes across maintainer budgets $|S| \in \{1, 5, 10, 25, 50, 100\}$. The top 100 maintainers represent only $0.819\%$ of the 12,217 unique maintainers in our ecosystem, yet their prioritization commands vast reach over downstream workflow repositories.
+
+\begin{table*}[t]
+\centering
+\caption{Empirical maintainer prioritization performance across multiple budgets $|S| \in \{1, 5, 10, 25, 50, 100\}$ on the 7,171 workflow repository corpus.}
+\label{tab:multi_budget_comparison}
+\footnotesize
+\setlength{\tabcolsep}{4.5pt}
+\begin{tabular}{llrrrrrr}
+\toprule
+Budget $|S|$ & Metric & Portfolio Size & Summed Reach & Max Reach & Exact Union & Greedy Coverage & Random (Mean $\pm$ MCSE) \\
+\midrule
+$|S| = 1$   & $C(S)$ (\%) & 23.65\% & 23.65\% & 23.65\% & 23.65\% & 23.65\% & 0.28\% $\pm$ 0.05\% \\
+            & $H(S)$ (\%) & 0.32\%  & 0.32\%  & 0.32\%  & 0.32\%  & 0.32\%  & 0.01\% $\pm$ 0.00\% \\
+            & $P(S)$      & 164     & 164     & 164     & 164     & 164     & 1.2 $\pm$ 0.1 \\
+\midrule
+$|S| = 5$   & $C(S)$ (\%) & 40.83\% & 41.54\% & 35.81\% & 35.81\% & 46.12\% & 1.34\% $\pm$ 0.11\% \\
+            & $H(S)$ (\%) & 1.24\%  & 2.87\%  & 5.92\%  & 5.92\%  & 1.48\%  & 0.04\% $\pm$ 0.00\% \\
+            & $P(S)$      & 261     & 288     & 245     & 245     & 298     & 3.5 $\pm$ 0.3 \\
+\midrule
+$|S| = 10$  & $C(S)$ (\%) & 48.72\% & 49.38\% & 41.22\% & 41.22\% & 55.42\% & 2.65\% $\pm$ 0.18\% \\
+            & $H(S)$ (\%) & 2.11\%  & 4.95\%  & 10.45\% & 10.45\% & 2.58\%  & 0.08\% $\pm$ 0.01\% \\
+            & $P(S)$      & 334     & 371     & 343     & 343     & 351     & 5.8 $\pm$ 0.4 \\
+\midrule
+$|S| = 25$  & $C(S)$ (\%) & 55.19\% & 57.66\% & 48.91\% & 48.91\% & 65.81\% & 6.48\% $\pm$ 0.29\% \\
+            & $H(S)$ (\%) & 3.89\%  & 9.88\%  & 18.72\% & 18.72\% & 4.15\%  & 0.20\% $\pm$ 0.01\% \\
+            & $P(S)$      & 422     & 489     & 427     & 427     & 514     & 8.7 $\pm$ 0.6 \\
+\midrule
+$|S| = 50$  & $C(S)$ (\%) & 59.84\% & 62.45\% & 55.12\% & 55.12\% & 71.94\% & 12.51\% $\pm$ 0.42\% \\
+            & $H(S)$ (\%) & 5.62\%  & 15.40\% & 26.31\% & 26.31\% & 6.55\%  & 0.41\% $\pm$ 0.02\% \\
+            & $P(S)$      & 498     & 584     & 441     & 441     & 638     & 10.4 $\pm$ 0.8 \\
+\midrule
+$|S| = 100$ & $C(S)$ (\%) & 63.85\% & 67.42\% & 59.52\% & 61.46\% & \textbf{77.23\%} & 23.44\% $\pm$ 0.52\% \\
+            & $H(S)$ (\%) & 7.96\%  & 21.98\% & 33.59\% & \textbf{33.79\%} & 11.48\% & 0.82\% $\pm$ 0.03\% \\
+            & $P(S)$      & 577     & 704     & 533     & 534     & \textbf{800}     & 12.8 $\pm$ 1.1 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.92\textwidth]{objective_tradeoff.pdf}
+\caption{Multi-budget trade-off trajectories across maintainer budgets $|S| \in [1, 100]$: (a) submodular coverage $C(S)$, (b) modular scenario exposure reduction $H(S)$, and (c) supermodular all-source exclusion $P(S)$ across six prioritization strategies.}
+\label{fig:objective_tradeoff}
+\end{figure*}
+
+At budget $|S|=100$, \textbf{Greedy Coverage} achieves $C(S) = 5{,}538$ repositories ($77.23\%$), establishing a descriptive lead of $+1{,}131$ repositories ($+15.77$ percentage points) over \textbf{Exact Union} ($C(S) = 4{,}407$, $61.46\%$). However, when evaluated under scenario-weighted additive exposure reduction $H(S)$, Exact Union achieves $33.79\%$, outpacing Greedy Coverage ($11.48\%$) by \textbf{$+22.31$ percentage points} ($2.94\times$ relative advantage).
+
+This divergence demonstrates the primary trade-off governing supply-chain defense:
+\begin{enumerate}
+    \item \textbf{Extensive Defense (Submodular Coverage):} Greedy coverage spreads interventions across the widest perimeter of consumer repositories, securing any repository having at least one top maintainer.
+    \item \textbf{Intensive Defense (Modular Exposure):} Exact union prioritizes maintainers whose accounts touch large volumes of package dependencies across all repositories, eliminating total identity-exposure mass.
+\end{enumerate}
+
+Portfolio size ranking performs poorly across all objectives, achieving only $63.85\%$ coverage and $7.96\%$ exposure reduction at $|S|=100$. This confirms that raw package count is a deceptive indicator of systemic risk: maintainers with hundreds of dormant utility packages exert minimal downstream blast radius compared to maintainers of foundational packages with compact portfolios.
+
+\subsection{RQ2: Multi-Homing Residual Exposure and Single-Source Fragility}
+A central mechanism explaining the gap between $C(S)$ and $H(S)$ is \textit{multi-homing dependency}: downstream workflow repositories rely on multiple distinct maintainers simultaneously. In our corpus, consumer repositories have a mean of $3.12$ maintainer sources in their direct and transitive dependency closures, with heavy-tailed repositories depending on up to $182$ distinct maintainers.
+
+Consequently, covering a repository under $C(S)$ does not eliminate its compromise probability. If repository $r$ depends on $\text{Sources}(r) = \{m_1, m_2, m_3, m_4\}$, hardening only $m_1$ satisfies $r \in \bigcup_{m \in S} E_m$, yet leaves 3 unmitigated compromise pathways ($75\%$ residual vulnerability under uniform compromise probability). Full immunity requires all-source exclusion $P(S)$, which is supermodular.
+
+As shown in Table~\ref{tab:multi_budget_comparison}, at $|S|=100$, Greedy Coverage achieves $P(S) = 800$ fully protected repositories ($11.16\%$), while Exact Union achieves only $P(S) = 534$ ($7.45\%$). This descriptive difference of $\Delta P = +266$ repositories occurs because greedy coverage systematically targets maintainers of single-source leaf repositories. Nonetheless, over $88\%$ of workflow repositories retain unhardened dependency paths under both baseline heuristics at budget 100.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{representation_detail.pdf}
+\caption{Cross-representation divergence: version-continuous resolution eliminates spurious cyclic paths and reduces total identity-repository exposure pairs by $42.44\%$, shifting maintainer leverage.}
+\label{fig:representation_detail}
+\end{figure}
+
+\subsection{RQ3: Version-Continuity Representation and Selection Penalties}
+Comparing the package-projected name graph against the version-continuous SemVer dependency graph reveals substantial topological distortion:
+\begin{enumerate}
+    \item \textbf{Exposure Shrinkage:} Preserving version continuity contracts total maintainer-repository exposure pairs from $462{,}170$ to $266{,}016$---an exact reduction of \textbf{$42.44\%$}.
+    \item \textbf{Root Scope Changes:} $8{,}587$ out of $25{,}228$ packages ($34.04\%$) exhibit divergent downstream reach scopes between name-collapsed and version-continuous representations.
+    \item \textbf{Cycle Condensation:} Kosaraju condensation detects $82$ cyclic nodes across $68$ strongly connected components in the name graph, compared to $68$ cyclic components across $40{,}806$ version nodes in the version-continuous graph.
+    \item \textbf{Phantom-Reach Witnesses:} We identified 5 verified packages whose name-projected reach is heavily inflated by multi-version conflation: \texttt{pseudomap}, \texttt{is}, \texttt{foreach}, \texttt{indexof}, and \texttt{has-color}.
+\end{enumerate}
+
+\subsubsection{The Cross-Representation Selection Penalty}
+When maintainers are selected based on name-projected heuristics but evaluated on the real-world version-continuous graph, prioritization efficacy degrades substantially. For the \texttt{sum\_package\_reach} heuristic at budget 100, ranking directly on version-continuous topologies captures \textbf{$34.34\%$} of version exposure, compared to only \textbf{$20.91\%$} when using name-projected rankings---an improvement of \textbf{$+13.43$ percentage points} ($+64.2\%$ relative gain).
+
+\subsubsection{Real-World Compromise Case Study}
+Table~\ref{tab:q1_incident_case_study} details reach metrics and maintainer prioritization ranks across the 16 verified compromised package assessments present in our June 2026 snapshot.
+
+\input{tables/q1_incident_case_study_table}
+
+The case study illustrates three critical phenomena:
+\begin{itemize}
+    \item \textbf{Asymmetric Phantom Inflation:} Foundational utilities exhibit massive phantom inflation under name projection: \texttt{simple-swizzle} is inflated by \textbf{$+287.1\%$} ($2{,}969$ vs. $767$ repositories), \texttt{chalk} by \textbf{$+91.7\%$} ($5{,}293$ vs. $2{,}761$), \texttt{ansi-styles} by \textbf{$+85.9\%$} ($5{,}133$ vs. $2{,}761$), and \texttt{debug} by \textbf{$+25.8\%$} ($2{,}971$ vs. $2{,}362$).
+    \item \textbf{Co-Maintenance Masking:} Maintainer \texttt{qix} (author of \texttt{debug} and \texttt{simple-swizzle}) is excluded by unweighted Greedy Coverage beyond budget 100 (rank $\#>100$) because co-maintainers with broader portfolios satisfy the marginal coverage check first. Under Exact Union and Pareto Hybrid ($\alpha=0.50$), \texttt{qix} is correctly prioritized at rank \textbf{$\#8$} and \textbf{$\#4$}, respectively.
+    \item \textbf{Targeted Compromise Reach:} Ecosystem reach varies by orders of magnitude: foundational packages like \texttt{chalk} reach $2{,}761$ repositories ($38.5\%$), whereas targeted attack packages like \texttt{@solana/web3.js} reach $48$ repositories, \texttt{nx} reaches $142$, and \texttt{node-ipc} reaches $18$.
+\end{itemize}

@@ -1,0 +1,42 @@
+\section{Threats to Validity and Research Ethics}
+\label{sec:threats_to_validity}
+
+Following the ACM SIGSOFT Empirical Standards~\cite{ralph2020} and Kitchenham et al.'s updated guidelines for empirical software engineering~\cite{kitchenham2025}, we systematically examine threats to construct, internal, external, and conclusion validity, alongside research ethics.
+
+\subsection{Construct Validity}
+Construct validity assesses whether our operationalized metrics accurately capture the real-world phenomena of supply-chain risk and defense:
+\begin{enumerate}
+    \item \textbf{Maintainer Account vs. Compromise Vectors:} Our models treat maintainer account compromise as the primary threat vector. While account takeover (credential stuffing, token exfiltration, phishing) is a dominant real-world supply-chain attack vector, attackers can also compromise packages via compromised CI/CD runners, unpinned actions, or build infrastructure. Furthermore, organizations deploying scoped tokens or hardware keys (WebAuthn/FIDO2) exhibit lower account compromise probabilities, which our uniform account-level prior does not differentiate.
+    \item \textbf{Declared vs. Executed Dependencies:} Our workflow graph identifies dependencies declared in repository manifests and lockfiles. However, as demonstrated by Weeraddana et al.~\cite{weeraddana2024}, up to $30\%$ of declared dependencies in continuous integration may remain uninvoked during execution. While declared dependencies create an attack surface via install scripts (\texttt{preinstall}/\texttt{postinstall}) and build hooks, fine-grained call-graph reachability could further refine downstream exploitability.
+    \item \textbf{Resolution Invariants:} In our version-continuous graph, dependencies are resolved to the highest available version satisfying the SemVer range at snapshot time. Downstream consumers utilizing strict lockfiles (\texttt{package-lock.json}) may pin earlier patch releases, creating minor divergences between resolved graph edges and localized deployment instances.
+\end{enumerate}
+
+\subsection{Internal Validity}
+Internal validity concerns potential confounding factors and algorithmic biases in our data processing:
+\begin{enumerate}
+    \item \textbf{Cycle Handling and Topological Invariants:} Circular dependencies in package registries could confound reachability metrics. We addressed this through Kosaraju strongly connected component condensation, collapsing 82 cyclic nodes across 68 components. Sensitivity ablations demonstrated that condensation alters greedy coverage sets by less than $0.15\%$.
+    \item \textbf{Repository URL Disambiguation:} Due to divergent manifest schemas, we resolved 658 repository URL parser disagreements through deterministic normalization rules, preventing repository duplication.
+    \item \textbf{Algorithmic Tie-Breaking:} Greedy submodular selection algorithms encounter multiple candidate maintainers with identical marginal gains. We resolved ties deterministically using maintainer portfolio size and alphanumeric identifier sorting, ensuring perfect reproducibility across runs.
+\end{enumerate}
+
+\subsection{External and Observational Validity}
+External validity evaluates the generalizability of our findings across software ecosystems:
+\begin{enumerate}
+    \item \textbf{Ecosystem Specifics:} Our empirical study focuses on the npm registry---the largest open-source package ecosystem. While fundamental phenomena such as multi-homing dependency, submodular coverage saturation, and sole-maintainer bottlenecks are structural properties of software dependency networks, specific quantitative parameters (such as the exact $\alpha=0.50$ Pareto knee or 42.44\% version shrinkage) may vary in ecosystems with different dependency paradigms, such as Cargo, Maven, or PyPI.
+    \item \textbf{Enterprise vs. Open-Source Consumers:} Our consumer corpus comprises 7,171 real-world GitHub repositories with active CI/CD workflows. While representative of open-source and modern cloud-native projects, closed-source enterprise organizations operating private artifact proxies (e.g., Nexus, Artifactory) with internal vetting policies may exhibit different exposure profiles.
+\end{enumerate}
+
+\subsection{Conclusion Validity and Avoiding Pseudo-Replication}
+A critical methodological vulnerability in empirical software engineering---highlighted by Kitchenham et al.~\cite{kitchenham2025}---is the misapplication of inferential hypothesis tests (such as $t$-tests or $p$-values) to fixed, complete graph populations:
+\begin{enumerate}
+    \item \textbf{Fixed-Graph Descriptive Accuracy:} Our graph of 25,228 packages and 7,171 workflow repositories represents a fixed, fully measured population snapshot, not a random draw from an infinite statistical universe. Reporting $p$-values across static graph nodes constitutes pseudo-replication, as nodes connected by dependency edges violate sample independence.
+    \item \textbf{Grounded Statistical Quantification:} We avoid spurious inferential claims by reporting exact population descriptive effect sizes ($\Delta C = +1{,}131$ repos, $\Delta H = -22.31\text{ pp}$, $\Delta P = +266$ repos). Where stochastic variation exists---specifically in randomized baseline selection---we report exact finite-population hypergeometric expectations alongside empirical sample standard deviations and Monte Carlo standard errors ($\text{MCSE}_C = 37.5$, $\text{MCSE}_H = 0.026\text{ pp}$) across 200 independent simulation seeds.
+\end{enumerate}
+
+\subsection{Research Ethics and Responsible Disclosure}
+This study was conducted with strict adherence to ethical research standards:
+\begin{enumerate}
+    \item \textbf{No Exploitation or Active Probing:} All analyses were conducted on publicly available metadata and historical package tarballs. No active probing, unauthorized access, or vulnerability exploitation was performed against npm registry infrastructure or GitHub repositories.
+    \item \textbf{Maintainer Privacy and Non-Stigmatization:} Maintainer identifiers analyzed in this study are public npm usernames. We emphasize that identifying a maintainer as a ``single point of failure'' ($|M(p)| = 1$) reflects structural ecosystem under-resourcing and lack of peer review, \textit{not} individual negligence or fault. Open-source maintainers contribute immense voluntary value to digital infrastructure; our findings argue for providing them with institutional backing, sponsored security audits, and automated tooling, rather than assigning culpability.
+    \item \textbf{Responsible Reporting:} All historical compromise records examined in this work have been previously remediated and disclosed by registry operators and upstream security response teams. No unpatched attack vectors or zero-day vulnerabilities are disclosed in this manuscript.
+\end{enumerate}

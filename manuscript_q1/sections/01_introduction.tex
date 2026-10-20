@@ -1,0 +1,34 @@
+\section{Introduction}
+\IEEEPARstart{M}{odern} software engineering is inextricably bound to open-source package ecosystems. Centralized package managers, led by npm with over 3 million registered packages and billions of weekly downloads, enable rapid assembly of complex applications through deep, transitive dependency graphs~\cite{zimmermann2019}. However, this structural efficiency creates an asymmetric attack surface: an adversary who successfully compromises a single maintainer account can execute malicious code across tens of thousands of downstream continuous-integration (CI) pipelines, server environments, and end-user systems~\cite{ohm2020,koishybayev2022}.
+
+Securing these registry-scale ecosystems requires defensible resource allocation. Ecosystem guardians (such as npm, GitHub, and the Open Source Security Foundation [OpenSSF]) operate under severe capacity constraints: manual source-code audits, hardware security token distribution, mandatory multi-factor authentication (MFA) rollouts, and privileged-access review programs cannot be extended to all 12,000+ active maintainers simultaneously~\cite{schorlemmer2024,okafor2025}. Consequently, defenders rely on algorithmic maintainer prioritization to identify which accounts should receive prioritized controls.
+
+Despite the critical nature of this task, prior prioritization heuristics have operated under unverified assumptions. Commonly deployed heuristics---such as ranking maintainers by total portfolio size, raw download numbers, or greedy unconstrained downstream coverage---treat software dependency graphs as simple reachability networks~\cite{wang2026,liu2022}. In doing so, existing approaches conflate three fundamentally distinct defensive objectives:
+\begin{enumerate}
+    \item \textbf{Broad Ecosystem Coverage ($C(S)$):} The total number of distinct downstream client repositories that depend on at least one package authored by the selected maintainers. This is a classic submodular set function~\cite{nemhauser1978}.
+    \item \textbf{Scenario Exposure Reduction ($H(S)$):} The fraction of maintainer-repository dependency pairs eliminated under a probabilistic model of independent account compromise. Because each account compromise represents a distinct historical event, this is a modular (additive linear) set function.
+    \item \textbf{All-Source Exclusion ($P(S)$):} The number of downstream client repositories whose complete set of upstream maintainers is fully contained within the hardened cohort, rendering the client impervious to single-maintainer account takeovers. Because protection requires all upstream maintainers to be selected, this is a supermodular set function.
+\end{enumerate}
+
+In this paper, we demonstrate that optimizing for broad coverage ($C$) actively undermines exposure reduction ($H$) and full protection ($P$), creating severe residual exposure across the ecosystem. When defenders maximize greedy coverage, maintainer multi-homing and co-maintenance overlap induce extensive masking: accounts managing ubiquitous shared libraries (e.g., maintainer \texttt{qix} managing \texttt{debug}) are discarded by greedy coverage heuristics because their downstream endpoints are already partially touched by other maintainers, leaving thousands of repositories residually exposed.
+
+Furthermore, we show that standard dependency graph representations introduce massive measurement distortions. Coarse package-name projections---which collapse all historical versions of a package into a single node---inflate downstream attack surfaces by 42.44\% (over 196,000 phantom pairs) and distort individual package blast radii by up to 287\%, misallocating defensive investments.
+
+To address these challenges, this study presents a comprehensive, multi-objective theoretical and empirical investigation of maintainer prioritization across 25,228 npm packages, 12,217 maintainer accounts, and 7,171 workflow repositories. Specifically, we investigate five core Research Questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Objective Trade-offs):} How do distinct coverage $C(S)$ and scenario exposure reduction $H(S)$ diverge under operational budgets, and what is the magnitude of the descriptive trade-off?
+    \item \textbf{RQ2 (Residual Exposure \& Supermodular Protection):} What fraction of covered repositories retain unhardened upstream attack paths under standard heuristics, and can dedicated supermodular optimization maximize all-source exclusion $P(S)$?
+    \item \textbf{RQ3 (Representation Sensitivity):} How does version continuity alter downstream reach closures, maintainer rankings, and cross-representation selection penalties compared to name-collapsed graphs?
+    \item \textbf{RQ4 (Multi-Objective Optimization \& Heterogeneous Risk):} Can a hybrid scalarization $J_\alpha(S)$ achieve a Pareto-optimal frontier between coverage and exposure, and how do heterogeneous maintainer risk models (solo-maintainer bottlenecks, log-portfolio scaling, package-level reach) reshape prioritization?
+    \item \textbf{RQ5 (Temporal Reconstruction \& Release Authority):} How effectively can time-bounded SemVer dependency resolution eliminate future-leakage bias, and what pre-event metadata discontinuities characterize real-world compromise snapshots?
+\end{itemize}
+
+\subsection{Contributions}
+The primary contributions of this work are as follows:
+\begin{enumerate}
+    \item \textbf{Multi-Objective Optimization Framework:} We formalize maintainer prioritization across submodular ($C$), modular ($H$), and supermodular ($P$) objectives, proving that single-objective baselines induce extreme polarization.
+    \item \textbf{The $\alpha = 0.50$ Pareto Sweet Spot:} We formulate a monotone submodular-modular scalarization $J_\alpha(S)$ that captures $>92\%$ of maximum exposure reduction while maintaining 70\% broad repository coverage.
+    \item \textbf{Supermodular Exclusion Breakthrough:} We design a greedy minimum-remaining-source heuristic that breaks past 1,000 fully protected repositories at budget 100 ($P = 1,022$, $+27.8\%$ over greedy, $+91.4\%$ over exact union).
+    \item \textbf{Package-Level Sole-Maintainer Risk Theorem:} We prove that account-level metrics misspecify vulnerability bottlenecks: weight-aware package-level optimization captures 67.37\% of solo-maintainer exposure mass (+40.05 pp over unweighted union).
+    \item \textbf{Historical SemVer \& Release-Authority Audit:} We evaluate 45 pre-compromise snapshots with 1,848 reconstructed SemVer edges, quantifying that 97.8\% of incidents exhibit predecessor availability suitable for automated release gating.
+\end{enumerate}

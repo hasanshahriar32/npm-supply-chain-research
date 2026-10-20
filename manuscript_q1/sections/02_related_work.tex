@@ -1,0 +1,51 @@
+\section{Related Work}
+\label{sec:related_work}
+
+Our research intersects five major areas of empirical software engineering and software supply-chain security: structural ecosystem measurement, malicious package detection, continuous-integration workflow analysis, registry governance and provenance, and temporal dependency reconstruction.
+
+\subsection{Ecosystem Structure and Centrality-Based Prioritization}
+Pioneering empirical studies established that open-source package registries exhibit extreme structural asymmetry and small-world properties. Zimmermann et al.~\cite{zimmermann2019} analyzed npm's dependency topology, revealing that a tiny core of central packages and maintainers transitively affects a vast majority of the ecosystem. Zahan et al.~\cite{zahan2022} and Liu et al.~\cite{liu2022} demonstrated that vulnerabilities propagate rapidly through deep, hierarchical trees, identifying ``weak links'' in software supply chains.
+
+Building upon structural topology, recent work has proposed maintainer and package prioritization mechanisms. Wang~\cite{wang2026} explored centrality-based protection strategies within dependency networks. However, as we demonstrate in this paper, classical network centrality metrics (e.g., degree centrality, PageRank, or raw portfolio size) fail to account for the submodular-modular dichotomy between distinct client coverage and scenario exposure reduction, nor do they account for co-maintenance overlap in shared critical libraries.
+
+\subsection{Malicious Package Benchmarks and Detection Limits}
+A parallel line of security research focuses on detecting malicious packages published via typosquatting, dependency confusion, and account takeovers~\cite{ohm2020,sejfia2022}. Benchmark evaluations, such as Guo et al.'s extensive study of npm malware detectors~\cite{guo2026}, show that static analysis tools face severe limitations due to obfuscation, dynamic runtime execution, and environment-keyed payloads. 
+
+Because reactive post-publication malware detection suffers from non-trivial evasion rates, proactive hardening of legitimate, high-leverage maintainer accounts remains the primary line of registry defense~\cite{schorlemmer2024,okafor2025}. Our work complements malware detection by optimizing how defenders allocate proactive security interventions before credentials or tokens are compromised.
+
+\subsection{Continuous-Integration Workflows and Reachability Limits}
+Software supply-chain risks manifest concretely in downstream CI/CD pipelines. Koishybayev et al.~\cite{koishybayev2022} and Muralee et al.~\cite{muralee2023} demonstrated that GitHub Actions workflows frequently execute third-party build scripts with access to repository secrets, cloud deployment credentials, and package publish tokens. 
+
+Crucially, recent empirical studies have emphasized that package-level dependency relationships do not equal actual code execution. Weeraddana, Alfadel, and McIntosh~\cite{weeraddana2024} established that a substantial fraction of dependencies declared in npm projects represent ``dependency-induced waste''---packages invoked during development but never executed in production or continuous integration. Furthermore, an extensive benchmark by Gao et al.~\cite{gao2025emse} proved that 99\% of client vulnerabilities originate in transitive dependencies, yet \textbf{81.26\% of vulnerabilities flagged by package-level reachability are false positives at the function call-graph level}. Jayasuriya et al.~\cite{jayasuriya2024} observed similar granularity effects when analyzing syntactic breaking changes across versions. In our work, we address this fundamental reachability gap by evaluating both coarse package-name projections and version-continuous graphs, explicitly qualifying topological reachability as an upper-bound potential review surface.
+
+\subsection{Registry Governance, Cryptographic Provenance, and Signing}
+In response to account compromises, registries and standards bodies have introduced cryptographic signing and provenance attestations. Schorlemmer et al.~\cite{schorlemmer2024} audited signing across npm, PyPI, Maven, and RubyGems, finding that adoption remains minimal and unevenly distributed. Okafor, Torres-Arias, and Davis~\cite{okafor2025} interviewed industry practitioners, revealing significant operational friction in managing cryptographic keys and configuring automated pipeline attestations. 
+
+Simultaneously, He, Vasilescu, and K{\"a}stner~\cite{he2025} demonstrated that local dependency version pinning is insufficient to protect clients against upstream attacks, as adversaries exploit unpinned sub-dependencies and registry-level re-resolutions. These findings emphasize that registry-level maintainer account controls are indispensable.
+
+\subsection{Temporal Reconstruction and Empirical Standards}
+A critical methodological vulnerability in supply-chain studies is future-leakage bias---evaluating historical attacks using contemporary registry graphs. Pinckney et al.~\cite{pinckney2023} introduced \texttt{npm-follower} to mirror registry event streams, while Rahman et al.~\cite{rahman2026} released \texttt{CHRONO-RESOLUTION} to reconstruct exact dependency trees at release points. Shafin and Ahmed~\cite{shafin2026} highlighted the necessity of time-indexed forecasting.
+
+Methodologically, our evaluation adheres strictly to the ACM SIGSOFT Empirical Standards~\cite{ralph2020} and Kitchenham et al.'s updated guidelines on empirical software engineering~\cite{kitchenham2025}. By avoiding pseudo-replication---specifically rejecting the treat\-ment of fixed-graph nested budgets or repeated random orders as independent sampling units---our study provides rigorous, reproducible descriptive and Pareto-optimal findings.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Systematic positioning of our Q1 empirical investigation relative to major related literature.}
+\label{tab:lit_positioning}
+\begin{tabularx}{\textwidth}{lYYYY}
+\toprule
+\textbf{Research Dimension} & \textbf{Structural Topology \& Centrality} & \textbf{Malicious Package Detectors} & \textbf{CI/CD \& Function Call-Graphs} & \textbf{This Study (Q1 Journal Expansion)} \\
+\midrule
+\textbf{Focus Literature} & Zimmermann~\cite{zimmermann2019}, Zahan~\cite{zahan2022}, Wang~\cite{wang2026} & Ohm~\cite{ohm2020}, Sejfia~\cite{sejfia2022}, Guo~\cite{guo2026} & Koishybayev~\cite{koishybayev2022}, Weeraddana~\cite{weeraddana2024}, Gao~\cite{gao2025emse} & Formal multi-objective optimization ($C, H, P, J_\alpha$), version continuity, release authority \\
+\midrule
+\textbf{Prioritization Metric} & Degree centrality, PageRank, raw portfolio size & Reactive post-event incident signatures & Taint analysis on workflows, call-graph reachability & Submodular coverage, modular exposure reduction, supermodular all-source exclusion \\
+\midrule
+\textbf{Graph Representation} & Coarse package-name projected graphs & Isolated package tarballs & Dynamic execution traces, static ASTs & Dual evaluation: Package-projected vs. Version-continuous closures (42.4\% pair diff) \\
+\midrule
+\textbf{Maintainer Risk Prior} & Uniform equal weight & Unweighted & Unweighted & Heterogeneous weights: Solo bottlenecks ($H_{\text{sole}}$), log-portfolio ($H_{\text{log}}$), package-level sole reach ($H_{\text{pkg-sole}}$) \\
+\midrule
+\textbf{Temporal Grounding} & Static single snapshot & Retrospective positive-only datasets & Static GitHub Actions scripts & 45 historical pre-incident snapshots, 1,848 SemVer edges ($t_{\text{cutoff}} < t_{\text{incident}}$), 90-day prospective cohort \\
+\bottomrule
+\end{tabularx}
+\end{table*}
