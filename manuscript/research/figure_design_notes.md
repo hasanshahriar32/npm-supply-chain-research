@@ -6,7 +6,7 @@ The reference supplied during the figure review is a network topology, with reco
 
 The local GOAD image `docs/img/diagram-GOAD_compromission_Path.png` contains embedded draw.io XML identifying draw.io 13.7.3. Its stencils include Citrix directory servers, web servers, databases and laptops, and user/group symbols. The newer `docs/img/diagram-GOADv3-full.png` identifies draw.io Desktop 24.6.4. The thesis scripts `enhance_fig61_topology.py` and `enhance_fig62_attack_paths.py` use Python/Pillow to add topology badges and attack-stage banners. Thus the reference combines a diagram editor and infrastructure symbol libraries with programmatic annotations. This inspection describes the local files, rather than inferring the tool from appearance.
 
-The [official draw.io network-diagram documentation](https://www.drawio.com/docs/diagram-types/network-diagrams/) describes device symbols, groups, labeled connections and networking shape libraries. These are the design elements relevant to the requested style. This public documentation was consulted on 20 October 2026. No GOAD content or third-party icon artwork is incorporated into our paper figure.
+The [official draw.io network-diagram documentation](https://www.drawio.com/docs/diagram-types/network-diagrams/) describes device symbols, groups, labeled connections and networking shape libraries. Its [Citrix documentation](https://www.drawio.com/docs/diagram-types/citrix-diagrams/) specifically identifies **Citrix (legacy)** as the library retaining the older 3D shapes. These are the design elements relevant to the requested style. This public documentation was consulted on 20 October 2026. No GOAD content or third-party icon artwork is incorporated into our paper figure.
 
 ## Implemented figure
 

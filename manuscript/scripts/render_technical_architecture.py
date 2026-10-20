@@ -203,6 +203,7 @@ def render_architecture(data):
         'source':'Original SVG geometry and reusable technical glyphs',
         'font_family':FONT,'svg_viewbox':[0,0,1420,670],
         'physical_dimensions_inches':[7.1,3.35],
+        'pdf_format':'pdf1.5','preview_dpi':300,'source_date_epoch':int(EPOCH),
         'device_semantics':'Logical service and analysis roles, not measured physical/VPS deployment',
         'graph_semantics':'Illustrative maintainer/package/repository topology; counts and displayed result are empirical',
     }
@@ -211,6 +212,8 @@ def render_architecture(data):
     env=dict(os.environ,SOURCE_DATE_EPOCH=EPOCH)
     subprocess.run(['rsvg-convert','--format=pdf1.5','--output',str(out/'study_system.pdf'),str(svg)],check=True,env=env)
     subprocess.run(['rsvg-convert','--format=png','--width=2130','--output',str(out/'study_system.png'),str(svg)],check=True,env=env)
+    from export_drawio import export_drawio
+    data['architecture_renderer']['drawio_export']=export_drawio(svg,out/'study_system.drawio')
     data['dimensions_inches']['study_system']=[7.1,3.35]
     return data
 

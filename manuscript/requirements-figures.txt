@@ -1,3 +1,8 @@
-# The data audit itself uses only the Python standard library.
-# Figures were rendered with this version; committed PDF figures avoid a rebuild dependency.
+# The data audit and native SVG architecture generator use Python's standard library.
+# Matplotlib renders the measured charts and optional illustrative objective figure.
 matplotlib==3.11.2
+# Architecture system dependencies (not Python packages):
+#   rsvg-convert from librsvg (current export: librsvg 2.63.3)
+#   Noto Sans font family, available to the system font resolver
+# Typical Debian/Ubuntu package names: librsvg2-bin and fonts-noto-core.
+# Committed figure PDFs allow normal LaTeX compilation without these rebuild tools.
