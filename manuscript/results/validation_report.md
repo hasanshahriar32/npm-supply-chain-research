@@ -12,8 +12,8 @@ The current paper reports completed maintainer-prioritization experiments in our
 | Prospective records | Frozen before requests; 90 metadata captures, eight contextual 405s and two ordinary 404s; all 100 outcomes pending |
 | Three full isolated reruns | Scientific result JSON byte-identical; 39.50-second mean, 0.98-second sample SD, 1,038.43-MiB maximum RSS on one host |
 | Active bibliography | 13 cited primary references; 18 verified literature/source records |
-| Anonymous PDF | 6 A4 pages, 177,594 bytes; all 27 fonts embedded, no Type 3 |
-| Named PDF | 6 A4 pages, 178,986 bytes; all 28 fonts embedded, no Type 3 |
+| Anonymous PDF | 6 A4 pages, 177,502 bytes; all 27 fonts embedded, no Type 3 |
+| Named PDF | 6 A4 pages, 178,870 bytes; all 28 fonts embedded, no Type 3 |
 | Identity checks | Named author order, ECE/CSE departments and shared university present; supplied identities absent from anonymous PDF and author metadata |
 | LaTeX diagnostics | No unresolved citations/references or overfull boxes; standard IEEEtran conference A4 10pt layout |
 
@@ -25,7 +25,9 @@ The full working Overleaf ZIP contains both manuscript versions; the separate an
 
 The observation-helper URL/response fixtures pass. The v2 collector was not used for fresh live GitHub workflow acquisition, and it does not repair historical flags automatically. Source archives and the original collector remain unchanged. Pending prospective surveillance ends on 18 January 2027; no trained forecast or real-world control effect is established.
 
-Technical success does not certify human approval, authorship, similarity, venue eligibility or indirect anonymity. The guideline's non-intellectual-only LLM restriction remains unresolved because assistance included study design, code and analysis as well as literature discovery and drafting. The acknowledgment records those actual roles.
+Technical success does not certify human approval, authorship, similarity, venue eligibility or indirect anonymity. The acknowledgment now thanks the package maintainers, open-source community and public data resources used in the study. The supplied guideline's LLM disclosure requirement is unmet, and its restriction to non-intellectual assistance remains unresolved. These conditions are recorded separately from technical formatting checks; no AI-use, funding or author-approval declaration was added.
+
+The editorial sentence directing the human authors to review interpretations, sources and disclosures was removed from the responsible-reporting paragraph. Both PDFs are checked for the neutral acknowledgment and absence of AI-use declarations and draft-review instructions. Research results and figures are unchanged.
 
 ## Research figure revision
 
@@ -37,4 +39,4 @@ The renderers read the frozen structural results and identifier-scope census. Ev
 
 The system graph is explicitly schematic, its counts are empirical, maintainer links denote observed membership, and dependency traversal follows dependency to dependent. Source partition bars conserve 7,158 reachable repositories and exclude the 13 repositories without observed source identities. The optional six-endpoint example is illustrative and computed from its declared sets; it is not presented as a measured npm subgraph. No research result or source archive was changed by this visual revision.
 
-The new system diagram and analysis pages were visually inspected at their intended print dimensions. An obsolete forced reference break was removed to retain the six-page limit with standard fonts and margins. Plot placement was adjusted to keep the budget chart near the results. Both named and anonymous PDFs pass the actual submission checks.
+The new system diagram and analysis pages were visually inspected at their intended print dimensions. An obsolete forced reference break was removed to retain the six-page limit with standard fonts and margins. Plot placement was adjusted to keep the budget chart near the results. Both named and anonymous PDFs pass the technical PDF checks; the separate disclosure requirement is unmet.

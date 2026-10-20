@@ -90,7 +90,7 @@ python3 manuscript/scripts/check_author_versions.py
 
 Technical checks do not certify originality, a similarity percentage, author approval or venue acceptance. [guideline_compliance.md](submission_files/guideline_compliance.md) records the remaining author-controlled requirements.
 
-**LLM policy is unresolved:** the guide permits non-intellectual assistance, while assistance here included literature discovery, study design, code, analysis, drafting and editing. The acknowledgment discloses those roles. The authors must resolve this mismatch before submission; neither human approval nor compliance is assumed.
+The acknowledgment thanks the package maintainers, open-source community and public data resources used in the study. The guide's LLM disclosure requirement and restriction to non-intellectual assistance remain unresolved in the [author-side compliance record](submission_files/guideline_compliance.md); formatting checks do not certify those requirements.
 
 ## Reproducible research figures
 

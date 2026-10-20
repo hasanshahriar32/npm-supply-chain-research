@@ -55,7 +55,10 @@ checks = {
     "empty_pdf_author_metadata": not author_value,
     "no_local_home_paths_or_emails_in_pdf": not re.search(
         r"/home/|/Users/|[A-Za-z]:\\Users\\|[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", text),
-    "llm_acknowledgment_present": "ACKNOWLEDGMENT" in normalized and "large language model" in normalized,
+}
+venue_policy_checks = {
+    "llm_acknowledgment_present": bool(re.search(r"ACKNOWLEDG(?:E)?MENT", normalized, re.I))
+        and bool(re.search(r"large language model|\bLLM\b|ChatGPT", normalized, re.I)),
 }
 author_record_path = PAPER / "submission_files/authors.json"
 if author_record_path.exists():
@@ -76,6 +79,8 @@ report = {
     "file_bytes": pdf.stat().st_size, "pages": page_count, "page_sizes_pt": sizes,
     "font_count": len(fonts), "fonts": fonts, "checks": checks,
     "technical_checks_pass": all(checks.values()), "submission_ready": False,
+    "venue_policy_checks": venue_policy_checks,
+    "venue_policy_checks_pass": all(venue_policy_checks.values()),
     "anonymity_scope": "Author block, PDF author metadata, local paths, and email patterns checked; indirect identification requires human review.",
     "llm_policy_status": requirements["llm_policy_status"],
     "similarity_check": "not performed; no similarity-service report is available",
@@ -87,5 +92,7 @@ report = {
 print(f"PDF: {page_count} pages, {pdf.stat().st_size:,} bytes, {len(fonts)} fonts.")
 for name, passed in checks.items():
     print(f"{'PASS' if passed else 'FAIL'} {name}")
+for name, passed in venue_policy_checks.items():
+    print(f"{'PASS' if passed else 'UNMET'} venue_policy.{name}")
 print("Author/venue requirements remain pending; see results/submission_compliance.json.")
 sys.exit(0 if report["technical_checks_pass"] else 1)

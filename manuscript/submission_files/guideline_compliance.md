@@ -7,11 +7,11 @@ Applied from the supplied `guideline/guide.md` and `guideline/template_link.txt`
 | IEEE double-column template | `IEEEtran` with `conference,a4paper,10pt`; standard layout retained | Implemented |
 | PDF, at most 3 MB | Compiled `main.pdf`; exact bytes recorded in the JSON report | Pass |
 | A4 on every page | Every page checked with `pdfinfo`, approximately 595.28 × 841.89 pt | Pass |
-| At most six pages, including references | Six pages, including acknowledgment and all 13 active references; exact count recorded in the PDF report | Pass |
+| At most six pages, including references | Page count including all 13 active references recorded in the PDF report | See generated report |
 | All fonts embedded | Review and named-draft fonts checked using `pdffonts`; current counts recorded in the generated reports | Pass |
 | No Type 3 fonts | No Type 3 font found | Pass |
 | Double-blind review | Anonymous author block; empty PDF author metadata; recorded author names, institution, local paths and email patterns screened | Technical screen passes; manual indirect-identity review pending |
-| LLM acknowledgment | Added `sections/09_acknowledgment.tex` with actual assistance roles | Implemented truthfully |
+| LLM acknowledgment | Replaced with a neutral acknowledgment of package maintainers, the open-source community and public data resources; no LLM-use disclosure appears in the paper | **Unmet requirement** |
 | LLM use limited to non-intellectual purposes | The guide says models were employed “solely for non-intellectual purposes.” This draft used literature discovery, study design, code development, analysis, drafting, and editing assistance | **Unresolved policy mismatch** |
 | Human review and approval of LLM output | Not asserted; actual authors must review sources, code, claims, and disclosure | Pending |
 | Similarity below 30% | No external similarity-service report available | Not verified |
@@ -20,11 +20,11 @@ Applied from the supplied `guideline/guide.md` and `guideline/template_link.txt`
 | Co-author CMT accounts | No accounts inspected or created | Author action required |
 | Presentation/no-show requirements | Applies if accepted; no promise made on the authors' behalf | Author planning required |
 
-The LLM mismatch cannot be resolved by relabeling substantive assistance as proofreading or asserting review that has not happened. The acknowledgment describes the actual work and leaves author review pending. Venue eligibility requires resolution with the organizers before submission. No message has been sent and no paper has been submitted.
+The manuscript has a neutral acknowledgment at the author's request. It thanks the package maintainers, open-source community, npm registry, deps.dev and GitHub; it makes no funding, institutional-support, AI-use or completed-author-approval claim. The guideline's LLM disclosure requirement and non-intellectual-use restriction remain unresolved. No message has been sent and no paper has been submitted.
 
 ## Artifacts and checks
 
-`results/submission_compliance.json` records the PDF checksum, page dimensions, size, fonts, technical checks, guideline hashes, and remaining author-controlled requirements. Regenerate it from the repository root:
+`results/submission_compliance.json` records the PDF checksum, page dimensions, size, fonts, technical checks, guideline hashes, and remaining author-controlled requirements. The disclosure check is reported separately under `venue_policy_checks`; a technical formatting pass does not make an unmet policy check pass. Regenerate it from the repository root:
 
 ```bash
 python3 manuscript/scripts/check_submission.py

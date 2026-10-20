@@ -167,7 +167,7 @@ Use `bash manuscript/compile.sh --both` or `make -C manuscript both` for both PD
 
 A documented-event-versus-unlabeled design need not prove that every unreported package is benign. It does require a defined population, time interval, source coverage, reporting assumptions and explicit unknown/censored states. A small or zero event yield is a result to report, not a reason to change targets or relabel ordinary vulnerabilities as publisher compromise. [extended_benchmark_design.md](extended_benchmark_design.md) records the follow-up design and [research_status.json](2026-10-20_research_status.json) records the current machine-readable state.
 
-**Submission-policy status:** assistance included literature discovery, design, code, analysis, drafting and editing. The supplied guideline restricts LLM use to non-intellectual purposes, so the acknowledgment discloses the actual roles and the mismatch remains unresolved. No similarity result, human authorship approval, policy compliance or submission is asserted.
+**Submission-policy status:** the acknowledgment now thanks the package maintainers, open-source community and public data resources used in the study, without an AI-use declaration. The supplied guideline requires LLM disclosure and restricts use to non-intellectual purposes; these remain unresolved in the author-side compliance record. No similarity result, human authorship approval, policy compliance or submission is asserted.
 
 
 ## Code-generated figures

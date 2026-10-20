@@ -47,8 +47,7 @@ This bundle contains the PDF and typesetting inputs, not the underlying data.
 It omits author-side research notes and repository/environment provenance.
 Named author configuration, author records, and the named draft are excluded.
 
-The LLM acknowledgment describes the actual assistance used. The venue's
-restriction to non-intellectual use remains unresolved; the disclosure and
-all scientific claims require human-author review before submission.
+The authors must review the scientific claims and the venue's submission
+requirements before submitting this draft.
 """)
 print(f"Wrote {anonymous_target.name}: {len(anonymous_paths)+1} files, {anonymous_target.stat().st_size:,} bytes")
