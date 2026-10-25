@@ -76,8 +76,7 @@ def main():
             current.pop('direct_deps',None);current.pop('transitive_deps',None);incidents.append(current)
             rank=lambda x:r'\#'+format(x,',') if isinstance(x,int) else r'\#>100'
             table_rows.append([r'\texttt{'+label+'}',r'\texttt{'+user+'}',row['version'],f'{dr:,}/{tr:,}',f"{int(row['reach_name']):,}",f"{int(row['reach_vc']):,}",rank(current['portfolio_rank']),rank(current['greedy_rank']),rank(current['union_name_rank']),rank(current['pareto_p50_rank'])])
-        table(tbl/'q1_incident_case_study_table.tex','Representation sensitivity for 16 retained incident assessments (15 package names). Maintainer ranks now use workflow-repository endpoints throughout.','tab:q1_incident_case_study','lllrrrrrrr',r'Package & Focal maintainer & Ref. version & Dependents & Name reach & Version reach & Portfolio & Greedy & Union & Hybrid',table_rows,
-              r'Reach unions all retained versions; the reference-version label does not restrict the graph. Package reach excludes the root; maintainer reach includes eligible seeds. Focal maintainers are observed members, not necessarily the compromised publisher. A star denotes assessment shorthand. Repeated package assessments are not independent incidents. Rankings and graph fields are not time-aligned forecasts.')
+        # Table 4 is extracted and verified via scripts/extract_q1_temporal_and_authority_tables.py
     bins=json.loads((ROOT/'manuscript_q1/results/quorum_reproducibility.json').read_text())['cardinality_histograms'][0]['counts']
     source_stats={'mean_nonempty':sum(n*c for n,t,c in bins)/7158,'max':max(n for n,t,c in bins),'nonempty':7158,'pairs':462170}
     s=temporal['summary'];roots=s['perRoot'];resolved=s['reconstructedEdges'];unresolved=s['unresolvedEdges'];ratio=resolved/(resolved+unresolved)*100
@@ -89,7 +88,7 @@ def main():
     arows=[[title,summary[key],f'{100*summary[key]/45:.1f}\\%'] for title,key in mapping]
     table(tbl/'q1_release_authority_table.tex','Field availability in 45 retained pre-event version objects. Comparison availability is not continuity, equality, or authenticated release authority.','tab:q1_release_authority','lrr','Metadata availability & Count & Share',arows,
           r'Embedded maintainer metadata is not a signature. No version-specific provenance endpoint requests, bundle retrievals, signature verifications, or attestation-state classifications were performed. Historical attestation presence/absence is unknown, not 0/45 absent.')
-    for name in ('q1_temporal_reconstruction_table.tex','q1_release_authority_table.tex','q1_incident_case_study_table.tex'):
+    for name in ('q1_temporal_reconstruction_table.tex','q1_release_authority_table.tex'):
         shutil.copy2(tbl/name,ROOT/'manuscript/results/q1_journal'/name)
     write_json(out/'incident_workflow_reconciliation.json',incidents)
     with (ROOT/'manuscript/results/q1_journal/q1_incident_case_study.csv').open('w',newline='') as f:
