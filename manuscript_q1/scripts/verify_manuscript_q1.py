@@ -21,6 +21,8 @@ Outputs publication-ready verification report to manuscript_q1/results/q1_verifi
 from __future__ import annotations
 
 import csv
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import hashlib
 import json
 from pathlib import Path
@@ -101,6 +103,8 @@ def check_pdf(pdf_name: str) -> dict:
             res["errors"].append(f"Found {len(unembedded)} unembedded fonts in {pdf_name}")
 
     # Check compilation log
+    if not log_path.exists():
+        res["errors"].append(f"Compilation log missing: {log_path}")
     if log_path.exists():
         log_content = log_path.read_text(encoding="utf-8", errors="replace")
         # Overfull check
@@ -126,7 +130,9 @@ def check_pdf(pdf_name: str) -> dict:
             res["errors"].append(f"Missing glyphs: {set(missing_glyphs)}")
 
     res["passed"] = (
-        res["exists"]
+        not res["errors"]
+        and res["pages"] > 0
+        and res["exists"]
         and res["fonts_embedded"]
         and res["zero_type_3"]
         and res["zero_overfull_hbox"]
@@ -309,7 +315,7 @@ def main():
 
     report = {
         "status": "PASS" if all_passed else "FAIL",
-        "timestamp": "2026-10-21T16:00:00Z",
+        "timestamp": datetime.now(ZoneInfo("Asia/Dhaka")).isoformat(),
         "checks": {
             "abstract": abstract_res,
             "named_pdf": named_res,
@@ -323,7 +329,7 @@ def main():
     report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(f"Wrote full verification report to: {report_path}")
     print("=" * 80)
-    print("VERIFICATION SUITE RESULT:", "ALL CHECKS PASSED (100% COMPLIANT)" if all_passed else "FAILURES DETECTED")
+    print("VERIFICATION SUITE RESULT:", "ALL TECHNICAL CHECKS PASSED (venue and author review separate)" if all_passed else "FAILURES DETECTED")
     print("=" * 80)
 
     sys.exit(0 if all_passed else 1)

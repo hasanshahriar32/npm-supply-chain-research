@@ -1,7 +1,7 @@
 r"""Q1 Journal Expansion: Generalized k-of-n Quorum Exclusion & October 2026 Incident Analysis.
 
-Motivated by the October 21, 2026 LiteLLM 1.107.0 multi-token compromise and the
-October 13, 2026 npm Trusted Publishing flaw.
+Structural sensitivity motivated by multi-token incidents. Counts do not
+establish observed approval quorums or operational protection.
 
 Computes:
 1. k-Quorum Exclusion P_k(S) = |{r in R_wf : |Sources(r) \ S| < k}|
@@ -13,6 +13,9 @@ Computes:
 from __future__ import annotations
 
 import csv
+import hashlib
+from datetime import datetime
+from zoneinfo import ZoneInfo
 import heapq
 import json
 from pathlib import Path
@@ -62,6 +65,19 @@ def main():
             wf_repo_sources[r] |= sources
 
     active_sources = [src for src in wf_repo_sources if src]
+    # Independently transpose maintainer endpoint closures to check source masks.
+    transposed = [0] * len(wf_repo_sources)
+    for m, mask in enumerate(masks_name):
+        for endpoint in ssi.bit_indices(mask):
+            transposed[endpoint] |= 1 << m
+    assert transposed == wf_repo_sources, "Forward/reverse source incidence mismatch"
+    baseline = {str(k): sum(src.bit_count() < k for src in active_sources) for k in K_VALS}
+    assert len(active_sources) == 7158
+    assert sum(src.bit_count() for src in active_sources) == total_pairs_name
+    # A single remaining source is still an attack path under the original model.
+    assert (0b11 & ~0b01).bit_count() < 2
+    assert (0b11 & ~0b01) != 0
+
     print(f"Loaded graph with {M} maintainers, {len(names)} packages, {len(active_sources)} active workflow endpoints.")
 
     # -------------------------------------------------------------------------
@@ -101,6 +117,7 @@ def main():
     rem_counts = [src.bit_count() for src in valid_repos]
     order_direct_p = []
     selected_mask = 0
+    direct_covered = 0
     for step in range(1, 101):
         best_m = None
         best_score = (-1, -1.0, -1, 0)
@@ -125,12 +142,13 @@ def main():
                     imm += 1
                 elif c > 1 and (rem_sources[r_idx] & (1 << m)):
                     frac += 1.0 / c
-            marginal_c = (masks_name[m] & ~0).bit_count()
+            marginal_c = (masks_name[m] & ~direct_covered).bit_count()
             score = (imm, frac, marginal_c, -m)
             if score > best_score:
                 best_score = score
                 best_m = m
 
+        direct_covered |= masks_name[best_m]
         order_direct_p.append(best_m)
         selected_mask |= (1 << best_m)
         for r_idx in maint_repos[best_m]:
@@ -181,6 +199,21 @@ def main():
             }
             rows.append(row)
 
+    # Verify all evaluated budgets, thresholds and efficacy identities.
+    for order in strategies.values():
+        assert len(order) == len(set(order)) == 100
+    for row in rows:
+        vals = [row[f"P_{k}"] for k in K_VALS]
+        assert vals == sorted(vals)
+        assert row["P_1"] <= row["C"] <= N_WF_TOTAL
+        for eta, field in ((0.95, "H_eta_095"), (0.90, "H_eta_090"), (0.75, "H_eta_075")):
+            assert abs(row[field] - eta * row["H_pct"]) < 1e-10
+    for strategy in strategies:
+        group = [row for row in rows if row["strategy"] == strategy]
+        for k in K_VALS:
+            values = [row[f"P_{k}"] for row in group]
+            assert values == sorted(values)
+
     # -------------------------------------------------------------------------
     # 3. Export CSV and JSON
     # -------------------------------------------------------------------------
@@ -197,6 +230,28 @@ def main():
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
     print(f"Saved JSON: {json_path}")
+    metadata = {
+        "generated_at": datetime.now(ZoneInfo("Asia/Dhaka")).isoformat(),
+        "source_archive_sha256": hashlib.sha256((ROOT / "data/npm_ecosystem.db.zip").read_bytes()).hexdigest(),
+        "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "workflow_universe": N_WF_TOTAL,
+        "observed_source_endpoints": len(active_sources),
+        "excluded_source_free_endpoints": N_WF_TOTAL - len(active_sources),
+        "population_rule": "R_plus: endpoints with at least one observed source; literal full-universe P_k adds 13",
+        "interpretation": "hypothetical common-threshold sensitivity, not observed release-quorum protection",
+        "baseline_P_k_empty": baseline,
+        "delta_P_k": [{"strategy": row["strategy"], "budget": row["budget"],
+                       **{f"delta_P_{k}": row[f"P_{k}"] - baseline[str(k)] for k in K_VALS}} for row in rows],
+        "selections": {name: [identities[m] for m in order] for name, order in strategies.items()},
+        "validation": {"forward_reverse_incidence_parity": True, "threshold_and_budget_monotonicity": True,
+                       "selection_uniqueness": True, "efficacy_identities": True},
+    }
+    q1_results = ROOT / "manuscript_q1/results"
+    q1_results.mkdir(exist_ok=True)
+    (q1_results / "quorum_reproducibility.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    shutil.copy2(csv_path, q1_results / csv_path.name)
+    shutil.copy2(json_path, q1_results / json_path.name)
+
 
     # -------------------------------------------------------------------------
     # 4. Export LaTeX Table
@@ -207,7 +262,7 @@ def main():
         f.write("\\begin{table*}[t]\n")
         f.write("\\centering\n")
         f.write("\\small\n")
-        f.write("\\caption{Generalized $k$-of-$n$ Quorum Exclusion $P_k(S)$ and coverage across maintainer hardening strategies ($|R_{\\text{wf}}| = 7{,}171$).}\n")
+        f.write("\\caption{Residual-source threshold counts $P_k(S)$ and coverage across maintainer hardening strategies ($|R_{\\text{wf}}| = 7{,}171$).}\n")
         f.write("\\label{tab:q1_quorum_exclusion}\n")
         f.write("\\begin{tabular}{lrrrrrrrr}\n")
         f.write("\\toprule\n")
