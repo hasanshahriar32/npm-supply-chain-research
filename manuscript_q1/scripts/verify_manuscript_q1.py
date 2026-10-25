@@ -280,6 +280,19 @@ def check_numerical_consistency() -> dict:
     except (AssertionError, OSError, ValueError, KeyError) as exc:
         errors.append(f"Threshold reproducibility gate: {exc}")
 
+    # Task 16: new workflow/semantics diagrams and shared result plots are bound
+    # to the conference figure evidence rather than copied without provenance.
+    try:
+        figure_record=json.loads((ROOT / 'manuscript/results/publication_figure_data.json').read_text())
+        for stem, outputs in figure_record['figures'].items():
+            for ext, expected in outputs.items():
+                assert hashlib.sha256((Q1_DIR / f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
+        included=re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}",
+                             "\n".join(p.read_text() for p in (Q1_DIR / 'sections').glob('*.tex')))
+        assert len(included)==8 and len(set(included))==8, 'Expected eight integrated journal figures'
+    except (AssertionError,OSError,ValueError,KeyError) as exc:
+        errors.append(f'Figure integration gate: {exc}')
+
     # 4. Check experiments JSON invariants
     q1_json_path = ROOT / "manuscript/results/q1_journal_experiments.json"
     if q1_json_path.exists():
@@ -300,7 +313,7 @@ def check_numerical_consistency() -> dict:
 
 
 def check_conference_freeze() -> dict:
-    # Task 15 explicitly lifted the original conference freeze. This reviewed lock
+    # Tasks 15 and 16 authorize conference updates. This reviewed lock
     # is written only after the rebuilt conference PDFs and packages pass checks.
     lock = json.loads((Q1_DIR / 'config/conference_lock.json').read_text())
     expected_hashes = lock['artifacts']
@@ -332,7 +345,7 @@ def check_conference_freeze() -> dict:
         "passed": len(errors) == 0,
         "errors": errors,
         "files": file_status,
-        "detail": "Confirmed Track 1 matches the authorized Task 15 conference artifact lock."
+        "detail": "Confirmed Track 1 matches the current reviewed conference artifact lock."
     }
 
 

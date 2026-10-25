@@ -263,8 +263,7 @@ def main():
         },
         "dimensions_inches": {"study_system": [7.1, 3.35], "objective_mechanism": [3.45, 2.18]},
     }
-    from render_technical_architecture import render_architecture
-    render_architecture(data)
+    # The publication renderer now draws study_system natively after this evidence pass.
     mechanism_figure(data)
     (RESULTS / "system_figure_data.json").write_text(json.dumps(data, indent=2) + "\n")
     print("Rendered study_system and objective_mechanism as PDF, SVG, and PNG.")

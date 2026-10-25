@@ -53,7 +53,7 @@ python3 scripts/validate_observation_semantics.py
 make -C manuscript reproduce
 ```
 
-The first four commands run from the repository root and use Python's standard library. The complete Make target runs the supporting archive audit, structural and validity experiments, independent semantic checks, figure rendering, source verification, both PDF builds and PDF checks. Figure rendering additionally needs [requirements-figures.txt](requirements-figures.txt): Matplotlib for charts, and the system tools librsvg `rsvg-convert` plus Noto Sans for the native SVG architecture.
+The first four commands run from the repository root and use Python's standard library. The complete Make target runs the supporting archive audit, structural and validity experiments, independent semantic checks, figure rendering, source verification, both PDF builds and PDF checks. Current figure rendering needs Matplotlib from [requirements-figures.txt](requirements-figures.txt). The historical optional architecture renderer additionally uses librsvg; current publication figures do not require it.
 
 The offline studies extract the original archive into a temporary directory and open SQLite read-only. They preserve source archives and the historical collector, execute no npm package code and make no network requests in their ordinary mode. Manifests bind source/code hashes, seeds, definitions and results. Optional source probes and prospective collection are separate network operations; `make reproduce` does not repeat or overwrite the frozen acquisition wave.
 
@@ -94,12 +94,18 @@ The acknowledgment thanks the package maintainers, open-source community and pub
 
 ## Reproducible research figures
 
-The paper includes a technical system topology and three measured analyses: budget tradeoffs, source-set partitions, and version-representation sensitivity. See the [figure gallery and source mapping](figures/README.md) for PDF/SVG/PNG previews, the [editable architecture in draw.io](figures/study_system.drawio), and the optional illustrative C/H/P mechanism.
+The conference includes five numbered figures: observation workflow, analysis methodology, budget tradeoffs, source-set partitions, and representation sensitivity. The journal adds a version-splicing explanation and further analysis figures. See the [figure gallery](figures/README.md) for PDF/SVG/PNG sources and previews.
 
-Regenerate all figures and numeric tables with `python3 manuscript/scripts/render_research_figures.py` from the repository root, or `make -C manuscript figures`. [render_technical_architecture.py](scripts/render_technical_architecture.py) positions original [SVG infrastructure symbols](scripts/technical_icons.py), research entities, labeled connections and logical boundaries; librsvg converts the resulting SVG to vector PDF and PNG using Noto Sans. [export_drawio.py](scripts/export_drawio.py) supplies an editable diagram alongside the reproducible exports. The charts and optional objective illustration retain Matplotlib and saved research results. A game engine is unnecessary for these static publication figures.
-
-Machine symbols describe logical collection, storage and analysis roles; they do not report measured hardware, deployed VPS instances, CI execution or publishing authority. The topology is illustrative, while its counts and result display are read from the executed experiments. [figure_design_notes.md](research/figure_design_notes.md) documents the design and reference inspection. [figure_manifest.json](results/figure_manifest.json) binds every current export to its input and renderer hashes; source verification checks those bindings and the repository partition counts. Figure generation makes no network requests.
+Regenerate the seven available figure sets and numeric tables with `python3 manuscript/scripts/render_research_figures.py` or `make -C manuscript figures`. The master generator invokes `scripts/render_publication_figures.py` for the six current shared visual sets. Everything uses native vector geometry and retained result rows. The older draw.io architecture is historical; current editable assets are SVGs and the renderer.
 
 ## October 2026 modernization (Task 15)
 
 The conference freeze was explicitly lifted for this rebuild. See [the Task 15 report](../reports/15_conference_manuscript_oct2026_modernization_and_rebuild.md) for the new artifact lock. Both variants retain six A4 pages and the same body. Primary incident references and corrected academic entries were imported from the focused journal source audit. `results/conference_modernization.json` independently derives residual counts T2 and their baseline-adjusted increments, alongside the distinct strict P2 values, from retained cardinality histograms. Neither count establishes an enforced signing policy. The typesetting archives do not contain the entire surrounding dataset needed to rerun scientific verification.
+
+## Publication figure expansion (Task 16)
+
+The final acknowledgment sentence was removed. Both conference PDFs remain six A4 pages with five figures; both journal PDFs are 17 pages with eight figures. [The Task 16 report](../reports/16_acknowledgment_and_publication_figure_expansion.md) records the research, figure changes, provenance, and latest artifact lock.
+
+## Original architecture restored (Task 17)
+
+The original illustrated architecture is restored in both papers. It supplements the new methodology diagram and enhanced result plots. The compact box workflow is retained as an alternative asset. Source PDF/SVG/PNG bytes are checked against the preserved original, and updated builds and locks are documented in `../reports/17_original_architecture_restoration.md`.

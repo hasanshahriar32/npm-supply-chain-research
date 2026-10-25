@@ -2,7 +2,7 @@
 
 This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
 
-Current handoff: [Task 15 — authorized conference modernization and cross-track artifact lock](15_conference_manuscript_oct2026_modernization_and_rebuild.md).
+Current handoff: [Task 17 — original architecture restored](17_original_architecture_restoration.md).
 
 ## Report Index
 
@@ -25,6 +25,8 @@ Current handoff: [Task 15 — authorized conference modernization and cross-trac
 | [`14_final_manuscript_verification_and_handoff.md`](14_final_manuscript_verification_and_handoff.md) | Final continuation, source corrections, and handoff | Reproduced 20 threshold rows; qualified hypothetical quorum claims; corrected primary sources and author metadata; rebuilt two 16-page drafts; passed archive/member parity and four frozen conference checksums. | **COMPLETED; author submission review separate** |
 | [`14_q1_strict_quorum_exclusion_fix_and_lock.md`](14_q1_strict_quorum_exclusion_fix_and_lock.md) | Strict zero-budget correction | Regenerated 20 strict rows; four boundary tests passed; original P1 unchanged; rebuilt and verified both 16-page PDFs and ZIP; conference hashes unchanged. | **COMPLETED; supersedes earlier threshold counts** |
 | [`15_conference_manuscript_oct2026_modernization_and_rebuild.md`](15_conference_manuscript_oct2026_modernization_and_rebuild.md) | Authorized conference modernization | Both conference PDFs exactly six A4 pages, 24 citations, residual and strict thresholds distinguished, all three ZIPs rebuilt, cross-track technical checks PASS. | **COMPLETED; author/venue policy review remains** |
+| [`16_acknowledgment_and_publication_figure_expansion.md`](16_acknowledgment_and_publication_figure_expansion.md) | Acknowledgment and visual expansion | Conference five figures/six A4 pages; journal eight figures/17 pages; workflow and methodology added, existing plots enhanced, all four PDFs and three ZIPs verified. | **COMPLETED** |
+| [`17_original_architecture_restoration.md`](17_original_architecture_restoration.md) | Restore original illustrated architecture | Original assets recovered exactly; added methodology and enhanced plots retained; conference six pages, journal 17 pages; all artifacts verified. | **COMPLETED** |
 
 ## Master Tracking Ledger
 The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX.md`](../research_sessions/SESSION_INDEX.md).

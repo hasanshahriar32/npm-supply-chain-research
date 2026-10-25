@@ -1,17 +1,17 @@
 \section{Introduction}
 Shared dependencies concentrate npm exposure in upstream packages and maintainer accounts~\cite{zimmermann2019,zahan2022}. Limited defensive budgets require distinguishing three objectives: reviewing distinct downstream repositories, reducing exposure across hypothetical account compromises, and eliminating every observed source at a repository.
 
-October 2026 disclosures illustrate the boundaries of account controls. npm's SlugFest weakness involved mutable repository-name trust bindings; GitHub announced expiry of unvalidated bindings on October 2~\cite{npmtrustedpub2026,npmexpiry2026}. LiteLLM's final investigation describes an exposed master key followed by CI secret theft and misuse of multiple developer tokens~\cite{litellm2026}. Its published artifacts differed from the official source tag~\cite{litellmincident2026}. Railway reported potential environment-variable exposure and temporarily paused deployments~\cite{railway2026,railwaydisclosure2026}. These cases motivate publishing-authority and CI boundaries; they are not observations validating our historical npm graph.
+October 2026 disclosures illustrate the boundaries of account controls. npm's SlugFest weakness involved mutable repository-name trust bindings; GitHub announced expiry of unvalidated bindings on October 2~\cite{npmtrustedpub2026,npmexpiry2026}. LiteLLM's final investigation describes an exposed master key followed by CI secret theft and misuse of multiple developer tokens~\cite{litellm2026}. Its published artifacts differed from the official source tag~\cite{litellmincident2026}. Railway reported potential environment-variable exposure and temporarily paused deployments~\cite{railway2026,railwaydisclosure2026}. These contextual cases motivate authority and CI boundaries; they do not validate our graph.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{study_system.pdf}
-\caption{Measurement architecture. Symbols denote logical roles; topology is illustrative. Arrows distinguish maintainer links, dependency-to-dependent exposure, and repository mapping. Counts describe our sample. Greedy at budget 100 yields $C=5{,}538$, $H=11.48\%$, $P=800$ under the stipulated source-hardening model.}
+\includegraphics[width=0.96\textwidth]{study_system.pdf}
+\caption{Measurement architecture. Icons denote logical roles; topology is illustrative. Arrows distinguish membership, reverse dependency reach, and repository mapping. Displayed counts are empirical.}
 \label{fig:system}
 \end{figure*}
 
-Two accounts can reach nearly identical repositories: selecting the second adds little coverage but removes another account-origin scenario. Conversely, broad coverage can leave other upstream identities unhardened. We compare these objectives using exact maintainer portfolio unions and deduplicated workflow-associated repository endpoints.
+Overlapping portfolios distinguish the objectives: a second account may add little coverage but still contribute a compromise-origin scenario. We compare exact portfolio unions at deduplicated workflow-repository endpoints.
 
 We ask: \textbf{RQ1:} How do coverage and additive exposure selections differ at equal budgets? \textbf{RQ2:} How much covered infrastructure remains reachable from unselected identities? \textbf{RQ3:} How sensitive are results to representation, endpoint units, and observation gaps?
 
-Our contribution extends established maintainer-reach analysis: five deterministic methods and 200 random orders at six budgets; endpoint and version-continuity sensitivities; and independently checked reproducibility records. Additional hybrid, exclusion-oriented, threshold, and efficacy sensitivities clarify the decision tradeoff. A frozen acquisition pilot supports future outcome research, without a forecasting claim.
+We extend maintainer-reach analysis with five deterministic methods, 200 random orders, six budgets, representation sensitivities, and independent checks. Hybrid, exclusion, threshold, and efficacy sensitivities clarify tradeoffs. A frozen acquisition pilot supports future outcome research without a forecasting claim.

@@ -222,7 +222,17 @@ for field in ('inputs_sha256', 'scripts_sha256'):
         check_hash(ROOT / name, expected)
 for name, expected in figure_manifest['outputs_sha256'].items():
     check_hash(PAPER / name, expected)
-check(sum(f['in_paper'] for f in figure_manifest['figures'].values()) == 4, 'Unexpected main figure count')
+check(sum(f['in_paper'] for f in figure_manifest['figures'].values()) == 5, 'Unexpected main figure count')
+publication=read_json(RESULTS / 'publication_figure_data.json')
+for relative, expected in publication['source_sha256'].items():
+    check_hash(ROOT / relative, expected)
+check(publication['renderer_sha256']==digest(PAPER / 'scripts/render_publication_figures.py'), 'Stale publication renderer')
+for stem, outputs in publication['figures'].items():
+    for ext, expected in outputs.items():
+        check_hash(PAPER / f'figures/{stem}.{ext}', expected)
+check(set(re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}', content)) ==
+      {'study_system.pdf','study_methodology.pdf','objective_tradeoff.pdf','coverage_partition.pdf','representation_detail.pdf'},
+      'Unexpected conference figure integration')
 figure_data = read_json(RESULTS / 'analysis_figure_data.json')
 for row in figure_data['figures']['coverage_partition']['segments']:
     r = one(rows, endpoint='workflow_repositories', method=row['method'], budget=100)
@@ -238,7 +248,7 @@ report = {'source_and_output_hashes_checked': checked_hashes, 'deterministic_bud
     'active_tex_inputs': sorted(visited), 'generated_macros_checked': len(expected_macros),
     'cohort_records': len(captures), 'cohort_outcomes_pending': 100,
     'conference_modernization_checked': True, 'identifier_scope_checked': True, 'resource_profile_checked': profile_path.exists(),
-    'figure_provenance_checked': True, 'active_figure_count': 4,
+    'figure_provenance_checked': True, 'active_figure_count': 5,
     'checks_pass': not failures, 'failures': failures,
     'scope': 'Technical evidence consistency; does not certify authorship, venue policy, prediction validity or real control efficacy.'}
 (RESULTS / 'research_verification.json').write_text(json.dumps(report, indent=2)+'\n')

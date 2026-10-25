@@ -1,13 +1,13 @@
 \section{Robustness and Research Implications}
 \subsection{Observation and Selection Sensitivities}
-We exclude 60 positive observations whose stored repository key disagrees with a lexical parse of the source URL, reducing the endpoint universe by 24 repositories (7,171 to 7,147); greedy at 100 covers 5,524, with $P=799$. We do not transfer workflow flags without reacquisition. This check addresses a specific mapping defect and cannot certify remaining remote associations.
+We exclude 60 positive observations whose stored repository key disagrees with a lexical parse of the source URL, reducing the endpoint universe by 24 repositories (7,171 to 7,147); greedy at 100 covers 5,524, with $P=799$. Flags are not transferred without reacquisition; this check cannot certify other remote associations.
 
-Removing all bundled-context nodes leaves every workflow-repository source set unchanged, including all 462,170 identity--repository pairs. Consequently, primary repository $C$, $H$, and $P$ are identical for any fixed selection. Workflow-package incidence changes by 28 pairs for one endpoint, which repository deduplication absorbs; contextual nodes should therefore not be assumed irrelevant to every endpoint definition.
+Removing all bundled-context nodes leaves every workflow-repository source set unchanged, including all 462,170 identity--repository pairs. Thus repository $C$, $H$, and $P$ remain invariant for fixed selections. Workflow-package incidence changes by 28 pairs for one endpoint, which repository deduplication absorbs; contextual nodes should therefore not be assumed irrelevant to every endpoint definition.
 
 Reversing tie order yields $C=5{,}537$ and $P=793$. Excluding the 1, 5, or 10 largest portfolios gives coverage of 5,522, 5,149, and 5,076. Grouping equal stored email hashes as a hypothetical control unit yields 12,147 groups with greedy coverage at 5,538. These tests reflect eligibility sensitivity rather than verified credential control.
 
 \subsection{Hybrid, Threshold, and Efficacy Results}
-At budget 100, the equal-weight hybrid gives $C=5{,}020$ (70.0\%), $H=31.19\%$, and $P=626$. Direct lexicographic exclusion selection gives $P=1{,}022$ with $C=5{,}020$ and $H=13.23\%$. These are fixed-graph sensitivities, not additional independent samples.
+At budget 100, the equal-weight hybrid gives $C=5{,}020$ (70.0\%), $H=31.19\%$, and $P=626$. Direct lexicographic exclusion selection gives $P=1{,}022$ with $C=5{,}020$ and $H=13.23\%$. These sensitivities reuse the fixed graph.
 
 For $k=2$, $T_2(\varnothing)=1{,}716$ across 7,158 source-reachable endpoints. Greedy, Exact Union, and Hybrid yield $T_2=2{,}112$, $2{,}137$, and $2{,}153$, respectively, giving increments $\Delta T_2=396$, $421$, and $437$. These baseline-adjusted residual counts differ from strict zero-anchored counts: $P_2^{\rm strict}=1{,}145$, $793$, and $961$, respectively. Neither definition measures a deployed multisigner policy.
 

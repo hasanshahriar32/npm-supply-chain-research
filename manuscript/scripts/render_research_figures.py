@@ -167,23 +167,27 @@ def main():
     import render_analysis_figures
     render_system_figures.main()
     render_analysis_figures.main()
+    import render_publication_figures
+    render_publication_figures.main()
     stems = {
         "study_system": {"kind": "Logical architecture with original infrastructure glyphs and empirical counts", "in_paper": True},
         "objective_tradeoff": {"kind": "Measured budget curves and analytic random expectations", "in_paper": True},
         "coverage_partition": {"kind": "Measured source-incidence partition at budget 100", "in_paper": True},
         "representation_detail": {"kind": "Measured version-continuity sensitivity", "in_paper": True},
+        "observation_workflow": {"kind": "Compact observation flow retained as supplementary alternative", "in_paper": False},
+        "study_methodology": {"kind": "Implemented analysis and validation workflow", "in_paper": True},
+        "graph_semantics": {"kind": "Illustrative version-splicing mechanism", "in_paper": False},
         "objective_mechanism": {"kind": "Illustrative counterexample computed from declared sets", "in_paper": False},
     }
     def sha(path):
         return hashlib.sha256(path.read_bytes()).hexdigest()
     inputs = [PAPER / "results/structural_interventions/results.json",
-              PAPER / "results/graph_validity/identifier_scope.json"]
+              PAPER / "results/graph_validity/identifier_scope.json", PAPER / "results/conference_modernization.json"]
     scripts = [Path(__file__).resolve(), PAPER / "scripts/render_system_figures.py",
                PAPER / "scripts/render_analysis_figures.py", PAPER / "scripts/render_technical_architecture.py",
-               PAPER / "scripts/technical_icons.py", PAPER / "scripts/export_drawio.py"]
+               PAPER / "scripts/technical_icons.py", PAPER / "scripts/export_drawio.py", PAPER / "scripts/render_publication_figures.py"]
     outputs = [FIGURES / f"{stem}.{suffix}" for stem in stems for suffix in ("pdf", "svg", "png")]
-    outputs += [FIGURES / "study_system.drawio"]
-    outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json"]
+    outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json", RESULTS / "publication_figure_data.json"]
     manifest = {
         "generator": "Original native SVG topology through librsvg; Matplotlib statistical plots; no external imagery or network calls",
         "python_version": platform.python_version(), "matplotlib_version": matplotlib.__version__,
@@ -193,7 +197,7 @@ def main():
         "outputs_sha256": {str(p.relative_to(PAPER)): sha(p) for p in outputs},
     }
     (RESULTS / "figure_manifest.json").write_text(json.dumps(manifest, indent=2)+"\n")
-    print("Generated five reproducible PDF/SVG/PNG figure sets, numeric TeX inputs and figure_manifest.json.")
+    print("Generated eight reproducible PDF/SVG/PNG figure sets, numeric TeX inputs and figure_manifest.json.")
 
 
 if __name__ == "__main__":

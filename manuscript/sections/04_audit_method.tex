@@ -28,6 +28,13 @@ Finally, we count endpoints for which every observed source has been selected:
 \end{equation}
 We call this \emph{all-source exclusion}. Endpoints without observed sources are excluded rather than counted as protected. Under the idealized model, $C(S)-P(S)$ covered endpoints remain reachable from an unselected source. Neither quantity establishes real control effectiveness.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{study_methodology.pdf}
+\caption{Analysis methodology and validation stages. Baseline orders are reused across budgets; sensitivities are fixed-graph comparisons.}
+\label{fig:methodology}
+\end{figure}
+
 \subsection{Selection Rules and Budget Grid}
 We compare portfolio size, summed per-package reach, maximum per-package reach, exact portfolio-union reach, and greedy maximum marginal coverage. The sum baseline double-counts overlap within a portfolio. Greedy repeatedly adds the identity contributing the most newly covered endpoints. Coverage is monotone submodular, so this established method has the standard $1-1/e$ lower bound relative to optimal coverage~\cite{nemhauser1978}; that guarantee does not apply to $H$ or $P$. The additional exclusion-oriented heuristic has no global optimality guarantee.
 
@@ -37,12 +44,12 @@ Selections are nested at budgets $1,5,10,25,50,100$, with equal identity costs. 
 \begin{figure*}[t]
 \centering
 \includegraphics[width=\textwidth]{objective_tradeoff.pdf}
-\caption{Workflow-repository coverage and conditional exposure reduction favor different selections. Lines connect the six evaluated budgets. The random baseline shows exact finite-population expectations, without confidence bands.}
+\caption{Workflow-repository coverage and conditional exposure reduction favor different selections. Lines connect the six evaluated budgets. The random curve is the exact expectation; stars and plus markers show the two additional budget-100 sensitivities.}
 \label{fig:budget}
 \end{figure*}
 
 \subsection{Reproducibility and Checks}
-The read-only Python implementation records hashes, seeds, environment, and definitions. Breadth-first searches independently verify 288 roots and all 25,228 stored package transitive counts; dual incidence, union bounds, nested curves, and $P\le C$ are checked. Tests cover cycles, version splicing, and 675 roots in 60 seeded small graphs. The grid contains 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.
+The read-only Python implementation follows Fig.~\ref{fig:methodology} and records hashes, seeds, environment, and definitions. Breadth-first searches independently verify 288 roots and all 25,228 stored package transitive counts; dual incidence, union bounds, nested curves, and $P\le C$ are checked. Tests cover cycles, version splicing, and 675 roots in 60 seeded small graphs. The grid contains 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.
 
 Three isolated full reruns reproduce aggregate results byte for byte. On Linux x86-64 with Python 3.14.8, mean wall time is 39.50 s (sample SD 0.98 s), with maximum peak RSS 1,038.4 MiB. These include extraction, baselines, sensitivities, and serialization; uncontrolled caches preclude online-cost inference.
 

@@ -13,12 +13,26 @@ The empirical corpus analyzed in this study comprises:
     \item \textbf{Workflow-Verified Repositories ($R_{\text{wf}}$):} 7,171 distinct client software repositories with verified, active GitHub Actions continuous-integration workflows.
 \end{itemize}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{study_system.pdf}
+\caption{Implemented measurement architecture with public data sources, collection, retained evidence, illustrative typed exposure paths, and exact closure computation. Icons denote logical roles. Sample counts and displayed greedy outcomes are empirical; workflow presence does not establish execution.}
+\label{fig:q1_observation_workflow}
+\end{figure*}
+
 \subsection{Two Graph Representations: Name-Projected vs. Version-Continuous}
-A central contribution of our study is evaluating prioritization sensitivity across two structural graph models:
+Figures~\ref{fig:q1_observation_workflow} and~\ref{fig:q1_version_semantics} distinguish data processing from representation sensitivity. We evaluate two structural graph models:
 \begin{enumerate}
     \item \textbf{Package-Projected Graph ($G_{\text{proj}}$):} Standard in the literature, this representation collapses all published versions of package $p$ into a single node. A directed edge $(u, v) \in E_{\text{proj}}$ exists if \textit{any} version of $u$ declares a dependency on package $v$. Maintainer reach closures $\reach(m)$ are computed via transitive closure over $G_{\text{proj}}$.
-    \item \textbf{Version-Continuous Graph ($G_{\text{ver}}$):} This ground-truth representation explicitly preserves discrete version nodes $v \in V$. A directed edge $(v_1, v_2) \in E_{\text{ver}}$ exists if version $v_1$ declares a SemVer constraint that resolves to version $v_2$. Reach closures $\reach_{\text{ver}}(m)$ require a valid, continuous version path from client repositories to upstream maintainer-authored releases.
+    \item \textbf{Version-Continuous Graph ($G_{\text{ver}}$):} This sensitivity representation explicitly preserves discrete version nodes $v \in V$. A directed edge $(v_1, v_2) \in E_{\text{ver}}$ exists if version $v_1$ declares a SemVer constraint that resolves to version $v_2$. Reach closures $\reach_{\text{ver}}(m)$ require a valid, continuous version path from client repositories to upstream maintainer-authored releases.
 \end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{graph_semantics.pdf}
+\caption{Illustrative version-splicing mechanism. Collapsing the two versions of the intermediate package creates a name-level path that has no continuous exact-version counterpart. Arrows show reverse dependency reach; the example is not a measured installation.}
+\label{fig:q1_version_semantics}
+\end{figure}
 
 \subsection{Cycle Resolution and SCC Condensation}
 Real-world package dependency graphs contain cyclic dependencies caused by circular development utilities, mutual peer dependencies, and legacy meta-packages. To ensure exact, deterministic reachability computation without infinite recursion, we apply Kosaraju's Strongly Connected Component (SCC) condensation algorithm:
