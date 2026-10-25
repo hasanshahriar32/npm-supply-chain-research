@@ -13,7 +13,7 @@ Table~\ref{tab:q1_pareto_frontier} presents the Pareto frontier outcomes across 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{q1_pareto_frontier.pdf}
-\caption{Multi-objective Pareto frontier between submodular coverage $C(S)$ and modular exposure reduction $H(S)$ at budget $|S|=100$ under varying scalarization weights $\alpha \in [0.0, 1.0]$. The balanced sweet spot at $\alpha=0.50$ captures $>90\%$ of both single-objective theoretical ceilings.}
+\caption{Multi-objective Pareto frontier between submodular coverage $C(S)$ and modular exposure reduction $H(S)$ at budget $|S|=100$ under varying scalarization weights $\alpha \in [0.0, 1.0]$. The balanced sweet spot at $\alpha=0.50$ captures $>90\%$ of both single-objective baseline values.}
 \label{fig:q1_pareto_frontier}
 \end{figure}
 
@@ -23,7 +23,7 @@ The empirical Pareto frontier reveals a pronounced knee region at \textbf{$\alph
     \item On the version-continuous graph, $\alpha=0.50$ achieves $C(S) = 5{,}000$ repositories ($69.73\%$) and $H(S) = 38.65\%$ exposure reduction ($P=648$).
 \end{itemize}
 
-Compared to pure Greedy Coverage ($\alpha=1.00$), shifting to $\alpha=0.50$ incurs a minor coverage penalty of only $-7.23$ percentage points ($77.23\% \rightarrow 70.00\%$), while delivering a massive gain of \textbf{$+19.71$ percentage points} in exposure reduction ($11.48\% \rightarrow 31.19\%$, a $2.72\times$ increase). Compared to pure Exact Union ($\alpha=0.00$), $\alpha=0.50$ sacrifices only $-2.60$ percentage points of exposure reduction ($33.79\% \rightarrow 31.19\%$) while capturing $+613$ additional covered repositories ($+8.54$ percentage points). Thus, equal-weight scalarization resolves the single-objective trade-off dilemma by retaining over $90\%$ of the maximum attainable coverage and exposure reduction simultaneously.
+Compared to pure Greedy Coverage ($\alpha=1.00$), shifting to $\alpha=0.50$ incurs a minor coverage penalty of only $-7.23$ percentage points ($77.23\% \rightarrow 70.00\%$), while delivering a massive gain of \textbf{$+19.71$ percentage points} in exposure reduction ($11.48\% \rightarrow 31.19\%$, a $2.72\times$ increase). Compared to pure Exact Union ($\alpha=0.00$), $\alpha=0.50$ sacrifices only $-2.60$ percentage points of exposure reduction ($33.79\% \rightarrow 31.19\%$) while capturing $+613$ additional covered repositories ($+8.54$ percentage points). Thus, equal-weight scalarization resolves the single-objective trade-off dilemma by retaining over $90\%$ of the baseline coverage and optimal modular exposure reduction simultaneously.
 
 \subsection{Supermodular All-Source Exclusion Breakthrough}
 Because full repository immunization requires eliminating all reachable maintainers ($|\text{rem}(r)| = 0$), we evaluated our adaptive Minimum-Remaining-Source heuristic against standard heuristics. Table~\ref{tab:q1_supermodular_p} documents all-source exclusion counts across budgets $|S| \in \{10, 25, 50, 100\}$.
@@ -44,22 +44,22 @@ At budget $|S|=100$, the direct $P(S)$ heuristic achieves \textbf{$P(S) = 1{,}02
 \end{itemize}
 Crucially, this supermodular gain is achieved without compromising perimeter defense: the heuristic maintains $C(S) = 5{,}020$ repositories ($70.0\%$) and $H(S) = 13.23\%$. This establishes that registry operators seeking complete repository isolation can achieve nearly double the structural protection of traditional rankings by actively prioritizing maintainers of near-isolated repositories.
 
-\subsection{Residual-Source Threshold Sensitivity}
+\subsection{Strict Zero-Anchored Threshold Sensitivity}
 \label{sec:quorum_exclusion}
 
-Multi-token incidents motivate asking how many unhardened source identities remain, but token count is not a measured release quorum. In LiteLLM's final account, credentials served different roles, including deletion of records after publication~\cite{litellm2026}. We therefore evaluate a hypothetical common threshold, rather than infer an enforced $k$-of-$n$ policy from the incident.
-
-Let $R_+=\{r\in R_{\text{wf}}:\mathrm{Sources}(r)\ne\varnothing\}$ denote the 7,158 endpoints with at least one observed source, excluding 13 source-free endpoints. Consistent with our existing $P(S)$ convention, define
+Multi-token incidents motivate asking how many unhardened source identities remain, but token count is not a measured release quorum. In LiteLLM's final account, credentials served different roles, including deletion of records after publication~\cite{litellm2026}. We evaluate the explicit strict rule in Eq.~\ref{eq:strict_quorum}, retaining only the 7,158 endpoints with observed sources and excluding all 13 source-free endpoints:
 \begin{equation}
-P_k(S)=\left|\left\{r\in R_+:|\mathrm{Sources}(r)\setminus S|<k\right\}\right|.
+P_k(S)=\left|\left\{r\in R_+:t_r(S)=0\ \lor\ (n_r\ge k\ \land\ t_r(S)<k)\right\}\right|.
 \end{equation}
-Here $P_1(S)=P(S)$, and $P_k(S)$ is nondecreasing in both $S$ and $k$. The literal expression over all 7,171 repositories would add 13 to every value, including at zero budget; these endpoints are not counted as an intervention benefit.
+The unguarded condition $t_r(S)<k$ credits every endpoint with $n_r<k$ even at zero hardening. In the strict model, a single-source endpoint must have its sole maintainer hardened at every threshold, and any endpoint with $n_r<k$ requires complete exclusion. This ensures a zero baseline for each tested $k$; it is not equivalent to subtracting the old zero-budget count.
 
-A protection interpretation requires the additional assumption that every successful attack on an endpoint requires $k$ distinct unhardened identities from its observed source set, with no bypass. Our graph does not measure such a condition. Under the original single-account threat model, any remaining source may suffice, irrespective of $k$. For example, two unrelated single-maintainer dependencies can each poison a consumer even when neither enforces two-person approval. A policy-faithful extension would require package-level authorized signer sets, role constraints, and bypass privileges. Table~\ref{tab:q1_quorum_exclusion} is therefore a structural sensitivity analysis, not a count of empirically protected repositories.
+A protection interpretation still requires a measured policy in which every successful attack needs the designated number of distinct upstream identities with no bypass. Our graph lacks package-level signer groups, role constraints, and bypass privileges. Two unrelated single-maintainer dependencies can each poison a consumer even if their combined source cardinality is two. Table~\ref{tab:q1_quorum_exclusion} is therefore a structural sensitivity analysis, not a count of empirically protected repositories.
 
 \input{tables/q1_quorum_exclusion_table}
 
-At budget 100, Pareto Hybrid has $P_1=626$, $P_2=2{,}153$, and $P_3=2{,}719$; Greedy Coverage has $800$, $2{,}112$, and $2{,}602$, respectively. Exact Union reaches $P_2=2{,}137$ and $P_3=2{,}760$, compared with $2{,}074$ and $2{,}636$ for the Direct $P$ heuristic. Rankings therefore change with the structural threshold. Values at different $k$ are different scenarios, not measured gains from deploying review rules. We retain the original $P_1$ selections for every $k$ rather than optimize each threshold separately. The reproducibility outputs also record $P_k(\varnothing)$, so pre-existing low-source counts can be separated from intervention increments.
+At budget 100, Pareto Hybrid has $P_1=626$, $P_2=961$, $P_3=1{,}018$, $P_5=1{,}063$. Greedy Coverage has $P_1=800$, $P_2=1{,}145$, $P_3=1{,}125$, $P_5=1{,}105$. Exact Union has $P_1=534$, $P_2=793$, $P_3=901$, $P_5=1{,}022$. Direct $P$ has $P_1=1{,}022$, $P_2=1{,}169$, $P_3=1{,}286$, $P_5=1{,}383$. The source-cardinality distribution is $n_r=0$: 13; $n_r=1$: 1,716; $n_r=2$: 546; $n_r=3$: 354; $n_r=4$: 347; and $n_r\ge5$: 4,195. All strict zero-budget counts are zero.
+
+The same ordered maintainer selections are reused at all thresholds, and the Direct $P$ strategy continues to optimize its original $k=1$ heuristic. Counts are nondecreasing with nested hardening budgets for a fixed $k$. Comparisons across $k$ represent different hypothetical policies and need not be monotone, because endpoints with $n_r<k$ revert to complete-exclusion requirements.
 
 For an additional hypothetical sensitivity, uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$. At $\eta=0.90$, Pareto Hybrid yields $28.07\%$ effective scenario exposure reduction. This uniform multiplier preserves all $H$ rankings and does not estimate a real bypass rate, correlate account failures, or model CI compromise. Its values are assumptions, not incident-derived estimates.
 
@@ -79,4 +79,4 @@ A crucial discovery from our empirical audit is that account-level metrics sever
     \item By contrast, Weight-Aware Package-Sole Optimization ($\arg\max_S H_{\text{pkg-sole}}(S)$) eliminates \textbf{$67.37\%$} of package-level sole-maintainer exposure mass.
 \end{itemize}
 
-This represents an improvement of \textbf{$+40.05$ percentage points} ($2.47\times$ higher risk reduction) at the exact same budget of 100 maintainers. Furthermore, this targeted optimization maintains high perimeter defense, covering $4{,}718$ workflow repositories ($65.79\%$) and fully excluding $642$ repositories. This structural theorem demonstrates that software supply-chain defenses must differentiate between account-level portfolio breadth and package-level co-maintenance governance: protecting accounts solely by dependency volume leaves the most fragile single-maintainer dependencies exposed.
+This represents an improvement of \textbf{$+40.05$ percentage points} ($2.47\times$ higher risk reduction) at the exact same budget of 100 maintainers. Furthermore, this targeted optimization maintains high perimeter defense, covering $4{,}718$ workflow repositories ($65.79\%$) and fully excluding $642$ repositories. This fixed-graph result suggests that software supply-chain defenses must differentiate between account-level portfolio breadth and package-level co-maintenance governance: protecting accounts solely by dependency volume leaves the most fragile single-maintainer dependencies exposed.

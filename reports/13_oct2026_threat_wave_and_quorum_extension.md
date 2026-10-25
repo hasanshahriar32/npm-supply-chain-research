@@ -1,3 +1,5 @@
+> **Superseded by Task 14:** The incident bibliography, operational quorum-protection interpretation, and unconditional submission-readiness claims below were corrected in [the final handoff report](14_final_manuscript_verification_and_handoff.md). Retained as a historical session record.
+
 # Active Verification Session 13: Integration of October 2026 Supply-Chain Threat Wave & Generalized $k$-of-$n$ Quorum Exclusion Extension
 
 ## 1. Executive Summary & Session Objectives

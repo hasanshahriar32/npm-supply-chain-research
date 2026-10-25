@@ -11,7 +11,7 @@ Defenders seeking broad ecosystem review prioritize distinct downstream client r
 \begin{equation}
 C(S) = \left| \bigcup_{m \in S} E_m \right|
 \end{equation}
-\textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and strictly submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
+\textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
 \begin{equation}
 C(A \cup \{m\}) - C(A) \ge C(B \cup \{m\}) - C(B)
 \end{equation}
@@ -27,12 +27,22 @@ H(S) = \frac{\sum_{m \in S} w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
 \subsubsection{Supermodular All-Source Exclusion ($P(S)$)}
 A client repository $r$ is fully insulated against single-account compromise if and only if \textit{every} maintainer in its upstream dependency tree has adopted hardening controls:
 \begin{equation}
-P(S) = \sum_{r \in R_{\text{wf}}} \mathbb{I}[\text{Sources}(r) \subseteq S]
+P(S) = \sum_{r \in R_{\text{wf}}} \mathbb{I}[\varnothing\ne\text{Sources}(r) \subseteq S]
 \end{equation}
-\textbf{Property:} $P(S)$ is strictly \textit{supermodular}. Selecting maintainer $m$ contributes zero gain to $r$ until the final remaining unhardened maintainer of $r$ is selected, producing sharp threshold transitions:
+\textbf{Property:} $P(S)$ is \textit{supermodular}. Selecting maintainer $m$ contributes zero gain to $r$ until the final remaining unhardened maintainer of $r$ is selected, producing sharp threshold transitions:
 \begin{equation}
 P(A \cup \{m\}) - P(A) \le P(B \cup \{m\}) - P(B) \quad \text{for } A \subseteq B
 \end{equation}
+
+\subsubsection{Strict Zero-Anchored Threshold Exclusion ($P_k$)}
+Let $R_+=\{r\in R_{\text{wf}}:\mathrm{Sources}(r)\ne\varnothing\}$, $n_r=|\mathrm{Sources}(r)|$, and $t_r(S)=|\mathrm{Sources}(r)\setminus S|$. We define the hypothetical strict threshold count
+\begin{equation}
+P_k(S)=\sum_{r\in R_+}\mathbb{I}\left[t_r(S)=0\ \lor\ (n_r\ge k\ \land\ t_r(S)<k)\right].
+\label{eq:strict_quorum}
+\end{equation}
+For $n_r<k$, only complete source exclusion is credited. For $n_r\ge k$, fewer than $k$ remaining sources suffice under the hypothetical threshold rule. Thus $P_k(\varnothing)=0$, $P_1(S)=P(S)$, and every counted endpoint has a hardened source. The function is monotone in $S$ for fixed $k$, but need not be monotone in $k$: an endpoint with $n_r=2$ and $t_r(S)=1$ is counted at $k=2$ and not at $k=3$. The superficially compact condition $t_r(S)<\min(k,n_r)$ is not equivalent to Eq.~\ref{eq:strict_quorum}. No claim about the submodularity or supermodularity of $P_1$ is extended to general $P_k$.
+
+The cardinality guard removes zero-budget credit but does not supply missing authorization semantics. It is an explicit modeling convention, not evidence that a repository actually implements a $k$-person approval policy; upstream source sets may span independently compromised packages.
 
 \subsection{Proposition 1: Monotone Submodularity of Hybrid Scalarization $J_\alpha(S)$}
 Because single-objective optimization induces severe polarization between $C(S)$ and $H(S)$, we formulate a hybrid scalarization function:
@@ -42,7 +52,7 @@ J_\alpha(S) = \alpha \cdot \frac{C(S)}{|R_{\text{wf}}|} + (1 - \alpha) \cdot H(S
 where $\alpha \in [0, 1]$ parameterizes defensive posture between broad coverage ($\alpha = 1$) and scenario exposure reduction ($\alpha = 0$).
 
 \begin{proposition}
-For any $\alpha \in [0, 1]$, the marginal gain function $\Delta J_\alpha(m \mid S) = J_\alpha(S \cup \{m\}) - J_\alpha(S)$ is monotone non-decreasing and submodular.
+For any $\alpha \in [0, 1]$, the objective $J_\alpha(S)$ is monotone non-decreasing and submodular.
 \end{proposition}
 \begin{IEEEproof}
 Let $A \subseteq B \subseteq M$ and $m \notin B$. The marginal gain is:
@@ -57,11 +67,7 @@ Because the sum of a submodular set function and a modular set function is submo
 \end{IEEEproof}
 
 \subsection{Supermodular Minimum-Remaining-Source Heuristic for $P(S)$}
-Because $P(S)$ is supermodular, greedy coverage and exact union achieve all-source exclusion purely as an unoptimized side-effect. To directly optimize $P(S)$, we design an adaptive minimum-remaining-source heuristic. At each step, let $\text{rem}(r) = \text{Sources}(r) \setminus S$. The heuristic scores unselected maintainers by:
-\begin{equation}
-\text{Score}(m) = \sum_{r : \text{rem}(r) = \{m\}} 1 + \sum_{r : m \in \text{rem}(r), |\text{rem}(r)| > 1} \frac{1}{|\text{rem}(r)|}
-\end{equation}
-breaking ties by marginal coverage $|E_m \setminus \bigcup_{u \in S} E_u|$.
+Because $P(S)$ is supermodular, greedy coverage and exact union achieve all-source exclusion purely as an unoptimized side-effect. To directly optimize $P(S)$, we design an adaptive minimum-remaining-source heuristic. At each step, let $\text{rem}(r)=\text{Sources}(r)\setminus S$. Candidate maintainers are drawn from endpoints with one to ten remaining sources; if none exist, all unselected maintainers are considered. The implementation maximizes a lexicographic tuple: (i) the number of endpoints immediately completed, (ii) the sum of $1/|\text{rem}(r)|$ over affected endpoints with more than one remaining source, (iii) marginal coverage, and (iv) ascending maintainer index. This is a heuristic with no global optimality guarantee for $P(S)$.
 
 \subsection{Heterogeneous Maintainer Risk Formulations}
 We evaluate three structural models of non-uniform maintainer risk:

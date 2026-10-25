@@ -204,17 +204,81 @@ def check_numerical_consistency() -> dict:
         errors.append("Section 5 narrative contains stale back-calculated number '2,362'")
 
     # 3. Check k-Quorum Exclusion Table
-    quorum_tbl_path = Q1_DIR / "tables/q1_quorum_exclusion_table.tex"
-    if not quorum_tbl_path.exists():
-        errors.append(f"Missing table file: {quorum_tbl_path}")
-    else:
-        q_content = quorum_tbl_path.read_text(encoding="utf-8")
-        if not re.search(r"Pareto Hybrid.*?100.*?5,020.*?70\.00\\%.*?31\.19\\%.*?626.*?2,153.*?2,719.*?3,415", q_content, re.DOTALL):
-            errors.append("Pareto Hybrid B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
-        if not re.search(r"Greedy Coverage.*?100.*?5,538.*?77\.23\\%.*?11\.48\\%.*?800.*?2,112.*?2,602.*?3,268", q_content, re.DOTALL):
-            errors.append("Greedy Coverage B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
-        if not re.search(r"Direct Supermodular.*?100.*?5,020.*?70\.00\\%.*?13\.23\\%.*?1,022.*?2,074.*?2,636.*?3,337", q_content, re.DOTALL):
-            errors.append("Direct Supermodular B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
+    # Compare each individual table row with the complete CSV, avoiding cross-row regex matches.
+    quorum_csv = Q1_DIR / "results/q1_quorum_exclusion.csv"
+    quorum_json = Q1_DIR / "results/q1_quorum_exclusion.json"
+    quorum_table = Q1_DIR / "tables/q1_quorum_exclusion_table.tex"
+    provenance = Q1_DIR / "results/quorum_reproducibility.json"
+    try:
+        with quorum_csv.open() as stream:
+            qrows = list(csv.DictReader(stream))
+        jrows = json.loads(quorum_json.read_text())
+        assert len(qrows) == len(jrows) == 20, "Expected five strategies by four budgets"
+        table_rows = [line for line in quorum_table.read_text().splitlines()
+                      if " & " in line and re.search(r"& (10|25|50|100) &", line)]
+        assert len(table_rows) == 20, "Expected twenty data rows in threshold table"
+        for row, jrow, line in zip(qrows, jrows, table_rows):
+            assert row["strategy"] == jrow["strategy"], "CSV/JSON strategy mismatch"
+            for key in row.keys() - {"strategy"}:
+                assert abs(float(row[key]) - float(jrow[key])) < 1e-9, f"CSV/JSON mismatch: {key}"
+            expected = [str(row["budget"]), f"{int(row['C']):,}",
+                        f"{float(row['C_pct']):.2f}\\%", f"{float(row['H_pct']):.2f}\\%",
+                        *[f"{int(row[f'P_{k}']):,}" for k in (1, 2, 3, 5)]]
+            actual = [cell.strip().removesuffix(r"\\").strip() for cell in line.split("&")[1:]]
+            assert actual == expected, f"CSV/table mismatch: {row['strategy']}, B={row['budget']}"
+        meta = json.loads(provenance.read_text())
+        assert meta["metric_version"] == "strict_zero_anchored_v1"
+        assert meta["baseline_P_k_empty"] == {str(k): 0 for k in (1, 2, 3, 5)}
+        distribution = meta["source_cardinality_distribution"]
+        assert set(distribution) == {"0", "1", "2", "3", "4", ">=5"}
+        assert distribution["0"] == 13 and sum(distribution.values()) == 7171
+        histograms = meta["cardinality_histograms"]
+        assert len(histograms) == len(jrows) == 20
+        for row, hist in zip(jrows, histograms):
+            assert (row["strategy"], row["budget"]) == (hist["strategy"], hist["budget"])
+            bins = hist["counts"]
+            assert sum(count for n, rem, count in bins) == 7158
+            assert all(n > 0 and 0 <= rem <= n and count > 0 for n, rem, count in bins)
+            # Recompute from aggregated source-cardinality/remaining-cardinality evidence.
+            assert sum(count for n, rem, count in bins if rem < n) == row["C"]
+            for k in (1, 2, 3, 5):
+                count = sum(c for n, rem, c in bins if rem == 0 or (n >= k and rem < k))
+                assert count == row[f"P_{k}"], f"Strict count mismatch at {row['strategy']}, B={row['budget']}, k={k}"
+                assert row["P_1"] <= count <= row["C"]
+            assert row["P_1"] == sum(c for n, rem, c in bins if rem == 0)
+        expected_p1 = {"Greedy Coverage": 800, "Exact Union": 534,
+                       r"Pareto Hybrid ($\alpha=0.50$)": 626, r"Direct Supermodular $P(S)$": 1022}
+        for row in jrows:
+            if row["budget"] == 100 and row["strategy"] in expected_p1:
+                assert row["P_1"] == expected_p1[row["strategy"]]
+        # Scan active manuscript source, retained outputs and extracted PDF text.
+        # Binary byte patterns and historical build intermediates are not numerical claims.
+        retired = ("1,915", "1,846", "1,825")
+        for path in Q1_DIR.rglob("*"):
+            if "build" in path.parts or not path.is_file():
+                continue
+            if path.suffix in {".tex", ".json", ".csv", ".md", ".bib"}:
+                assert not any(value in path.read_text() for value in retired), f"Retired count in {path}"
+        for pdf in ("main_q1.pdf", "main_q1_anonymous.pdf"):
+            extracted = subprocess.check_output(["pdftotext", str(Q1_DIR / pdf), "-"], text=True)
+            assert not any(value in extracted for value in retired), f"Retired count in {pdf}"
+        for suffix in ("csv", "json"):
+            assert (ROOT / f"manuscript/results/q1_journal/q1_quorum_exclusion.{suffix}").read_bytes() == (Q1_DIR / f"results/q1_quorum_exclusion.{suffix}").read_bytes()
+        assert (ROOT / "manuscript/results/q1_journal/q1_quorum_exclusion_table.tex").read_bytes() == quorum_table.read_bytes()
+        assert meta["observed_source_endpoints"] + meta["excluded_source_free_endpoints"] == 7171
+        assert all(meta["validation"].values()), "Experiment semantic check failed"
+        assert meta["source_archive_sha256"] == hashlib.sha256((ROOT / "data/npm_ecosystem.db.zip").read_bytes()).hexdigest()
+        assert meta["script_sha256"] == hashlib.sha256((ROOT / "scripts/study_q1_quorum_and_oct2026.py").read_bytes()).hexdigest()
+        # Prevent reintroducing unsupported claims from the initial extension.
+        section = (Q1_DIR / "sections/06_pareto_and_heterogeneous_results_rq4.tex").read_text()
+        assert "not a count of empirically protected repositories" in section
+        bibliography = (Q1_DIR / "bibliography/references_q1.bib").read_text()
+        for key in ("litellm2026", "litellmincident2026", "opencode2026", "railway2026",
+                    "railwaydisclosure2026", "npmtrustedpub2026", "npmexpiry2026", "nodejsbrotli2026"):
+            entry = re.search(r"@\w+\{" + key + r",(.*?)\n\}", bibliography, re.S)
+            assert entry and "url = {https://" in entry.group(1), f"Missing traceable incident reference: {key}"
+    except (AssertionError, OSError, ValueError, KeyError) as exc:
+        errors.append(f"Threshold reproducibility gate: {exc}")
 
     # 4. Check experiments JSON invariants
     q1_json_path = ROOT / "manuscript/results/q1_journal_experiments.json"

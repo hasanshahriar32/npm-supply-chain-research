@@ -1,6 +1,8 @@
 # Research Verification & Empirical Audit Reports
 
-This directory stores the official, sequential research audit reports and gap analyses for the `npm-supply-chain-research` repository. All reports are deterministically generated from workspace artifacts, verified against IEEE conference requirements and Q1 journal publication criteria (*IEEE TSE*, *ACM TOSEM*, *IEEE TDSC*, *EMSE*), and tracked in version control.
+This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
+
+Current handoff: [Task 14 strict correction — zero-anchored counts and artifact lock](14_q1_strict_quorum_exclusion_fix_and_lock.md).
 
 ## Report Index
 
@@ -19,7 +21,9 @@ This directory stores the official, sequential research audit reports and gap an
 | [`10_q1_journal_manuscript_build_and_audit.md`](10_q1_journal_manuscript_build_and_audit.md) | Task 10: Standalone Q1 Journal Manuscript Assembly & Audit | Built and compiled standalone Q1 journal manuscript (`manuscript_q1/main_q1.pdf`: 15 pages, 282,184 bytes, 9,367 words, zero overfull boxes, zero unresolved citations, 23 verified peer-reviewed citations) with native Tectonic. | **COMPLETED** |
 | [`11_q1_data_reconciliation_and_verification_lock.md`](11_q1_data_reconciliation_and_verification_lock.md) | Task 11: Q1 Data Reconciliation & Verification Lock | Reconciled Table 4 reach bug against Task 04 ground truth, enforced IEEE TSE 188-word abstract limit, eliminated Type 3 fonts, compiled Named/Anonymous PDFs, ran verification suite, and locked Q1 source archive. | **COMPLETED** |
 | [`12_q1_table4_sqlite_reconciliation_and_final_lock.md`](12_q1_table4_sqlite_reconciliation_and_final_lock.md) | Task 12: SQLite Table 4 Parity & Final Lock | Purged hardcoded metadata; 100% programmatic SQLite extraction of maintainers, dependents, and strategy ranks; reconciled qix version reach to 1,476; locked Q1 deliverables. | **COMPLETED** |
-| [`13_oct2026_threat_wave_and_quorum_extension.md`](13_oct2026_threat_wave_and_quorum_extension.md) | Task 13: October 2026 Threat Wave & $k$-Quorum Extension | Formulated and evaluated generalized $k$-of-$n$ quorum exclusion $P_k(S)$ and imperfect efficacy $H_\eta(S)$; integrated October 2026 threat wave (`LiteLLM`, `OpenCode`, `Railway`, `npm Trusted Publishing`, `Node.js`); compiled 16-page journal PDFs with zero Type 3 fonts and zero overfull boxes. | **COMPLETED** |
+| [`13_oct2026_threat_wave_and_quorum_extension.md`](13_oct2026_threat_wave_and_quorum_extension.md) | Task 13: October 2026 Threat Wave & $k$-Quorum Extension | Formulated and evaluated generalized $k$-of-$n$ quorum exclusion $P_k(S)$ and imperfect efficacy $H_\eta(S)$; integrated October 2026 threat wave (`LiteLLM`, `OpenCode`, `Railway`, `npm Trusted Publishing`, `Node.js`); compiled 16-page journal PDFs with zero Type 3 fonts and zero overfull boxes. | **COMPLETED; interpretation superseded by Task 14** |
+| [`14_final_manuscript_verification_and_handoff.md`](14_final_manuscript_verification_and_handoff.md) | Final continuation, source corrections, and handoff | Reproduced 20 threshold rows; qualified hypothetical quorum claims; corrected primary sources and author metadata; rebuilt two 16-page drafts; passed archive/member parity and four frozen conference checksums. | **COMPLETED; author submission review separate** |
+| [`14_q1_strict_quorum_exclusion_fix_and_lock.md`](14_q1_strict_quorum_exclusion_fix_and_lock.md) | Strict zero-budget correction | Regenerated 20 strict rows; four boundary tests passed; original P1 unchanged; rebuilt and verified both 16-page PDFs and ZIP; conference hashes unchanged. | **COMPLETED; supersedes earlier threshold counts** |
 
 ## Master Tracking Ledger
 The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX.md`](../research_sessions/SESSION_INDEX.md).

@@ -4,7 +4,7 @@ Structural sensitivity motivated by multi-token incidents. Counts do not
 establish observed approval quorums or operational protection.
 
 Computes:
-1. k-Quorum Exclusion P_k(S) = |{r in R_wf : |Sources(r) \ S| < k}|
+1. Strict P_k counts nonempty sources with rem=0 or (n>=k and rem<k).
    for k in {1, 2, 3, 5} across budgets |S| in {10, 25, 50, 100}
    for Portfolio, Greedy Coverage, Exact Union, Pareto Hybrid (alpha=0.50), and Direct Supermodular P(S).
 2. Imperfect hardening efficacy H_eta(S) = eta * H(S) for eta in {1.0, 0.95, 0.90, 0.75}.
@@ -13,6 +13,7 @@ Computes:
 from __future__ import annotations
 
 import csv
+from collections import Counter
 import hashlib
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -34,6 +35,15 @@ BUDGETS = (10, 25, 50, 100)
 K_VALS = (1, 2, 3, 5)
 ETA_VALS = (1.00, 0.95, 0.90, 0.75)
 N_WF_TOTAL = 7171
+
+
+def strict_counted(source_mask: int, selected_mask: int, k: int) -> bool:
+    """Explicit advisor definition; empty source sets are excluded."""
+    if k < 1:
+        raise ValueError("k must be positive")
+    n = source_mask.bit_count()
+    remaining = (source_mask & ~selected_mask).bit_count()
+    return n > 0 and (remaining == 0 or (n >= k and remaining < k))
 
 
 def main():
@@ -71,7 +81,14 @@ def main():
         for endpoint in ssi.bit_indices(mask):
             transposed[endpoint] |= 1 << m
     assert transposed == wf_repo_sources, "Forward/reverse source incidence mismatch"
-    baseline = {str(k): sum(src.bit_count() < k for src in active_sources) for k in K_VALS}
+    baseline = {str(k): sum(strict_counted(src, 0, k) for src in active_sources) for k in K_VALS}
+    assert all(value == 0 for value in baseline.values())
+    workflow_indices = list(ssi.bit_indices(ssi.union(wf_repo_nodes)))
+    assert len(workflow_indices) == N_WF_TOTAL
+    counts = Counter(wf_repo_sources[index].bit_count() for index in workflow_indices)
+    distribution = {str(n): counts[n] for n in range(5)}
+    distribution[">=5"] = sum(count for n, count in counts.items() if n >= 5)
+    assert sum(distribution.values()) == N_WF_TOTAL
     assert len(active_sources) == 7158
     assert sum(src.bit_count() for src in active_sources) == total_pairs_name
     # A single remaining source is still an attack path under the original model.
@@ -168,6 +185,7 @@ def main():
     # 2. Evaluation across Budgets and k
     # -------------------------------------------------------------------------
     rows = []
+    cardinality_histograms = []
     for s_name, order in strategies.items():
         for b in BUDGETS:
             sub_sel = order[:b]
@@ -177,7 +195,14 @@ def main():
 
             pk_dict = {}
             for k in K_VALS:
-                pk_dict[k] = sum(1 for src in active_sources if (src & ~sub_mask).bit_count() < k)
+                counted = [src for src in active_sources if strict_counted(src, sub_mask, k)]
+                assert all(src & sub_mask for src in counted), "Counted endpoint has no hardened source"
+                assert all((src & ~sub_mask) == 0 for src in counted if src.bit_count() < k)
+                pk_dict[k] = len(counted)
+            assert pk_dict[1] == sum((src & ~sub_mask) == 0 for src in active_sources)
+            histogram = Counter((src.bit_count(), (src & ~sub_mask).bit_count()) for src in active_sources)
+            cardinality_histograms.append({"strategy": s_name, "budget": b,
+                "counts": [[n, remaining, count] for (n, remaining), count in sorted(histogram.items())]})
 
             eta_dict = {}
             for eta in ETA_VALS:
@@ -203,9 +228,8 @@ def main():
     for order in strategies.values():
         assert len(order) == len(set(order)) == 100
     for row in rows:
-        vals = [row[f"P_{k}"] for k in K_VALS]
-        assert vals == sorted(vals)
-        assert row["P_1"] <= row["C"] <= N_WF_TOTAL
+        assert all(row["P_1"] <= row[f"P_{k}"] <= row["C"] for k in K_VALS)
+        assert row["C"] <= N_WF_TOTAL
         for eta, field in ((0.95, "H_eta_095"), (0.90, "H_eta_090"), (0.75, "H_eta_075")):
             assert abs(row[field] - eta * row["H_pct"]) < 1e-10
     for strategy in strategies:
@@ -221,7 +245,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "q1_quorum_exclusion.csv"
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     print(f"Saved CSV: {csv_path}")
@@ -237,13 +261,18 @@ def main():
         "workflow_universe": N_WF_TOTAL,
         "observed_source_endpoints": len(active_sources),
         "excluded_source_free_endpoints": N_WF_TOTAL - len(active_sources),
-        "population_rule": "R_plus: endpoints with at least one observed source; literal full-universe P_k adds 13",
-        "interpretation": "hypothetical common-threshold sensitivity, not observed release-quorum protection",
+        "metric_version": "strict_zero_anchored_v1",
+        "definition": "n>0 and (remaining==0 or (n>=k and remaining<k))",
+        "population_rule": "R_plus: nonempty sources only; all 13 source-free endpoints excluded",
+        "source_cardinality_distribution": distribution,
+        "cardinality_histograms": cardinality_histograms,
+        "interpretation": "strict zero-anchored hypothetical threshold sensitivity, not observed release-quorum protection",
         "baseline_P_k_empty": baseline,
         "delta_P_k": [{"strategy": row["strategy"], "budget": row["budget"],
                        **{f"delta_P_{k}": row[f"P_{k}"] - baseline[str(k)] for k in K_VALS}} for row in rows],
         "selections": {name: [identities[m] for m in order] for name, order in strategies.items()},
-        "validation": {"forward_reverse_incidence_parity": True, "threshold_and_budget_monotonicity": True,
+        "validation": {"forward_reverse_incidence_parity": True, "budget_monotonicity": True, "zero_budget": True, "counted_has_hardened_source": True,
+                       "small_source_requires_full_exclusion": True, "P1_matches_original": True,
                        "selection_uniqueness": True, "efficacy_identities": True},
     }
     q1_results = ROOT / "manuscript_q1/results"
@@ -262,7 +291,7 @@ def main():
         f.write("\\begin{table*}[t]\n")
         f.write("\\centering\n")
         f.write("\\small\n")
-        f.write("\\caption{Residual-source threshold counts $P_k(S)$ and coverage across maintainer hardening strategies ($|R_{\\text{wf}}| = 7{,}171$).}\n")
+        f.write("\\caption{Strict zero-anchored threshold counts $P_k(S)$ and coverage across maintainer hardening strategies ($|R_{\\text{wf}}| = 7{,}171$).}\n")
         f.write("\\label{tab:q1_quorum_exclusion}\n")
         f.write("\\begin{tabular}{lrrrrrrrr}\n")
         f.write("\\toprule\n")
