@@ -181,6 +181,16 @@ for method in methods:
     values = f"& {r['covered_endpoints']:,} & {100*r['coverage_fraction_observed']:.1f} & {100*r['scenario_exposure_reduction_fraction']:.2f} & {r['fully_protected_endpoints']:,}"
     check(values in tex_rows, f'Stale method table: {method}')
 
+# Task 15: residual increments and strict thresholds have different definitions.
+modern = read_json(RESULTS / 'conference_modernization.json')
+for relative, expected in modern['source_sha256'].items():
+    check_hash(ROOT / relative, expected)
+check(modern['T2_empty'] == 1716 and modern['P2_strict_empty'] == 0, 'Threshold baselines conflated')
+for prefix, expected in [('Greedy', (2112,396,1145)), ('Exact', (2137,421,793)), ('Pareto', (2153,437,961))]:
+    row = next(row for row in modern['budget100'] if row['strategy'].startswith(prefix))
+    check((row['T2'],row['delta_T2'],row['P2_strict']) == expected, f'Task 15 threshold mismatch: {prefix}')
+    check(close(row['H_eta_090_pct'], 0.9*row['H_pct']), 'Efficacy scaling mismatch')
+
 visited = set()
 
 def tex_tree(relative):
@@ -198,6 +208,10 @@ content = tex_tree('main')
 bib = (PAPER / 'bibliography/references.bib').read_text()
 keys = set(re.findall(r'@\w+\s*\{\s*([^,]+),', bib))
 citations = {key.strip() for block in re.findall(r'\\cite(?:\[[^\]]*\])?\{([^}]+)\}', content) for key in block.split(',')}
+required_modern_citations = {'npmtrustedpub2026','npmexpiry2026','opencode2026','litellm2026',
+    'litellmincident2026','railway2026','railwaydisclosure2026','nodejsbrotli2026',
+    'gao2025emse','okafor2025','weeraddana2024','jayasuriya2024'}
+check(required_modern_citations <= citations, 'Missing Task 15 primary or academic citations')
 for key in citations-keys:
     check(False, f'Undefined citation: {key}')
 for relative in re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}', content):
@@ -223,7 +237,7 @@ report = {'source_and_output_hashes_checked': checked_hashes, 'deterministic_bud
     'random_budget_rows': len(random_rows), 'active_citation_count': len(citations),
     'active_tex_inputs': sorted(visited), 'generated_macros_checked': len(expected_macros),
     'cohort_records': len(captures), 'cohort_outcomes_pending': 100,
-    'identifier_scope_checked': True, 'resource_profile_checked': profile_path.exists(),
+    'conference_modernization_checked': True, 'identifier_scope_checked': True, 'resource_profile_checked': profile_path.exists(),
     'figure_provenance_checked': True, 'active_figure_count': 4,
     'checks_pass': not failures, 'failures': failures,
     'scope': 'Technical evidence consistency; does not certify authorship, venue policy, prediction validity or real control efficacy.'}

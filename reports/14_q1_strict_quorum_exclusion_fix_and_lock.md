@@ -1,3 +1,5 @@
+> **Artifact lock superseded by Task 15:** [The authorized conference rebuild](15_conference_manuscript_oct2026_modernization_and_rebuild.md) replaces the conference hashes and journal source ZIP recorded here. The strict metric and journal PDFs remain unchanged.
+
 # Task 14: Strict quorum exclusion correction and artifact lock
 
 ## 1. Executive summary

@@ -16,12 +16,12 @@ Selection & $C$ & $C$ (\%) & $H$ (\%) & $P$\\
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:budget} shows budget curves. At 25 identities, greedy covers 4,854 repositories, versus 4,284 for exact union and 4,067 for portfolio size ($H = 6.08\%$, $9.86\%$, $4.38\%$). At 100, random mean coverage is 1,680.6 (sample SD 530.7, Monte Carlo standard error $\text{MCSE}_C = 37.5$), with a central 95\% simulation range of 659.8--2,610.7. The exact finite-population expectation is $E[C] = 1{,}716.8$; expected $H$ is $100/12{,}217 = 0.819\%$ (SD 0.373 pp, $\text{MCSE}_H = 0.026$ pp). Differences reflect random-order variation, not sampling inference about npm.
+Figure~\ref{fig:budget} shows the six budgets. At 100, random mean coverage is 1,680.6 (sample SD 530.7, Monte Carlo standard error $\text{MCSE}_C = 37.5$). The exact finite-population expectation is $E[C] = 1{,}716.8$; expected $H$ is $100/12{,}217 = 0.819\%$ (SD 0.373 pp, $\text{MCSE}_H = 0.026$ pp). Differences reflect random-order variation, not sampling inference about npm.
 
 
 
 \subsection{RQ2: Covered Endpoints Retain Other Sources}
-Figure~\ref{fig:partition} partitions source-reachable repositories at budget 100. Of the 5,538 repositories covered by greedy, only 800 meet all-source exclusion; 4,738 remain reachable from an unselected identity. Across the 7,158 repositories with nonempty observed source sets, 6,358 retain such a source. Exact-union ranking excludes every observed source for 534 repositories. We make no claim that either selection optimizes $P$.
+Figure~\ref{fig:partition} partitions source-reachable repositories at budget 100. Of the 5,538 repositories covered by greedy, only 800 meet all-source exclusion; 4,738 remain reachable from an unselected identity. Across the 7,158 repositories with nonempty observed source sets, 6,358 retain such a source. Exact-union ranking excludes every observed source for 534 repositories. Neither baseline optimizes $P$.
 
 \begin{figure}[t]
 \centering
@@ -30,7 +30,7 @@ Figure~\ref{fig:partition} partitions source-reachable repositories at budget 10
 \label{fig:partition}
 \end{figure}
 
-Cross-identity overlap explains the difference between broad coverage and additive scenario mass. At 100 identities, $1-C(S)/\sum_{m\in S}|E_m|$ is 89.57\% for greedy and 97.18\% for exact union. An observed co-maintenance pattern illustrates this masking without asserting a historical forecast: \texttt{qix} maintains only three packages (\texttt{debug}, \texttt{simple-swizzle}, \texttt{backslash}; portfolio rank \#2,298) yet reaches 2,971 repositories, ranking \#8 under exact union and \#5 under version continuity (including 444 repositories not reached by \texttt{sindresorhus}). Because \texttt{sindresorhus} (\#1) and \texttt{tootallnate} (\#8) absorb 2,527 of those endpoints, greedy marginal coverage skips \texttt{qix} past rank 100 while leaving all 2,971 repositories residually exposed.
+Cross-identity overlap explains the difference between broad coverage and additive scenario mass. At 100 identities, $1-C(S)/\sum_{m\in S}|E_m|$ is 89.57\% for greedy and 97.18\% for exact union. An observed co-maintenance pattern illustrates this masking without asserting a historical forecast: \texttt{qix} maintains only three packages (\texttt{debug}, \texttt{simple-swizzle}, \texttt{backslash}; portfolio rank \#2,298) yet reaches 2,971 repositories, ranking \#8 under exact union and \#5 under version continuity (1,476 repositories) (including 444 repositories not reached by \texttt{sindresorhus}). Because \texttt{sindresorhus} (\#1) and \texttt{tootallnate} (\#8) absorb 2,527 of those endpoints, greedy marginal coverage skips \texttt{qix} past rank 100 while leaving all 2,971 repositories residually exposed.
 
 \subsection{RQ3: Representation Changes Exposure Mass}
 Preserving version continuity changes downstream closures for \ChangedRoots{} of 25,228 package roots and removes 1,273,291 ordered root--dependent pairs introduced by package projection. Maintainer workflow-repository unions change for 2,582 usernames. Total identity--repository pairs fall from 462,170 to 266,016, a \VersionPairsDecreasePercent{}\% decrease. This is representational sensitivity, not an estimate of false exploit paths in actual installations.

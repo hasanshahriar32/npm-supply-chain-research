@@ -11,7 +11,7 @@ Applied from the supplied `guideline/guide.md` and `guideline/template_link.txt`
 | All fonts embedded | Review and named-draft fonts checked using `pdffonts`; current counts recorded in the generated reports | Pass |
 | No Type 3 fonts | No Type 3 font found | Pass |
 | Double-blind review | Anonymous author block; empty PDF author metadata; recorded author names, institution, local paths and email patterns screened | Technical screen passes; manual indirect-identity review pending |
-| LLM acknowledgment | Replaced with a neutral acknowledgment of package maintainers, the open-source community and public data resources; no LLM-use disclosure appears in the paper | **Unmet requirement** |
+| LLM acknowledgment | Accurate LLM-use disclosure is present; it does not claim solely non-intellectual use or completed author approval | Disclosure present; policy mismatch remains |
 | LLM use limited to non-intellectual purposes | The guide says models were employed “solely for non-intellectual purposes.” This draft used literature discovery, study design, code development, analysis, drafting, and editing assistance | **Unresolved policy mismatch** |
 | Human review and approval of LLM output | Not asserted; actual authors must review sources, code, claims, and disclosure | Pending |
 | Similarity below 30% | No external similarity-service report available | Not verified |
@@ -20,7 +20,7 @@ Applied from the supplied `guideline/guide.md` and `guideline/template_link.txt`
 | Co-author CMT accounts | No accounts inspected or created | Author action required |
 | Presentation/no-show requirements | Applies if accepted; no promise made on the authors' behalf | Author planning required |
 
-The manuscript has a neutral acknowledgment at the author's request. It thanks the package maintainers, open-source community, npm registry, deps.dev and GitHub; it makes no funding, institutional-support, AI-use or completed-author-approval claim. The guideline's LLM disclosure requirement and non-intellectual-use restriction remain unresolved. No message has been sent and no paper has been submitted.
+The manuscript acknowledges LLM assistance with drafting, code revision, analysis checks, and source verification. The actual authors must review and finalize the disclosure. The supplied guideline restricts use to non-intellectual purposes, so disclosure presence does not resolve the policy mismatch. No paper has been submitted.
 
 ## Artifacts and checks
 

@@ -28,10 +28,8 @@ Finally, we count endpoints for which every observed source has been selected:
 \end{equation}
 We call this \emph{all-source exclusion}. Endpoints without observed sources are excluded rather than counted as protected. Under the idealized model, $C(S)-P(S)$ covered endpoints remain reachable from an unselected source. Neither quantity establishes real control effectiveness.
 
-The distinction appears in a small example. For exposure sets $\{1,2,3,4\}$, $\{1,2,3\}$, and $\{5,6\}$, coverage greedy selects the first and third at budget two, covering six endpoints with six selected identity--endpoint pairs. Exact-union ranking selects the first and second, covering four endpoints with seven pairs. The objective determines the preferred selection.
-
 \subsection{Selection Rules and Budget Grid}
-We compare portfolio size, summed per-package reach, maximum per-package reach, exact portfolio-union reach, and greedy maximum marginal coverage. The sum baseline double-counts overlap within a portfolio. Greedy repeatedly adds the identity contributing the most newly covered endpoints. Coverage is monotone submodular, so this established method has the standard $1-1/e$ lower bound relative to optimal coverage~\cite{nemhauser1978}; that guarantee does not apply to $H$ or $P$. We do not optimize $P$ globally.
+We compare portfolio size, summed per-package reach, maximum per-package reach, exact portfolio-union reach, and greedy maximum marginal coverage. The sum baseline double-counts overlap within a portfolio. Greedy repeatedly adds the identity contributing the most newly covered endpoints. Coverage is monotone submodular, so this established method has the standard $1-1/e$ lower bound relative to optimal coverage~\cite{nemhauser1978}; that guarantee does not apply to $H$ or $P$. The additional exclusion-oriented heuristic has no global optimality guarantee.
 
 Selections are nested at budgets $1,5,10,25,50,100$, with equal identity costs. Deterministic ties use ascending username order. We sample 200 seeded uniform orders without replacement, reusing each order across endpoint universes, and calculate exact random expectations from source multiplicities using hypergeometric probabilities. Random central 95\% simulation ranges describe selection variability on this graph, not confidence intervals for npm or real attacks. Our saved analysis plan is exploratory and recorded before this execution; it is not an external preregistration.
 
@@ -44,6 +42,17 @@ Selections are nested at budgets $1,5,10,25,50,100$, with equal identity costs. 
 \end{figure*}
 
 \subsection{Reproducibility and Checks}
-The read-only implementation uses Python's standard library and records source/output hashes, seeds, environment, and definitions. We verify 288 graph roots independently by breadth-first search, match all 25,228 stored package transitive counts, and check source/endpoint duality, union bounds, nested curves, and $P\le C$. Separate tests cover the objective counterexample, cycles, version splicing, and 60 seeded small graphs comprising 675 independently traversed roots. The study evaluates 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.
+The read-only Python implementation records hashes, seeds, environment, and definitions. Breadth-first searches independently verify 288 roots and all 25,228 stored package transitive counts; dual incidence, union bounds, nested curves, and $P\le C$ are checked. Tests cover cycles, version splicing, and 675 roots in 60 seeded small graphs. The grid contains 150 deterministic and 6,000 random budget rows across five endpoint/visibility definitions. No package payload is executed.
 
-Three isolated full reruns reproduce the aggregate results byte for byte. On our Linux x86-64 host with Python 3.14.8, wall time averages 39.50 seconds (sample standard deviation 0.98 seconds), with maximum process peak RSS of 1,038.4 MiB. These descriptive measurements include extraction, every baseline and sensitivity, and output serialization. Filesystem caches are uncontrolled; they do not estimate per-package inference or online collection cost.
+Three isolated full reruns reproduce aggregate results byte for byte. On Linux x86-64 with Python 3.14.8, mean wall time is 39.50 s (sample SD 0.98 s), with maximum peak RSS 1,038.4 MiB. These include extraction, baselines, sensitivities, and serialization; uncontrolled caches preclude online-cost inference.
+
+
+\subsection{Additional Structural Sensitivities}
+At budget 100, a hybrid greedily maximizes marginal gain of $J_\alpha(S)=\alpha C(S)/|U|+(1-\alpha)H(S)$ at $\alpha=0.50$. A separate heuristic lexicographically prioritizes immediately completed source sets, fractional remaining-source contributions, marginal coverage, and username order. Candidates come from endpoints with one to ten remaining sources, falling back to all unselected identities.
+
+To distinguish the earlier residual threshold from strict exclusion, define $R_+=\{e:A_e\ne\varnothing\}$ and
+\begin{equation}
+ T_k(S)=|\{e\in R_+:|A_e\setminus S|<k\}|,\quad
+ \Delta T_k=T_k(S)-T_k(\varnothing).
+\end{equation}
+$T_k$ is a residual-source count, not an enforced review quorum. The strict variant $P_k^{\rm strict}$ counts only endpoints with zero remaining sources or with $|A_e|\ge k$ and fewer than $k$ remaining sources. It has zero baseline; all 13 source-free endpoints are excluded. Uniform efficacy sensitivity $H_\eta=\eta H$ scales the stipulated exposure reduction without estimating a bypass rate.

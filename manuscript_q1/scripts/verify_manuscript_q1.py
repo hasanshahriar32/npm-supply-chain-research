@@ -300,24 +300,11 @@ def check_numerical_consistency() -> dict:
 
 
 def check_conference_freeze() -> dict:
-    expected_hashes = {
-        "manuscript/main.pdf": {
-            "sha256": "abb1b4b3cd1baeabf3fc1f9232661f5594f7f233f75db0d5ec247d06f882e4cb",
-            "bytes": 179471
-        },
-        "manuscript/main_authors.pdf": {
-            "sha256": "402215fde6223126c4809f988baadcd86e4b0920318eb05b101a6e65b148f373",
-            "bytes": 180875
-        },
-        "NPM_Supply_Chain_IEEE_Anonymous_Source.zip": {
-            "sha256": "bb2c591b009979b5f117ce5458d867c80f4b56ddb4a093cae59ea2bd30e87de4",
-            "bytes": 1441736
-        },
-        "NPM_Supply_Chain_IEEE_Overleaf.zip": {
-            "sha256": "ab0fd2cd4546997e4cc386ce960aa14ceca77870f8fbf61c71cc225a29d00145",
-            "bytes": 3520168
-        }
-    }
+    # Task 15 explicitly lifted the original conference freeze. This reviewed lock
+    # is written only after the rebuilt conference PDFs and packages pass checks.
+    lock = json.loads((Q1_DIR / 'config/conference_lock.json').read_text())
+    expected_hashes = lock['artifacts']
+
 
     errors = []
     file_status = {}
@@ -345,7 +332,7 @@ def check_conference_freeze() -> dict:
         "passed": len(errors) == 0,
         "errors": errors,
         "files": file_status,
-        "detail": "Confirmed 100% frozen state of Track 1 IEEE conference deliverables (zero byte changes)."
+        "detail": "Confirmed Track 1 matches the authorized Task 15 conference artifact lock."
     }
 
 
@@ -367,7 +354,7 @@ def main():
     print(f"[{'PASS' if num_res['passed'] else 'FAIL'}] Numerical Consistency: Table 4, Section 5, Task 04 audit")
 
     freeze_res = check_conference_freeze()
-    print(f"[{'PASS' if freeze_res['passed'] else 'FAIL'}] Conference Freeze Invariant: 4 artifacts verified")
+    print(f"[{'PASS' if freeze_res['passed'] else 'FAIL'}] Conference Artifact Lock: 4 artifacts verified")
 
     all_passed = (
         abstract_res["passed"]

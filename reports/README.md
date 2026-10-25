@@ -2,7 +2,7 @@
 
 This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
 
-Current handoff: [Task 14 strict correction — zero-anchored counts and artifact lock](14_q1_strict_quorum_exclusion_fix_and_lock.md).
+Current handoff: [Task 15 — authorized conference modernization and cross-track artifact lock](15_conference_manuscript_oct2026_modernization_and_rebuild.md).
 
 ## Report Index
 
@@ -24,6 +24,7 @@ Current handoff: [Task 14 strict correction — zero-anchored counts and artifac
 | [`13_oct2026_threat_wave_and_quorum_extension.md`](13_oct2026_threat_wave_and_quorum_extension.md) | Task 13: October 2026 Threat Wave & $k$-Quorum Extension | Formulated and evaluated generalized $k$-of-$n$ quorum exclusion $P_k(S)$ and imperfect efficacy $H_\eta(S)$; integrated October 2026 threat wave (`LiteLLM`, `OpenCode`, `Railway`, `npm Trusted Publishing`, `Node.js`); compiled 16-page journal PDFs with zero Type 3 fonts and zero overfull boxes. | **COMPLETED; interpretation superseded by Task 14** |
 | [`14_final_manuscript_verification_and_handoff.md`](14_final_manuscript_verification_and_handoff.md) | Final continuation, source corrections, and handoff | Reproduced 20 threshold rows; qualified hypothetical quorum claims; corrected primary sources and author metadata; rebuilt two 16-page drafts; passed archive/member parity and four frozen conference checksums. | **COMPLETED; author submission review separate** |
 | [`14_q1_strict_quorum_exclusion_fix_and_lock.md`](14_q1_strict_quorum_exclusion_fix_and_lock.md) | Strict zero-budget correction | Regenerated 20 strict rows; four boundary tests passed; original P1 unchanged; rebuilt and verified both 16-page PDFs and ZIP; conference hashes unchanged. | **COMPLETED; supersedes earlier threshold counts** |
+| [`15_conference_manuscript_oct2026_modernization_and_rebuild.md`](15_conference_manuscript_oct2026_modernization_and_rebuild.md) | Authorized conference modernization | Both conference PDFs exactly six A4 pages, 24 citations, residual and strict thresholds distinguished, all three ZIPs rebuilt, cross-track technical checks PASS. | **COMPLETED; author/venue policy review remains** |
 
 ## Master Tracking Ledger
 The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX.md`](../research_sessions/SESSION_INDEX.md).

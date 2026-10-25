@@ -27,4 +27,4 @@ Uses `data/npm_ecosystem.db.zip` and `scripts/study_structural_interventions.py`
 
 `results/source_verification_2026-10-25.json` records the focused source audit. The prospective cohort has 100 pending outcomes, with its horizon ending January 18, 2027; it supplies no forecast-performance result.
 
-The final continuation report is `../reports/14_q1_strict_quorum_exclusion_fix_and_lock.md`. It supersedes Task 13's claims of incident verification, operational quorum protection, and submission readiness.
+The strict-metric report is `../reports/14_q1_strict_quorum_exclusion_fix_and_lock.md`. The current conference artifact lock and cross-track handoff are documented in `../reports/15_conference_manuscript_oct2026_modernization_and_rebuild.md`. Task 15 explicitly lifted the earlier conference freeze; `config/conference_lock.json` records its reviewed replacement hashes. It supersedes Task 13's claims of incident verification, operational quorum protection, and submission readiness.
