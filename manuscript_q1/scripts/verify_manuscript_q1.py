@@ -197,7 +197,20 @@ def check_numerical_consistency() -> dict:
     if "2,362" in sec5_content or "2{,}362" in sec5_content:
         errors.append("Section 5 narrative contains stale back-calculated number '2,362'")
 
-    # 3. Check experiments JSON invariants
+    # 3. Check k-Quorum Exclusion Table
+    quorum_tbl_path = Q1_DIR / "tables/q1_quorum_exclusion_table.tex"
+    if not quorum_tbl_path.exists():
+        errors.append(f"Missing table file: {quorum_tbl_path}")
+    else:
+        q_content = quorum_tbl_path.read_text(encoding="utf-8")
+        if not re.search(r"Pareto Hybrid.*?100.*?5,020.*?70\.00\\%.*?31\.19\\%.*?626.*?2,153.*?2,719.*?3,415", q_content, re.DOTALL):
+            errors.append("Pareto Hybrid B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
+        if not re.search(r"Greedy Coverage.*?100.*?5,538.*?77\.23\\%.*?11\.48\\%.*?800.*?2,112.*?2,602.*?3,268", q_content, re.DOTALL):
+            errors.append("Greedy Coverage B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
+        if not re.search(r"Direct Supermodular.*?100.*?5,020.*?70\.00\\%.*?13\.23\\%.*?1,022.*?2,074.*?2,636.*?3,337", q_content, re.DOTALL):
+            errors.append("Direct Supermodular B=100 quorum row missing or corrupted in q1_quorum_exclusion_table.tex")
+
+    # 4. Check experiments JSON invariants
     q1_json_path = ROOT / "manuscript/results/q1_journal_experiments.json"
     if q1_json_path.exists():
         q1_data = json.loads(q1_json_path.read_text(encoding="utf-8"))
@@ -212,7 +225,7 @@ def check_numerical_consistency() -> dict:
         "check": "numerical_consistency",
         "passed": len(errors) == 0,
         "errors": errors,
-        "detail": "Verified Table 4 against SQLite database and per_package.csv; verified Section 5 ground truth (including 1,476 vs 2,362 check); verified experiments JSON."
+        "detail": "Verified Table 4 against SQLite and per_package.csv; verified Section 5 ground truth; verified k-quorum exclusion table; verified experiments JSON."
     }
 
 

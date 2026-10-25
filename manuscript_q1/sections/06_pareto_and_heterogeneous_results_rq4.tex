@@ -44,6 +44,25 @@ At budget $|S|=100$, the direct $P(S)$ heuristic achieves \textbf{$P(S) = 1{,}02
 \end{itemize}
 Crucially, this supermodular gain is achieved without compromising perimeter defense: the heuristic maintains $C(S) = 5{,}020$ repositories ($70.0\%$) and $H(S) = 13.23\%$. This establishes that registry operators seeking complete repository isolation can achieve nearly double the structural protection of traditional rankings by actively prioritizing maintainers of near-isolated repositories.
 
+\subsection{Residual-Source Threshold Sensitivity}
+\label{sec:quorum_exclusion}
+
+Multi-token incidents motivate asking how many unhardened source identities remain, but token count is not a measured release quorum. In LiteLLM's final account, credentials served different roles, including deletion of records after publication~\cite{litellm2026}. We therefore evaluate a hypothetical common threshold, rather than infer an enforced $k$-of-$n$ policy from the incident.
+
+Let $R_+=\{r\in R_{\text{wf}}:\mathrm{Sources}(r)\ne\varnothing\}$ denote the 7,158 endpoints with at least one observed source, excluding 13 source-free endpoints. Consistent with our existing $P(S)$ convention, define
+\begin{equation}
+P_k(S)=\left|\left\{r\in R_+:|\mathrm{Sources}(r)\setminus S|<k\right\}\right|.
+\end{equation}
+Here $P_1(S)=P(S)$, and $P_k(S)$ is nondecreasing in both $S$ and $k$. The literal expression over all 7,171 repositories would add 13 to every value, including at zero budget; these endpoints are not counted as an intervention benefit.
+
+A protection interpretation requires the additional assumption that every successful attack on an endpoint requires $k$ distinct unhardened identities from its observed source set, with no bypass. Our graph does not measure such a condition. Under the original single-account threat model, any remaining source may suffice, irrespective of $k$. For example, two unrelated single-maintainer dependencies can each poison a consumer even when neither enforces two-person approval. A policy-faithful extension would require package-level authorized signer sets, role constraints, and bypass privileges. Table~\ref{tab:q1_quorum_exclusion} is therefore a structural sensitivity analysis, not a count of empirically protected repositories.
+
+\input{tables/q1_quorum_exclusion_table}
+
+At budget 100, Pareto Hybrid has $P_1=626$, $P_2=2{,}153$, and $P_3=2{,}719$; Greedy Coverage has $800$, $2{,}112$, and $2{,}602$, respectively. Exact Union reaches $P_2=2{,}137$ and $P_3=2{,}760$, compared with $2{,}074$ and $2{,}636$ for the Direct $P$ heuristic. Rankings therefore change with the structural threshold. Values at different $k$ are different scenarios, not measured gains from deploying review rules. We retain the original $P_1$ selections for every $k$ rather than optimize each threshold separately. The reproducibility outputs also record $P_k(\varnothing)$, so pre-existing low-source counts can be separated from intervention increments.
+
+For an additional hypothetical sensitivity, uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$. At $\eta=0.90$, Pareto Hybrid yields $28.07\%$ effective scenario exposure reduction. This uniform multiplier preserves all $H$ rankings and does not estimate a real bypass rate, correlate account failures, or model CI compromise. Its values are assumptions, not incident-derived estimates.
+
 \subsection{Heterogeneous Maintainer Risk Formulations}
 Table~\ref{tab:q1_heterogeneous_weights} reports maintainer prioritization outcomes evaluated under uniform, sole-maintainer ($w^{\text{sole}}$), and log-portfolio activity ($w^{\text{log}}$) risk priors, alongside weight-aware optimization strategies.
 

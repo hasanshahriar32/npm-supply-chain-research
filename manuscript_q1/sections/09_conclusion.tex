@@ -25,7 +25,8 @@ Our empirical findings translate directly into concrete, high-leverage defensive
 
 \subsubsection{For Downstream Consumers and DevSecOps Organizations}
 \begin{itemize}
-    \item \textbf{Enforce Dependency Cooldown Periods:} Because supply-chain attacks are often detected and yanked within 24 to 72 hours of publication, automated dependency update bots (e.g., Dependabot, Renovate) should enforce a mandatory 3-to-7 day cooldown window for minor and patch updates on non-critical paths.
+    \item \textbf{Evaluate Dependency Cooldown Periods:} LiteLLM's affected PyPI release was available for approximately two hours~\cite{litellmincident2026}. A release-age delay may avoid some short-lived poisoned releases, but we do not evaluate a 3-to-7 day optimum or guarantee prevention. Emergency security updates require a separate exception policy.
+    \item \textbf{Maintain Independent Secret Rotation Paths:} Railway paused deployments during incident response~\cite{railwaydisclosure2026}. We infer that build-independent revocation and recovery paths can reduce remediation dependencies; this is operational guidance rather than an experimentally measured deadlock.
     \item \textbf{Disable Arbitrary Lifecycle Scripts:} Organizations should configure package managers with \texttt{--ignore-scripts} by default, requiring explicit allowlisting for packages that necessitate native compilation during installation.
     \item \textbf{Strict Lockfile Pinning and Integrity Verification:} All CI/CD workflows should enforce immutable lockfile resolution (\texttt{npm ci}) with cryptographic subresource integrity checks to prevent dynamic resolution shifts.
     \item \textbf{Prioritize Auditing of Sole-Maintainer Dependencies:} Downstream dependency auditing should prioritize packages where $|M(p)| = 1$, actively sponsoring co-maintainers or contributing upstream code reviews to eliminate single-maintainer bottlenecks.
