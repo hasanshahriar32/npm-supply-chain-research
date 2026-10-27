@@ -148,9 +148,11 @@ def main() -> None:
     shutil.copy2(BUILD / "EMSE_Title_Page.log", HERE / "EMSE_Title_Page.log")
     package = HERE / "EMSE_LaTeX_Source.zip"
     with zipfile.ZipFile(package, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name in source_files:
+        for name in ["EMSE_Manuscript.tex", "references_q1.bib"]:
             archive.write(SOURCE / name, name)
         archive.write(BUILD / "EMSE_Manuscript.bbl", "EMSE_Manuscript.bbl")
+        for name in ["sn-jnl.cls", "sn-basic.bst", *figures]:
+            archive.write(SOURCE / name, name)
     # Verify a clean extraction without access to the repository's source paths.
     with tempfile.TemporaryDirectory(prefix="emse-standalone-") as tmp:
         extracted = Path(tmp)

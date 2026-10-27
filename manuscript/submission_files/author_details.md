@@ -5,7 +5,7 @@ Updated with contact details supplied for the EMSE title page.
 | Order | Author | Department | Email | ORCID |
 |---|---|---|---|---|
 | 1 | Shahriar Hasan | Department of ECE | hasanshahriar32@gmail.com | [0009-0006-4448-9209](https://orcid.org/0009-0006-4448-9209) |
-| 2 | Ashikul Islam | Department of CSE | ashikulislamcf2000@gmail.com | [0009-0009-6384-5223](https://orcid.org/0009-0009-6384-5223) |
+| 2 | Md. Ashikul Islam | Department of CSE | ashikulislamcf2000@gmail.com | [0009-0009-6384-5223](https://orcid.org/0009-0009-6384-5223) |
 
 Both authors: Hajee Mohammad Danesh Science and Technology University, Basherhat, HSTU, Dinajpur – 5200, Bangladesh.
 

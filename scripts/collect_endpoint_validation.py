@@ -208,7 +208,7 @@ def summarize():
     review=ROOT/'manuscript_q1/review_packets';review.mkdir(exist_ok=True)
     fields=['audit_id','repository','commit_sha','repository_mapping_supported','workflow_file_present',
             'install_directive_observed','lockfile_present','dependency_version_supported','evidence_notes']
-    for name in ['Shahriar_Hasan','Ashikul_Islam']:
+    for name in ['Shahriar_Hasan','Md_Ashikul_Islam']:
         p=review/f'{name}_independent_labels.csv'
         if not p.exists():
             with p.open('w',newline='') as f:

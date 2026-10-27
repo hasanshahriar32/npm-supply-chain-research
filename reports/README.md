@@ -2,9 +2,9 @@
 
 This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
 
-Current handoff: [Task 21 — EMSE declarations and submission draft](21_emse_declarations_and_submission_draft.md). The scientific evidence baseline remains [Task 20 — evidence reconciliation and empirical figure expansion](20_evidence_reconciliation_and_figures.md).
+Current handoff: [Task 23 — implemented journal validation revision](23_journal_validation_implementation.md). The original numerical baseline remains [Task 20 — evidence reconciliation and empirical figure expansion](20_evidence_reconciliation_and_figures.md); [Task 21](21_emse_declarations_and_submission_draft.md) records the earlier EMSE preparation.
 
-Proposed next work: [Task 22 — detailed journal improvement plan](22_journal_improvement_plan.md). This is a plan for new validation and manuscript restructuring, not a record of completed experiments.
+Implementation basis: [Task 22 — detailed journal improvement plan](22_journal_improvement_plan.md). Task 23 records the executed computational work, public release and remaining independent human audit.
 
 Review basis: [Task 19 — repository issues and figure assessment](19_repository_review_and_figure_assessment.md). Task 20 applies its corrections and expands scientific verification. Earlier build results remain historical technical checks.
 
@@ -37,3 +37,5 @@ Task 18 revises the conference text, retains the original architecture and measu
 ## Master Tracking Ledger
 The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX.md`](../research_sessions/SESSION_INDEX.md).
 
+
+- [Report 24: coauthor name correction](24_author_name_correction.md) — full name updated to Md. Ashikul Islam; current submission deliverables rebuilt.

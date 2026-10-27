@@ -48,7 +48,7 @@ class RevisionEvidenceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);folder=root/'manuscript_q1/review_packets';folder.mkdir(parents=True)
             sample=[{'audit_id':'A001','repository':'owner/repo'}]
-            for author in ['Shahriar_Hasan','Ashikul_Islam']:
+            for author in ['Shahriar_Hasan','Md_Ashikul_Islam']:
                 with (folder/f'{author}_independent_labels.csv').open('w',newline='') as f:
                     w=csv.DictWriter(f,['audit_id','repository',*audit.LABELS]);w.writeheader();w.writerow(sample[0])
             with patch.object(audit,'ROOT',root),patch.object(audit,'OUT',root/'results'):
@@ -56,6 +56,23 @@ class RevisionEvidenceTests(unittest.TestCase):
             self.assertFalse(status['human_review_complete_and_adjudicated'])
             self.assertEqual(status['independent_rows_complete'],0)
             self.assertEqual(rows[0][audit.LABELS[0]],'pending')
+
+    def test_human_disagreement_keeps_adjudication_pending_and_reports_kappa(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'manuscript_q1/review_packets';folder.mkdir(parents=True)
+            sample=[{'audit_id':'A001','repository':'owner/one'},{'audit_id':'A002','repository':'owner/two'}]
+            for index,author in enumerate(['Shahriar_Hasan','Md_Ashikul_Islam']):
+                with (folder/f'{author}_independent_labels.csv').open('w',newline='') as f:
+                    w=csv.DictWriter(f,['audit_id','repository',*audit.LABELS,'evidence_notes']);w.writeheader()
+                    for i,row in enumerate(sample):
+                        value='unsupported' if index==1 and i==1 else 'supported'
+                        w.writerow({**row,**{label:value for label in audit.LABELS},'evidence_notes':'Inspected recorded evidence'})
+            with patch.object(audit,'ROOT',root),patch.object(audit,'OUT',root/'results'):
+                status,rows=audit.review_status(sample)
+            self.assertFalse(status['human_review_complete_and_adjudicated'])
+            self.assertEqual(status['raw_agreement'],.5)
+            self.assertEqual(status['initial_agreement_by_label'][audit.LABELS[0]]['cohen_kappa'],0)
+            self.assertTrue((folder/'adjudication.csv').exists())
 
 
 if __name__=='__main__':unittest.main()

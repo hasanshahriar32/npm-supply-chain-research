@@ -19,7 +19,7 @@ A frozen acquisition-feasibility wave selected 100 graph identifiers before requ
 | Order | Author | Department |
 |---|---|---|
 | 1 | Shahriar Hasan | Department of ECE |
-| 2 | Ashikul Islam | Department of CSE |
+| 2 | Md. Ashikul Islam | Department of CSE |
 
 Both authors are affiliated with **Hajee Mohammad Danesh Science and Technology University**. Emails, ORCIDs and the shared Dinajpur address are recorded in `submission_files/authors.json`; Shahriar Hasan is first and corresponding author. The separate EMSE title page is in `../submission/emse/`. [submission_files/authors.json](submission_files/authors.json) and [author_details.md](submission_files/author_details.md) preserve the author record.
 

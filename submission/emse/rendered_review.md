@@ -8,7 +8,7 @@ Reviewed `EMSE-S-26-02038.pdf`. The rendering passes the checks below, but the d
 | --- | --- | --- |
 | Page 28, article page 26; also page 29 for code availability | Data/code availability still describe a planned release. The text says public access and an identifier are not yet available. | Publish and verify the versioned replication materials, insert the actual URL/version or DOI and any exclusions, rebuild the manuscript/title page, replace uploads and regenerate the submission PDF. |
 | Page 1 | City is displayed as **Dianjpur**. | Correct the corresponding-author address/profile city in the portal to **Dinajpur**. |
-| Page 1 | **Department of CSE** appears after Ashikul Islam in the qualification position. | Move it to the affiliation's department field. Keep the author name as **Ashikul Islam** and enter any actual qualification in the proper field. |
+| Page 1 | **Department of CSE** appears after Md. Ashikul Islam in the qualification position. | Move it to the affiliation's department field. Keep the author name as **Md. Ashikul Islam** and enter any actual qualification in the proper field. |
 | Page 2 | Uploaded title page is the earlier one-page contact-only attachment. | Replace it with the current two-page `EMSE_Title_Page.pdf` after finalizing the data/code statements. The present names, emails, ORCIDs and address are correct. |
 
 ## Rendering checks

@@ -1,6 +1,6 @@
 # Journal research draft
 
-For the current EMSE submission, use [`../submission/emse/EMSE_Manuscript.pdf`](../submission/emse/EMSE_Manuscript.pdf), the updated title page and flat source archive described in [`../submission/emse/README.md`](../submission/emse/README.md). The Springer export has 29 pages and 12 figures; the IEEE working PDFs below remain 15 pages each. Both formats now include the confirmed funding/interest declarations, data/code availability, ethics/consent scope and substantive AI-use disclosure in the methods. Public release access and final author approval remain pending. Individual contribution roles have not been inferred.
+For the current EMSE submission, use [`../submission/emse/EMSE_Manuscript.pdf`](../submission/emse/EMSE_Manuscript.pdf), the updated title page and flat source archive described in [`../submission/emse/README.md`](../submission/emse/README.md). The validation revision has 13 active figures, four focused research questions and appended exploratory material. Its data/code [prerelease](https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28) is publicly accessible and was reproduced offline after downloading the checksum-verified original input. Human endpoint labels and final author approval remain pending. Individual contribution roles have not been inferred. See [Report 23](../reports/23_journal_validation_implementation.md) for the executed evidence and current page counts.
 
 The named and anonymous PDFs are research drafts. Their compilation checks do not certify acceptance, submission, author approval, venue compliance, or complete bibliography verification. Author names, order and departments follow `manuscript/submission_files/authors.json`; contact details now follow the user-supplied record, with Shahriar Hasan as first and corresponding author. The separate title-page attachment is `../submission/emse/EMSE_Title_Page.pdf`. No IEEE memberships were supplied.
 
@@ -19,6 +19,8 @@ python3 submission/emse/build_emse.py
 The source ZIP supports typesetting from its `manuscript_q1` directory. Full numerical verification uses the surrounding repository and its retained datasets; the ZIP alone is not the complete research dataset.
 
 ## Threshold experiment
+
+The new validation workflow is documented in [`protocols/REVISION_WORKFLOW.md`](protocols/REVISION_WORKFLOW.md). Independent review sheets and pinned evidence are under [`review_packets/`](review_packets/ENDPOINT_REVIEW_INSTRUCTIONS.md). After both authors complete their own sheets, run `python3 scripts/study_validated_endpoints.py --label-source human` from the repository root; unresolved disagreements require the generated adjudication file. The command reports pending status rather than inventing labels when sheets are incomplete.
 
 ```sh
 python3 scripts/study_q1_quorum_and_oct2026.py

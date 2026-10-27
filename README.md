@@ -1,5 +1,7 @@
 # Maintainer Prioritization in npm Supply Chains
 
+The [28 October journal validation revision](reports/23_journal_validation_implementation.md) adds a frozen 120-endpoint evidence audit, heuristic ablations and exact benchmarks, and a fresh 100-root acquisition. The [versioned research artifact](https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28) is public and was reproduced from a clean extraction. The journal now has four focused research questions, with exploratory material in appendices. Independent human endpoint annotations and final author approval remain pending; automated evidence is explicitly provisional.
+
 Our current paper is **Maintainer Prioritization in npm Supply Chains: Coverage, Exposure, and Graph Representation**. We study how a limited maintainer-review budget behaves under different defensive objectives and dependency representations.
 
 The completed work is a reproducible structural experiment on our collected npm data. It compares review coverage, conditional exposure under an explicitly uniform account-loss scenario, and exclusion of every observed source identity. Longer-term compromise forecasting and graph learning remain research plans; no trained HGAT, credential-harvesting return, compromise probability or deployed-hardening effect is claimed.
@@ -10,7 +12,7 @@ The [27 October reconciliation](reports/20_evidence_reconciliation_and_figures.m
 
 ## Main completed findings
 
-For the current journal submission, use the [EMSE manuscript](submission/emse/EMSE_Manuscript.pdf), [title page](submission/emse/EMSE_Title_Page.pdf), and [flat LaTeX source archive](submission/emse/EMSE_LaTeX_Source.zip). This 29-page Springer export has the same 12 scientific figures and the new declarations and methods assistance disclosure. The [EMSE guide](submission/emse/README.md) and [Report 21](reports/21_emse_declarations_and_submission_draft.md) identify the remaining public-data release and author-confirmation items. The IEEE journal working drafts remain 15 pages.
+For the current journal submission, use the [EMSE manuscript](submission/emse/EMSE_Manuscript.pdf), [title page](submission/emse/EMSE_Title_Page.pdf), and [flat LaTeX source archive](submission/emse/EMSE_LaTeX_Source.zip). The revised export contains 13 active figures and the new validation results. The [EMSE guide](submission/emse/README.md) and [Report 23](reports/23_journal_validation_implementation.md) record the current outputs and remaining human-review items. Earlier page/figure counts below describe the preceding baseline revision.
 
 Our graph contains **25,228 identifiers**, **12,217 maintainer usernames**, **79,405 account/package relations**, and **88,113 distinct projected dependency adjacencies**. The identifiers include **2,745 bundled-context strings containing `>`** and **22,483 ordinary-shaped names**. Bundled-context strings have no matching registry metadata or maintainer membership in the archive; they must not be counted as independently registered npm packages. We retain the original graph for a reproducible representation study. Removing all context nodes leaves every maintainer/workflow-repository incidence set unchanged, so repository-level C/H/P values for any fixed identity selection are unchanged; all-package endpoints have a different scope. This does not establish that summed or maximum individual-package scores retain their rankings.
 
@@ -92,7 +94,7 @@ The legacy `calculate_metrics.py` column names include `wormability`, `blast_rad
 ## Authors and submission versions
 
 1. **Shahriar Hasan** — Department of ECE.
-2. **Ashikul Islam** — Department of CSE.
+2. **Md. Ashikul Islam** — Department of CSE.
 
 Both are affiliated with **Hajee Mohammad Danesh Science and Technology University**. The order follows the supplied author record. Author emails, ORCIDs and the shared Dinajpur address are recorded in `manuscript/submission_files/authors.json`; Shahriar Hasan is first and corresponding author. A separate EMSE title page is available in `submission/emse/`.
 

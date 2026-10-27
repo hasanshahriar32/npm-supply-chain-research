@@ -14,7 +14,7 @@ LABELS=['repository_mapping_supported','workflow_file_present','install_directiv
 def review_status(sample):
     folder=ROOT/'manuscript_q1/review_packets'
     sheets=[]
-    for who in ['Shahriar_Hasan','Ashikul_Islam']:
+    for who in ['Shahriar_Hasan','Md_Ashikul_Islam']:
         p=folder/f'{who}_independent_labels.csv'
         if not p.exists():
             folder.mkdir(parents=True,exist_ok=True)
@@ -29,6 +29,8 @@ def review_status(sample):
         assert len({r['audit_id'] for r in rows})==len(rows)
         sheets.append({r['audit_id']:r for r in rows})
     completed=0;agreements=0;comparisons=0;unresolved=[];consensus=[]
+    values=['supported','unsupported','unknown']
+    confusion={label:{a:{b:0 for b in values} for a in values} for label in LABELS}
     for s in sample:
         aid=s['audit_id'];row={'audit_id':aid,'repository':s['repository']}
         assert all(sheet[aid]['repository']==s['repository'] for sheet in sheets), 'Review row repository mismatch'
@@ -39,6 +41,7 @@ def review_status(sample):
             if not a or not b:
                 complete=False;row[label]='pending';continue
             comparisons+=1;agreements+=a==b
+            confusion[label][a][b]+=1
             row[label]=a if a==b else 'requires_adjudication'
             if a!=b:unresolved.append({'audit_id':aid,'label':label,'reviewer_1':a,'reviewer_2':b,'adjudicated_label':'','reason':''})
         if complete and not all(sheet[aid].get('evidence_notes','').strip() for sheet in sheets):
@@ -63,6 +66,17 @@ def review_status(sample):
             'completed_label_comparisons':comparisons,'initial_agreements':agreements,
             'raw_agreement':agreements/comparisons if comparisons else None,
             'human_review_complete_and_adjudicated':finished,'no_labels_inferred_from_blank_cells':True}
+    agreement_by_label={}
+    for label,matrix in confusion.items():
+        n=sum(sum(row.values()) for row in matrix.values())
+        if n:
+            observed=sum(matrix[v][v] for v in values)/n
+            chance=sum(sum(matrix[v].values())*sum(matrix[a][v] for a in values) for v in values)/n**2
+            kappa=(observed-chance)/(1-chance) if chance<1 else None
+        else:observed=chance=kappa=None
+        agreement_by_label[label]={'n':n,'raw_agreement':observed,'chance_agreement':chance,
+                                   'cohen_kappa':kappa,'confusion_matrix':matrix}
+    status['initial_agreement_by_label']=agreement_by_label
     dump(OUT/'endpoint_audit/human_review_status.json',status)
     if finished:dump(OUT/'endpoint_audit/labels_adjudicated.json',consensus)
     return status,consensus

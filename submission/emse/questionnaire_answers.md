@@ -20,11 +20,11 @@ The acknowledgment concerns sharing the manuscript and associated personal data 
 
 **Data availability statement included**
 
-The rebuilt manuscript contains the statement. Its public-release wording is pending and must be finalized with the actual accessible release before submission.
+The rebuilt named manuscript contains the data/code availability statements and the actual public prerelease URL. Access and the companion checksum were verified without authentication. Human endpoint annotations remain pending and are not described as completed validation.
 
 **Supporting data accessibility**
 
-Choose “My manuscript has associated data in a data repository” after the research-data release is publicly accessible and the manuscript identifies it. A plan to release data does not establish current access. The typesetting source ZIP is not the research-data repository.
+Choose “My manuscript has associated data in a data repository”. The public research prerelease is https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28. It includes a companion and a checksum-verified original database linked at a fixed commit. The LaTeX typesetting ZIP is a separate attachment.
 
 **Special issue**
 

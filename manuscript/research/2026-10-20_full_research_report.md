@@ -2,7 +2,7 @@
 
 **Paper:** Maintainer Prioritization in npm Supply Chains: Coverage, Exposure, and Graph Representation.
 
-**Authors:** Shahriar Hasan, Department of ECE; Ashikul Islam, Department of CSE. Both are affiliated with Hajee Mohammad Danesh Science and Technology University, in that order.
+**Authors:** Shahriar Hasan, Department of ECE; Md. Ashikul Islam, Department of CSE. Both are affiliated with Hajee Mohammad Danesh Science and Technology University, in that order.
 
 We completed a structural measurement study, verified its nearest prior methods, executed graph and observation-unit sensitivity analyses, corrected future acquisition semantics, and collected a frozen prospective feasibility wave. The paper now reports our research directly. The completed evidence supports maintainer-prioritization tradeoffs under explicit graph and scenario assumptions; compromise prediction and real deployed-control effectiveness have not been evaluated.
 
