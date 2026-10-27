@@ -65,9 +65,9 @@ def main():
     cr=[]
     for r in replication['common_results']:
         if r['budget']==100:
-            cr.append(['Original' if r['dataset']=='original' else 'New cohort',names[r['method']],r['C'],f"{r['H_pct']:.2f}",r['P']])
+            cr.append(['Original' if r['dataset']=='original' else 'New cohort',names[r['method']],r['C'],f"{r['H_pct']:.2f}",r['P'],f"{r['pair_denominator']:,}"])
     table('revision_common_table.tex','Reoptimized budget-100 selections on 65 common repository keys with 1,036 common selectable accounts.',
-          'tab:revision_common','llrrr',['Dataset','Rule',r'$C$',r'$H$ (\%)',r'$P$'],cr,
+          'tab:revision_common','llrrrr',['Dataset','Rule',r'$C$',r'$H$ (\%)',r'$P$','Pair mass'],cr,
           'Complete source sets are preserved, including sources outside the common eligible account set. Pair denominators differ by observed graph, so H percentages are within-dataset quantities rather than a causal temporal effect.')
     macros={'AuditSample':120,'AuditCommits':audit['commits_acquired'],'HeuristicExactHits':heuristic['direct_exact_hits'],
             'HeuristicExactSettings':heuristic['direct_benchmarks'],'HeuristicWorstGap':heuristic['direct_worst_absolute_gap'],
@@ -77,29 +77,34 @@ def main():
             'ReplicationUnionC':next(r['C'] for r in replication['results'] if r['method']=='exact_union' and r['budget']==100 and r['selection_representation']==r['evaluation_representation']=='name')}
     (Q/'config/revision_numbers.tex').write_text('% Generated revision evidence\n'+'\n'.join('\\newcommand{\\'+k+'}{'+str(v)+'}' for k,v in macros.items())+'\n')
     plt.rcParams.update({'font.family':'DejaVu Sans','font.size':8,'pdf.fonttype':42,'ps.fonttype':42,'axes.spines.top':False,'axes.spines.right':False})
-    fig,axs=plt.subplots(1,2,figsize=(7.1,3.1));fig.subplots_adjust(left=.25,right=.98,bottom=.20,top=.86,wspace=.6)
+    fig,axs=plt.subplots(1,2,figsize=(7.1,3.4));fig.subplots_adjust(left=.18,right=.97,bottom=.25,top=.86,wspace=.65)
     y=np.arange(5);positive=np.array([audit['labels'][k]['supported_static'] for k in labels])
     axs[0].barh(y,positive,color='#2b6686',label='Automated candidate')
     axs[0].barh(y,120-positive,left=positive,color='#dedede',label='Unresolved')
     for i,v in enumerate(positive):axs[0].text(v/2,i,str(v),ha='center',va='center',color='white',fontsize=8)
     axs[0].set_yticks(y,['Mappings','Workflow file','Install directive','Root lockfile','Version example']);axs[0].invert_yaxis()
-    axs[0].set(xlim=(0,120),xlabel='Sampled endpoints',title='(a) Evidence candidates; human review pending')
-    axs[0].legend(loc='upper center',bbox_to_anchor=(.4,-.23),frameon=False,fontsize=6.5,ncol=2)
+    axs[0].set(xlim=(0,120),xlabel='Sampled endpoints',title='(a) Automated evidence')
+    handles,legend_labels=axs[0].get_legend_handles_labels()
+    fig.legend(handles,legend_labels,loc='lower center',bbox_to_anchor=(.5,.015),frameon=False,fontsize=7,ncol=2)
     for kind,label,color in [('empirical_candidate_restricted','Empirical (60 settings)','#285d85'),('synthetic','Synthetic (36 settings)','#b57720')]:
         vals=sorted(r['absolute_gap'] for r in heuristic['exact_rows'] if r['kind']==kind and r['method']=='direct_p')
         axs[1].step(vals,np.arange(1,len(vals)+1)/len(vals),where='post',label=label,color=color)
-    axs[1].set_xscale('symlog',linthresh=1);axs[1].set(ylim=(0,1.03),xlabel='Exact P minus heuristic P',ylabel='Fraction at or below gap',title='(b) Candidate-restricted exact gaps')
+    axs[1].set_xscale('symlog',linthresh=1);axs[1].set(ylim=(0,1.03),xlabel='Exact P minus heuristic P',ylabel='Fraction at or below gap',title='(b) Restricted exact gaps')
     axs[1].set_xticks([0,1,5,20,66],['0','1','5','20','66']);axs[1].legend(frameon=False,fontsize=7,loc='lower right');axs[1].grid(alpha=.15)
-    for ext in ['pdf','png','svg']:fig.savefig(F/f'revision_audit_benchmarks.{ext}',dpi=200)
+    for ext in ['pdf','png','svg']:
+        path=F/f'revision_audit_benchmarks.{ext}';fig.savefig(path,dpi=200)
+        if ext=='svg':path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines())+'\n')
     plt.close(fig)
-    fig,axs=plt.subplots(1,3,figsize=(7.1,2.6));fig.subplots_adjust(left=.08,right=.99,bottom=.24,top=.83,wspace=.45)
-    for ax,field,title in zip(axs,['C_pct','H_pct','P'],['(a) Coverage C (%)','(b) Exposure share H (%)','(c) All-source exclusions P']):
+    fig,axs=plt.subplots(1,3,figsize=(7.1,2.8));fig.subplots_adjust(left=.08,right=.97,bottom=.24,top=.83,wspace=.45)
+    for ax,field,title in zip(axs,['C_pct','H_pct','P'],['(a) Coverage (%)','(b) Exposure share (%)','(c) All-source exclusions']):
         for method,color,label in [('greedy_coverage','#00858b','Greedy'),('exact_union','#285d85','Union'),('direct_p','#b57720','Direct P')]:
             rr=[r for r in replication['results'] if r['method']==method and r['selection_representation']==r['evaluation_representation']=='name']
             ax.plot([r['budget'] for r in rr],[r[field] for r in rr],marker='o',ms=2.5,lw=1.2,color=color,label=label)
-        ax.set_xscale('log');ax.set_xticks([1,5,10,25,50,100],['1','5','10','25','50','100']);ax.set(xlabel='Account budget',title=title);ax.grid(alpha=.15)
+        ax.set_xscale('log');ax.set_xticks([1,5,10,25,50,100],['1','5','10','25','50','100']);ax.set(xlabel='Account budget',title=title);ax.set_title(title,fontsize=8);ax.grid(alpha=.15)
     axs[0].legend(frameon=False,fontsize=7,loc='upper left')
-    for ext in ['pdf','png','svg']:fig.savefig(F/f'revision_replication.{ext}',dpi=200)
+    for ext in ['pdf','png','svg']:
+        path=F/f'revision_replication.{ext}';fig.savefig(path,dpi=200)
+        if ext=='svg':path.write_text('\n'.join(line.rstrip() for line in path.read_text().splitlines())+'\n')
     plt.close(fig)
     record={'created_at_utc':stamp(),'renderer_sha256':sha(__file__),
             'source_sha256':{str(p.relative_to(ROOT)):sha(p) for p in [OUT/'endpoint_audit/summary.json',OUT/'heuristic/summary.json',OUT/'replication/study_summary.json']},

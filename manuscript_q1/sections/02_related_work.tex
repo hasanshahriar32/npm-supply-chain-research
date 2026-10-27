@@ -11,12 +11,12 @@ Zimmermann et al.~\cite{zimmermann2019} already studied maintainer-union reach, 
 \subsection{Malicious Package Benchmarks and Detection Limits}
 A parallel line of security research focuses on detecting malicious packages published via typosquatting, dependency confusion, and account takeovers~\cite{ohm2020,sejfia2022}. Benchmark evaluations, such as Guo et al.'s extensive study of npm malware detectors~\cite{guo2026}, show that static analysis tools face severe limitations due to obfuscation, dynamic runtime execution, and environment-keyed payloads. 
 
-Because reactive post-publication malware detection suffers from non-trivial evasion rates, proactive hardening of legitimate, high-leverage maintainer accounts is a complementary research direction~\cite{schorlemmer2024,okafor2025}. Our work complements malware detection by optimizing how defenders allocate proactive security interventions before credentials or tokens are compromised.
+Because reactive post-publication malware detection suffers from non-trivial evasion rates, proactive hardening of legitimate, high-leverage maintainer accounts is a complementary research direction~\cite{schorlemmer2024,okafor2025}. Our comparison concerns a hypothetical account-review budget; it does not evaluate a deployed prevention program.
 
 \subsection{Continuous-Integration Workflows and Reachability Limits}
-Software supply-chain risks manifest concretely in downstream CI/CD pipelines. Koishybayev et al.~\cite{koishybayev2022} and Muralee et al.~\cite{muralee2023} demonstrated that GitHub Actions workflows frequently execute third-party build scripts with access to repository secrets, cloud deployment credentials, and package publish tokens. Recent incidents motivate artifact-level checks: Railway's preliminary report describes potential secret exposure affecting at most 1.85\% of workspaces, approximately 100,000, and notes that builds had resumed~\cite{railway2026}. LiteLLM reported a release workflow redirected to attacker-controlled source, with separate approval and log-deletion credentials~\cite{litellm2026}. These are contextual examples rather than observations in our npm graph.
+Software supply-chain risks manifest concretely in downstream CI/CD pipelines. Koishybayev et al.~\cite{koishybayev2022} and Muralee et al.~\cite{muralee2023} demonstrated that GitHub Actions workflows frequently execute third-party build scripts with access to repository secrets, cloud deployment credentials, and package publish tokens. Incident reports motivate inspecting actual artifacts and authorization evidence; they do not validate the workflow-associated endpoints in our graph.
 
-Crucially, recent empirical studies have emphasized that package-level dependency relationships do not equal actual code execution. Weeraddana, Alfadel, and McIntosh~\cite{weeraddana2024} studied CI time spent updating unused npm dependencies. Shen et al.~\cite{gao2025emse} reported that 99\% of client vulnerabilities in their studied corpus arose from dependencies and 81.26\% of package-level findings were false positives under finer analysis. These corpus-specific results do not establish registry-wide false-positive rates. Jayasuriya et al.~\cite{jayasuriya2024} observed similar granularity effects when analyzing syntactic breaking changes across versions. In our work, we address this fundamental reachability gap by evaluating both coarse package-name projections and version-continuous graphs, treating topological reach as a conditional review surface rather than installed-code evidence.
+Crucially, recent empirical studies have emphasized that package-level dependency relationships do not equal actual code execution. Weeraddana, Alfadel, and McIntosh~\cite{weeraddana2024} studied CI time spent updating unused npm dependencies. Shen et al.~\cite{gao2025emse} reported that 99\% of client vulnerabilities in their studied corpus arose from dependencies and 81.26\% of package-level findings were false positives under finer analysis. These corpus-specific results do not establish registry-wide false-positive rates. Jayasuriya et al.~\cite{jayasuriya2024} observed similar granularity effects when analyzing syntactic breaking changes across versions. We measure sensitivity to package-name and exact-version edge unions, while explicitly retaining the gap between topological reach and installed-code evidence.
 
 \subsection{Registry Governance, Cryptographic Provenance, and Signing}
 In response to account compromises, registries and standards bodies have introduced cryptographic signing and provenance attestations. Schorlemmer et al.~\cite{schorlemmer2024} audited signing across Maven, PyPI, Docker Hub, and Hugging Face, finding that adoption remains minimal and unevenly distributed. Kalu et al.~\cite{okafor2025} interviewed industry practitioners, revealing significant operational friction in managing cryptographic keys and configuring automated pipeline attestations. Bloom Security's SlugFest disclosure concerns mutable repository-name bindings before a first trusted publish, rather than a break of OIDC cryptography~\cite{npmtrustedpub2026}. GitHub announced expiry of unvalidated bindings on October 2~\cite{npmexpiry2026}; reported exposure is not evidence that all affected packages were maliciously published. Pillar's October 19 OpenCode report describes a September 28 dependency fix without a CVE~\cite{opencode2026}, illustrating a coverage gap for CVE-indexed detection.
@@ -31,21 +31,16 @@ Our reporting is informed by the ACM SIGSOFT Empirical Standards~\cite{ralph2020
 \begin{table*}[t]
 \centering
 \small
-\caption{Selected literature and the scope of our empirical investigation relative to major related literature.}
+\caption{Closest empirical work and the additional question addressed here. Different observation units prevent direct comparison of reported security percentages.}
 \label{tab:lit_positioning}
 \begin{tabularx}{\textwidth}{lYYYY}
 \toprule
-\textbf{Research Dimension} & \textbf{Structural Topology \& Centrality} & \textbf{Malicious Package Detectors} & \textbf{CI/CD \& Function Call-Graphs} & \textbf{This Study (Q1 Journal Expansion)} \\
+Study & Population & Main observations & Validation basis & Additional question here\\
 \midrule
-\textbf{Focus Literature} & Zimmermann~\cite{zimmermann2019}, Zahan~\cite{zahan2022}, Wang~\cite{wang2026} & Ohm~\cite{ohm2020}, Sejfia~\cite{sejfia2022}, Guo~\cite{guo2026} & Koishybayev~\cite{koishybayev2022}, Weeraddana~\cite{weeraddana2024}, Shen~\cite{gao2025emse} & Structural objectives ($C, H, P, J_\alpha$), version continuity, field availability \\
-\midrule
-\textbf{Prioritization Metric} & Dependency and maintainer reach; coverage; metadata signals & Reactive post-event incident signatures & Taint analysis on workflows, call-graph reachability & Submodular coverage, modular exposure reduction, supermodular all-source exclusion \\
-\midrule
-\textbf{Graph Representation} & Dependency graphs and resolved trees & Isolated package tarballs & Dynamic execution traces, static ASTs & Dual evaluation: Package-projected vs. Version-continuous closures (42.4\% pair diff) \\
-\midrule
-\textbf{Maintainer Risk Prior} & Uniform equal weight & Unweighted & Unweighted & Heterogeneous weights: Solo bottlenecks ($H_{\text{sole}}$), log-portfolio ($H_{\text{log}}$), package-level sole reach ($H_{\text{pkg-sole}}$) \\
-\midrule
-\textbf{Temporal Grounding} & Static single snapshot & Retrospective positive-only datasets & Static GitHub Actions scripts & 45 root records (44 distinct tuples), 1,848 bounded edge attempts ($t_{\text{cutoff}} < t_{\text{incident}}$), 90-day prospective cohort \\
+\cite{zimmermann2019} & npm dependency and maintainer ecosystem & Maintainer influence, combined reach and vetting simulations & Ecosystem-scale longitudinal dependency analysis & Joint C/H/P costs, endpoint definitions and representation-sensitive selection\\
+\cite{zahan2022} & 1.63 million npm packages & Metadata weak-link signals & Metadata analyses and survey of 470 developers & Explicit structural objectives rather than fitted compromise signals\\
+\cite{weeraddana2024} & 1,487 projects and 20,743 dependency-update commits & Unused dependencies and CI resource waste & Dependency-use analysis and measured CI builds & Evidence limits of workflow-presence proxies; this study does not measure job execution\\
+This study & Retained seeded graph; new 100-root cohort; 120-endpoint audit & C/H/P tradeoffs, heuristic ablations and representation effects & Independent graph checks, exact restricted instances and fresh acquisition; human audit pending & Transport of decision tradeoffs and explicit limitations of observations\\
 \bottomrule
 \end{tabularx}
 \end{table*}

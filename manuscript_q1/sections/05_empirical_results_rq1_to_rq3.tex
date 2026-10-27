@@ -1,7 +1,7 @@
-\section{Empirical Results: RQ1 to RQ3}
+\section{Core Tradeoffs and Representation: RQ1 and RQ2}
 \label{sec:empirical_results}
 
-We first report our empirical findings for Research Questions 1 through 3 on the retained 25,228-identifier graph, spanning multi-budget trade-offs, multi-homing mechanics, and representation fidelity.
+We first report our empirical findings for Research Questions 1 and 2 on the retained 25,228-identifier graph, spanning multi-budget trade-offs, multi-homing mechanics, and representation fidelity.
 
 \begin{figure}[t]
 \centering
@@ -27,7 +27,7 @@ At budget $|S|=100$, \textbf{Greedy Coverage} achieves $C(S) = 5{,}538$ reposito
 
 Exact union's H advantage follows from its additive objective under equal costs. The experiment measures the accompanying loss in distinct coverage. Greedy offers the largest measured coverage among the compared baseline selections; it is an approximation to maximum coverage, not a proved global optimum. Portfolio size gives 63.85\% coverage and 7.96\% H at this budget, showing that portfolio count and measured downstream reach need not agree.
 
-\subsection{RQ2: Multi-Homing Residual Exposure and Single-Source Fragility}
+\subsection{Residual Sources and Single-Source Fragility}
 A repository can have many source accounts even when a single account already covers it. Across the 7,158 repositories with observed sources, mean source cardinality is 64.57 and the maximum is 1,502. These are graph source identities, not measured permissions or independent compromises. Figure~\ref{fig:q1_source_distribution} shows their distribution and the remaining-source distributions after budget-100 selections.
 
 \begin{figure*}[t]
@@ -46,11 +46,11 @@ Greedy's $P=800$ is 11.18\% of source-reachable repositories; exact union gives 
 \label{fig:representation_detail}
 \end{figure}
 
-\subsection{RQ3: Version-Continuity Representation and Selection Penalties}
-Comparing the package-projected name graph against the version-continuous SemVer dependency graph reveals substantial sensitivity to representation:
+\subsection{RQ2: Version-Continuity Representation and Selection Penalties}
+Comparing the package-projected name graph against the observed exact-version edge union reveals substantial sensitivity to representation:
 \begin{enumerate}
     \item \textbf{Exposure Shrinkage:} Preserving version continuity contracts total maintainer-repository exposure pairs from $462{,}170$ to $266{,}016$---an exact reduction of \textbf{$42.44\%$}.
-    \item \textbf{Root Scope Changes:} $8{,}587$ out of $25{,}228$ packages ($34.04\%$) exhibit divergent downstream reach scopes between name-collapsed and version-continuous representations.
+    \item \textbf{Root Scope Changes:} $8{,}587$ out of $25{,}228$ graph identifiers ($34.04\%$) exhibit divergent downstream reach scopes between name-collapsed and version-continuous representations.
     \item \textbf{Cycle Condensation:} Kosaraju condensation detects $403$ nodes in $82$ nontrivial strongly connected components in the name graph, compared to $68$ cyclic components across $40{,}806$ version nodes in the version-continuous graph.
     \item \textbf{Version-Splicing Witnesses:} Retained representation diagnostics include five illustrative roots whose name-level paths lack a continuous counterpart in the retained version graph: \texttt{pseudomap}, \texttt{is}, \texttt{foreach}, \texttt{indexof}, and \texttt{has-color}.
 \end{enumerate}
@@ -58,7 +58,7 @@ Comparing the package-projected name graph against the version-continuous SemVer
 \subsubsection{The Cross-Representation Selection Penalty}
 When maintainers are selected based on name-projected heuristics but evaluated on the observed version-continuous graph, measured exposure changes. For the \texttt{sum\_package\_reach} heuristic at budget 100, ranking directly on version-continuous topologies captures \textbf{$34.34\%$} of version exposure, compared to only \textbf{$20.91\%$} when using name-projected rankings---an improvement of \textbf{$+13.43$ percentage points} ($+64.2\%$ relative gain).
 
-\subsubsection{Real-World Compromise Case Study}
+\subsubsection{Cross-Sectional Incident-Associated Illustrations}
 Table~\ref{tab:q1_incident_case_study} details reach metrics and maintainer prioritization ranks across the 16 incident-associated records whose package names occur in the retained graph.
 
 \input{tables/q1_incident_case_study_table}

@@ -5,6 +5,7 @@ from collections import deque
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import urllib.request
 import urllib.error
@@ -17,6 +18,8 @@ OUTDIR=OUT/'replication'; OBS=OUTDIR/'observations'
 
 
 def request(url):
+    if os.environ.get('NPM_RESEARCH_OFFLINE')=='1':
+        raise RuntimeError('Offline reproduction requested missing captured input: '+url)
     obj={'requested_url':url,'observed_at_utc':stamp(),'attempts':0}
     for attempt in range(2):
         obj['attempts']=attempt+1

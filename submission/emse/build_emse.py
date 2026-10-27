@@ -73,7 +73,7 @@ def main() -> None:
     preamble = preamble.replace(r"\graphicspath{{figures/}}", "")
     preamble += "\n" + r"\usepackage{adjustbox}" + "\n" + r"\raggedbottom" + "\n"
     macros = "\n".join(expand(r"\input{config/" + name + "}") for name in
-                       ["research_numbers", "research_method_rows", "reconciliation_numbers"])
+                       ["research_numbers", "research_method_rows", "reconciliation_numbers", "revision_numbers"])
     abstract = (Q1 / "sections/00_abstract.tex").read_text().replace(
         r"\begin{abstract}", "").replace(r"\end{abstract}", "").strip()
     keywords = re.search(r"\\begin\{IEEEkeywords\}(.*?)\\end\{IEEEkeywords\}", canonical, re.S)[1].strip().rstrip(".")
@@ -96,6 +96,13 @@ def main() -> None:
     # Preserve shared table values while fitting the narrower Springer text block.
     body = re.sub(r"(\\begin\{tabular\})", r"\\begin{adjustbox}{max width=\\linewidth}\n\1", body)
     body = body.replace(r"\end{tabular}", r"\end{tabular}" + "\n" + r"\end{adjustbox}")
+    appendix = ""
+    if r"\appendices" in canonical:
+        appendix = expand(canonical.split(r"\appendices", 1)[1].split(r"\end{document}", 1)[0])
+        appendix = appendix.replace(r"\cite{", r"\citep{").replace("IEEEproof", "proof")
+        appendix = re.sub(r"(\\begin\{tabular\})", r"\\begin{adjustbox}{max width=\\linewidth}\n\1", appendix)
+        appendix = appendix.replace(r"\end{tabular}", r"\end{tabular}" + "\n" + r"\end{adjustbox}")
+        appendix = "\n" + r"\clearpage\appendix" + "\n" + appendix
     authors = json.loads((ROOT / "manuscript/submission_files/authors.json").read_text())
     author_lines = []
     for i, author in enumerate(authors["authors_in_supplied_order"], 1):
@@ -109,13 +116,14 @@ def main() -> None:
            + r"\begin{document}" + "\n" + r"\title{\PaperTitle}" + "\n"
            + "\n".join(author_lines) + "\n" + r"\abstract{" + abstract + "}\n"
            + r"\keywords{" + keywords + "}\n" + r"\maketitle" + "\n" + body
-           + "\n" + r"\bibliography{references_q1}" + "\n" + r"\end{document}" + "\n")
+           + "\n" + r"\bibliography{references_q1}" + appendix + "\n" + r"\end{document}" + "\n")
     (SOURCE / "EMSE_Manuscript.tex").write_text(tex)
     shutil.copy2(Q1 / "bibliography/references_q1.bib", SOURCE / "references_q1.bib")
     for name in ["sn-jnl.cls", "sn-basic.bst"]:
         shutil.copy2(HERE / "template" / name, SOURCE / name)
     figures = sorted(set(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex)))
-    assert len(figures) == 12
+    reviewed = json.loads((Q1 / "config/revision_artifact_manifest.json").read_text())
+    assert figures == reviewed["active_figures"], "Active figures differ from reviewed revision manifest"
     for name in figures:
         assert Path(name).name == name
         shutil.copy2(Q1 / "figures" / name, SOURCE / name)
@@ -132,7 +140,7 @@ def main() -> None:
     title += ("\n" + r"\subsection*{Publication Status}" + "\n"
               + "Neither the conference-length draft nor the journal manuscript has been published, accepted, or is under review elsewhere. This manuscript is not an extension of a previously published conference paper.\n\n"
               + r"\subsection*{Acknowledgments}" + "\n"
-              + "The authors thank npm package maintainers and the open-source community for the studied public artifacts, and deps.dev and GitHub for data interfaces. AI assistance is disclosed in the manuscript methods.\n"
+              + "The authors thank npm package maintainers and the open-source community for the studied public artifacts, and deps.dev and GitHub for data interfaces.\n"
               + r"\end{document}" + "\n")
     title_path.write_text(title)
     compile_pdf(title_path, BUILD)
@@ -155,12 +163,12 @@ def main() -> None:
     title_checks = pdf_checks(HERE / "EMSE_Title_Page.pdf", BUILD / "EMSE_Title_Page.log")
     extracted_text = subprocess.check_output(["pdftotext", str(HERE / "EMSE_Manuscript.pdf"), "-"], text=True)
     normalized = " ".join(extracted_text.split())
-    required = ["Statements and Declarations", "Data Availability", "Code Availability", "Funding", "Competing Interests", "Use of AI Assistance", "hasanshahriar32@gmail.com", "not yet available"]
+    required = ["Statements and Declarations", "Data Availability", "Code Availability", "Funding", "Competing Interests", "Use of AI Assistance", "hasanshahriar32@gmail.com"]
     content_checks = all(term in normalized for term in required)
     report = {"date": "2026-10-27", "manuscript": manuscript, "title_page": title_checks,
               "standalone_archive_build": standalone, "required_content_present": content_checks,
               "abstract_words": len(abstract.split()), "keywords": len(keywords.split(",")), "figures": len(figures),
-              "data_release_public": False, "author_contributions_confirmed": False,
+              "data_release_public": json.loads((HERE / "submission_status.json").read_text()).get("public_release_verified", False), "author_contributions_confirmed": False,
               "coauthor_submission_approval_confirmed": authors["submission_approval_confirmed"],
               "sha256": {name: hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() for name in source_files}}
     report["passed"] = all(x["passed"] for x in [manuscript, title_checks, standalone]) and content_checks

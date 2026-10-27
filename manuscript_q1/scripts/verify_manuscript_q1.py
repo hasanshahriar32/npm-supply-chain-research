@@ -138,6 +138,8 @@ def check_pdf(pdf_name: str) -> dict:
             res['errors'].append('Recorded author identity in anonymous journal PDF')
         if 'AI assistance was used' not in normalized:
             res['errors'].append('Assistance disclosure missing from anonymous journal PDF')
+        if 'hasanshahriar32' in normalized:
+            res['errors'].append('Author-identifying artifact URL in anonymous journal PDF')
 
     res["passed"] = (
         not res["errors"]
@@ -247,9 +249,17 @@ def check_numerical_consistency() -> dict:
         for stem, outputs in figure_record['figures'].items():
             for ext, expected in outputs.items():
                 assert hashlib.sha256((Q1_DIR / f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
+        def expand_active(text):
+            return re.sub(r"\\input\{([^}]+)\}",lambda m:expand_active((Q1_DIR/(m[1]+'.tex')).read_text()),text)
         included=re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}",
-                             "\n".join(p.read_text() for p in (Q1_DIR / 'sections').glob('*.tex')))
-        assert len(included)==12 and len(set(included))==12, 'Expected twelve integrated journal figures'
+                            expand_active((Q1_DIR/'main_q1.tex').read_text()))
+        reviewed=json.loads((Q1_DIR/'config/revision_artifact_manifest.json').read_text())
+        assert sorted(set(included))==reviewed['active_figures'], 'Active figure set differs from reviewed revision'
+        assert len(included)==len(set(included)), 'Duplicated active figure input'
+        revision=json.loads((Q1_DIR/'results/revision_validation/publication_artifacts.json').read_text())
+        for stem,outputs in revision['figures'].items():
+            for ext,expected in outputs.items():
+                assert hashlib.sha256((Q1_DIR/f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
     except (AssertionError,OSError,ValueError,KeyError) as exc:
         errors.append(f'Figure integration gate: {exc}')
 
@@ -276,7 +286,7 @@ def check_submission_sections() -> dict:
     errors = []
     required = ("Statements and Declarations", "Data Availability", "Code Availability",
                 "Funding", "Competing Interests", "Ethics and Consent", "Use of AI Assistance",
-                "no external funding", "not yet available")
+                "no external funding")
     for stem in ("main_q1", "main_q1_anonymous"):
         text = " ".join(subprocess.check_output(
             ["pdftotext", str(Q1_DIR / f"{stem}.pdf"), "-"], text=True).split())

@@ -26,6 +26,23 @@ Figure~\ref{fig:q1_observation_scope} separates graph units, observed workflow e
 \subsection{Name Projection and Exact-Version Continuity}
 The name graph merges retained versions sharing an identifier. The sensitivity graph retains 40,806 exact (package, version) nodes and joins paths only at matching version keys. A maintained package seeds every retained version; without a version node, it contributes only its eligible seed endpoint. Both representations use the same package-level workflow flags. Neither reproduces npm installation or historical lockfile behavior: contexts and acquisition times remain mixed.
 
+\subsection{Frozen Endpoint Evidence Audit}
+Before new audit requests, we freeze 120 endpoints drawn without replacement from the 7,158 repositories with observed sources. Four source-count strata contain 1,716 endpoints with one source, 1,473 with two to five, 1,959 with six to fifty, and 2,010 with more than fifty; each contributes 30 sampled repositories. Inclusion probabilities and design weights are retained. Failed observations are not replaced. Equal stratum allocation means the unweighted pooled support percentage is not an estimate for the full frame.
+
+For each endpoint, acquisition requests its original package/version registry metadata, resolves a repository commit, and retrieves workflow files, candidate package manifests and root lockfiles at that commit. It records response states, timestamps, commit IDs and file hashes. Up to twenty workflow files and twelve manifest/lockfile candidates per repository are retained under the frozen request limits. Mapping support requires matching evidence for every package/version observation assigned to the endpoint; monorepo paths and unresolved reusable actions can leave labels unknown.
+
+The automated pass records 172 version-specific registry-request outcomes and 115 pinned repository commits. It flags 106 endpoints as mapping-support candidates, 115 with workflow files, 88 with aligned installation directives, 70 with root lockfiles, and 17 with dependency/version examples. Table~\ref{tab:revision_audit} and Figure~\ref{fig:revision_audit_benchmarks}(a) describe these machine-generated evidence candidates. They are not independently adjudicated labels or estimates of historical mapping precision. The two authors have separate, initially blank review sheets; agreement and human-validated endpoint results remain pending. No reviewer role or completed approval is inferred.
+\input{tables/revision_audit_table}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.98\textwidth]{revision_audit_benchmarks.pdf}
+\caption{New evidence diagnostics: (a) automated endpoint-audit candidates and unresolved cases, before independent human review; (b) empirical and synthetic candidate-restricted exact exclusion gaps. Panel populations and inferential meanings differ. The exact settings reuse instances across budgets.}
+\label{fig:revision_audit_benchmarks}
+\end{figure*}
+
+Current-commit evidence cannot retrospectively validate the original undated HEAD observations. Static installation commands do not establish executed jobs, and a lockfile example does not validate every transitive path. Frozen original account selections are evaluated on progressively stricter machine-evidence subsets as provisional diagnostics in the replication materials. Full source sets are preserved. Design-weighted C/P totals and H pair-mass ratios are distinguished from conditional subset results; unresolved-included/excluded H scenarios are not claimed as sharp bounds. Human-reviewed results require completed independent annotations and adjudication.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{graph_semantics.pdf}

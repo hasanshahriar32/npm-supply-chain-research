@@ -1,0 +1,1 @@
+This is the exact collector executed for the new acquisition. Its SHA-256 matches acquisition_summary.json. It is also available in repository commit 43c039bebe7c36b07a5aeb50b1c8a412ad058e0f, the research release base tag. The current collector adds an offline-network guard after acquisition; online collection logic is unchanged.

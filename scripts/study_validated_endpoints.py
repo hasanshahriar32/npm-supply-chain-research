@@ -16,6 +16,14 @@ def review_status(sample):
     sheets=[]
     for who in ['Shahriar_Hasan','Ashikul_Islam']:
         p=folder/f'{who}_independent_labels.csv'
+        if not p.exists():
+            folder.mkdir(parents=True,exist_ok=True)
+            evidence_path=OUT/'endpoint_audit/automated_evidence.json'
+            commits={r['audit_id']:r.get('observed_commit_sha','') for r in json.loads(evidence_path.read_text())} if evidence_path.exists() else {}
+            with p.open('w',newline='') as f:
+                fields=['audit_id','repository','commit_sha',*LABELS,'evidence_notes']
+                w=csv.DictWriter(f,fields);w.writeheader()
+                for r in sample:w.writerow({'audit_id':r['audit_id'],'repository':r['repository'],'commit_sha':commits.get(r['audit_id'],'')})
         with p.open() as f:rows=list(csv.DictReader(f))
         assert len(rows)==len(sample) and {r['audit_id'] for r in rows}=={r['audit_id'] for r in sample}
         assert len({r['audit_id'] for r in rows})==len(rows)
@@ -23,6 +31,7 @@ def review_status(sample):
     completed=0;agreements=0;comparisons=0;unresolved=[];consensus=[]
     for s in sample:
         aid=s['audit_id'];row={'audit_id':aid,'repository':s['repository']}
+        assert all(sheet[aid]['repository']==s['repository'] for sheet in sheets), 'Review row repository mismatch'
         complete=True
         for label in LABELS:
             a,b=[sheet[aid][label].strip().lower() for sheet in sheets]
@@ -32,6 +41,8 @@ def review_status(sample):
             comparisons+=1;agreements+=a==b
             row[label]=a if a==b else 'requires_adjudication'
             if a!=b:unresolved.append({'audit_id':aid,'label':label,'reviewer_1':a,'reviewer_2':b,'adjudicated_label':'','reason':''})
+        if complete and not all(sheet[aid].get('evidence_notes','').strip() for sheet in sheets):
+            complete=False
         completed+=complete
         consensus.append(row)
     adjudication=folder/'adjudication.csv'
@@ -47,7 +58,7 @@ def review_status(sample):
                     decision=lookup.get((row['audit_id'],label),{})
                     value=decision.get('adjudicated_label','').strip().lower()
                     if value in ['supported','unsupported','unknown'] and decision.get('reason','').strip():row[label]=value
-    finished=all(r[k] in ['supported','unsupported','unknown'] for r in consensus for k in LABELS)
+    finished=completed==len(sample) and all(r[k] in ['supported','unsupported','unknown'] for r in consensus for k in LABELS)
     status={'authors_expected':2,'independent_rows_complete':completed,'sample_rows':len(sample),
             'completed_label_comparisons':comparisons,'initial_agreements':agreements,
             'raw_agreement':agreements/comparisons if comparisons else None,
