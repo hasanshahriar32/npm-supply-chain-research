@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_d53fada4c18b028e",
+    "path": ".github/workflows/lock.yml",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/.github/workflows/lock.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:59.235Z",
+  "content": "name: 'Lock Threads'\n\non:\n  schedule:\n    - cron: '20 1/3 * * *'\n\njobs:\n  lock:\n    runs-on: ubuntu-latest\n    env:\n      YARN_ENABLE_SCRIPTS: false\n    steps:\n      - uses: dessant/lock-threads@c1b35aecc5cdb1a34539d14196df55838bb2f836\n        with:\n          github-token: ${{ secrets.GH_PAT_BOT }}\n          issue-inactive-days: '7'\n          issue-comment: >\n            This thread has been automatically locked since there has not been\n            any recent activity after it was closed. Please open a new issue\n            if you think you have a related problem or query.\n          pr-inactive-days: '2'\n          pr-comment: >\n            This pull request has been automatically locked since there\n            has not been any recent activity after it was closed.\n            Please open a new issue for related bugs.\n",
+  "is_error": false,
+  "error": null
+}

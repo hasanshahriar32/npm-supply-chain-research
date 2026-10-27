@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A080",
+    "commit_sha": "1dec622022b85b10865774f3e7d98babb66ba550",
+    "key": "A080__file_2f2dcee4f3f279ea",
+    "path": ".github/workflows/renovate.yml",
+    "repo": "portabletext/to-html",
+    "url": "https://raw.githubusercontent.com/portabletext/to-html/1dec622022b85b10865774f3e7d98babb66ba550/.github/workflows/renovate.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:01.724Z",
+  "content": "name: Add changeset to Renovate updates\n\non:\n  pull_request_target:\n    types: [opened, synchronize]\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read # for checkout\n\njobs:\n  call:\n    uses: portabletext/.github/.github/workflows/changesets-from-conventional-commits.yml@a311e91e5c045a8986adf91bb0d3e35808e1704c # main\n    if: github.event.pull_request.user.login == 'renovate[bot]'\n    secrets: inherit\n",
+  "is_error": false,
+  "error": null
+}

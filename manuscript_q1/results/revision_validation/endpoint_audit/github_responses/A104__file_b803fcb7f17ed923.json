@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A104",
+    "commit_sha": "9ccc71df10c3349100bfdd79c57ac239b48c835b",
+    "key": "A104__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "mweibel/lcov-result-merger",
+    "url": "https://raw.githubusercontent.com/mweibel/lcov-result-merger/9ccc71df10c3349100bfdd79c57ac239b48c835b/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:26.503Z",
+  "content": "name: CI\n\non:\n  push:\n    branches: [ 'master', 'develop', 'v*', '*.x' ]\n  pull_request:\n  workflow_call:\n  workflow_dispatch:\n\njobs:\n  test-linux:\n    name: Test Linux\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: [ 20.x, 22.x, 24.x ]\n\n    steps:\n      - uses: actions/checkout@v5\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n      - name: Run Tests (Node ${{ matrix.node-version }})\n        run: |\n          npm install\n          npm run test:coverage\n      - name: Coveralls\n        uses: coverallsapp/github-action@master\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n\n  test-windows:\n    name: Test Windows OS\n    runs-on: windows-latest\n\n    strategy:\n      matrix:\n        node-version: [ 20.x, 22.x, 24.x ]\n\n    steps:\n      - uses: actions/checkout@v5\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n      - name: Run Tests (Node ${{ matrix.node-version }})\n        run: |\n          npm install\n          npm run test\n",
+  "is_error": false,
+  "error": null
+}

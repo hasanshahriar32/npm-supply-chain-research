@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A017",
+    "commit_sha": "4b071d3e54d466a4059de89006c752da782c8b02",
+    "key": "A017__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "lukeed/totalist",
+    "url": "https://raw.githubusercontent.com/lukeed/totalist/4b071d3e54d466a4059de89006c752da782c8b02/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:59.628Z",
+  "content": "name: CI\n\non: push\n\njobs:\n  test:\n    name: Node.js v${{ matrix.nodejs }} (${{ matrix.os }})\n    runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        nodejs: [8, 10, 12, 14]\n        os: [ubuntu-latest, windows-latest, macOS-latest]\n    steps:\n    - uses: actions/checkout@v1\n      with:\n        fetch-depth: 1\n\n    - uses: actions/setup-node@v1\n      with:\n        node-version: ${{ matrix.nodejs }}\n\n    - name: Install\n      run: |\n        npm install\n        npm install -g nyc\n\n    - name: Test w/ Coverage\n      run: npx nyc --include=src npm test\n\n    - name: Report\n      if: matrix.nodejs >= 14 && matrix.os == 'ubuntu-latest'\n      run: |\n        npx nyc report --reporter=text-lcov > coverage.lcov\n        bash <(curl -s https://codecov.io/bash)\n      env:\n        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

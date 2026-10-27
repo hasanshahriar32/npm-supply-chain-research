@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_1df421f02f91b743",
+    "path": ".github/workflows/failureNotifications.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/failureNotifications.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_1df421f02f91b743.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:11.947Z",
+  "content": "name: failureNotifications\non:\n  workflow_run:\n    workflows:\n      - publish\n      - create-github-release\n    types:\n      - completed\njobs:\n  failure-notify:\n    runs-on: ubuntu-latest\n    if: ${{ github.event.workflow_run.conclusion == 'failure' }}\n    steps:\n      - name: Announce Failure\n        id: slack\n        uses: slackapi/slack-github-action@v1.26.0\n        env:\n          # for non-CLI-team-owned plugins, you can send this anywhere you like\n          SLACK_WEBHOOK_URL: ${{ secrets.CLI_ALERTS_SLACK_WEBHOOK }}\n          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK\n        with:\n          payload: |\n            {\n              \"text\": \"${{ github.event.workflow_run.name }} failed: ${{ github.event.workflow_run.repository.name }}\",\n              \"blocks\": [\n                {\n                  \"type\": \"header\",\n                  \"text\": {\n                    \"type\": \"plain_text\",\n                    \"text\": \":bh-alert: ${{ github.event.workflow_run.name }} failed: ${{ github.event.workflow_run.repository.name }} :bh-alert:\"\n                  }\n                },\n                {\n                  \"type\": \"section\",\n                  \"text\": {\n                    \"type\": \"mrkdwn\",\n                    \"text\": \"Repo: ${{ github.event.workflow_run.repository.html_url }}\\nWorkflow name: `${{ github.event.workflow_run.name }}`\\nJob url: ${{ github.event.workflow_run.html_url }}\"\n                  }\n                }\n              ]\n            }\n",
+  "is_error": false,
+  "error": null
+}

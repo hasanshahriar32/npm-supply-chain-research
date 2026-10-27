@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A106",
+    "commit_sha": "119ab9d3a22dff6f1492f2556ec5e8077a3c6db1",
+    "key": "A106__file_b71166ed0f585913",
+    "path": ".github/workflows/pull-request.yml",
+    "repo": "npm/metavuln-calculator",
+    "url": "https://raw.githubusercontent.com/npm/metavuln-calculator/119ab9d3a22dff6f1492f2556ec5e8077a3c6db1/.github/workflows/pull-request.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:29.785Z",
+  "content": "# This file is automatically added by @npmcli/template-oss. Do not edit.\n\nname: Pull Request\n\non:\n  pull_request:\n    types:\n      - opened\n      - reopened\n      - edited\n      - synchronize\n\npermissions:\n  contents: read\n\njobs:\n  commitlint:\n    name: Lint Commits\n    if: github.repository_owner == 'npm'\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: bash\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n      - name: Setup Git User\n        run: |\n          git config --global user.email \"npm-cli+bot@github.com\"\n          git config --global user.name \"npm CLI robot\"\n      - name: Setup Node\n        uses: actions/setup-node@v6\n        id: node\n        with:\n          node-version: 26.x\n          check-latest: contains('26.x', '.x')\n      - name: Install Latest npm\n        uses: ./.github/actions/install-latest-npm\n        with:\n          node: ${{ steps.node.outputs.node-version }}\n      - name: Install Dependencies\n        run: npm i --ignore-scripts --no-audit --no-fund\n      - name: Run Commitlint on Commits\n        id: commit\n        continue-on-error: true\n        run: npx --offline commitlint -V --from 'origin/${{ github.base_ref }}' --to ${{ github.event.pull_request.head.sha }}\n      - name: Run Commitlint on PR Title\n        if: steps.commit.outcome == 'failure'\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: echo \"$PR_TITLE\" | npx --offline commitlint -V\n",
+  "is_error": false,
+  "error": null
+}

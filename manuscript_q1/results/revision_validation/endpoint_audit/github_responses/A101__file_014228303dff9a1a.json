@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A101",
+    "commit_sha": "6c10a2b66ebadb8250039d078ad2a53e52753a6e",
+    "key": "A101__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "i18next/i18next-parser",
+    "url": "https://raw.githubusercontent.com/i18next/i18next-parser/6c10a2b66ebadb8250039d078ad2a53e52753a6e/.github/workflows/node.js.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:23.734Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n    types: [opened, synchronize, reopened, ready_for_review]\n    branches:\n      - '**'\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [18.x, 20.x, 22.x]\n    steps:\n      - uses: actions/checkout@v4\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v4\n        with:\n          cache: yarn\n          node-version: ${{ matrix.node-version }}\n      - name: Install dependencies\n        run: yarn install\n      - name: Prettier\n        run: yarn prettify\n      - name: Tests\n        run: |\n          yarn test:cli\n          yarn test\n      - name: Build\n        run: yarn build\n      - name: Coverage\n        run: yarn coverage\n      - uses: codecov/codecov-action@v5\n        with:\n          name: node-${{ matrix.node-version }}\n          fail_ci_if_error: false\n",
+  "is_error": false,
+  "error": null
+}

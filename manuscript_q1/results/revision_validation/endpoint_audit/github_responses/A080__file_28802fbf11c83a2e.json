@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A080",
+    "commit_sha": "1dec622022b85b10865774f3e7d98babb66ba550",
+    "key": "A080__file_28802fbf11c83a2e",
+    "path": ".github/workflows/deploy.yml",
+    "repo": "portabletext/to-html",
+    "url": "https://raw.githubusercontent.com/portabletext/to-html/1dec622022b85b10865774f3e7d98babb66ba550/.github/workflows/deploy.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:01.711Z",
+  "content": "name: Deploy to GitHub Pages\n\non:\n  release:\n    types: [published]\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read\n\njobs:\n  deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/create-github-app-token@v3\n        id: generate-token\n        with:\n          app-id: ${{ secrets.ECOSCRIPT_APP_ID }}\n          private-key: ${{ secrets.ECOSCRIPT_APP_PRIVATE_KEY }}\n      - uses: actions/checkout@v7\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v7\n        with:\n          cache: pnpm\n          node-version: lts/*\n      - run: pnpm install\n      - run: pnpm build\n      - run: pnpm docs:build\n      - uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4\n        with:\n          github_token: ${{ steps.generate-token.outputs.token }}\n          publish_dir: ./docs\n",
+  "is_error": false,
+  "error": null
+}

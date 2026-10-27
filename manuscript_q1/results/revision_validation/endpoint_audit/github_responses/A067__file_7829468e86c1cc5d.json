@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A067",
+    "commit_sha": "5a413f1cab2650357b43ba580fe319f8fea113c5",
+    "key": "A067__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "emmatown/sembear",
+    "url": "https://raw.githubusercontent.com/emmatown/sembear/5a413f1cab2650357b43ba580fe319f8fea113c5/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:43.721Z",
+  "content": "name: CI\n\non: [push, pull_request]\n\njobs:\n  test:\n    name: Tests\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@main\n\n      - name: Set Node.js 14.x\n        uses: actions/setup-node@main\n        with:\n          node-version: 14.x\n\n      - name: Install Yarn\n        run: npm install --global yarn\n\n      - name: Install Dependencies\n        run: yarn\n\n      - name: Run Tests\n        run: yarn jest --coverage\n",
+  "is_error": false,
+  "error": null
+}

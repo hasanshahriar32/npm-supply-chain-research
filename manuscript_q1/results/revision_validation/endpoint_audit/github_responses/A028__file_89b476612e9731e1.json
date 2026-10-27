@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A028",
+    "commit_sha": "b95fe6a022713e008d075c6ced7dbce8aa917d53",
+    "key": "A028__file_89b476612e9731e1",
+    "path": ".github/workflows/autofix.yml",
+    "repo": "unjs/rc9",
+    "url": "https://raw.githubusercontent.com/unjs/rc9/b95fe6a022713e008d075c6ced7dbce8aa917d53/.github/workflows/autofix.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:09.620Z",
+  "content": "name: autofix.ci\non: { push: {}, pull_request: {} }\npermissions: { contents: read }\njobs:\n  autofix:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\n      - run: npm i -fg corepack && corepack enable\n      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\n        with: { node-version: lts/*, cache: \"pnpm\" }\n      - run: pnpm install\n      - run: pnpm format\n      - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8\n        with: { commit-message: \"chore: apply automated updates\" }\n",
+  "is_error": false,
+  "error": null
+}

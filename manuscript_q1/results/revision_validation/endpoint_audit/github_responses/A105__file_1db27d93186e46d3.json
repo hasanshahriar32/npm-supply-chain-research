@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A105",
+    "commit_sha": "c5329a5185895434839e05f4232f6267d52f2ead",
+    "key": "A105__file_1db27d93186e46d3",
+    "path": ".github/workflows/tests.yml",
+    "repo": "node-red/node-red-admin",
+    "url": "https://raw.githubusercontent.com/node-red/node-red-admin/c5329a5185895434839e05f4232f6267d52f2ead/.github/workflows/tests.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:29.648Z",
+  "content": "# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node\n# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions\n\nname: Run tests\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [18, 20, 22, 24]\n    steps:\n    - uses: actions/checkout@v4\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n    - name: Install Dependencies\n      run: npm install\n    - name: Run tests\n      run: |\n        npm run test\n        npm run coverage\n    - name: Publish to coveralls.io\n      if: ${{ matrix.node-version == 20 }}\n      uses: coverallsapp/github-action@v2\n      with:\n        github-token: ${{ github.token }}\n",
+  "is_error": false,
+  "error": null
+}

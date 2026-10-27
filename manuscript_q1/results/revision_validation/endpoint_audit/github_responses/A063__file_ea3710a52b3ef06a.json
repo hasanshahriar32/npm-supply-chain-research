@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A063",
+    "commit_sha": "f6bfe63c90a26589edc9c136df7d4212049668af",
+    "key": "A063__file_ea3710a52b3ef06a",
+    "path": ".github/workflows/semantic-release.yml",
+    "repo": "Berkmann18/json-fixer",
+    "url": "https://raw.githubusercontent.com/Berkmann18/json-fixer/f6bfe63c90a26589edc9c136df7d4212049668af/.github/workflows/semantic-release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:37.917Z",
+  "content": "name: Semantic Release\n\non:\n  push:\n    branches: [master]\n\njobs:\n  build-and-deploy:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v2\n      - name: Setup Node\n        uses: actions/setup-node@v1\n        with:\n          node-version: '12.x'\n      - run: |\n          npm ci\n          npm run build\n      - name: Semantic Release\n        uses: cycjimmy/semantic-release-action@v2\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

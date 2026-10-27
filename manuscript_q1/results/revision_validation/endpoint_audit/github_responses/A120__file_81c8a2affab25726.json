@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_81c8a2affab25726",
+    "path": ".github/workflows/e2e-nm-babel-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-nm-babel-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_81c8a2affab25726.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.224Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-nm-babel-workflow.yml\n    - scripts/e2e-setup-ci.sh\n    - packages/yarnpkg-nm/sources/hoist.ts\n    - packages/yarnpkg-nm/sources/buildNodeModulesTree.ts\n    - packages/plugin-nm/sources/NodeModulesLinker.ts\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-nm-babel-workflow.yml\n    - scripts/e2e-setup-ci.sh\n    - packages/yarnpkg-nm/sources/hoist.ts\n    - packages/yarnpkg-nm/sources/buildNodeModulesTree.ts\n    - packages/plugin-nm/sources/NodeModulesLinker.ts\n\nname: 'E2E NM Babel Install'\njobs:\n  chore:\n    strategy:\n      matrix:\n        platform:\n        - ubuntu-latest\n        - windows-latest\n\n    name: 'Validating Babel install via node-modules linker on ${{matrix.platform}}'\n    runs-on: ${{matrix.platform}}\n\n    steps:\n    - name: Enable git longpaths\n      run: git config --global core.longpaths true\n\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running node_modules install with self-validation'\n      run: |\n        source scripts/e2e-setup-ci.sh nm\n        git clone https://github.com/babel/babel.git\n        cd babel\n        yarn config unset yarnPath\n        NM_DEBUG_LEVEL=1 yarn\n      shell: bash\n",
+  "is_error": false,
+  "error": null
+}

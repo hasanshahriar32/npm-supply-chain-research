@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A053",
+    "commit_sha": "5e2e70417f655a70c592b55590ac24f9c995fb11",
+    "key": "A053__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "sveltejs/acorn-typescript",
+    "url": "https://raw.githubusercontent.com/sveltejs/acorn-typescript/5e2e70417f655a70c592b55590ac24f9c995fb11/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:30.836Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n      - main\n\npermissions: {}\njobs:\n  release:\n    # prevents this action from running on forks\n    if: github.repository == 'sveltejs/acorn-typescript'\n    permissions:\n      contents: write # to create release (changesets/action)\n      id-token: write # OpenID Connect token needed for provenance\n      pull-requests: write # to create pull request (changesets/action)\n    name: Release\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout Repo\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits\n          fetch-depth: 0\n      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0\n      - name: Setup Node.js\n        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n        with:\n          node-version: 24.x\n          cache: pnpm\n\n      - run: pnpm install --frozen-lockfile\n\n      - name: Create Release Pull Request or Publish to npm\n        id: changesets\n        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2\n        with:\n          # This expects you to have a script called release which does a build for your packages and calls changeset publish\n          publish-script: pnpm changeset:release\n          version-script: pnpm changeset:version\n        env:\n          NPM_CONFIG_PROVENANCE: true\n\n      # TODO alert discord\n      # - name: Send a Slack notification if a publish happens\n      #   if: steps.changesets.outputs.published == 'true'\n      #   # You can do something when a publish happens.\n      #   run: my-slack-bot send-notification --message \"A new version of ${GITHUB_REPOSITORY} was published!\"\n",
+  "is_error": false,
+  "error": null
+}

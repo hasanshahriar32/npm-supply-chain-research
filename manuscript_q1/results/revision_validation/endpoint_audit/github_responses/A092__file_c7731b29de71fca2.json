@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A092",
+    "commit_sha": "2742ac4678781ee982bc4cdb428457b36163b6b5",
+    "key": "A092__file_c7731b29de71fca2",
+    "path": ".github/workflows/website.yml",
+    "repo": "alibaba/ice",
+    "url": "https://raw.githubusercontent.com/alibaba/ice/2742ac4678781ee982bc4cdb428457b36163b6b5/.github/workflows/website.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:15.298Z",
+  "content": "name: Build Website\non:\n  push:\n    paths:\n      - 'website/**'\n    branches:\n      - master\n  workflow_dispatch:\n\n# 任务\njobs:\n  build-and-deploy:\n    # 服务器环境：最新版 Ubuntu\n    runs-on: ubuntu-latest\n    steps:\n      # 拉取代码\n      - uses: actions/checkout@v3\n        with:\n          fetch-depth: 0\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Use Node.js 16.x\n        uses: actions/setup-node@v3\n        with:\n          node-version: 16.x\n          cache: 'pnpm'\n\n      - run: pnpm install --filter=./website\n\n      - run: cd website && pnpm build\n\n      # 部署到 GitHub Pages\n      - name: Deploy\n        uses: JamesIves/github-pages-deploy-action@4.1.0\n        if: github.ref == 'refs/heads/master'\n        with:\n          BRANCH: gh-pages\n          FOLDER: website/build\n          clean-exclude: ice.png\n",
+  "is_error": false,
+  "error": null
+}

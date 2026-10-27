@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A039",
+    "commit_sha": "17ee569c3809adab91a5228d6411d118864bce57",
+    "key": "A039__file_914da273e1d93625",
+    "path": ".github/workflows/dev.yml",
+    "repo": "gulpjs/parse-node-version",
+    "url": "https://raw.githubusercontent.com/gulpjs/parse-node-version/17ee569c3809adab91a5228d6411d118864bce57/.github/workflows/dev.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:21.515Z",
+  "content": "name: dev\non:\n  pull_request:\n  push:\n    branches:\n      - main\nenv:\n  CI: true\n\njobs:\n  test:\n    name: Tests for Node ${{ matrix.node }} on ${{ matrix.os }}\n    runs-on: ${{ matrix.os }}\n\n    strategy:\n      fail-fast: false\n      matrix:\n        node: [22, 24, 26]\n        os: [ubuntu-latest, windows-latest, macos-latest]\n\n    steps:\n      - name: Clone repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n\n      - name: Set Node.js version\n        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n        with:\n          node-version: ${{ matrix.node }}\n\n      - name: Check node version\n        run: node --version\n\n      - name: Check npm version\n        run: npm --version\n\n      - name: Install npm dependencies\n        run: npm ci\n\n      - name: Run lint\n        run: npm run lint\n\n      - name: Run tests\n        run: npm test\n\n      - name: Check format\n        run: npm run format-check\n\n      - name: Coveralls\n        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n          flag-name: ${{matrix.os}}-node-${{ matrix.node }}\n          parallel: true\n\n  coveralls:\n    needs: test\n    name: Finish up\n\n    runs-on: ubuntu-latest\n    steps:\n      - name: Coveralls Finished\n        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n          parallel-finished: true\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A080",
+    "commit_sha": "1dec622022b85b10865774f3e7d98babb66ba550",
+    "key": "A080__file_9081e470dec7c9fa",
+    "path": ".github/workflows/format-if-needed.yml",
+    "repo": "portabletext/to-html",
+    "url": "https://raw.githubusercontent.com/portabletext/to-html/1dec622022b85b10865774f3e7d98babb66ba550/.github/workflows/format-if-needed.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:01.711Z",
+  "content": "name: Auto format\n\non:\n  push:\n    branches: [main]\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read # for checkout\n\njobs:\n  if-needed:\n    uses: portabletext/.github/.github/workflows/format.yml@a311e91e5c045a8986adf91bb0d3e35808e1704c # main\n    secrets: inherit\n",
+  "is_error": false,
+  "error": null
+}

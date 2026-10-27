@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A049",
+    "commit_sha": "0dcd129adb06743d5005245c0e39631f13b86251",
+    "key": "A049__file_e3eb95b1bd081edf",
+    "path": ".github/workflows/js-test-and-release.yml",
+    "repo": "multiformats/js-multiformats",
+    "url": "https://raw.githubusercontent.com/multiformats/js-multiformats/0dcd129adb06743d5005245c0e39631f13b86251/.github/workflows/js-test-and-release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:26.045Z",
+  "content": "name: test & maybe release\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  id-token: write\n  packages: write\n  pull-requests: write\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}\n  cancel-in-progress: true\n\njobs:\n  js-test-and-release:\n    uses: ipdxco/unified-github-workflows/.github/workflows/js-test-and-release.yml@v1.0\n    secrets:\n      DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}\n      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}\n      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n      UCI_GITHUB_TOKEN: ${{ secrets.UCI_GITHUB_TOKEN }}\n      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

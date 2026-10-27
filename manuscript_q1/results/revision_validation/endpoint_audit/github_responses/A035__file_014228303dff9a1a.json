@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A035",
+    "commit_sha": "c8df708b78b46553bc4a0fbf1baf4ffc10cef8bd",
+    "key": "A035__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "d3/d3-zoom",
+    "url": "https://raw.githubusercontent.com/d3/d3-zoom/c8df708b78b46553bc4a0fbf1baf4ffc10cef8bd/.github/workflows/node.js.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:17.237Z",
+  "content": "# https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions\n\nname: Node.js CI\n\non:\n  push:\n    branches: [ main ]\n  pull_request:\n    branches: [ main ]\n\njobs:\n  build:\n\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: [14.x]\n\n    steps:\n    - uses: actions/checkout@v2\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v1\n      with:\n        node-version: ${{ matrix.node-version }}\n    - run: yarn --frozen-lockfile\n    - run: |\n        echo ::add-matcher::.github/eslint.json\n        yarn run eslint src test --format=compact\n    - run: yarn test\n",
+  "is_error": false,
+  "error": null
+}

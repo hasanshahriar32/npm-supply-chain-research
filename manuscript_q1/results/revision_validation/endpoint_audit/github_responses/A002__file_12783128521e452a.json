@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A002",
+    "commit_sha": "c6dc5ed55654dfa6e006a9817b48db1f80d20a6e",
+    "key": "A002__file_12783128521e452a",
+    "path": ".github/workflows/codeql.yml",
+    "repo": "arthurfiorette/tinylibs",
+    "url": "https://raw.githubusercontent.com/arthurfiorette/tinylibs/c6dc5ed55654dfa6e006a9817b48db1f80d20a6e/.github/workflows/codeql.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:45.596Z",
+  "content": "name: 'CodeQL'\n\non:\n  push:\n    branches: [main]\n    paths: ['**.js', '**.jsx', '**.ts', '**.tsx']\n  pull_request:\n    branches: [main]\n  schedule:\n    - cron: '0 0/12 * * *'\n\npermissions: write-all\n\njobs:\n  analyze:\n    name: Analyze\n    runs-on: ubuntu-latest\n\n    strategy:\n      fail-fast: false\n      matrix:\n        language: ['javascript']\n\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@v6\n\n      - name: Initialize CodeQL\n        uses: github/codeql-action/init@v4\n        with:\n          languages: ${{ matrix.language }}\n\n      - name: Setup pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Setup node and restore cached dependencies\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: '.nvmrc'\n          cache: 'pnpm'\n\n      - name: Install packages\n        run: pnpm install --frozen-lockfile\n\n      - name: Build\n        run: pnpm build\n\n      - name: Perform CodeQL Analysis\n        uses: github/codeql-action/analyze@v4\n",
+  "is_error": false,
+  "error": null
+}

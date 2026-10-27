@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A018",
+    "commit_sha": "bde04654c082c3ba4a54ed57c29d91fbc59e54a9",
+    "key": "A018__file_e98936aa52a6dd74",
+    "path": ".github/workflows/nodejs.yml",
+    "repo": "matthewp/robot",
+    "url": "https://raw.githubusercontent.com/matthewp/robot/bde04654c082c3ba4a54ed57c29d91fbc59e54a9/.github/workflows/nodejs.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:59.521Z",
+  "content": "name: Node CI\n\non: [push]\n\njobs:\n  build:\n\n    runs-on: ubuntu-22.04\n\n    strategy:\n      matrix:\n        node-version: [20.x, 22.x]\n\n    steps:\n    - uses: actions/checkout@v1\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v1\n      with:\n        node-version: ${{ matrix.node-version }}\n    - name: Install\n      run: npm ci\n    - name: Bundle size\n      run: npm run bundlesize --workspaces --if-present\n    - name: Test\n      run: npm run test --workspaces --if-present\n",
+  "is_error": false,
+  "error": null
+}

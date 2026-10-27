@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A110",
+    "commit_sha": "ad916e75555cb08427f12d59efecb18cfb1e3906",
+    "key": "A110__file_2f2dcee4f3f279ea",
+    "path": ".github/workflows/renovate.yml",
+    "repo": "sanity-io/ui",
+    "url": "https://raw.githubusercontent.com/sanity-io/ui/ad916e75555cb08427f12d59efecb18cfb1e3906/.github/workflows/renovate.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A110__file_2f2dcee4f3f279ea.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:16.860Z",
+  "content": "name: Renovate\n\non:\n  schedule:\n    - cron: '0 */2 * * *' # Every 2 hours\n  pull_request:\n    types: [closed]\n    branches: [main]\n  issues:\n    types: [edited]\n  workflow_dispatch:\n\nconcurrency:\n  group: ${{ github.workflow }}\n\npermissions:\n  contents: read\n\njobs:\n  renovate:\n    # Filter out noise: only run for schedule, manual dispatch, merged Renovate PRs,\n    # and human-edited issues (not bot updates to the Dependency Dashboard).\n    if: >-\n      github.event_name == 'schedule' ||\n      github.event_name == 'workflow_dispatch' ||\n      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'renovate/')) ||\n      (github.event_name == 'issues' && github.event.sender.type != 'Bot')\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/create-github-app-token@v3 # zizmor: ignore[github-app]\n        id: app-token\n        with:\n          client-id: ${{ vars.ECOSPARK_CLIENT_ID }}\n          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}\n\n      - uses: actions/checkout@v7\n        with:\n          persist-credentials: false\n\n      - name: Generate Renovate runner config\n        id: config\n        env:\n          REPOSITORY: ${{ github.repository }}\n        run: |\n          CONFIG_FILE=\"$GITHUB_WORKSPACE/.renovate-runner-config.json5\"\n\n          cat > \"$CONFIG_FILE\" <<'EOF'\n          {\n            $schema: \"https://docs.renovatebot.com/renovate-schema.json\",\n            onboarding: false,\n            requireConfig: \"optional\",\n          EOF\n\n          echo \"  repositories: [\\\"$REPOSITORY\\\"],\" >> \"$CONFIG_FILE\"\n          echo '}' >> \"$CONFIG_FILE\"\n\n          echo \"Generated config:\"\n          cat \"$CONFIG_FILE\"\n\n      - name: Self-hosted Renovate\n        uses: renovatebot/github-action@a63d9a7bc606f7336fd20b47f2f32259a35e6213 # v46.3.9\n        with:\n          token: ${{ steps.app-token.outputs.token }}\n          configurationFile: .renovate-runner-config.json5\n        env:\n          GITHUB_COM_TOKEN: ${{ github.token }}\n          NODE_OPTIONS: '--max-old-space-size=4096'\n          LOG_LEVEL: debug\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A050",
+    "commit_sha": "a395f53aa4763170636bee90d50b38f700f7c84a",
+    "key": "A050__file_7ae45ad102eab3b6",
+    "path": "package.json",
+    "repo": "orchidjs/unicode-variants",
+    "url": "https://raw.githubusercontent.com/orchidjs/unicode-variants/a395f53aa4763170636bee90d50b38f700f7c84a/package.json"
+  },
+  "observed_at_utc": "2026-10-27T14:26:28.327Z",
+  "content": "{\n  \"name\": \"@orchidjs/unicode-variants\",\n  \"version\": \"1.2.2\",\n  \"description\": \"Unicode variant string matching\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/orchidjs/unicode-variants.git\"\n  },\n  \"type\": \"module\",\n  \"main\": \"dist/cjs/index.js\",\n  \"module\": \"dist/esm/index.js\",\n  \"browser\": \"dist/umd/index.js\",\n  \"exports\": {\n    \".\": {\n      \"import\": \"./dist/esm/index.js\",\n      \"require\": \"./dist/cjs/index.js\"\n    },\n    \"./types/*\": \"./dist/types/*\",\n    \"./dist/*\": \"./dist/*\",\n    \"./package.json\": \"./package.json\"\n  },\n  \"scripts\": {\n    \"pretest\": \"npm run build\",\n    \"test\": \"jest --coverage\",\n    \"test:types\": \"attw --pack .\",\n    \"bench\": \"npx 0x -- node --zero-fill-buffers bench.mjs\",\n    \"build\": \"rm -rf dist && npm run build:esm && npm run build:cjs && npm run build:umd && npm run build:types\",\n    \"build:esm\": \"tsc -p .config/tsconfig.esm.json\",\n    \"build:cjs\": \"tsc -p .config/tsconfig.cjs.json && echo '{\\\"type\\\":\\\"commonjs\\\"}' > ./dist/cjs/package.json\",\n    \"build:umd\": \"npx rollup -c .config/rollup.config.mjs && echo '{\\\"type\\\":\\\"commonjs\\\"}' > ./dist/cjs/package.json\",\n    \"build:types\": \"tsc -p .config/tsconfig.types.json\"\n  },\n  \"keywords\": [\n    \"unicode\",\n    \"diacritic\",\n    \"diacritics\",\n    \"matching\",\n    \"search\",\n    \"find\",\n    \"string\",\n    \"text\"\n  ],\n  \"author\": \"\",\n  \"license\": \"Apache-2.0\",\n  \"files\": [\n    \"/dist\",\n    \"/lib\"\n  ],\n  \"browserslist\": [\n    \">= 0.5%\",\n    \"not dead\",\n    \"Chrome >= 60\",\n    \"Firefox >= 60\",\n    \"Firefox ESR\",\n    \"Edge >= 17\",\n    \"iOS >= 12\",\n    \"Safari >= 12\",\n    \"not Explorer <= 11\"\n  ],\n  \"devDependencies\": {\n    \"@arethetypeswrong/cli\": \"^0.17.0\",\n    \"@babel/core\": \"^7.26.0\",\n    \"@babel/preset-env\": \"^7.26.0\",\n    \"@babel/preset-typescript\": \"^7.26.0\",\n    \"@rollup/plugin-babel\": \"^6.0.4\",\n    \"@rollup/plugin-terser\": \"^0.4.4\",\n    \"0x\": \"^5.7.0\",\n    \"jest\": \"^29.7.0\",\n    \"rollup\": \"^4.26.0\",\n    \"typescript\": \"^5.7.1-rc\"\n  },\n  \"jest\": {\n    \"verbose\": true,\n    \"testMatch\": [\n      \"**/test/**/*.js\"\n    ]\n  },\n  \"publishConfig\": {\n    \"access\": \"public\",\n    \"registry\": \"https://registry.npmjs.org/\"\n  }\n}\n",
+  "is_error": false,
+  "error": null
+}

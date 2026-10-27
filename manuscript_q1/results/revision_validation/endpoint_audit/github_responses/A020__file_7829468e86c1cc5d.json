@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A020",
+    "commit_sha": "520c757a80aa10ff224e9c89b0917edfa811adcf",
+    "key": "A020__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "rcbyr/keen-slider",
+    "url": "https://raw.githubusercontent.com/rcbyr/keen-slider/520c757a80aa10ff224e9c89b0917edfa811adcf/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:01.977Z",
+  "content": "name: CI\n\non:\n  release:\n    types: [created]\n\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v1\n      - uses: actions/setup-node@v1\n        with:\n          node-version: 14\n      - run: npm install\n      - run: npm run build\n      - uses: JS-DevTools/npm-publish@v1\n        with:\n          token: ${{ secrets.NPM_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

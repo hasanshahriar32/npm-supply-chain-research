@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_decd473bad929d30",
+    "path": ".github/workflows/e2e-pnp-angular-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-pnp-angular-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_decd473bad929d30.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.492Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-pnp-angular-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E PnP Angular'\njobs:\n  chore:\n    name: 'Validating Angular'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        # TODO: Angular should be fixed to detect the correct package manager to install with\n        # but for now we need to specify it\n        yarn dlx -p @angular/cli@next ng new berry-angular --interactive=false --package-manager yarn\n\n        cd berry-angular\n\n        yarn ng build --aot\n",
+  "is_error": false,
+  "error": null
+}

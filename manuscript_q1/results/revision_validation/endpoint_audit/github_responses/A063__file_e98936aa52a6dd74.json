@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A063",
+    "commit_sha": "f6bfe63c90a26589edc9c136df7d4212049668af",
+    "key": "A063__file_e98936aa52a6dd74",
+    "path": ".github/workflows/nodejs.yml",
+    "repo": "Berkmann18/json-fixer",
+    "url": "https://raw.githubusercontent.com/Berkmann18/json-fixer/f6bfe63c90a26589edc9c136df7d4212049668af/.github/workflows/nodejs.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:37.970Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches: [master, dev]\n  pull_request:\n    branches: [master]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: ['lts/*', 'node']\n\n    steps:\n      - uses: actions/checkout@v2\n      - name: Set up Node ${{ matrix.node-version }} using nvm\n        uses: dcodeIO/setup-node-nvm@master\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: |\n          npm ci\n          npm run lint\n          npm run build --if-present\n      - run: npm t\n        env:\n          CI: true\n      - name: Codecov\n        uses: codecov/codecov-action@v1.0.7\n",
+  "is_error": false,
+  "error": null
+}

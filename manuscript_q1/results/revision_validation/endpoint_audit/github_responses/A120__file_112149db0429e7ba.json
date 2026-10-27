@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_112149db0429e7ba",
+    "path": ".github/workflows/e2e-create-vue-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-create-vue-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_112149db0429e7ba.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.688Z",
+  "content": "#\non:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-create-vue-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Create-Vue'\njobs:\n  chore:\n    name: 'Validating Create-Vue'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test (Vue 3)'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn dlx create-vue@3 vue-project --default --typescript --eslint-with-prettier\n        cd vue-project\n        yarn\n\n        yarn build\n        yarn lint\n\n    - name: 'Running the integration test (Vue 2)'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn dlx create-vue@2 vue-project --default --typescript\n        cd vue-project\n        yarn\n\n        yarn build\n      if: |\n        success() || failure()\n",
+  "is_error": false,
+  "error": null
+}

@@ -2,7 +2,9 @@
 
 This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
 
-Current handoff: [Task 20 — evidence reconciliation and empirical figure expansion](20_evidence_reconciliation_and_figures.md).
+Current handoff: [Task 21 — EMSE declarations and submission draft](21_emse_declarations_and_submission_draft.md). The scientific evidence baseline remains [Task 20 — evidence reconciliation and empirical figure expansion](20_evidence_reconciliation_and_figures.md).
+
+Proposed next work: [Task 22 — detailed journal improvement plan](22_journal_improvement_plan.md). This is a plan for new validation and manuscript restructuring, not a record of completed experiments.
 
 Review basis: [Task 19 — repository issues and figure assessment](19_repository_review_and_figure_assessment.md). Task 20 applies its corrections and expands scientific verification. Earlier build results remain historical technical checks.
 

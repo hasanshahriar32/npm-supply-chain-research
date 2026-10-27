@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A092",
+    "commit_sha": "2742ac4678781ee982bc4cdb428457b36163b6b5",
+    "key": "A092__file_4b56c7c159ef6d18",
+    "path": ".github/workflows/canary.yml",
+    "repo": "alibaba/ice",
+    "url": "https://raw.githubusercontent.com/alibaba/ice/2742ac4678781ee982bc4cdb428457b36163b6b5/.github/workflows/canary.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:15.195Z",
+  "content": "name: Publish canary\n\non:\n  push:\n    branches:\n      - release/**\n\njobs:\n  check_changeset:\n    name: Check Changeset exists\n    outputs:\n      status: ${{ steps.check.outcome }}\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout Branch\n        uses: actions/checkout@v4\n\n      - name: Check\n        id: check\n        continue-on-error: true\n        run: test \"$(ls -1 .changeset | wc -l)\" -gt \"2\"\n\n  canary:\n    name: Publish Canary\n    runs-on: ubuntu-latest\n    needs: check_changeset\n    if: needs.check_changeset.outputs.status == 'success'\n\n    strategy:\n      matrix:\n        node-version: [18]\n\n    steps:\n      - name: Checkout Branch\n        uses: actions/checkout@v4\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n          cache: 'pnpm'\n\n      - name: Setup\n        run: pnpm run setup\n\n      - name: Config npm\n        run: echo \"//registry.npmjs.org/:_authToken=${NPM_TOKEN}\" > .npmrc\n        env:\n          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n\n      - run: pnpm run release:snapshot\n",
+  "is_error": false,
+  "error": null
+}

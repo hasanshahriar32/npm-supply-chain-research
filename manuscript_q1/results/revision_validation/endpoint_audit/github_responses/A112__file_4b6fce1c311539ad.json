@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A112",
+    "commit_sha": "a6c2fdf97bd9a37687f31fb3807d23323d877bd8",
+    "key": "A112__file_4b6fce1c311539ad",
+    "path": ".github/workflows/update-snapshots.yml",
+    "repo": "sindresorhus/eslint-plugin-unicorn",
+    "url": "https://raw.githubusercontent.com/sindresorhus/eslint-plugin-unicorn/a6c2fdf97bd9a37687f31fb3807d23323d877bd8/.github/workflows/update-snapshots.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A112__file_4b6fce1c311539ad.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.744Z",
+  "content": "name: autofix.ci # needed to securely identify the workflow\non:\n  pull_request:\npermissions: {}\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\njobs:\n  update-snapshots:\n    if: github.repository == 'sindresorhus/eslint-plugin-unicorn'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version: 24\n      - run: npm install --legacy-peer-deps\n      - run: npm run lint\n      - run: rm -rf test/snapshots\n      - run: npm run fix:snapshots\n      - uses: autofix-ci/action@v1\n        with:\n          commit-message: \"Update snapshots\"\n",
+  "is_error": false,
+  "error": null
+}

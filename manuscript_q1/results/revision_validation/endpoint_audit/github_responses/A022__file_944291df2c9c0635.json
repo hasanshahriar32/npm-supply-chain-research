@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A022",
+    "commit_sha": "e13ae0fa7e71feec88958ef5c5f6fa2e9239a291",
+    "key": "A022__file_944291df2c9c0635",
+    "path": ".github/workflows/ci.yaml",
+    "repo": "ruimarinho/google-libphonenumber",
+    "url": "https://raw.githubusercontent.com/ruimarinho/google-libphonenumber/e13ae0fa7e71feec88958ef5c5f6fa2e9239a291/.github/workflows/ci.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:02.421Z",
+  "content": "name: CI\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n    branches:\n      - '*'\n\njobs:\n  test:\n    name: Run Tests (Node ${{ matrix.node-version }})\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        node-version: [22, 24, 26]\n    steps:\n      - uses: actions/checkout@v5\n      - uses: actions/setup-node@v5\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm install\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

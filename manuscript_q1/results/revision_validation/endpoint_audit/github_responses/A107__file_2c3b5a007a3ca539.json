@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A107",
+    "commit_sha": "67b32d049d41dac10b8ccba96208af522d1c8f40",
+    "key": "A107__file_2c3b5a007a3ca539",
+    "path": ".github/workflows/release-integration.yml",
+    "repo": "npm/npm-profile",
+    "url": "https://raw.githubusercontent.com/npm/npm-profile/67b32d049d41dac10b8ccba96208af522d1c8f40/.github/workflows/release-integration.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:31.666Z",
+  "content": "# This file is automatically added by @npmcli/template-oss. Do not edit.\n\nname: Release Integration\n\non:\n  workflow_dispatch:\n    inputs:\n      releases:\n        required: true\n        type: string\n        description: 'A json array of releases. Required fields: publish: tagName, publishTag. publish check: pkgName, version'\n  workflow_call:\n    inputs:\n      releases:\n        required: true\n        type: string\n        description: 'A json array of releases. Required fields: publish: tagName, publishTag. publish check: pkgName, version'\n    secrets:\n      PUBLISH_TOKEN:\n        required: true\n\npermissions:\n  contents: read\n  id-token: write\n\njobs:\n  publish:\n    name: Publish\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: bash\n    permissions:\n      id-token: write\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n        with:\n          ref: ${{ fromJSON(inputs.releases)[0].tagName }}\n      - name: Setup Git User\n        run: |\n          git config --global user.email \"npm-cli+bot@github.com\"\n          git config --global user.name \"npm CLI robot\"\n      - name: Setup Node\n        uses: actions/setup-node@v6\n        id: node\n        with:\n          node-version: 26.x\n          check-latest: contains('26.x', '.x')\n      - name: Install Latest npm\n        uses: ./.github/actions/install-latest-npm\n        with:\n          node: ${{ steps.node.outputs.node-version }}\n      - name: Install Dependencies\n        run: npm i --ignore-scripts --no-audit --no-fund\n      - name: Set npm authToken\n        run: npm config set '//registry.npmjs.org/:_authToken'=\\${PUBLISH_TOKEN}\n      - name: Publish\n        env:\n          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}\n          RELEASES: ${{ inputs.releases }}\n        run: |\n          EXIT_CODE=0\n\n          for release in $(echo $RELEASES | jq -r '.[] | @base64'); do\n            PUBLISH_TAG=$(echo \"$release\" | base64 --decode | jq -r .publishTag)\n            npm publish --provenance --tag=\"$PUBLISH_TAG\"\n            STATUS=$?\n            if [[ \"$STATUS\" -eq 1 ]]; then\n              EXIT_CODE=$STATUS\n            fi\n          done\n\n          exit $EXIT_CODE\n",
+  "is_error": false,
+  "error": null
+}

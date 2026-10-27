@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_b5e0854ed0838024",
+    "path": ".github/workflows/stale.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/stale.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_b5e0854ed0838024.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:12.102Z",
+  "content": "name: 'Close stale issues'\non:\n  schedule:\n    - cron: '30 1 * * *'\n  workflow_dispatch:\n\njobs:\n  stale:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/stale@v9\n        with:\n          stale-issue-message: 'This issue is stale because it has been open 30 days with no activity. Remove stale label or comment or this will be closed in 7 days.'\n          days-before-stale: 30\n          days-before-close: 7\n          exempt-issue-labels: 'bug,enhancement,announcement,help wanted,good first issue,waiting for interest,needs response'\n          # Disable marking PRs as stale\n          days-before-pr-stale: -1\n",
+  "is_error": false,
+  "error": null
+}

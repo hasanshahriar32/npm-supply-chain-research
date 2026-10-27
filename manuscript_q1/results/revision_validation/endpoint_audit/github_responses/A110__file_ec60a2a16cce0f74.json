@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A110",
+    "commit_sha": "ad916e75555cb08427f12d59efecb18cfb1e3906",
+    "key": "A110__file_ec60a2a16cce0f74",
+    "path": ".github/workflows/pkg-pr-new.yml",
+    "repo": "sanity-io/ui",
+    "url": "https://raw.githubusercontent.com/sanity-io/ui/ad916e75555cb08427f12d59efecb18cfb1e3906/.github/workflows/pkg-pr-new.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A110__file_ec60a2a16cce0f74.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:16.359Z",
+  "content": "name: Publish Pull Requests with pkg.pr.new\n\npermissions:\n  pull-requests: write\n\non:\n  push:\n    branches:\n      - main\n  pull_request:\n    types: [opened, synchronize, labeled]\n\njobs:\n  publish:\n    if: >\n      github.repository == 'sanity-io/ui' &&\n      (github.event_name == 'push' ||\n      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')))\n\n    runs-on: ubuntu-latest\n    env:\n      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}\n      TURBO_TEAM: ${{ vars.TURBO_TEAM }}\n    steps:\n      - uses: actions/checkout@v7\n      - uses: ./.github/actions/setup\n\n      - id: pre-flight\n        run: |\n          VERSION=\"$(jq -r .version packages/ui/package.json)-pkg.pr.new@$(git rev-parse --short HEAD)\"\n          echo \"version=${VERSION}\" >> \"$GITHUB_OUTPUT\"\n\n      - run: pnpm build\n        env:\n          PKG_VERSION: ${{ steps.pre-flight.outputs.version }}\n\n      - run: |\n          echo \"Publishing to pkg.pr.new\"\n          pnpm pnpx pkg-pr-new publish --pnpm ./packages/ui\n",
+  "is_error": false,
+  "error": null
+}

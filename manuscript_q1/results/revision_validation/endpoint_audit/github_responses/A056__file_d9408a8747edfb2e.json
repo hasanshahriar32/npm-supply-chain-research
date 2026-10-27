@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A056",
+    "commit_sha": "c14e0221b1e656c7bb35e7b3d4cdf188719a3599",
+    "key": "A056__file_d9408a8747edfb2e",
+    "path": ".github/workflows/check-skills.yml",
+    "repo": "TanStack/table",
+    "url": "https://raw.githubusercontent.com/TanStack/table/c14e0221b1e656c7bb35e7b3d4cdf188719a3599/.github/workflows/check-skills.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:32.597Z",
+  "content": "# check-skills.yml\n#\n# Validates @tanstack/intent skills on PRs that touch skills or artifacts.\n#\n# Staleness checking after a release is intentionally NOT automated here — run\n# `pnpm test:intent` (which calls `intent validate && intent stale`) locally\n# before cutting a release. Keeping this workflow validation-only means it\n# needs zero write permissions.\n\nname: Check Skills\n\non:\n  pull_request:\n    paths:\n      - 'skills/**'\n      - '**/skills/**'\n      - '_artifacts/**'\n      - '**/_artifacts/**'\n      - 'scripts/sync-skill-versions.mjs'\n      - 'scripts/typecheck-skill-snippets.mjs'\n      - 'scripts/skill-snippets-*.tsconfig.json'\n      - 'scripts/validate-skill-content.mjs'\n      - 'scripts/validate-skill-tree.mjs'\n      - 'scripts/skill-tree.mjs'\n      - 'scripts/tests/skill-tree.test.mjs'\n      - 'package.json'\n      - 'pnpm-lock.yaml'\n      - '.github/workflows/check-skills.yml'\n  workflow_dispatch: {}\n\npermissions:\n  contents: read\n\njobs:\n  validate:\n    name: Validate intent skills\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1\n        with:\n          persist-credentials: false\n\n      - name: Setup Node\n        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0\n        with:\n          node-version: 22.13.0\n\n      - name: Install pnpm\n        run: npm install --global \"$(node -p 'require(\"./package.json\").packageManager')\"\n\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile\n\n      - name: Validate skills and examples\n        run: pnpm test:skills\n",
+  "is_error": false,
+  "error": null
+}

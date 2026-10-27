@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A116",
+    "commit_sha": "8c73fe2f9269db6576525a1a901bdac0ceed534c",
+    "key": "A116__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "unassert-js/unassertify",
+    "url": "https://raw.githubusercontent.com/unassert-js/unassertify/8c73fe2f9269db6576525a1a901bdac0ceed534c/.github/workflows/node.js.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A116__file_014228303dff9a1a.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:27.376Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: [14.x, 16.x, 18.x]\n        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/\n\n    steps:\n      - uses: actions/checkout@v3\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v1\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm ci\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

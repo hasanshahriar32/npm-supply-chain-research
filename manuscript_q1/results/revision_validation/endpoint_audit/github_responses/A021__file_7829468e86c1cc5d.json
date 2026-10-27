@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A021",
+    "commit_sha": "b2a1dc9967b556f9a576ce0f7ded2a457ba4aefa",
+    "key": "A021__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "Richienb/char-regex",
+    "url": "https://raw.githubusercontent.com/Richienb/char-regex/b2a1dc9967b556f9a576ce0f7ded2a457ba4aefa/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:01.877Z",
+  "content": "name: CI\non:\n  - push\n  - pull_request\njobs:\n  test:\n    name: Node.js ${{ matrix.node-version }}\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        node-version:\n          - 20\n          - 18\n    steps:\n      - uses: actions/checkout@v2\n      - uses: actions/setup-node@v2\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm install\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

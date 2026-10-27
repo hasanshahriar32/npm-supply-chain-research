@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_7ae45ad102eab3b6",
+    "path": "package.json",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/package.json"
+  },
+  "observed_at_utc": "2026-10-27T14:26:57.713Z",
+  "content": "{\n  \"author\": \"Jaco Greeff <jacogr@gmail.com>\",\n  \"bugs\": \"https://github.com/polkadot-js/wasm/issues\",\n  \"engines\": {\n    \"node\": \">=18.14\"\n  },\n  \"homepage\": \"https://github.com/polkadot-js/wasm#readme\",\n  \"license\": \"Apache-2.0\",\n  \"packageManager\": \"yarn@4.6.0\",\n  \"private\": true,\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/polkadot-js/wasm.git\"\n  },\n  \"sideEffects\": false,\n  \"type\": \"module\",\n  \"version\": \"7.5.4\",\n  \"versions\": {\n    \"git\": \"7.5.4\",\n    \"npm\": \"7.5.4\"\n  },\n  \"workspaces\": [\n    \"packages/*\"\n  ],\n  \"scripts\": {\n    \"build\": \"yarn build:wasm\",\n    \"build:js\": \"./scripts/build-js.sh\",\n    \"build:release\": \"polkadot-ci-ghact-build\",\n    \"build:rollup\": \"polkadot-exec-rollup --config\",\n    \"build:wasm\": \"./scripts/build.sh\",\n    \"clean\": \"./scripts/clean.sh\",\n    \"deno\": \"yarn deno:build && yarn deno:check\",\n    \"deno:build\": \"WITH_DENO=1 yarn build\",\n    \"deno:check\": \"deno check --import-map=import_map.json mod.ts\",\n    \"lint\": \"polkadot-dev-run-lint\",\n    \"postinstall\": \"polkadot-dev-yarn-only\",\n    \"test\": \"yarn test:wasm-crypto:rust\",\n    \"test:js\": \"yarn test:wasm-crypto:js\",\n    \"test:wasm-crypto:deno\": \"deno test --allow-read --import-map=import_map.json packages/wasm-crypto/test/deno.ts\",\n    \"test:wasm-crypto:js\": \"yarn test:wasm-crypto:js:jest && yarn test:wasm-crypto:js:node\",\n    \"test:wasm-crypto:js:jest\": \"polkadot-dev-run-test --env node --loader ./packages/wasm-crypto/test/loader-build.js\",\n    \"test:wasm-crypto:js:node\": \"node --no-warnings --loader ./packages/wasm-crypto/test/loader-build.js ./packages/wasm-crypto/test/wasm.js && node --no-warnings --loader ./packages/wasm-crypto/test/loader-build.js ./packages/wasm-crypto/test/asm.js\",\n    \"test:wasm-crypto:rust\": \"cd packages/wasm-crypto && RUST_BACKTRACE=full cargo test --release -- --test-threads=1 --nocapture\"\n  },\n  \"devDependencies\": {\n    \"@polkadot/dev\": \"^0.83.3\",\n    \"@polkadot/util\": \"^14.0.1\",\n    \"@types/node\": \"^20.16.1\",\n    \"fflate\": \"^0.8.2\"\n  },\n  \"resolutions\": {\n    \"typescript\": \"^5.5.4\"\n  }\n}\n",
+  "is_error": false,
+  "error": null
+}

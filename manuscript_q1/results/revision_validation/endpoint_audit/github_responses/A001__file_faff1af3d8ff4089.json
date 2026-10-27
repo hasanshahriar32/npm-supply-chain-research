@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A001",
+    "commit_sha": "081aa8995d82321b8d5d4bb64f97d63cb04380d7",
+    "key": "A001__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "ai/nanoevents",
+    "url": "https://raw.githubusercontent.com/ai/nanoevents/081aa8995d82321b8d5d4bb64f97d63cb04380d7/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:43.105Z",
+  "content": "name: Test\non:\n  push:\n    branches:\n      - main\n      - next\n  pull_request:\npermissions:\n  contents: read\njobs:\n  full:\n    name: Node.js Latest Full\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout the repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: Install Node.js & pnpm\n        uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1.0.0\n        with:\n          version: 11\n          runtime: node@26\n      - name: Install dependencies\n        run: pnpm ci\n      - name: Run tests\n        run: pnpm test\n  short:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node:\n          - 24\n          - 22\n    name: Node.js ${{ matrix.node }} Quick\n    steps:\n      - name: Checkout the repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: Install Node.js & pnpm\n        uses: pnpm/setup@5d160c5bc68a09337ad0d5654e237e03253b5879 # v1.0.0\n        with:\n          version: 11\n          runtime: node@${{ matrix.node }}\n      - name: Install dependencies\n        run: pnpm ci\n      - name: Run unit tests\n        run: pnpm bnt\n",
+  "is_error": false,
+  "error": null
+}

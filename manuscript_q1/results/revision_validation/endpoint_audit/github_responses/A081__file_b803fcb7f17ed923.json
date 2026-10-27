@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A081",
+    "commit_sha": "dc7d06b07a2e65322a311fafb9642c8802575b7a",
+    "key": "A081__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "preactjs/preact-render-to-string",
+    "url": "https://raw.githubusercontent.com/preactjs/preact-render-to-string/dc7d06b07a2e65322a311fafb9642c8802575b7a/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:01.879Z",
+  "content": "name: CI\n\non:\n  workflow_dispatch:\n  pull_request:\n    branches:\n      - '**'\n  push:\n    branches:\n      - main\n\njobs:\n  build_test:\n    name: Build & Test\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n\n      - name: Update npm\n        run: npm install -g npm@11.11.1\n\n      - run: npm ci\n      - name: test\n        run: npm run test\n",
+  "is_error": false,
+  "error": null
+}

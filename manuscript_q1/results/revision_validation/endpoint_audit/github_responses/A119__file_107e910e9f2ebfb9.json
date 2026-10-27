@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A119",
+    "commit_sha": "879746fbbe6b8df9b5840e26c08fcf06a04f94ce",
+    "key": "A119__file_107e910e9f2ebfb9",
+    "path": ".github/workflows/lint.yml",
+    "repo": "yakovmeister/pdf2image",
+    "url": "https://raw.githubusercontent.com/yakovmeister/pdf2image/879746fbbe6b8df9b5840e26c08fcf06a04f94ce/.github/workflows/lint.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A119__file_107e910e9f2ebfb9.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:29.664Z",
+  "content": "name: Lint code\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v3\n      - name: Use Node.js 16.x\n        uses: actions/setup-node@v3\n        with:\n          node-version: 16.x\n      - run: npm install\n      - run: npm run lint\n",
+  "is_error": false,
+  "error": null
+}

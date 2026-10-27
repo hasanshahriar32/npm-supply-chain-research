@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A054",
+    "commit_sha": "79c68d31fc7dd133c086a1a483583fbc02b48636",
+    "key": "A054__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "syntax-tree/hast-util-embedded",
+    "url": "https://raw.githubusercontent.com/syntax-tree/hast-util-embedded/79c68d31fc7dd133c086a1a483583fbc02b48636/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:31.200Z",
+  "content": "name: main\non:\n  - pull_request\n  - push\njobs:\n  main:\n    name: ${{matrix.node}}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: ${{matrix.node}}\n      - run: npm install\n      - run: npm test\n      - uses: codecov/codecov-action@v3\n    strategy:\n      matrix:\n        node:\n          - lts/gallium\n          - node\n",
+  "is_error": false,
+  "error": null
+}

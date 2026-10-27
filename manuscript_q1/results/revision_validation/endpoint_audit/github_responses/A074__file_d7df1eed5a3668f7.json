@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A074",
+    "commit_sha": "547244f61dc04b77a90d4c627a079ae5a9ace138",
+    "key": "A074__file_d7df1eed5a3668f7",
+    "path": ".github/workflows/node-twenties.yml",
+    "repo": "ljharb/json-stable-stringify",
+    "url": "https://raw.githubusercontent.com/ljharb/json-stable-stringify/547244f61dc04b77a90d4c627a079ae5a9ace138/.github/workflows/node-twenties.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:52.651Z",
+  "content": "name: 'Tests: node.js >= 20'\n\non: [pull_request, push]\n\npermissions:\n  contents: read\n\njobs:\n  tests:\n    uses: ljharb/actions/.github/workflows/node.yml@main\n    with:\n      range: '>= 20'\n      type: minors\n      command: npm run tests-only\n\n  node:\n    name: 'node >= 20'\n    needs: [tests]\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n",
+  "is_error": false,
+  "error": null
+}

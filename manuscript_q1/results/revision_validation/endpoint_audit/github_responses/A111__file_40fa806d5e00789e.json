@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A111",
+    "commit_sha": "e0e0f9a6d7e92bcee25bd70b53cfde900e82da57",
+    "key": "A111__file_40fa806d5e00789e",
+    "path": ".github/workflows/reuse-compliance.yml",
+    "repo": "SAP/ui5-project",
+    "url": "https://raw.githubusercontent.com/SAP/ui5-project/e0e0f9a6d7e92bcee25bd70b53cfde900e82da57/.github/workflows/reuse-compliance.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A111__file_40fa806d5e00789e.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.409Z",
+  "content": "name: REUSE\n\non:\n  push:\n    branches:\n      - v4\n  pull_request:\n    branches:\n      - v4\n\n# No permissions are required for this workflow\npermissions: {}\n\njobs:\n  compliance-check:\n    name: Compliance Check\n    runs-on: ubuntu-latest\n    steps:\n    - uses: actions/checkout@v7\n    - name: Execute REUSE Compliance Check\n      uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0\n",
+  "is_error": false,
+  "error": null
+}

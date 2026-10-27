@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_fe970db0da97cc88",
+    "path": "packages/yarnpkg-libzip/package.json",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/packages/yarnpkg-libzip/package.json",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_fe970db0da97cc88.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:33.070Z",
+  "content": "{\n  \"name\": \"@yarnpkg/libzip\",\n  \"version\": \"3.2.2\",\n  \"license\": \"BSD-2-Clause\",\n  \"main\": \"./sources/sync.ts\",\n  \"browser\": \"./sources/async.ts\",\n  \"exports\": {\n    \".\": {\n      \"browser\": \"./sources/async.ts\",\n      \"default\": \"./sources/sync.ts\"\n    },\n    \"./package.json\": \"./package.json\"\n  },\n  \"scripts\": {\n    \"build:libzip:wasm\": \"cd ./artifacts && ./build.sh\",\n    \"postpack\": \"rm -rf lib\",\n    \"prepack\": \"run build:compile \\\"$(pwd)\\\"\",\n    \"release\": \"yarn npm publish\"\n  },\n  \"publishConfig\": {\n    \"main\": \"./lib/sync.js\",\n    \"browser\": \"./lib/async.js\",\n    \"exports\": {\n      \".\": {\n        \"browser\": \"./lib/async.js\",\n        \"default\": \"./lib/sync.js\"\n      },\n      \"./package.json\": \"./package.json\"\n    }\n  },\n  \"files\": [\n    \"/lib/**/*\"\n  ],\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/yarnpkg/berry.git\",\n    \"directory\": \"packages/yarnpkg-libzip\"\n  },\n  \"devDependencies\": {\n    \"@types/prettier\": \"1.19.0\",\n    \"globby\": \"^11.0.1\",\n    \"prettier\": \"^1.19.1\"\n  },\n  \"dependencies\": {\n    \"@types/emscripten\": \"^1.39.6\",\n    \"@yarnpkg/fslib\": \"workspace:^\",\n    \"tslib\": \"^2.4.0\"\n  },\n  \"peerDependencies\": {\n    \"@yarnpkg/fslib\": \"workspace:^\"\n  },\n  \"engines\": {\n    \"node\": \">=18.12.0\"\n  },\n  \"stableVersion\": \"3.2.2\"\n}\n",
+  "is_error": false,
+  "error": null
+}

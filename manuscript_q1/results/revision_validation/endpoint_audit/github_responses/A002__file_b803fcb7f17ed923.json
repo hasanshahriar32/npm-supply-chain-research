@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A002",
+    "commit_sha": "c6dc5ed55654dfa6e006a9817b48db1f80d20a6e",
+    "key": "A002__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "arthurfiorette/tinylibs",
+    "url": "https://raw.githubusercontent.com/arthurfiorette/tinylibs/c6dc5ed55654dfa6e006a9817b48db1f80d20a6e/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:45.625Z",
+  "content": "name: Code CI\n\non:\n  push:\n  pull_request:\n\njobs:\n  build:\n    name: Build and test code\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n\n      - name: Setup pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Setup node and restore cached dependencies\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: .nvmrc\n          cache: 'pnpm'\n\n      - name: Install packages\n        run: pnpm install --frozen-lockfile\n\n      # Build first to avoid broken monorepo dependencies\n      - name: Build\n        run: pnpm build\n\n      - name: Lint\n        run: pnpm lint-ci\n\n      - name: Test\n        run: pnpm test\n\n      - name: Publish to Codecov\n        uses: codecov/codecov-action@v6.0.0\n        with:\n          fail_ci_if_error: true\n          token: ${{ secrets.CODECOV_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,7 +1,7 @@
 r"""Programmatic verification suite for Q1 journal manuscript (IEEE TSE / TDSC / ACM TOSEM / EMSE).
 
 Enforces:
-1. Abstract word count (100 <= words <= 200) across submission standards.
+1. Abstract word count (150 <= words <= 250) for the EMSE target.
 2. PDF compilation and font embedding:
    - Zero overfull \hbox / \vbox warnings > 1 pt
    - Zero undefined citations or references
@@ -43,14 +43,14 @@ def check_abstract() -> dict:
     clean = content.replace(r"\begin{abstract}", "").replace(r"\end{abstract}", "").strip()
     words = clean.split()
     count = len(words)
-    passed = 100 <= count <= 200
+    passed = 150 <= count <= 250
     return {
         "check": "abstract_word_count",
         "word_count": count,
-        "min_allowed": 100,
-        "max_allowed": 200,
+        "min_allowed": 150,
+        "max_allowed": 250,
         "passed": passed,
-        "detail": f"Abstract contains {count} words (TSE range: 100-200 words)."
+        "detail": f"Abstract contains {count} words (EMSE range: 150-250 words)."
     }
 
 
@@ -272,6 +272,34 @@ def check_numerical_consistency() -> dict:
     }
 
 
+def check_submission_sections() -> dict:
+    errors = []
+    required = ("Statements and Declarations", "Data Availability", "Code Availability",
+                "Funding", "Competing Interests", "Ethics and Consent", "Use of AI Assistance",
+                "no external funding", "not yet available")
+    for stem in ("main_q1", "main_q1_anonymous"):
+        text = " ".join(subprocess.check_output(
+            ["pdftotext", str(Q1_DIR / f"{stem}.pdf"), "-"], text=True).split())
+        compact = re.sub(r"\s+", "", text).casefold()
+        for term in required:
+            if re.sub(r"\s+", "", term).casefold() not in compact:
+                errors.append(f"{stem}: missing {term}")
+        source = (Q1_DIR / f"{stem}.tex").read_text()
+        keywords = re.search(r"\\begin\{IEEEkeywords\}(.*?)\\end\{IEEEkeywords\}", source, re.S)
+        if not keywords or not 4 <= len(keywords[1].split(",")) <= 6:
+            errors.append(f"{stem}: EMSE requires four to six keywords")
+    named = " ".join(subprocess.check_output(
+        ["pdftotext", str(Q1_DIR / "main_q1.pdf"), "-"], text=True).split())
+    named = re.sub(r"\s+", "", named)
+    record = json.loads((ROOT / "manuscript/submission_files/authors.json").read_text())
+    for author in record["authors_in_supplied_order"]:
+        for field in ("email", "orcid"):
+            if author[field] not in named:
+                errors.append(f"Named PDF: missing author {field}")
+    return {"check": "submission_sections", "passed": not errors, "errors": errors,
+            "detail": "Required declarations, assistance in methods, contacts and six-keyword limit; public data release remains pending."}
+
+
 def check_conference_freeze() -> dict:
     # Tasks 15 and 16 authorize conference updates. This reviewed lock
     # is written only after the rebuilt conference PDFs and packages pass checks.
@@ -315,7 +343,7 @@ def main():
     print("=" * 80)
 
     abstract_res = check_abstract()
-    print(f"[{'PASS' if abstract_res['passed'] else 'FAIL'}] Abstract: {abstract_res['word_count']} words (target 100-200)")
+    print(f"[{'PASS' if abstract_res['passed'] else 'FAIL'}] Abstract: {abstract_res['word_count']} words (EMSE target 150-250)")
 
     named_res = check_pdf("main_q1.pdf")
     print(f"[{'PASS' if named_res['passed'] else 'FAIL'}] Named PDF (main_q1.pdf): {named_res['pages']} pages, {named_res['file_bytes']:,} bytes, Type 3: {named_res.get('type_3_count', 'N/A')}, No overfull boxes: {named_res.get('zero_overfull_hbox')}")
@@ -329,12 +357,16 @@ def main():
     freeze_res = check_conference_freeze()
     print(f"[{'PASS' if freeze_res['passed'] else 'FAIL'}] Conference Artifact Lock: 4 artifacts verified")
 
+    submission_res = check_submission_sections()
+    print(f"[{'PASS' if submission_res['passed'] else 'FAIL'}] Submission sections: declarations, assistance disclosure, contacts and keywords")
+
     all_passed = (
         abstract_res["passed"]
         and named_res["passed"]
         and anon_res["passed"]
         and num_res["passed"]
         and freeze_res["passed"]
+        and submission_res["passed"]
     )
 
     report = {
@@ -346,6 +378,7 @@ def main():
             "anonymous_pdf": anon_res,
             "numerical_consistency": num_res,
             "conference_freeze": freeze_res,
+            "submission_sections": submission_res,
         }
     }
 

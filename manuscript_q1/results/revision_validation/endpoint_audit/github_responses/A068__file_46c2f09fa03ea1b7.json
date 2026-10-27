@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A068",
+    "commit_sha": "968bf202868005077f535129262d7ce094d231aa",
+    "key": "A068__file_46c2f09fa03ea1b7",
+    "path": ".github/workflows/lock-threads.yml",
+    "repo": "fastify/fast-json-stringify",
+    "url": "https://raw.githubusercontent.com/fastify/fast-json-stringify/968bf202868005077f535129262d7ce094d231aa/.github/workflows/lock-threads.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:43.748Z",
+  "content": "name: Lock Threads\n\non:\n  schedule:\n    - cron: '0 0 1 * *'\n  workflow_dispatch:\n\nconcurrency:\n  group: lock\n\npermissions:\n  contents: read\n\njobs:\n  lock-threads:\n    permissions:\n      issues: write\n      pull-requests: write\n    uses: fastify/workflows/.github/workflows/lock-threads.yml@ef591e2186785d5ab36b9fe6a79c7ce2f1d94e57 # v7.0.0\n",
+  "is_error": false,
+  "error": null
+}

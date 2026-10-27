@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A056",
+    "commit_sha": "c14e0221b1e656c7bb35e7b3d4cdf188719a3599",
+    "key": "A056__file_89b476612e9731e1",
+    "path": ".github/workflows/autofix.yml",
+    "repo": "TanStack/table",
+    "url": "https://raw.githubusercontent.com/TanStack/table/c14e0221b1e656c7bb35e7b3d4cdf188719a3599/.github/workflows/autofix.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:32.618Z",
+  "content": "name: autofix.ci # needed to securely identify the workflow\n\non:\n  pull_request:\n\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}\n  cancel-in-progress: true\n\npermissions:\n  contents: read\n\njobs:\n  autofix:\n    name: autofix\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n      - name: Setup Tools\n        uses: tanstack/config/.github/setup@466151b2d479656b38942cd84a0a3dce29d48de3 # main\n      - name: Fix formatting\n        run: pnpm format\n      - name: Apply fixes\n        uses: autofix-ci/action@dd55f44df8f7cdb7a6bf74c78677eb8acd40cd0a\n        with:\n          commit-message: 'ci: apply automated fixes'\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_2697e61518c037ef",
+    "path": ".github/workflows/e2e-nyc-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-nyc-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_2697e61518c037ef.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.494Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-nyc-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E NYC'\njobs:\n  chore:\n    name: 'Validating NYC'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn init\n\n        yarn add nyc@^15.0.0-beta.1 object-assign@4.1.1\n\n        printf '\"use strict\";\\nmodule.exports = require(\"object-assign\");\\n' > index.js\n        printf 'const objectAssign = require(\"./index.js\");\\nconsole.log(typeof objectAssign);\\n' > test.js\n\n        yarn nyc node test.js\n",
+  "is_error": false,
+  "error": null
+}

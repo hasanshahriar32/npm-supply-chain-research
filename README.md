@@ -10,6 +10,8 @@ The [27 October reconciliation](reports/20_evidence_reconciliation_and_figures.m
 
 ## Main completed findings
 
+For the current journal submission, use the [EMSE manuscript](submission/emse/EMSE_Manuscript.pdf), [title page](submission/emse/EMSE_Title_Page.pdf), and [flat LaTeX source archive](submission/emse/EMSE_LaTeX_Source.zip). This 29-page Springer export has the same 12 scientific figures and the new declarations and methods assistance disclosure. The [EMSE guide](submission/emse/README.md) and [Report 21](reports/21_emse_declarations_and_submission_draft.md) identify the remaining public-data release and author-confirmation items. The IEEE journal working drafts remain 15 pages.
+
 Our graph contains **25,228 identifiers**, **12,217 maintainer usernames**, **79,405 account/package relations**, and **88,113 distinct projected dependency adjacencies**. The identifiers include **2,745 bundled-context strings containing `>`** and **22,483 ordinary-shaped names**. Bundled-context strings have no matching registry metadata or maintainer membership in the archive; they must not be counted as independently registered npm packages. We retain the original graph for a reproducible representation study. Removing all context nodes leaves every maintainer/workflow-repository incidence set unchanged, so repository-level C/H/P values for any fixed identity selection are unchanged; all-package endpoints have a different scope. This does not establish that summed or maximum individual-package scores retain their rankings.
 
 At a budget of 100 usernames:

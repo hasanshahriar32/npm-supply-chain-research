@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A110",
+    "commit_sha": "ad916e75555cb08427f12d59efecb18cfb1e3906",
+    "key": "A110__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "sanity-io/ui",
+    "url": "https://raw.githubusercontent.com/sanity-io/ui/ad916e75555cb08427f12d59efecb18cfb1e3906/.github/workflows/release.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A110__file_87db21a973eed4fe.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:16.390Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n      - main\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read # for checkout\n\njobs:\n  release:\n    if: github.repository_owner == 'sanity-io'\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read # for checkout\n      id-token: write # to enable use of OIDC for npm provenance\n    steps:\n      - uses: actions/create-github-app-token@v3\n        id: app-token\n        with:\n          client-id: ${{ vars.ECOSPARK_CLIENT_ID }}\n          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}\n      - uses: actions/checkout@v7\n        with:\n          fetch-depth: 0\n          token: ${{ steps.app-token.outputs.token }}\n          persist-credentials: false\n      - name: Get app token user id\n        id: get-user-id\n        run: echo \"user-id=$(gh api \"/users/${{ steps.app-token.outputs.app-slug }}[bot]\" --jq .id)\" >> \"$GITHUB_OUTPUT\"\n        env:\n          GH_TOKEN: ${{ steps.app-token.outputs.token }}\n      - name: Setup git user\n        run: |\n          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'\n          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'\n      - uses: pnpm/action-setup@v6\n      - uses: actions/setup-node@v7\n        with:\n          cache: pnpm\n          check-latest: true\n          node-version: lts/*\n      - run: pnpm install\n      - name: Create Release Pull Request or Publish to npm\n        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2\n        with:\n          github-token: ${{ steps.app-token.outputs.token }}\n          publish-script: pnpm release\n        env:\n          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}\n          NPM_CONFIG_PROVENANCE: ${{ github.event.repository.visibility == 'public' && 'true' || 'false' }}\n",
+  "is_error": false,
+  "error": null
+}

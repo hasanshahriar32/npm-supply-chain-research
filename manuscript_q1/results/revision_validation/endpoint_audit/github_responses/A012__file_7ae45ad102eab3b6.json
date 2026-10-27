@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A012",
+    "commit_sha": "95142567be1731cdb70591d36e82691083cb630f",
+    "key": "A012__file_7ae45ad102eab3b6",
+    "path": "package.json",
+    "repo": "hustcc/size-sensor",
+    "url": "https://raw.githubusercontent.com/hustcc/size-sensor/95142567be1731cdb70591d36e82691083cb630f/package.json"
+  },
+  "observed_at_utc": "2026-10-27T14:25:54.624Z",
+  "content": "{\n  \"name\": \"size-sensor\",\n  \"version\": \"1.0.3\",\n  \"description\": \"DOM element size sensor which will callback when size changed.\",\n  \"main\": \"lib/index.js\",\n  \"types\": \"index.d.ts\",\n  \"scripts\": {\n    \"debug\": \"cross-env NODE_ENV=babel cross-env DEBUG_MODE=1 jest\",\n    \"test\": \"cross-env NODE_ENV=babel jest\",\n    \"build:umd\": \"rimraf ./dist && cross-env NODE_ENV=rollup rollup -c\",\n    \"build:lib\": \"rimraf ./lib && cross-env NODE_ENV=babel babel src -d lib\",\n    \"build\": \"npm run build:umd && npm run build:lib && limit-size\"\n  },\n  \"limit-size\": [\n    {\n      \"limit\": \"1 KB\",\n      \"path\": \"dist/size-sensor.min.js\",\n      \"gzip\": true\n    }\n  ],\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"git+https://github.com/hustcc/size-sensor.git\"\n  },\n  \"keywords\": [\n    \"resize\",\n    \"size\",\n    \"sensor\",\n    \"size-detector\",\n    \"element\"\n  ],\n  \"devDependencies\": {\n    \"@babel/cli\": \"^7.6.0\",\n    \"@babel/core\": \"^7.6.0\",\n    \"@babel/preset-env\": \"^7.6.0\",\n    \"babel-jest\": \"^24.9.0\",\n    \"babel-plugin-version\": \"^0.2.1\",\n    \"cross-env\": \"^5.1.3\",\n    \"jest\": \"^24.9.0\",\n    \"jest-electron\": \"^0.1.6\",\n    \"limit-size\": \"^0.1.2\",\n    \"rimraf\": \"^2.6.2\",\n    \"rollup\": \"^1.21.4\",\n    \"rollup-plugin-babel\": \"^4.3.3\",\n    \"rollup-plugin-node-resolve\": \"^5.2.0\",\n    \"rollup-plugin-uglify\": \"^6.0.3\"\n  },\n  \"jest\": {\n    \"runner\": \"jest-electron/runner\",\n    \"testEnvironment\": \"jest-electron/environment\",\n    \"collectCoverage\": true,\n    \"collectCoverageFrom\": [\n      \"src/**/*.{js,jsx}\",\n      \"!**/node_modules/**\",\n      \"!**/vendor/**\"\n    ],\n    \"testRegex\": \"/__tests__/.*\\\\.spec\\\\.jsx?$\"\n  },\n  \"author\": \"hustcc\",\n  \"license\": \"ISC\",\n  \"bugs\": {\n    \"url\": \"https://github.com/hustcc/size-sensor/issues\"\n  },\n  \"homepage\": \"https://git.hust.cc/size-sensor\"\n}\n",
+  "is_error": false,
+  "error": null
+}

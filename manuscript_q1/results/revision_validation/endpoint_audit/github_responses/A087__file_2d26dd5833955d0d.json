@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A087",
+    "commit_sha": "6e7bb1df3ee2efe3d2a396e6f1e2f7c6fd3da7ba",
+    "key": "A087__file_2d26dd5833955d0d",
+    "path": ".github/workflows/cancel.yml",
+    "repo": "stdlib-js/array-int16",
+    "url": "https://raw.githubusercontent.com/stdlib-js/array-int16/6e7bb1df3ee2efe3d2a396e6f1e2f7c6fd3da7ba/.github/workflows/cancel.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:08.663Z",
+  "content": "#/\n# @license Apache-2.0\n#\n# Copyright (c) 2021 The Stdlib Authors.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n#    http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n#/\n\n# Workflow name:\nname: cancel\n\n# Workflow triggers:\non:\n  # Allow the workflow to be manually run:\n  workflow_dispatch:\n\n# Workflow jobs:\njobs:\n\n  # Define a job to cancel existing workflow runs:\n  cancel:\n\n    # Define a display name:\n    name: 'Cancel workflow runs'\n\n    # Define the type of virtual host machine:\n    runs-on: 'ubuntu-latest'\n\n    # Time limit:\n    timeout-minutes: 3\n\n    # Define the sequence of job steps...\n    steps:\n\n      # Cancel existing workflow runs:\n      - name: 'Cancel existing workflow runs'\n        # Pin action to full length commit SHA\n        uses: styfle/cancel-workflow-action@85880fa0301c86cca9da44039ee3bb12d3bedbfa # v0.12.1\n        with:\n          workflow_id: >-\n            benchmark.yml,\n            examples.yml,\n            test.yml,\n            test_coverage.yml,\n            test_install.yml,\n            publish.yml\n          access_token: ${{ github.token }}\n",
+  "is_error": false,
+  "error": null
+}

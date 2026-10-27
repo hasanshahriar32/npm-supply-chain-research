@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A061",
+    "commit_sha": "68100eecd92ab5bbe3dff25cc454cbe137ef4f05",
+    "key": "A061__file_f618bae3eaba832e",
+    "path": ".github/workflows/node-pretest.yml",
+    "repo": "airbnb/react-with-styles",
+    "url": "https://raw.githubusercontent.com/airbnb/react-with-styles/68100eecd92ab5bbe3dff25cc454cbe137ef4f05/.github/workflows/node-pretest.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:36.106Z",
+  "content": "name: 'Tests: pretest/posttest'\n\non: [pull_request, push]\n\njobs:\n  pretest:\n    runs-on: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v3\n      - uses: ljharb/actions/node/install@main\n        name: 'nvm install lts/* && npm install'\n        with:\n          node-version: 'lts/*'\n      - run: npm run pretest\n\n  # posttest:\n  #   runs-on: ubuntu-latest\n\n  #   steps:\n  #     - uses: actions/checkout@v3\n  #     - uses: ljharb/actions/node/install@main\n  #       name: 'nvm install lts/* && npm install'\n  #       with:\n  #         node-version: 'lts/*'\n  #     - run: npm run posttest\n",
+  "is_error": false,
+  "error": null
+}

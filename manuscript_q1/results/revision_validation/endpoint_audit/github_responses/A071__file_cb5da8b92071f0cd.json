@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A071",
+    "commit_sha": "182e9c3ea81136c73d7c700d471bec6d52f1f398",
+    "key": "A071__file_cb5da8b92071f0cd",
+    "path": ".github/workflows/typedoc.yml",
+    "repo": "isaacs/prismjs-terminal",
+    "url": "https://raw.githubusercontent.com/isaacs/prismjs-terminal/182e9c3ea81136c73d7c700d471bec6d52f1f398/.github/workflows/typedoc.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:50.231Z",
+  "content": "name: typedoc\n\non:\n  push:\n    branches: [\"main\"]\n  workflow_dispatch:\n\npermissions:\n  contents: read\n  pages: write\n  id-token: write\n\nconcurrency:\n  group: \"pages\"\n  cancel-in-progress: true\n\njobs:\n  deploy:\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v5\n      - name: Use Nodejs ${{ matrix.node-version }}\n        uses: actions/setup-node@v6\n        with:\n          node-version: 20.x\n      - name: Install dependencies\n        run: npm install\n      - name: Generate typedocs\n        run: npm run typedoc\n\n      - name: Setup Pages\n        uses: actions/configure-pages@v5\n      - name: Upload artifact\n        uses: actions/upload-pages-artifact@v4 \n        with:\n          path: './docs'\n      - name: Deploy to GitHub Pages\n        id: deployment\n        uses: actions/deploy-pages@v4\n",
+  "is_error": false,
+  "error": null
+}

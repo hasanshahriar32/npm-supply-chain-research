@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A013",
+    "commit_sha": "6a1b7a4e8f86ebc9c41a76937ab9673466ca4dd0",
+    "key": "A013__file_548b36f3597c4260",
+    "path": ".github/workflows/on-push-or-release.yml",
+    "repo": "iamolegga/nestjs-pino",
+    "url": "https://raw.githubusercontent.com/iamolegga/nestjs-pino/6a1b7a4e8f86ebc9c41a76937ab9673466ca4dd0/.github/workflows/on-push-or-release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:54.488Z",
+  "content": "name: on-push-or-release\n\non:\n  push:\n    branches:\n      - master\n  release:\n    types: [created]\n  # manual retry, e.g. when a publish failed after master was already bumped\n  workflow_dispatch:\n\njobs:\n  build-lint-test:\n    if: github.event_name == 'push'\n    uses: ./.github/workflows/build-lint-test.yml\n    secrets: inherit\n\n  coverage:\n    if: github.event_name == 'push'\n    needs:\n      - build-lint-test\n    uses: ./.github/workflows/publish-coverage.yml\n    secrets: inherit\n\n  publish-alpha:\n    if: github.event_name == 'push' && github.actor != 'dependabot[bot]' && github.actor != 'mergify[bot]'\n    needs:\n      - build-lint-test\n    permissions:\n      contents: write\n      id-token: write\n    uses: ./.github/workflows/publish-alpha.yml\n    secrets: inherit\n\n  publish-with-git-tag-version:\n    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'\n    permissions:\n      contents: write\n      id-token: write\n    uses: ./.github/workflows/publish-with-git-tag-version.yml\n    secrets: inherit\n",
+  "is_error": false,
+  "error": null
+}

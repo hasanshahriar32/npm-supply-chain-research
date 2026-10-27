@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A046",
+    "commit_sha": "cbda7828f686c3c6380bf494a49b974237bf0cd3",
+    "key": "A046__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "LinusU/fs-temp",
+    "url": "https://raw.githubusercontent.com/LinusU/fs-temp/cbda7828f686c3c6380bf494a49b974237bf0cd3/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:23.408Z",
+  "content": "name: Node CI\n\non:\n  pull_request:\n    branches:\n    - master\n\njobs:\n  test:\n    strategy:\n      matrix:\n        os: [ubuntu-latest, macOS-latest]\n        node: [12.20.0, 14.13.1, 16.0.0, 17]\n    runs-on: ${{ matrix.os }}\n    steps:\n    - uses: actions/checkout@v2\n    - name: Use Node.js ${{ matrix.node }}\n      uses: actions/setup-node@v2\n      with:\n        node-version: ${{ matrix.node }}\n    - name: Install dependencies\n      run: npm install\n    - name: Run tests\n      run: npm test\n",
+  "is_error": false,
+  "error": null
+}

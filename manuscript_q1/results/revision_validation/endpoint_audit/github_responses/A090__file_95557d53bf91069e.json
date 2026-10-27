@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A090",
+    "commit_sha": "ead85eb0819cde32eed2bc5726ff6c8ac895f975",
+    "key": "A090__file_95557d53bf91069e",
+    "path": ".github/workflows/tests.yaml",
+    "repo": "vercel/serve-handler",
+    "url": "https://raw.githubusercontent.com/vercel/serve-handler/ead85eb0819cde32eed2bc5726ff6c8ac895f975/.github/workflows/tests.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:12.940Z",
+  "content": "name: Tests\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n\njobs:\n  test:\n    name: Tests\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n        with:\n          fetch-depth: 2\n      - uses: actions/setup-node@v3\n        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810\n        with:\n          cache: 'yarn'\n\n      - run: yarn install --network-timeout 1000000 --frozen-lockfile\n      - run: yarn run build-views\n      - run: yarn test\n\n      - name: Upload Coverage\n        uses: codecov/codecov-action@v3\n        with:\n          directory: ./coverage\n",
+  "is_error": false,
+  "error": null
+}

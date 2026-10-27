@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A091",
+    "commit_sha": "f12ec1c1f401d1a33bd167b9f36a2bad74e7c2c3",
+    "key": "A091__file_3ab46ee209a12747",
+    "path": ".github/workflows/CI.yml",
+    "repo": "alfredosalzillo/rollup-plugin-multi-input",
+    "url": "https://raw.githubusercontent.com/alfredosalzillo/rollup-plugin-multi-input/f12ec1c1f401d1a33bd167b9f36a2bad74e7c2c3/.github/workflows/CI.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:13.419Z",
+  "content": "name: CI\non: [ pull_request ]\njobs:\n  build:\n    runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ ubuntu-latest, macOS-latest ]\n    steps:\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 24\n      - uses: actions/checkout@v4\n      - name: Cache node modules\n        id: cache-npm\n        uses: actions/cache@v4\n        env:\n          cache-name: cache-node-modules\n        with:\n          path: ~/.npm\n          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}\n          restore-keys: |\n            ${{ runner.os }}-build-${{ env.cache-name }}-\n            ${{ runner.os }}-build-\n            ${{ runner.os }}-\n      - name: build\n        run: |\n          npm ci\n          npm run build\n  test:\n    runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [ ubuntu-latest, macOS-latest ]\n    needs: build\n    steps:\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 24\n      - uses: actions/checkout@v4\n      - name: Cache node modules\n        id: cache-npm\n        uses: actions/cache@v4\n        env:\n          cache-name: cache-node-modules\n        with:\n          path: ~/.npm\n          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}\n          restore-keys: |\n            ${{ runner.os }}-build-${{ env.cache-name }}-\n            ${{ runner.os }}-build-\n            ${{ runner.os }}-\n      - name: build\n        run: |\n          npm ci\n          npm run build\n      - name: test\n        run: npm test\n      - name: coverage\n        uses: codecov/codecov-action@v1\n        with:\n          token: ${{ secrets.CODECOV_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

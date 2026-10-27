@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_fe2c94f75439fa59",
+    "path": ".github/workflows/notify-slack-on-pr-open.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/notify-slack-on-pr-open.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_fe2c94f75439fa59.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:12.203Z",
+  "content": "name: Pull Request Slack Notification\n\non:\n  pull_request:\n    types: [opened, reopened]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - name: Notify Slack on PR open\n      env: \n        WEBHOOK_URL : ${{ secrets.CLI_TEAM_SLACK_WEBHOOK_URL }}\n        PULL_REQUEST_AUTHOR_ICON_URL : ${{ github.event.pull_request.user.avatar_url }}\n        PULL_REQUEST_AUTHOR_NAME : ${{ github.event.pull_request.user.login }}\n        PULL_REQUEST_AUTHOR_PROFILE_URL: ${{ github.event.pull_request.user.html_url }}\n        PULL_REQUEST_BASE_BRANCH_NAME : ${{ github.event.pull_request.base.ref }}\n        PULL_REQUEST_COMPARE_BRANCH_NAME : ${{ github.event.pull_request.head.ref }}\n        PULL_REQUEST_NUMBER : ${{ github.event.pull_request.number }}\n        PULL_REQUEST_REPO: ${{ github.event.pull_request.head.repo.name }}\n        PULL_REQUEST_TITLE : ${{ github.event.pull_request.title }}\n        PULL_REQUEST_URL : ${{ github.event.pull_request.html_url }}\n      uses: salesforcecli/github-workflows/.github/actions/prNotification@main\n",
+  "is_error": false,
+  "error": null
+}

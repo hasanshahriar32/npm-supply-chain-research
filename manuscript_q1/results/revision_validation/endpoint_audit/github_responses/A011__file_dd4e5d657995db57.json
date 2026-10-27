@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A011",
+    "commit_sha": "0185f9a29923c5e4e2a098c7547dfa9c5617e249",
+    "key": "A011__file_dd4e5d657995db57",
+    "path": ".github/workflows/export-sizes.yml",
+    "repo": "harlan-zw/packrup",
+    "url": "https://raw.githubusercontent.com/harlan-zw/packrup/0185f9a29923c5e4e2a098c7547dfa9c5617e249/.github/workflows/export-sizes.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:52.551Z",
+  "content": "name: Export Sizes\n\non:\n  push:\n    branches:\n      - main\n\njobs:\n  build:\n    runs-on: ${{ matrix.os }}\n\n    strategy:\n      matrix:\n        node-version: [16.x]\n        # os: [ubuntu-latest, windows-latest, macos-latest]\n        os: [ubuntu-latest]\n      fail-fast: false\n\n    steps:\n      - uses: actions/checkout@v3\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@v2.2.1\n\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v2\n        with:\n          node-version: ${{ matrix.node-version }}\n          registry-url: https://registry.npmjs.org/\n          cache: pnpm\n\n      - run: pnpm i\n\n      - name: Build\n        run: pnpm run build\n\n      - name: Run package sizes\n        run: pnpm run export:sizes\n\n      - name: Commit\n        uses: EndBug/add-and-commit@v4\n        with:\n          message: 'chore: update export size report'\n          add: export-size-report.json\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A036",
+    "commit_sha": "9d20474a7d7cefa98add3d59dba8293f01ab70bc",
+    "key": "A036__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "developit/web-worker",
+    "url": "https://raw.githubusercontent.com/developit/web-worker/9d20474a7d7cefa98add3d59dba8293f01ab70bc/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:17.371Z",
+  "content": "name: CI\n\non: [push, pull_request]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node: [16, 18, 20, 22]\n    name: Node ${{ matrix.node }} sample\n    steps:\n      - uses: actions/checkout@v4\n      - name: Setup node\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node }}\n        env:\n          CI: true\n      - run: npm install\n      - run: npm run prepare --if-present\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

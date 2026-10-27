@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A087",
+    "commit_sha": "6e7bb1df3ee2efe3d2a396e6f1e2f7c6fd3da7ba",
+    "key": "A087__file_aacbd0338bcf5989",
+    "path": ".github/workflows/benchmark.yml",
+    "repo": "stdlib-js/array-int16",
+    "url": "https://raw.githubusercontent.com/stdlib-js/array-int16/6e7bb1df3ee2efe3d2a396e6f1e2f7c6fd3da7ba/.github/workflows/benchmark.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:08.412Z",
+  "content": "#/\n# @license Apache-2.0\n#\n# Copyright (c) 2021 The Stdlib Authors.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n#    http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n#/\n\n# Workflow name:\nname: benchmark\n\n# Workflow triggers:\non:\n  # Allow the workflow to be manually run:\n  workflow_dispatch:\n\n# Workflow jobs:\njobs:\n\n  # Define a job to run benchmarks:\n  benchmark:\n\n    # Define a display name:\n    name: 'Run benchmarks'\n\n    # Define the type of virtual host machine:\n    runs-on: 'ubuntu-latest'\n\n    # Define the sequence of job steps...\n    steps:\n\n      # Checkout the repository:\n      - name: 'Checkout repository'\n        # Pin action to full length commit SHA\n        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0\n\n      # Install Node.js:\n      - name: 'Install Node.js'\n        # Pin action to full length commit SHA\n        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1\n        with:\n          node-version: 20\n        timeout-minutes: 5\n\n      # Install dependencies:\n      - name: 'Install production and development dependencies'\n        run: |\n          npm install || npm install || npm install\n        timeout-minutes: 15\n\n      # Run benchmarks:\n      - name: 'Run benchmarks'\n        run: |\n          npm run benchmark\n",
+  "is_error": false,
+  "error": null
+}

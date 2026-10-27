@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A089",
+    "commit_sha": "8da01b01d2fffa48574efc17a99067539f16b998",
+    "key": "A089__file_e426ed4584283702",
+    "path": ".github/workflows/release.yaml",
+    "repo": "thlorenz/anchor-markdown-header",
+    "url": "https://raw.githubusercontent.com/thlorenz/anchor-markdown-header/8da01b01d2fffa48574efc17a99067539f16b998/.github/workflows/release.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:13.037Z",
+  "content": "name: Release package\n\non:\n  push:\n    tags:\n      - \"v*.*.*\"\n\npermissions:\n  id-token: write  # Required for OIDC\n  contents: write\n  issues: write # Required for raising issues\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n    \n      - name: Use Node.js 24.x\n        uses: actions/setup-node@v6\n        with:\n          node-version: 24.x\n          cache: 'npm'\n\n      # This explicitly sets the version of the npm package to match that of the tag.\n      - run: npm version ${{ github.ref_name }} --no-git-tag-version\n\n      - run: npm install\n\n      - run: npm test\n\n      # note if locally preparing packages you will need to explicitly set the version in package.json,\n      # see for discussion https://github.com/thlorenz/doctoc/pull/289#discussion_r2649551681 for more details.\n      - run: npm pack\n\n      - name: NPM Publish\n        id: publish\n        run: npm publish\n        continue-on-error: true\n\n      - name: Create issue on npm publish failure\n        if: ${{ steps.publish.outcome == 'failure' }}\n        env:\n          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n        run: |\n          gh issue create \\\n            --title \"NPM Publish step failed for release ${GITHUB_REF_NAME}\" \\\n            --body \"The NPM publish step failed for release: ${GITHUB_REF_NAME}. The npm package will need to be manually uploaded to NPM.\" \\\n            --assignee AndrewSouthpaw\n        \n      - name: Release\n        uses: softprops/action-gh-release@v2\n        with:\n          generate_release_notes: true\n          files: |\n            ./anchor-markdown-header-*.tgz\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A095",
+    "commit_sha": "47ed74197b969ae26b079549a1ef57e7694c00e6",
+    "key": "A095__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "cfware/babel-plugin-template-html-minifier",
+    "url": "https://raw.githubusercontent.com/cfware/babel-plugin-template-html-minifier/47ed74197b969ae26b079549a1ef57e7694c00e6/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:18.666Z",
+  "content": "name: Tests\non: [push, pull_request]\n\nenv:\n  CI: true\n\njobs:\n  test:\n    strategy:\n      matrix:\n        os: [ubuntu-latest, windows-latest, macos-latest]\n        node-version: [10, 12, 13]\n    runs-on: ${{matrix.os}}\n    steps:\n    - uses: actions/checkout@v2\n    - name: Node.js ${{matrix.node-version}} on ${{matrix.os}}\n      uses: actions/setup-node@v1\n      with:\n        node-version: ${{matrix.node-version}}\n    - run: npm install\n    - name: Lint\n      run: npm run -s pretest -- --reporter stylish\n    - name: Tests\n      run: npm run -s tests-only\n",
+  "is_error": false,
+  "error": null
+}

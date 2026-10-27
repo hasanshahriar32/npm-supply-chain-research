@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_22ec448956849a92",
+    "path": ".github/workflows/debug.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/debug.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_22ec448956849a92.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.739Z",
+  "content": "on:\n  workflow_dispatch:\n\nconcurrency:\n  group: ${{github.workflow}}-${{github.ref}}\n  cancel-in-progress: true\n\nname: Debuggable Container\njobs:\n  debug:\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n    - name: Setup upterm session\n      uses: lhotari/action-upterm@d23c2722bdab893785c9fbeae314cbf080645bd7\n      with:\n        limit-access-to-actor: true\n",
+  "is_error": false,
+  "error": null
+}

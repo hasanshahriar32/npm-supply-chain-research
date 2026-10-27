@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A069",
+    "commit_sha": "00f41407ef64b4944060ca3e7fd2d637916a71ea",
+    "key": "A069__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "fastify/fast-uri",
+    "url": "https://raw.githubusercontent.com/fastify/fast-uri/00f41407ef64b4944060ca3e7fd2d637916a71ea/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:50.390Z",
+  "content": "name: Release the package\n\non:\n  workflow_dispatch:\n    inputs:\n      semver:\n        description: 'Release bump type'\n        required: true\n        type: choice\n        options:\n          - patch\n          - minor\n          - major\n          - prepatch\n          - preminor\n          - premajor\n          - prerelease\n      preid:\n        description: 'Prerelease identifier (e.g. rc), used by the pre* bump types'\n        required: false\n        type: string\n\npermissions: {}\n\njobs:\n  release:\n    permissions:\n      id-token: write # required for npm provenance via OIDC\n      contents: write # required to push the release commit and the tag\n    uses: fastify/workflows/.github/workflows/reusable-release.yml@b0a2ab2d8259b6bd574b804cd6874bbd75c3577c\n    with:\n      semver: ${{ inputs.semver }}\n      preid: ${{ inputs.preid }}\n      dist-tag: ${{ startsWith(inputs.semver, 'pre') && 'next' || 'latest' }}\n",
+  "is_error": false,
+  "error": null
+}

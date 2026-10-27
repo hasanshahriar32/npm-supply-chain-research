@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A001",
+    "commit_sha": "081aa8995d82321b8d5d4bb64f97d63cb04380d7",
+    "key": "A001__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "ai/nanoevents",
+    "url": "https://raw.githubusercontent.com/ai/nanoevents/081aa8995d82321b8d5d4bb64f97d63cb04380d7/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:43.443Z",
+  "content": "name: Release\non:\n  push:\n    tags:\n      - '*'\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      id-token: write\n    steps:\n      - name: Checkout the repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: Clean npm package\n        uses: ai/clean-npm-project@29219e611c2da08a07cb0a6a1b965c162e5940a9 # v0.3.0\n        with:\n          clean-docs: true\n      - name: Install Node.js\n        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0\n        with:\n          node-version: 26\n          package-manager-cache: false\n      - name: Publish npm package\n        run: npm stage publish\n        working-directory: cleaned-project/\n  release:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n    steps:\n      - name: Checkout the repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          persist-credentials: false\n      - name: Copy CHANGELOG.md to Releases\n        uses: ai/copy-changelog-to-release@a6dc825c34575add2da2060796794f7b84894628 # v0.2.0\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

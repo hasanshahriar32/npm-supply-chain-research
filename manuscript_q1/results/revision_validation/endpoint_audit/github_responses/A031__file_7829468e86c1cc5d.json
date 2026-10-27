@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A031",
+    "commit_sha": "8f8352630a3ba5d07a4e364b1425b032597f66d8",
+    "key": "A031__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "awslabs/aws-jwt-verify",
+    "url": "https://raw.githubusercontent.com/awslabs/aws-jwt-verify/8f8352630a3ba5d07a4e364b1425b032597f66d8/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:14.645Z",
+  "content": "name: test\npermissions:\n  contents: read\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n  workflow_dispatch:\n\njobs:\n  test:\n    runs-on: ubuntu-22.04\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v6\n        with:\n          node-version: \"18\"\n      - name: install\n        run: |\n          npm install -g npm@9\n          npm install\n      - name: test\n        run: |\n          npm run prettier:check\n          npm run lint:check\n          npm run test:unit\n          npm run pack-for-tests\n          npm run test:install\n          npm run test:import\n          npm run test:speed\n        env:\n          CI: \"true\"\n",
+  "is_error": false,
+  "error": null
+}

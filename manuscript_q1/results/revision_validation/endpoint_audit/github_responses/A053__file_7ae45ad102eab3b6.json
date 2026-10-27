@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A053",
+    "commit_sha": "5e2e70417f655a70c592b55590ac24f9c995fb11",
+    "key": "A053__file_7ae45ad102eab3b6",
+    "path": "package.json",
+    "repo": "sveltejs/acorn-typescript",
+    "url": "https://raw.githubusercontent.com/sveltejs/acorn-typescript/5e2e70417f655a70c592b55590ac24f9c995fb11/package.json"
+  },
+  "observed_at_utc": "2026-10-27T14:26:30.840Z",
+  "content": "{\n\t\"name\": \"@sveltejs/acorn-typescript\",\n\t\"version\": \"1.0.13\",\n\t\"description\": \"Acorn plugin that parses TypeScript\",\n\t\"type\": \"module\",\n\t\"types\": \"index.d.ts\",\n\t\"files\": [\n\t\t\"index.js\",\n\t\t\"index.d.ts\"\n\t],\n\t\"scripts\": {\n\t\t\"build\": \"esbuild src/index.ts --bundle --format=esm --outfile=index.js --platform=node --external:acorn\",\n\t\t\"format\": \"prettier --write .\",\n\t\t\"check\": \"tsc --noEmit\",\n\t\t\"lint\": \"prettier --check .\",\n\t\t\"test\": \"vitest run\",\n\t\t\"test:update\": \"cross-env UPDATE_SNAPSHOT=true vitest run && pnpm run format\",\n\t\t\"test:test262\": \"pnpm run build && node ./test/run_test262.js\",\n\t\t\"corpus:setup\": \"node ./test/setup_typescript_corpus.js\",\n\t\t\"test:typescript\": \"pnpm run corpus:setup && pnpm run build && node ./test/run_typescript_corpus.js\",\n\t\t\"test:typescript:update\": \"pnpm run corpus:setup -- --baselines && pnpm run build && node ./test/run_typescript_corpus.js --update\",\n\t\t\"changeset:version\": \"changeset version && git add --all\",\n\t\t\"changeset:release\": \"changeset publish\",\n\t\t\"prepublishOnly\": \"pnpm build\",\n\t\t\"playground\": \"pnpm build && node ./playground/index.js\"\n\t},\n\t\"exports\": {\n\t\t\".\": {\n\t\t\t\"types\": \"./index.d.ts\",\n\t\t\t\"default\": \"./index.js\"\n\t\t}\n\t},\n\t\"repository\": {\n\t\t\"type\": \"git\",\n\t\t\"url\": \"git+https://github.com/sveltejs/acorn-typescript.git\"\n\t},\n\t\"author\": \"tyrealhu and the Svelte team\",\n\t\"license\": \"MIT\",\n\t\"bugs\": {\n\t\t\"url\": \"https://github.com/sveltejs/acorn-typescript/issues\"\n\t},\n\t\"homepage\": \"https://github.com/sveltejs/acorn-typescript#readme\",\n\t\"devDependencies\": {\n\t\t\"@changesets/changelog-github\": \"1.0.1\",\n\t\t\"@changesets/cli\": \"^3.0.3\",\n\t\t\"acorn\": \"^8.18.0\",\n\t\t\"acorn-jsx\": \"~5.3.2\",\n\t\t\"acorn-v8-13\": \"npm:acorn@8.13.0\",\n\t\t\"acorn-v8-14\": \"npm:acorn@8.14.0\",\n\t\t\"acorn-v8-9\": \"npm:acorn@8.9.0\",\n\t\t\"cross-env\": \"^7.0.3\",\n\t\t\"esbuild\": \"^0.25.0\",\n\t\t\"prettier\": \"~3.5.2\",\n\t\t\"test262\": \"git+https://github.com/tc39/test262.git#2b2ecead6e828dd9af13a9ec72065e645724a50f\",\n\t\t\"test262-parser-runner\": \"^0.5.0\",\n\t\t\"typescript\": \"^6.0.3\",\n\t\t\"vitest\": \"^3.0.7\"\n\t},\n\t\"peerDependencies\": {\n\t\t\"acorn\": \"^8.14.0\"\n\t},\n\t\"packageManager\": \"pnpm@9.15.5\"\n}\n",
+  "is_error": false,
+  "error": null
+}

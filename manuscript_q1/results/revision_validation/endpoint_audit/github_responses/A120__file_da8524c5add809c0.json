@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_da8524c5add809c0",
+    "path": ".github/workflows/e2e-docusaurus-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-docusaurus-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_da8524c5add809c0.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:36.017Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-docusaurus-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Docusaurus'\njobs:\n  chore:\n    name: 'Validating Docusaurus'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn dlx create-docusaurus@latest my-website classic --javascript && cd my-website\n        yarn build\n\n    - name: 'Running the TypeScript integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn dlx create-docusaurus@latest my-website-ts classic --typescript && cd my-website-ts\n        yarn build\n      if: |\n        success() || failure()\n",
+  "is_error": false,
+  "error": null
+}

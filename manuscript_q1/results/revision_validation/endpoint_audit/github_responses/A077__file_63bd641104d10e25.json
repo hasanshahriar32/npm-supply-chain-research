@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A077",
+    "commit_sha": "ed7c3d8a624ec97cda91c3b52433714fc2433eaf",
+    "key": "A077__file_63bd641104d10e25",
+    "path": ".github/workflows/codeql-analysis.yml",
+    "repo": "mozilla/hawk",
+    "url": "https://raw.githubusercontent.com/mozilla/hawk/ed7c3d8a624ec97cda91c3b52433714fc2433eaf/.github/workflows/codeql-analysis.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:57.230Z",
+  "content": "# For most projects, this workflow file will not need changing; you simply need\n# to commit it to your repository.\n#\n# You may wish to alter this file to override the set of languages analyzed,\n# or to provide custom queries or build logic.\nname: \"CodeQL\"\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    # The branches below must be a subset of the branches above\n    branches: [main]\n  schedule:\n    - cron: '0 21 * * 4'\n\njobs:\n  analyze:\n    name: Analyze\n    runs-on: ubuntu-latest\n\n    strategy:\n      fail-fast: false\n      matrix:\n        # Override automatic language detection by changing the below list\n        # Supported options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']\n        language: ['javascript']\n        # Learn more...\n        # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection\n\n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v2\n\n    # Initializes the CodeQL tools for scanning.\n    - name: Initialize CodeQL\n      uses: github/codeql-action/init@v2\n      with:\n        languages: ${{ matrix.language }}\n        # If you wish to specify custom queries, you can do so here or in a config file.\n        # By default, queries listed here will override any specified in a config file.\n        # Prefix the list here with \"+\" to use these queries and those in the config file.\n        # queries: ./path/to/local/query, your-org/your-repo/queries@main\n\n    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).\n    # If this step fails, then you should remove it and run the build manually (see below)\n    - name: Autobuild\n      uses: github/codeql-action/autobuild@v2\n\n    # ℹ️ Command-line programs to run using the OS shell.\n    # 📚 https://git.io/JvXDl\n\n    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines\n    #    and modify them (or add more) to build your code if your project\n    #    uses a compiled language\n\n    #- run: |\n    #   make bootstrap\n    #   make release\n\n    - name: Perform CodeQL Analysis\n      uses: github/codeql-action/analyze@v2\n",
+  "is_error": false,
+  "error": null
+}

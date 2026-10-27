@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A011",
+    "commit_sha": "0185f9a29923c5e4e2a098c7547dfa9c5617e249",
+    "key": "A011__file_32e1e6bbc68b6835",
+    "path": ".github/workflows/export-sizes-comment.yml",
+    "repo": "harlan-zw/packrup",
+    "url": "https://raw.githubusercontent.com/harlan-zw/packrup/0185f9a29923c5e4e2a098c7547dfa9c5617e249/.github/workflows/export-sizes-comment.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:52.599Z",
+  "content": "name: Export Size Comment\non:\n  pull_request:\n    branches:\n      - main\n\njobs:\n  size:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Install pnpm\n        uses: pnpm/action-setup@v3\n\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n          registry-url: https://registry.npmjs.org/\n          cache: pnpm\n      - uses: antfu/export-size-action@v1\n        with:\n          github_token: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

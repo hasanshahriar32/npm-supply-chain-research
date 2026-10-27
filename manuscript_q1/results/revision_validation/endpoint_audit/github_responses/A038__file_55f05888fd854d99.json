@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A038",
+    "commit_sha": "7281f1b8f09637ab383c1aab4d14247d683bc15d",
+    "key": "A038__file_55f05888fd854d99",
+    "path": ".github/workflows/check.yml",
+    "repo": "enisdenjo/graphql-ws",
+    "url": "https://raw.githubusercontent.com/enisdenjo/graphql-ws/7281f1b8f09637ab383c1aab4d14247d683bc15d/.github/workflows/check.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:19.460Z",
+  "content": "name: Check\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n\njobs:\n  format:\n    name: Format\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v3\n      - name: Setup\n        uses: the-guild-org/shared-config/setup@v1\n        with:\n          node-version-file: .node-version\n      - name: Check\n        run: yarn check:format\n\n  types:\n    name: Types with graphql@${{matrix.graphql}}\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        graphql: [15, 16, 17]\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v3\n      - name: Setup\n        uses: the-guild-org/shared-config/setup@v1\n        with:\n          node-version-file: .node-version\n      - name: Install\n        run: yarn add --dev graphql@${{matrix.graphql}}\n      - name: Info\n        run: yarn info graphql\n      - name: Check\n        run: yarn check:types\n",
+  "is_error": false,
+  "error": null
+}

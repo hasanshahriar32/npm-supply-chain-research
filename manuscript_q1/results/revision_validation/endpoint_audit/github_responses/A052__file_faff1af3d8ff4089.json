@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A052",
+    "commit_sha": "a0e10df97c446fdacc4d2911c42a8c403afff1fc",
+    "key": "A052__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "southpolesteve/node-abort-controller",
+    "url": "https://raw.githubusercontent.com/southpolesteve/node-abort-controller/a0e10df97c446fdacc4d2911c42a8c403afff1fc/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:29.474Z",
+  "content": "name: Test\n\non:\n  push:\n    branches: [\"master\"]\n  pull_request:\n    branches: [\"master\"]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v3\n      - name: Use Node.js 14.6.x\n        uses: actions/setup-node@v3\n        with:\n          node-version: 14.6.x\n          cache: \"npm\"\n      - run: npm ci\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

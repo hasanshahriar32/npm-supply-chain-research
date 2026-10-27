@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A031",
+    "commit_sha": "8f8352630a3ba5d07a4e364b1425b032597f66d8",
+    "key": "A031__file_c76511afeed26896",
+    "path": ".github/workflows/browser.yml",
+    "repo": "awslabs/aws-jwt-verify",
+    "url": "https://raw.githubusercontent.com/awslabs/aws-jwt-verify/8f8352630a3ba5d07a4e364b1425b032597f66d8/.github/workflows/browser.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:14.682Z",
+  "content": "name: test-browser\npermissions:\n  contents: read\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\n  workflow_dispatch:\n\njobs:\n  test:\n    runs-on: ubuntu-22.04\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v6\n        with:\n          node-version: \"24\"\n      - name: install\n        run: |\n          npm install -g npm\n          npm install\n      - name: test\n        run: |\n          # To prevent dbus errors from Cypress, start dbus\n          export XDG_RUNTIME_DIR=/run/user/$(id -u)\n          export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus\n          echo $DBUS_SESSION_BUS_ADDRESS\n          dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --nofork --nopidfile --syslog-only &\n\n          # Run actual tests\n          npm run pack-for-tests\n          npm run test:browser\n        env:\n          CI: \"true\"\n          TERM: xterm\n",
+  "is_error": false,
+  "error": null
+}

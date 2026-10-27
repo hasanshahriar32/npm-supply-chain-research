@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A002",
+    "commit_sha": "c6dc5ed55654dfa6e006a9817b48db1f80d20a6e",
+    "key": "A002__file_551d1fcf87f78cc3",
+    "path": ".github/workflows/publish.yml",
+    "repo": "arthurfiorette/tinylibs",
+    "url": "https://raw.githubusercontent.com/arthurfiorette/tinylibs/c6dc5ed55654dfa6e006a9817b48db1f80d20a6e/.github/workflows/publish.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:45.612Z",
+  "content": "name: Release Flow\n\non:\n  push:\n    branches: [main]\n\n  # Allows you to run this workflow manually from the Actions tab\n  workflow_dispatch:\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  id-token: write # Required for OIDC\n  contents: write\n  pull-requests: write # Required to create a release PR\n  checks: write # Required to create a check run\n  issues: write # Required to create issues\n\njobs:\n  release:\n    runs-on: ubuntu-latest\n    if: ${{ github.actor != 'dependabot[bot]' }}\n\n    environment:\n      name: NPM Registry\n\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n\n      # https://github.com/actions/checkout/issues/1471\n      - name: Fetch tags\n        run: git fetch --prune --unshallow --tags\n\n      - name: Setup pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Setup node and restore cached dependencies\n        uses: actions/setup-node@v6\n        with:\n          node-version-file: '.nvmrc'\n          cache: 'pnpm'\n\n      - name: Install packages\n        run: pnpm install --frozen-lockfile\n\n      - name: Build\n        run: pnpm build\n\n      - name: Create Release Pull Request or Publish\n        id: changesets\n        uses: changesets/action@v1\n        with:\n          version: pnpm ci-version\n          commit: 'chore: update versions'\n          title: 'Release plan'\n\n          # https://github.com/changesets/action/issues/246\n          # https://github.com/changesets/changesets/pull/674\n          publish: pnpm ci-publish\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          NPM_CONFIG_PROVENANCE: true\n",
+  "is_error": false,
+  "error": null
+}

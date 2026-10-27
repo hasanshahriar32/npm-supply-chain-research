@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_ffaa2de7b784327b",
+    "path": ".github/workflows/pr-any.yml",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/.github/workflows/pr-any.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:59.171Z",
+  "content": "name: PR\non: [pull_request]\n\njobs:\n  pr:\n    continue-on-error: true\n    strategy:\n      matrix:\n        step: ['lint', 'test', 'build', 'deno']\n    runs-on: ubuntu-latest\n    env:\n      YARN_ENABLE_SCRIPTS: false\n    steps:\n    - uses: actions/checkout@v4\n    - uses: actions/setup-node@v4\n      with:\n        node-version: 'lts/*'\n    - uses: denoland/setup-deno@v1\n      with:\n        deno-version: v1.42.x\n    - name: ${{ matrix.step }}\n      if: always()\n      continue-on-error: true\n      run: |\n        yarn install --immutable\n        if [ \"${{ matrix.step }}\" != \"lint\" ]; then\n          ./scripts/install-build-deps.sh\n        fi\n        yarn polkadot-dev-deno-map\n        yarn ${{ matrix.step }}\n",
+  "is_error": false,
+  "error": null
+}

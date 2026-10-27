@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A068",
+    "commit_sha": "968bf202868005077f535129262d7ce094d231aa",
+    "key": "A068__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "fastify/fast-json-stringify",
+    "url": "https://raw.githubusercontent.com/fastify/fast-json-stringify/968bf202868005077f535129262d7ce094d231aa/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:43.786Z",
+  "content": "name: Release the package\n\non:\n  workflow_dispatch:\n    inputs:\n      semver:\n        description: 'Release bump type'\n        required: true\n        type: choice\n        options:\n          - patch\n          - minor\n          - major\n\npermissions: {}\n\njobs:\n  release:\n    permissions:\n      id-token: write # required for npm provenance via OIDC\n      contents: write # required to push the release commit and the tag\n    uses: fastify/workflows/.github/workflows/reusable-release.yml@b1a11bce713bc857e52b2231fec3c89071ad3135\n    with:\n      semver: ${{ inputs.semver }}\n",
+  "is_error": false,
+  "error": null
+}

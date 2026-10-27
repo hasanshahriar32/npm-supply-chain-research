@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A043",
+    "commit_sha": "217018dbc46dcd4118dd6f2c60c8d97010c587f8",
+    "key": "A043__file_4e88a8cc63d2540b",
+    "path": ".github/workflows/node.yml",
+    "repo": "jaredhanson/passport",
+    "url": "https://raw.githubusercontent.com/jaredhanson/passport/217018dbc46dcd4118dd6f2c60c8d97010c587f8/.github/workflows/node.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:24.032Z",
+  "content": "# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node\n# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions\n\nname: Node.js CI\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version:\n          - '17'\n          - '16'\n          - '14'\n          - '12'\n          - '10'\n          - '8'\n          - '6'\n          - '4'\n          # - '3' # io.js\n          # - '2' # io.js\n          # - '1' # io.js\n          - '0.12'\n          - '0.10'\n          # - '0.8'\n\n    steps:\n    - uses: actions/checkout@v2\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v2\n      with:\n        node-version: ${{ matrix.node-version }}\n    - run: npm install\n    - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

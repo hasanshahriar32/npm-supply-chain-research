@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A025",
+    "commit_sha": "a3fac78f200ec7f8d5b20eaf09add25f1c2c4208",
+    "key": "A025__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "tada5hi/smob",
+    "url": "https://raw.githubusercontent.com/tada5hi/smob/a3fac78f200ec7f8d5b20eaf09add25f1c2c4208/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:05.642Z",
+  "content": "name: CI\n\non:\n    push:\n        branches: [develop, master, next, beta, alpha]\n    pull_request:\n        branches: [develop, master, next, beta, alpha]\n\npermissions:\n    contents: read\n\nconcurrency:\n    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}\n    cancel-in-progress: true\n\nenv:\n    PRIMARY_NODE_VERSION: 24\n\njobs:\n    install:\n        name: Checkout and Install\n        runs-on: ubuntu-latest\n        steps:\n            - name: Checkout\n              uses: actions/checkout@v6\n            - name: Install\n              uses: ./.github/actions/install\n              with:\n                  node-version: ${{ env.PRIMARY_NODE_VERSION }}\n\n    build:\n        name: Build\n        needs: [install]\n        runs-on: ubuntu-latest\n        steps:\n            - name: Checkout\n              uses: actions/checkout@v6\n            - name: Install\n              uses: ./.github/actions/install\n              with:\n                  node-version: ${{ env.PRIMARY_NODE_VERSION }}\n            - name: Build\n              uses: ./.github/actions/build\n\n    lint:\n        name: Lint\n        needs: [build]\n        runs-on: ubuntu-latest\n        steps:\n            - name: Checkout\n              uses: actions/checkout@v6\n\n            - name: Install\n              uses: ./.github/actions/install\n              with:\n                  node-version: ${{ env.PRIMARY_NODE_VERSION }}\n\n            - name: Build\n              uses: ./.github/actions/build\n\n            - name: Lint\n              run: |\n                  npm run lint\n\n    tests:\n        name: Test\n        needs: [build]\n        runs-on: ubuntu-latest\n        steps:\n            - name: Checkout\n              uses: actions/checkout@v6\n\n            - name: Install\n              uses: ./.github/actions/install\n              with:\n                  node-version: ${{ env.PRIMARY_NODE_VERSION }}\n\n            - name: Build\n              uses: ./.github/actions/build\n\n            - name: Run tests\n              run: |\n                  npm run test\n",
+  "is_error": false,
+  "error": null
+}

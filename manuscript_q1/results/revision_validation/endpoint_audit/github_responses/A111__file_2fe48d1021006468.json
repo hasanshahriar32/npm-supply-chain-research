@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A111",
+    "commit_sha": "e0e0f9a6d7e92bcee25bd70b53cfde900e82da57",
+    "key": "A111__file_2fe48d1021006468",
+    "path": ".github/workflows/dependabot-auto-merge.yml",
+    "repo": "SAP/ui5-project",
+    "url": "https://raw.githubusercontent.com/SAP/ui5-project/e0e0f9a6d7e92bcee25bd70b53cfde900e82da57/.github/workflows/dependabot-auto-merge.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A111__file_2fe48d1021006468.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.642Z",
+  "content": "name: Dependabot auto-merge\non:\n  pull_request:\n    branches:\n      - v4\n\npermissions:\n  contents: write\n  pull-requests: write\n\njobs:\n  dependabot:\n    runs-on: ubuntu-latest\n    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.auto_merge == null }}\n    steps:\n      - name: Dependabot metadata\n        id: metadata\n        uses: dependabot/fetch-metadata@v3\n        with:\n          github-token: \"${{ secrets.GITHUB_TOKEN }}\"\n      - name: Approve and auto-merge PRs for minor/patch updates of github-actions\n        if: |\n          steps.metadata.outputs.package-ecosystem == 'github_actions' &&\n          contains(fromJSON('[\"version-update:semver-minor\", \"version-update:semver-patch\"]'), steps.metadata.outputs.update-type)\n        run: gh pr review --approve \"$PR_URL\" && gh pr merge --auto --rebase \"$PR_URL\"\n        env:\n          PR_URL: ${{github.event.pull_request.html_url}}\n          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}\n",
+  "is_error": false,
+  "error": null
+}

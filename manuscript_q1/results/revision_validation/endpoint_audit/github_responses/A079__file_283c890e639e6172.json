@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_283c890e639e6172",
+    "path": ".github/workflows/auto-approve.yml",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/.github/workflows/auto-approve.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:59.107Z",
+  "content": "name: bot\n\non:\n  pull_request:\n    types: [labeled]\n\njobs:\n  approve:\n    if: \"! startsWith(github.event.head_commit.message, '[CI Skip]') && (!github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository)\"\n    runs-on: ubuntu-latest\n    steps:\n      - uses: jacogr/action-approve@795afd1dd096a2071d7ec98740661af4e853b7da\n        with:\n          authors: jacogr, TarikGul, valentinfernandez1\n          labels: -auto\n          token: ${{ secrets.GH_PAT_BOT }}\n",
+  "is_error": false,
+  "error": null
+}

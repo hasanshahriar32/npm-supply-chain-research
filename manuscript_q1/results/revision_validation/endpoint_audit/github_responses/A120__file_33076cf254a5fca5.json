@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_33076cf254a5fca5",
+    "path": ".github/workflows/e2e-mocha-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-mocha-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_33076cf254a5fca5.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.192Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-mocha-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Mocha'\njobs:\n  chore:\n    name: 'Validating Mocha'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn init -p\n        yarn add mocha\n        mkdir test\n\n        echo \"const assert = require('assert'); it('should pass', function() { assert.equal(true, true); });\" | tee pass.test.js\n        yarn mocha pass.test.js\n\n        echo \"const assert = require('assert'); it('should fail', function() { assert.equal(true, false); });\" | tee fail.test.js\n        ! yarn mocha fail.test.js\n\n        yarn add left-pad\n\n        echo \"const assert = require('assert'); const leftPad = require('left-pad'); it('should resolve a module', () => { assert.equal(typeof leftPad, 'function');});\" | tee module.test.js\n        yarn mocha module.test.js\n",
+  "is_error": false,
+  "error": null
+}

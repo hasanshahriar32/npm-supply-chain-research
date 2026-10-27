@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A119",
+    "commit_sha": "879746fbbe6b8df9b5840e26c08fcf06a04f94ce",
+    "key": "A119__file_8a5ce8b612395836",
+    "path": ".github/workflows/npm-publish.yml",
+    "repo": "yakovmeister/pdf2image",
+    "url": "https://raw.githubusercontent.com/yakovmeister/pdf2image/879746fbbe6b8df9b5840e26c08fcf06a04f94ce/.github/workflows/npm-publish.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A119__file_8a5ce8b612395836.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:29.763Z",
+  "content": "name: NPM publish\n\non:\n  release:\n    types: [released]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: 16.x\n          registry-url: https://registry.npmjs.org\n      - run: |\n          sudo apt-get update\n          sudo apt-get install -y graphicsmagick ghostscript\n      - run: npm install\n      - run: npm run build\n      - run: npm publish\n        env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

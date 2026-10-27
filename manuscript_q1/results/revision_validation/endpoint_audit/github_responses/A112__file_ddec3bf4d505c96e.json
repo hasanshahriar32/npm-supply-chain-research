@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A112",
+    "commit_sha": "a6c2fdf97bd9a37687f31fb3807d23323d877bd8",
+    "key": "A112__file_ddec3bf4d505c96e",
+    "path": ".github/workflows/title-formatter.yml",
+    "repo": "sindresorhus/eslint-plugin-unicorn",
+    "url": "https://raw.githubusercontent.com/sindresorhus/eslint-plugin-unicorn/a6c2fdf97bd9a37687f31fb3807d23323d877bd8/.github/workflows/title-formatter.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A112__file_ddec3bf4d505c96e.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.695Z",
+  "content": "name: Title formatter\n\non:\n  pull_request_target:\n    types: [opened, edited]\n  issues:\n    types: [opened, edited]\n\njobs:\n  Rule:\n    runs-on: ubuntu-latest\n    permissions:\n      pull-requests: write\n      issues: write\n    steps:\n      - uses: actions/checkout@v7\n        with:\n          sparse-checkout: docs/rules\n      - name: Auto-format rule names in titles\n        uses: fregante/keyword-formatter-action@v1\n        with:\n          token: ${{ secrets.GITHUB_TOKEN }}\n          keywords-path: docs/rules\n          prefix: unicorn/\n\n",
+  "is_error": false,
+  "error": null
+}

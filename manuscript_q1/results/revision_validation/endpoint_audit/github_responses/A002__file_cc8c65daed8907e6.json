@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A002",
+    "commit_sha": "c6dc5ed55654dfa6e006a9817b48db1f80d20a6e",
+    "key": "A002__file_cc8c65daed8907e6",
+    "path": ".github/workflows/automerge.yml",
+    "repo": "arthurfiorette/tinylibs",
+    "url": "https://raw.githubusercontent.com/arthurfiorette/tinylibs/c6dc5ed55654dfa6e006a9817b48db1f80d20a6e/.github/workflows/automerge.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:45.692Z",
+  "content": "name: Dependabot Auto Merge\n\non:\n  pull_request_target:\n    branches:\n      - main\n\npermissions:\n  pull-requests: write\n  contents: write\n\njobs:\n  auto-merge:\n    runs-on: ubuntu-latest\n    if: github.actor == 'dependabot[bot]'\n    steps:\n      - uses: ahmadnassri/action-dependabot-auto-merge@v2.6\n        with:\n          github-token: ${{ secrets.GITHUB_TOKEN }}\n          command: 'squash and merge'\n          target: minor\n          approve: true\n",
+  "is_error": false,
+  "error": null
+}

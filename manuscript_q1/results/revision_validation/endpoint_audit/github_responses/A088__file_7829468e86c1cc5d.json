@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A088",
+    "commit_sha": "4dbadee35fa572fbc10eda1aed85e81768135fe0",
+    "key": "A088__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "syntax-tree/unist-util-find",
+    "url": "https://raw.githubusercontent.com/syntax-tree/unist-util-find/4dbadee35fa572fbc10eda1aed85e81768135fe0/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:10.464Z",
+  "content": "jobs:\n  main:\n    name: ${{matrix.node}}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{matrix.node}}\n      - run: npm install\n      - run: npm test\n      - uses: codecov/codecov-action@v5\n    strategy:\n      matrix:\n        node:\n          - lts/hydrogen\n          - node\nname: main\non:\n  - pull_request\n  - push\n",
+  "is_error": false,
+  "error": null
+}

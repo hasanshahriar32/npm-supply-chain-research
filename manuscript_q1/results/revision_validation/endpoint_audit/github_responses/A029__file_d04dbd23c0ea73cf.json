@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A029",
+    "commit_sha": "d5df5239da69c26c9a3c7eb2a5a0e475f98efecf",
+    "key": "A029__file_d04dbd23c0ea73cf",
+    "path": ".github/workflows/expense.yml",
+    "repo": "webdriverio-community/node-safaridriver",
+    "url": "https://raw.githubusercontent.com/webdriverio-community/node-safaridriver/d5df5239da69c26c9a3c7eb2a5a0e475f98efecf/.github/workflows/expense.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:11.990Z",
+  "content": "name: Expense Contribution\n\non:\n  workflow_dispatch:\n    inputs:\n      prNumber:\n        description: \"Number of the PR (without #)\"\n        required: true\n      amount:\n        description: \"The expense amount you like to grant for the contribution in $\"\n        required: true\n        type: choice\n        options:\n          - \"5\"\n          - \"10\"\n          - \"15\"\n          - \"25\"\n          - \"35\"\n          - \"50\"\n          - \"100\"\n          - \"150\"\n          - \"200\"\n          - \"250\"\n          - \"300\"\n          - \"350\"\n          - \"400\"\n          - \"450\"\n          - \"500\"\n          - \"550\"\n          - \"600\"\n          - \"650\"\n          - \"700\"\n          - \"750\"\n          - \"800\"\n          - \"850\"\n          - \"900\"\n          - \"950\"\n          - \"1000\"\n\njobs:\n  authorize:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: octokit/request-action@dad4362715b7fb2ddedf9772c8670824af564f0d # v2.4.0\n        with:\n          route: GET /orgs/:organisation/teams/:team/memberships/${{ github.actor }}\n          team: technical-steering-committee\n          organisation: webdriverio\n        env:\n          GITHUB_TOKEN: ${{ secrets.WDIO_BOT_GITHUB_TOKEN }}\n  expense:\n    permissions:\n      contents: write\n      id-token: write\n    needs: [authorize]\n    runs-on: ubuntu-latest\n    steps:\n      - name: Run Expense Flow\n        uses: webdriverio/expense-action@fbcf7b225dfc474104d0830fe50a9b356bcec810 # v1\n        with:\n          prNumber: ${{ github.event.inputs.prNumber }}\n          amount: ${{ github.event.inputs.amount }}\n        env:\n          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}\n          GH_TOKEN: ${{ secrets.WDIO_BOT_GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

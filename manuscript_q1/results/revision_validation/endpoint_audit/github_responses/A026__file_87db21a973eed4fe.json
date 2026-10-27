@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A026",
+    "commit_sha": "aa2145df1bedd0bc8b578dfba684ff745a6f75ad",
+    "key": "A026__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "thefrontside/ctrlc-windows",
+    "url": "https://raw.githubusercontent.com/thefrontside/ctrlc-windows/aa2145df1bedd0bc8b578dfba684ff745a6f75ad/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:10.421Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n      - \"v[0-9]+\"\n\njobs:\n  publish-releases:\n    name: Publish Releases\n    runs-on: windows-latest\n    steps:\n      - name: Install Rust Toolchain\n        run: |\n          rustup install 1.63.0\n          rustup default 1.63.0\n          rustup target add x86_64-pc-windows-msvc\n          rustup target add aarch64-pc-windows-msvc\n      - uses: volta-cli/action@v3\n        with:\n          node-version: 14\n          yarn-version: 1.22.19\n          registry-url: https://registry.npmjs.org\n        env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}\n      - uses: actions/checkout@v3\n      - run: yarn install\n      - run: yarn build --arch=arm64\n      - run: yarn build --arch=x64\n      - name: Publish Releases\n        uses: thefrontside/actions/synchronize-with-npm@v2\n        with:\n          npm_publish: yarn publish\n        env:\n          GITHUB_TOKEN: ${{ secrets.FRONTSIDEJACK_GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

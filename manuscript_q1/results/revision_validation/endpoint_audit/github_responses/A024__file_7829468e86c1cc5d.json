@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A024",
+    "commit_sha": "b836d524750a1688e1ac26ad02d0534005e87eb4",
+    "key": "A024__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "sindresorhus/is-fn",
+    "url": "https://raw.githubusercontent.com/sindresorhus/is-fn/b836d524750a1688e1ac26ad02d0534005e87eb4/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:04.225Z",
+  "content": "name: CI\non:\n  - push\n  - pull_request\njobs:\n  test:\n    name: Node.js ${{ matrix.node-version }}\n    runs-on: ubuntu-latest\n    strategy:\n      fail-fast: false\n      matrix:\n        node-version:\n          - 16\n          - 14\n          - 12\n    steps:\n      - uses: actions/checkout@v2\n      - uses: actions/setup-node@v2\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm install\n      - run: npm test\n",
+  "is_error": false,
+  "error": null
+}

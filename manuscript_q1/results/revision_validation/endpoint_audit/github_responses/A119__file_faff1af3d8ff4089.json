@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A119",
+    "commit_sha": "879746fbbe6b8df9b5840e26c08fcf06a04f94ce",
+    "key": "A119__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "yakovmeister/pdf2image",
+    "url": "https://raw.githubusercontent.com/yakovmeister/pdf2image/879746fbbe6b8df9b5840e26c08fcf06a04f94ce/.github/workflows/test.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A119__file_faff1af3d8ff4089.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:33.339Z",
+  "content": "name: Run tests\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: [14.x, 16.x, 18.x, 20.x]\n\n    name: Node.js ${{ matrix.node-version }}\n\n    steps:\n      - uses: actions/checkout@v3\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v3\n        with:\n          node-version: ${{ matrix.node-version }}\n      - name: Install GraphicsMagick and Ghostscript\n        run: |\n          sudo apt-get update\n          sudo apt-get install -y graphicsmagick ghostscript\n      - run: npm install\n\n      # Run tests only (for pull requests or non-master branches)\n      - name: Run tests only\n        if: github.ref != 'refs/heads/master'\n        run: npm test\n\n      # Run tests with CodeClimate reporting (only on master branch)\n      - name: Run tests with CodeClimate\n        if: github.ref == 'refs/heads/master'\n        uses: paambaati/codeclimate-action@v5\n        env:\n          CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}\n        with:\n          coverageCommand: npm test\n\n",
+  "is_error": false,
+  "error": null
+}

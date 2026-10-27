@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A090",
+    "commit_sha": "ead85eb0819cde32eed2bc5726ff6c8ac895f975",
+    "key": "A090__file_e81e13daadd1745d",
+    "path": ".github/workflows/publish.yaml",
+    "repo": "vercel/serve-handler",
+    "url": "https://raw.githubusercontent.com/vercel/serve-handler/ead85eb0819cde32eed2bc5726ff6c8ac895f975/.github/workflows/publish.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:13.027Z",
+  "content": "name: Publish Package\n\non:\n  workflow_dispatch:\n  release:\n    types: [published]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        timeout-minutes: 5 # See https://github.com/actions/cache/issues/810\n        with:\n          cache: 'yarn'\n          node-version: '16.x'\n          registry-url: 'https://registry.npmjs.org'\n\n      - run: yarn install --network-timeout 1000000 --frozen-lockfile\n      - run: yarn run build-views\n      - run: yarn test\n      - run: npm publish\n        env:\n          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}\n",
+  "is_error": false,
+  "error": null
+}
