@@ -1,17 +1,17 @@
 \section{Robustness and Research Implications}
 \subsection{Observation and Selection Sensitivities}
-We exclude 60 positive observations whose stored repository key disagrees with a lexical parse of the source URL, reducing the endpoint universe by 24 repositories (7,171 to 7,147); greedy at 100 covers 5,524, with $P=799$. Flags are not transferred without reacquisition; this check cannot certify other remote associations.
+The stored repository key disagrees with a lexical URL parse for 60 positive observations. Excluding them removes 24 repository endpoints (7,171 to 7,147); greedy at 100 then gives $C=5{,}524$ and $P=799$. We discard those flags instead of assigning them to corrected URLs, which would require fresh observation.
 
-Removing all bundled-context nodes leaves every workflow-repository source set unchanged, including all 462,170 identity--repository pairs. Thus repository $C$, $H$, and $P$ remain invariant for fixed selections. Workflow-package incidence changes by 28 pairs for one endpoint, which repository deduplication absorbs; contextual nodes should therefore not be assumed irrelevant to every endpoint definition.
+Removing bundled-context nodes preserves every workflow-repository source set and all 462,170 identity--repository pairs. Repository $C$, $H$, and $P$ therefore remain unchanged for fixed selections. At the workflow-package level, one endpoint loses 28 incidence pairs; repository deduplication absorbs that change. The invariance is specific to the repository endpoint definition.
 
 Reversing tie order yields $C=5{,}537$ and $P=793$. Excluding the 1, 5, or 10 largest portfolios gives coverage of 5,522, 5,149, and 5,076. Grouping equal stored email hashes as a hypothetical control unit yields 12,147 groups with greedy coverage at 5,538. These tests reflect eligibility sensitivity rather than verified credential control.
 
 \subsection{Hybrid, Threshold, and Efficacy Results}
-At budget 100, the equal-weight hybrid gives $C=5{,}020$ (70.0\%), $H=31.19\%$, and $P=626$. Direct lexicographic exclusion selection gives $P=1{,}022$ with $C=5{,}020$ and $H=13.23\%$. These sensitivities reuse the fixed graph.
+The equal-weight hybrid reaches $C=5{,}020$ (70.0\%), $H=31.19\%$, and $P=626$ at budget 100. The lexicographic exclusion heuristic reaches the same coverage with $P=1{,}022$, but $H$ falls to $13.23\%$. Increasing completed source sets thus has a measurable exposure tradeoff on this graph.
 
 For $k=2$, $T_2(\varnothing)=1{,}716$ across 7,158 source-reachable endpoints. Greedy, Exact Union, and Hybrid yield $T_2=2{,}112$, $2{,}137$, and $2{,}153$, respectively, giving increments $\Delta T_2=396$, $421$, and $437$. These baseline-adjusted residual counts differ from strict zero-anchored counts: $P_2^{\rm strict}=1{,}145$, $793$, and $961$, respectively. Neither definition measures a deployed multisigner policy.
 
 At assumed efficacy $\eta=0.90$, Exact Union gives $H_\eta=30.41\%$ and Hybrid $28.07\%$, versus Greedy's unattenuated $11.48\%$. A common multiplier preserves $H$ rankings and does not model correlated CI failures.
 
 \subsection{Prospective Groundwork}
-We sampled 100 identifiers without replacement from the 25,228-name frame (seed 20261020, frozen before requests). Metadata were captured for 90; eight bundled identifiers returned HTTP 405 and two returned HTTP 404. The cutoff is October 20, 2026, 00:48:38 Asia/Dhaka; the 90-day horizon ends January 18, 2027. All outcomes remain pending. Surveillance, reporting delays, censoring, and family-grouped splits must be fixed before outcome analysis. Unreported packages remain unlabeled; no trained forecast or performance result is reported.
+Before metadata requests, we froze a uniform sample of 100 graph identifiers without replacement (seed 20261020). Ninety requests returned metadata; eight bundled-context identifiers returned HTTP 405 and two ordinary names returned HTTP 404. The context failures expose a sampling-frame defect. The feature cutoff is October 20, 2026, 00:48:38 Asia/Dhaka, with follow-up ending January 18, 2027. All 100 outcomes are pending. Outcome surveillance, reporting delays, censoring, and family-grouped splits still need specification before analysis; unreported packages remain unlabeled.

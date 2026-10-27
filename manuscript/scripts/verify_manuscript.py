@@ -231,7 +231,7 @@ for stem, outputs in publication['figures'].items():
     for ext, expected in outputs.items():
         check_hash(PAPER / f'figures/{stem}.{ext}', expected)
 check(set(re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}', content)) ==
-      {'study_system.pdf','study_methodology.pdf','objective_tradeoff.pdf','coverage_partition.pdf','representation_detail.pdf'},
+      {'study_system.pdf','source_multiplicity_compact.pdf','objective_tradeoff.pdf','coverage_partition.pdf','representation_detail.pdf'},
       'Unexpected conference figure integration')
 figure_data = read_json(RESULTS / 'analysis_figure_data.json')
 for row in figure_data['figures']['coverage_partition']['segments']:
@@ -242,6 +242,14 @@ for row in figure_data['figures']['coverage_partition']['segments']:
           'Source-partition figure does not conserve observed repository count')
 prose = '\n'.join(p.read_text() for p in (PAPER / 'sections').glob('*.tex'))
 check(not re.search(r'given SQL|supplied artifacts|provided repository|at the platform', prose, re.I), 'External-review framing remains in paper')
+
+# Scientific gate checks active sources and endpoint definitions, beyond hashes.
+sys.path.insert(0, str(ROOT / 'scripts'))
+from verify_reconciled_papers import verify as verify_reconciled
+try:
+    verify_reconciled(ROOT)
+except (AssertionError, OSError, ValueError, KeyError) as exc:
+    check(False, f'Reconciled scientific evidence: {exc}')
 
 report = {'source_and_output_hashes_checked': checked_hashes, 'deterministic_budget_rows': len(rows),
     'random_budget_rows': len(random_rows), 'active_citation_count': len(citations),

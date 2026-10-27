@@ -2,7 +2,11 @@
 
 This directory stores research audit reports and continuation records. Historical completion labels describe prior sessions; the latest handoff report supersedes earlier readiness and verification claims where corrections are documented. Technical checks do not certify submission approval or publication eligibility.
 
-Current handoff: [Task 17 — original architecture restored](17_original_architecture_restoration.md).
+Current handoff: [Task 20 — evidence reconciliation and empirical figure expansion](20_evidence_reconciliation_and_figures.md).
+
+Review basis: [Task 19 — repository issues and figure assessment](19_repository_review_and_figure_assessment.md). Task 20 applies its corrections and expands scientific verification. Earlier build results remain historical technical checks.
+
+Task 18 revises the conference text, retains the original architecture and measured results, and distinguishes the supplied pre-revision scores from checks still needed for the revised PDF.
 
 ## Report Index
 

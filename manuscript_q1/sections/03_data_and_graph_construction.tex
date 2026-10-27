@@ -1,51 +1,39 @@
 \section{Data Corpus and Graph Construction}
 \label{sec:data_construction}
+\subsection{Collection and Units}
+The collector seeds a high-impact npm list, expands dependencies through deps.dev~\cite{depsdevapi}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
 
-To conduct our empirical investigations, we construct and analyze two distinct mathematical graph representations derived from a centralized snapshot of the npm ecosystem, enriched with continuous-integration metadata and repository links from deps.dev~\cite{depsdevapi} and GitHub.
-
-\subsection{Study Universe and Empirical Dimensions}
-The empirical corpus analyzed in this study comprises:
-\begin{itemize}
-    \item \textbf{Packages ($P$):} 25,228 unique npm package names.
-    \item \textbf{Package Versions ($V$):} 22,340 versions possessing detailed dependency manifests.
-    \item \textbf{Maintainer Accounts ($M$):} 12,217 unique publisher accounts, spanning 79,405 author-package assignments.
-    \item \textbf{Dependency Edges ($E_{\text{dep}}$):} 88,113 unique directed package-to-package dependency relationships (48,705 direct dependencies, 73,180 transitive relations).
-    \item \textbf{Workflow-Verified Repositories ($R_{\text{wf}}$):} 7,171 distinct client software repositories with verified, active GitHub Actions continuous-integration workflows.
-\end{itemize}
+Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges~\cite{depsdevapi}. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=\textwidth]{study_system.pdf}
-\caption{Implemented measurement architecture with public data sources, collection, retained evidence, illustrative typed exposure paths, and exact closure computation. Icons denote logical roles. Sample counts and displayed greedy outcomes are empirical; workflow presence does not establish execution.}
+\includegraphics[width=0.96\textwidth]{study_system.pdf}
+\caption{Implemented measurement architecture. Icons denote logical roles and topology is illustrative. Counts and displayed greedy outcomes are empirical; workflow presence does not establish execution.}
 \label{fig:q1_observation_workflow}
 \end{figure*}
 
-\subsection{Two Graph Representations: Name-Projected vs. Version-Continuous}
-Figures~\ref{fig:q1_observation_workflow} and~\ref{fig:q1_version_semantics} distinguish data processing from representation sensitivity. We evaluate two structural graph models:
-\begin{enumerate}
-    \item \textbf{Package-Projected Graph ($G_{\text{proj}}$):} Standard in the literature, this representation collapses all published versions of package $p$ into a single node. A directed edge $(u, v) \in E_{\text{proj}}$ exists if \textit{any} version of $u$ declares a dependency on package $v$. Maintainer reach closures $\reach(m)$ are computed via transitive closure over $G_{\text{proj}}$.
-    \item \textbf{Version-Continuous Graph ($G_{\text{ver}}$):} This sensitivity representation explicitly preserves discrete version nodes $v \in V$. A directed edge $(v_1, v_2) \in E_{\text{ver}}$ exists if version $v_1$ declares a SemVer constraint that resolves to version $v_2$. Reach closures $\reach_{\text{ver}}(m)$ require a valid, continuous version path from client repositories to upstream maintainer-authored releases.
-\end{enumerate}
+The 15,233 workflow-positive package names map to 7,171 normalized repository keys. Owner/name pairs are case-folded and trailing transport \code{.git} is removed. This is lexical deduplication, without redirect or commit verification. There are 3,081 identifiers without maintainer mappings and 3,772 without completed workflow flags. Zero flags conflate directory absence with repository unavailability. Workflow endpoints require a positive observation; missing and zero flags are not evidence of safety. Coverage uses all 7,171 repository endpoints. Only 7,158 have an observed source identity; the other 13 are excluded from source-exclusion counts.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.94\textwidth]{observation_scope.pdf}
+\caption{Observation units and prospective acquisition. Panels describe separate populations; their missingness counts must not be added across panels. Context identifiers are retained graph units, not separate registry packages. The prospective selection was frozen before requests; all 100 outcomes remain pending.}
+\label{fig:q1_observation_scope}
+\end{figure*}
+
+Figure~\ref{fig:q1_observation_scope} separates graph units, observed workflow endpoints, and the prospective selection frame. This distinction matters because directory observation and metadata acquisition do not validate a historical installation or a future outcome.
+
+\subsection{Name Projection and Exact-Version Continuity}
+The name graph merges retained versions sharing an identifier. The sensitivity graph retains 40,806 exact (package, version) nodes and joins paths only at matching version keys. A maintained package seeds every retained version; without a version node, it contributes only its eligible seed endpoint. Both representations use the same package-level workflow flags. Neither reproduces npm installation or historical lockfile behavior: contexts and acquisition times remain mixed.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{graph_semantics.pdf}
-\caption{Illustrative version-splicing mechanism. Collapsing the two versions of the intermediate package creates a name-level path that has no continuous exact-version counterpart. Arrows show reverse dependency reach; the example is not a measured installation.}
+\caption{Illustrative version splicing. Collapsing intermediate versions creates a name-level path without an exact-version counterpart. Reverse-reach arrows do not describe a measured installation.}
 \label{fig:q1_version_semantics}
 \end{figure}
 
-\subsection{Cycle Resolution and SCC Condensation}
-Real-world package dependency graphs contain cyclic dependencies caused by circular development utilities, mutual peer dependencies, and legacy meta-packages. To ensure exact, deterministic reachability computation without infinite recursion, we apply Kosaraju's Strongly Connected Component (SCC) condensation algorithm:
-\begin{itemize}
-    \item In the package-projected graph, we identify \textbf{82 package nodes involved in 68 cyclic SCC components}. The largest cycle contains 4 packages (\texttt{glob}, \texttt{rimraf}, \texttt{minimatch}, \texttt{graceful-fs}).
-    \item In the version-continuous graph, \textbf{68 cyclic components} are detected across 40,806 version nodes.
-\end{itemize}
-Each cyclic component is condensed into a single super-node with bitwise union of outgoing edges. The resulting graph is a Directed Acyclic Graph (DAG), enabling exact, linear-time topological reach propagation via 64-bit integer bitmasks.
+\subsection{Cycles, Mapping Disagreements and Contexts}
+The name graph has 82 nontrivial strongly connected components (SCCs) containing 403 nodes; the exact-version union has 68 containing 304 nodes. The largest component has 61 nodes in each. SCC condensation preserves reach and permits exact bitset propagation over a directed acyclic graph; the implementation uses arbitrary-precision Python integers, not fixed 64-bit sets. This is a computation technique, not an intervention that removes cycles.
 
-\subsection{Dataset Hygiene, Disagreements, and Phantom Reach}
-To ensure rigorous dataset hygiene, we audited parser disagreements and contextual node markers:
-\begin{itemize}
-    \item \textbf{Lexical URL Parser Disagreements:} We identified 658 package records where the repository URL recorded in npm metadata disagreed with lexical URL parsing (e.g., git subdirectory references, SSH vs. HTTPS schemas). We audited the sensitivity of excluding 60 positive observations with ambiguous remote mappings, reducing the repository universe from 7,171 to 7,147 ($C = 5,524, P = 799$ at budget 100), confirming that mapping discrepancies do not alter our comparative findings.
-    \item \textbf{Contextual Node Invariance:} npm metadata contains 2,745 bundled-context identifiers. Removing these contextual nodes leaves primary workflow repository reach strictly invariant across all 462,170 identity--repository pairs.
-    \item \textbf{Phantom Reach Witnesses:} Package-name projection introduces substantial ``phantom reach''---dependency paths that appear reachable in collapsed graphs but cannot exist under any valid SemVer installation. We verified five explicit witness packages---\texttt{pseudomap}, \texttt{is}, \texttt{foreach}, \texttt{indexof}, and \texttt{has-color}---where legacy versions link to modern frameworks, artificially inflating perceived downstream blast radius by up to 287\%.
-\end{itemize}
+The URL audit finds 658 identifier-level parser disagreements. Excluding 60 inconsistent positive observations reduces the workflow repository universe to 7,147; greedy at budget 100 gives $C=5{,}524$ and $P=799$. We discard ambiguous flags rather than transferring them to a corrected URL without reacquisition. Removing bundled-context nodes preserves all 462,170 primary account--repository incidences for fixed selections, although workflow-package incidence changes. That invariance does not apply automatically to every endpoint definition or individual-package ranking.

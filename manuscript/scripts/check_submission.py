@@ -83,7 +83,7 @@ report = {
     "venue_policy_checks_pass": all(venue_policy_checks.values()),
     "anonymity_scope": "Author block, PDF author metadata, local paths, and email patterns checked; indirect identification requires human review.",
     "llm_policy_status": requirements["llm_policy_status"],
-    "similarity_check": "not performed; no similarity-service report is available",
+    "similarity_check": "User-supplied baseline report in turnitin_check/main - Similarity.pdf reports 12 percent overall similarity. It predates the manuscript revision; a fresh report for this PDF is pending. The separate academi.cx report estimates AI detection, not similarity.",
     "author_actions_pending": requirements["author_actions_pending"],
     "guideline_hashes": {name: hashlib.sha256((PAPER/name).read_bytes()).hexdigest() for name in [
         requirements["local_guideline"], requirements["local_template_link"]]},

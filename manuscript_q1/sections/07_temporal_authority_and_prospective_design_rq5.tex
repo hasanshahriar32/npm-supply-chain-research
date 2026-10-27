@@ -1,49 +1,26 @@
-\section{Temporal Reconstruction and Authority-Aware Design: RQ5}
+\section{Temporal Metadata and Prospective Design: RQ5}
 \label{sec:temporal_authority}
+The historical companion asks what retained registry metadata can support before an event cutoff. It is separate from the cross-sectional reverse-reach experiment. It does not test whether the primary rankings would have predicted historical compromise.
 
-Research Question 5 investigates whether the structural prioritization metrics developed on static graphs hold under pre-event temporal reconstructions, what release-authority metadata exists to audit prospective releases, and how to rigorously benchmark prospective supply-chain defenses.
-
-\subsection{Bounded Recursive SemVer Cutoff Reconstruction}
-A primary methodological vulnerability in supply-chain literature is the retrospective evaluation of static dependency graphs. When an incident is analyzed using the contemporary dependency graph, post-compromise package removals, yanked versions, and subsequent dependency migrations distort the true attack blast radius.
-
-To quantify this representation gap, we implemented a time-bounded recursive SemVer graph reconstruction engine enforcing the strict pre-event invariant $t_{\text{cutoff}} < t_{\text{incident}}$ across our 45 retained pre-incident snapshots. Table~\ref{tab:q1_temporal_reconstruction} summarizes the architectural dimensions and empirical completeness of this reconstruction.
+\subsection{Bounded Cutoff-SemVer Reconstruction}
+For each retained root record, the reconstruction chooses the highest currently retained, non-prerelease version satisfying a runtime dependency range and published by the root cutoff. Expansion stops at depth three or 250 nodes per root. Peer, optional, development, bundled, workspace, override, git, and tarball dependency behavior is excluded. Deleted historical versions may be unavailable; present-day retention cannot recreate every past registry state.
 
 \input{tables/q1_temporal_reconstruction_table}
 
-The reconstruction engine achieved \textbf{$99.89\%$ SemVer resolution completeness} across $1{,}848$ dependency edges and $1{,}272$ unique nodes, with only 7 unresolved edges attributable to unmirrored private scopes. A node budget cap of $N_{\max} = 250$ was reached by only a single root package ($2.2\%$), confirming that a traversal depth of $\le 3$ captures the true pre-event transitive dependency tree without unbounded recursion.
+The source contains 45 root records but 44 distinct event/root/cutoff tuples: one \texttt{node-ipc} tuple is repeated. We report retained-record counts without treating them as independent incidents. Of 1,848 recorded edge attempts, 1,841 resolve and seven have unavailable target registries, yielding 99.62\% among recorded attempts. This percentage excludes unvisited expansions beyond the bounds. The 1,272 node count is summed across roots, not globally deduplicated. One record reaches the node cap. These measurements do not establish full-tree completeness, downstream population reconstruction, or unbiased historical rankings.
 
-Crucially, pre-event reconstructions reveal that static snapshot analysis alters the downstream dependent count in $31.8\%$ of historical packages, primarily due to upstream deprecations and registry yanking following security disclosures. Time-bounded reconstruction is therefore indispensable for evaluating what defenders could have observed immediately prior to an attack.
-
-\subsection{Pre-Event Release-Authority and Provenance Audit}
-Even if dependency topology is accurately reconstructed, supply-chain interventions require verifiable release authority to authenticate package updates. We audited all 45 pre-event source snapshots across five metadata and cryptographic dimensions. Table~\ref{tab:q1_release_authority} details the empirical availability of these authority signals.
-
+\subsection{Release-Field Availability and Authority Limits}
 \input{tables/q1_release_authority_table}
 
-Our audit yields three significant discoveries:
-\begin{enumerate}
-    \item \textbf{High Predecessor and Repository Continuity:} $97.8\%$ of pre-incident packages ($44/45$) possess an identifiable immediate predecessor version in npm packument metadata, and $93.3\%$ ($42/45$) provide continuous repository URLs. This confirms that differential release audits (e.g., detecting sudden maintainer switches or unexpected repository relocations) are structurally viable for $>90\%$ of real-world packages.
-    \item \textbf{Moderate VCS Commit Transparency:} $75.6\%$ of pre-incident packages ($34/45$) record a valid \texttt{gitHead} commit SHA in their package metadata, permitting source-to-tarball diffing. However, $24.4\%$ provide no commit reference, leaving tarball contents unanchored to public version control.
-    \item \textbf{Total Absence of Public Cryptographic Provenance:} Exactly \textbf{$0$ out of $45$ pre-incident snapshots ($0.0\%$)} possessed official npm Sigstore/SLSA provenance attestations or transparency log entries. While cryptographic distribution hashes (\texttt{dist.integrity}) and registry PGP signatures were present on $100\%$ of tarballs, these certify only registry transmission integrity, not build provenance or developer identity. As observed by Kalu et al.~\cite{okafor2025} and Schorlemmer et al.~\cite{schorlemmer2024}, public registry provenance adoption remains in its infancy, making pre-incident retrospective verification impossible via public transparency logs alone.
-\end{enumerate}
+The availability audit finds predecessor metadata for 44 of 45 retained records, repository-field comparison availability for 42, and \texttt{gitHead}-field comparison availability for 34. Availability does not show that URLs stayed equal, commits were valid or available, or a publisher retained authority. The audit classified no field deltas, built no authority scores, and evaluated no release-gating control.
 
-\subsection{Sensitivity Analyses and Ablation Studies}
-To verify the stability of our prioritization metrics across algorithmic assumptions, we executed a comprehensive 6-dimension ablation suite:
-\begin{itemize}
-    \item \textbf{Cycle Condensation Sensitivity:} Comparing Kosaraju SCC condensation against raw cyclic graphs revealed $<0.15\%$ change in greedy coverage sets, verifying that dependency cycles in npm do not artificially inflate reachability calculations.
-    \item \textbf{Traversal Depth Sensitivity:} Expanding maximum traversal depth from $k=2$ to $k=3$ increased total reach by $14.2\%$, while expanding from $k=3$ to $k=4$ contributed only $+1.8\%$ additional reach, confirming that depth 3 captures the effective blast radius of npm supply-chain dependencies.
-    \item \textbf{Resolution Budget Sensitivity:} Doubling the per-root node cap from $N_{\max} = 250$ to $500$ affected only $1$ package out of $45$, confirming that resolution truncation does not bias empirical conclusions.
-\end{itemize}
+All 45 records contain \texttt{dist.integrity} and embedded maintainer metadata. A distribution hash identifies expected artifact bytes; an embedded maintainer array is not a cryptographic signature. Neither proves a benign or reproducible build. The attestation access assessment made no version-specific requests, retrieved no bundles, ran no signature verification, and classified no attestation states. Historical attestation presence is therefore \emph{unknown}; zero retrievals cannot be reported as zero attestations. Signing studies motivate the need for stronger evidence~\cite{okafor2025,schorlemmer2024}, without supplying the missing measurements for this cohort.
 
-\subsection{Prospective Cohort Evaluation vs. Positive-Only Benchmarks}
-A widespread failure mode in software supply-chain research is benchmarking detectors on retrospective ``positive-only'' lists of compromised packages (e.g., Datadog, Figshare, or GitHub Advisory lists). Such benchmarks suffer from fatal methodological deficiencies:
-\begin{enumerate}
-    \item \textbf{Survivor and Discovery Bias:} Only compromises that were detected and publicly attributed enter retrospective datasets. Stealthy, long-dwell exfiltration campaigns are systematically excluded.
-    \item \textbf{Absence of Dated Negative Horizons:} Without a defined, prospective temporal cohort of uncompromised packages observed over the exact same time window, false-positive rates cannot be established. Package-level findings can overapproximate finer-grained exposure~\cite{gao2025emse}; that study does not supply a negative population for our cohort.
-    \item \textbf{Campaign Relatedness and Grouped Inference:} Many malicious packages belong to coordinated typosquatting or dependency confusion campaigns (e.g., hundreds of identical packages published by a single attacker). Treating each package as an independent statistical sample constitutes pseudo-replication.
-\end{enumerate}
+The LiteLLM source-tag/artifact discrepancy~\cite{litellmincident2026} illustrates why artifact identity, intended source, and release authority must be evaluated separately. Contextual reports do not add observations to the 45-record companion.
 
-We froze a \textbf{100-package prospective metadata feasibility cohort} with a 90-day outcome horizon ending January 18, 2027. Metadata was captured for 90 packages and unavailable for ten. No outcomes, fitted models, or predicted probabilities are present in the retained cohort status. The frame is a historical high-impact-seeded expansion, not a representative current npm population; missing records are not labeled benign. The planned outcome evaluation remains pending and does not establish forecasting performance or unbiased population inference.
+\subsection{Prospective Acquisition and Outcome Requirements}
+Before requests, we froze 100 identifiers sampled uniformly without replacement from the 25,228-identifier graph frame (seed 20261020). The 92 ordinary-shaped names produced 90 metadata captures and two HTTP 404 responses; eight bundled-context identifiers returned HTTP 405. These failures expose a sampling-frame defect. No selected identifier was replaced. A new registry-level wave would require a separately frozen frame of valid units.
 
-\paragraph{Artifact identity is not source equivalence.}
-The LiteLLM source-tag/artifact discrepancy~\cite{litellmincident2026} motivates comparing built artifacts with intended source. Availability of \texttt{gitHead} and \texttt{dist.integrity} alone does not establish a reproducible build, trusted publisher identity, or benign contents. These October examples do not expand the 45-snapshot audit cohort.
+The cutoff is October 20, 2026, 00:48:38 Asia/Dhaka; the 90-day horizon ends January 18, 2027. All 100 outcomes remain pending. No positive or negative outcome labels, trained models, predicted probabilities, or forecasting metrics exist. The protocol is an internal feasibility plan, not external preregistration.
 
+A future outcome study must define its eligible population, surveillance sources, reporting-delay and censoring rules, and campaign/family grouping before examining outcomes. Unreported packages must remain unlabeled unless a specified follow-up procedure supports another interpretation. Retrospective incident lists can support documented-event studies, but cannot alone estimate false-positive rates for an unspecified population. The current acquisition pilot establishes request feasibility and frame limitations, not predictive validity.

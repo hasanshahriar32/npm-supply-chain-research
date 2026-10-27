@@ -9,14 +9,14 @@ Enforces:
    - Both Named (main_q1.pdf) and Double-Anonymous (main_q1_anonymous.pdf) targets
 3. Exact numerical consistency across TeX sections/tables and ground-truth data:
    - Task 04 incident validation ground truth (debug 1462 vs 1162, chalk 1125 vs 587,
-     ansi-styles 1376 vs 740, simple-swizzle 120 vs 31, qix portfolio reach 2971)
+     ansi-styles 1376 vs 740, simple-swizzle 120 vs 31, workflow endpoint membership and focal BFS reach)
    - per_package.csv, results.json, and q1_journal_experiments.json
 4. Conference freeze check:
    - manuscript/main.pdf, manuscript/main_authors.pdf,
      NPM_Supply_Chain_IEEE_Anonymous_Source.zip, NPM_Supply_Chain_IEEE_Overleaf.zip
      have zero byte changes (SHA-256 invariant).
 
-Outputs publication-ready verification report to manuscript_q1/results/q1_verification_report.json.
+Outputs technical verification report to manuscript_q1/results/q1_verification_report.json.
 """
 from __future__ import annotations
 
@@ -129,6 +129,16 @@ def check_pdf(pdf_name: str) -> dict:
         if missing_glyphs:
             res["errors"].append(f"Missing glyphs: {set(missing_glyphs)}")
 
+    if pdf_path.exists() and pdf_name.endswith('_anonymous.pdf'):
+        extracted = subprocess.check_output(['pdftotext', str(pdf_path), '-'], text=True)
+        normalized = ' '.join(extracted.split())
+        authors = json.loads((ROOT / 'manuscript/submission_files/authors.json').read_text())
+        identities = [a['name'] for a in authors['authors_in_supplied_order']] + [authors['institution']]
+        if any(name in normalized for name in identities):
+            res['errors'].append('Recorded author identity in anonymous journal PDF')
+        if 'AI assistance was used' not in normalized:
+            res['errors'].append('Assistance disclosure missing from anonymous journal PDF')
+
     res["passed"] = (
         not res["errors"]
         and res["pages"] > 0
@@ -145,63 +155,13 @@ def check_pdf(pdf_name: str) -> dict:
 def check_numerical_consistency() -> dict:
     errors = []
 
-    # 1. Check Table 4 against SQLite database and per_package.csv
-    per_pkg_path = ROOT / "manuscript/results/graph_validity/per_package.csv"
-    tbl4_path = Q1_DIR / "tables/q1_incident_case_study_table.tex"
-    tbl4_content = tbl4_path.read_text(encoding="utf-8")
-
-    expected_table4_rows = [
-        ("debug", "qix", 2, "4.4.1", "541 / 3,525", 1462, 1162, "+25.8%", "2,298", ">100", "8", "48"),
-        ("chalk", "sindresorhus", 1, "5.6.0", "544 / 3,416", 1125, 587, "+91.7%", "2", "1", "1", "1"),
-        ("ansi-styles", "sindresorhus", 1, "6.2.1", "25 / 4,052", 1376, 740, "+85.9%", "2", "1", "1", "1"),
-        ("simple-swizzle", "qix", 1, "0.2.2", "1 / 357", 120, 31, "+287.1%", "2,298", ">100", "8", "48"),
-        ("backslash", "qix", 1, "0.2.0", "1 / 1", 0, 0, "0.0%", "2,298", ">100", "8", "48"),
-        ("eslint-config-prettier", "lydell", 3, "10.1.5", "14 / 15", 10, 10, "0.0%", "561", "35", "39", "29"),
-        ("eslint-plugin-prettier", "lydell", 6, "5.2.3", "6 / 7", 5, 5, "0.0%", "561", "35", "39", "29"),
-        ("@solana/web3.js", "solana-devs", 1, "2.1.0*", "6 / 31", 4, 4, "0.0%", "181", ">100", "1,385", "562"),
-        ("nx", "jameshenry", 8, "21.5.0*", "5 / 52", 2, 2, "0.0%", "31", ">100", "899", "1,529"),
-        ("node-ipc (v12)", "riaevangelist", 12, "12.0.0", "2 / 4", 4, 4, "0.0%", "2,562", ">100", "2,560", "454"),
-        ("node-ipc (v10)", "riaevangelist", 12, "10.1.0", "2 / 4", 4, 4, "0.0%", "2,562", ">100", "2,560", "454"),
-        ("@tanstack/history", "tannerlinsley", 5, "1.114.15", "3 / 13", 1, 1, "0.0%", "163", ">100", "1,694", "443"),
-        ("@ctrl/tinycolor", "scttcper", 1, "4.1.0", "7 / 455", 10, 9, "+11.1%", "5,765", ">100", "366", "490"),
-        ("@opensearch-project/opensearch", "peterzhuamazon", 3, "3.6.0", "0 / 0", 0, 0, "0.0%", "2,548", ">100", "1,754", "3,299"),
-        ("@mastra/core", "tylerbarnes", 9, "0.0.0*", "0 / 0", 0, 0, "0.0%", "416", ">100", "5,387", "6,334"),
-        ("echarts-for-react", "atool", 1, "3.0.0", "0 / 0", 0, 0, "0.0%", "398", ">100", "1,971", "744"),
-    ]
-
-    for pkg, maint, m_count, ver, deps_str, exp_name, exp_vc, exp_infl, port_r, gr_r, un_r, p50_r in expected_table4_rows:
-        # Check maintainer and count
-        maint_pat = rf"\\texttt{{{re.escape(pkg)}}}.*?\\texttt{{{re.escape(maint)}}}\s*\({m_count}\)"
-        if not re.search(maint_pat, tbl4_content):
-            errors.append(f"Table 4 maintainer mismatch for {pkg}: expected {maint} ({m_count})")
-        # Check reach values
-        reach_pat = rf"\\texttt{{{re.escape(pkg)}}}.*?{exp_name:,}\s*&\s*{exp_vc:,}"
-        if not re.search(reach_pat, tbl4_content):
-            errors.append(f"Table 4 reach mismatch for {pkg}: expected {exp_name:,} & {exp_vc:,}")
-        # Check ranks
-        rank_pat = rf"\\texttt{{{re.escape(pkg)}}}.*?\\#{re.escape(port_r)}.*?\\#{re.escape(un_r)}.*?\\#{re.escape(p50_r)}"
-        if not re.search(rank_pat, tbl4_content):
-            errors.append(f"Table 4 rank mismatch for {pkg}: expected port=#{port_r}, un=#{un_r}, p50=#{p50_r}")
-
-    # 2. Check narrative in Section 5
-    sec5_path = Q1_DIR / "sections/05_empirical_results_rq1_to_rq3.tex"
-    sec5_content = sec5_path.read_text(encoding="utf-8")
-
-    narrative_checks = [
-        (r"simple-swizzle.*?120.*?31", "simple-swizzle 120 vs 31"),
-        (r"chalk.*?1{,}125.*?587", "chalk 1,125 vs 587"),
-        (r"ansi-styles.*?1{,}376.*?740", "ansi-styles 1,376 vs 740"),
-        (r"debug.*?1{,}462.*?1{,}162", "debug 1,462 vs 1,162"),
-        (r"qix.*?2{,}971", "qix 2,971 maintainer portfolio union reach in name graph"),
-        (r"1[\{,\}]*476.*?repositories\s*in\s*the\s*version-continuous\s*graph", "qix 1,476 maintainer portfolio union reach in version graph"),
-    ]
-    for pattern, desc in narrative_checks:
-        if not re.search(pattern, sec5_content):
-            errors.append(f"Section 5 narrative missing ground-truth finding: {desc}")
-
-    # Assert 2,362 (corrupted back-calculation) is NOT present in Section 5
-    if "2,362" in sec5_content or "2{,}362" in sec5_content:
-        errors.append("Section 5 narrative contains stale back-calculated number '2,362'")
+    # Full active-table and endpoint validation replaces hardcoded incident strings.
+    try:
+        sys.path.insert(0, str(ROOT / 'scripts'))
+        from verify_reconciled_papers import verify
+        scientific = verify(ROOT)
+    except (AssertionError, OSError, ValueError, KeyError) as exc:
+        errors.append(f'Reconciled scientific evidence: {exc}')
 
     # 3. Check k-Quorum Exclusion Table
     # Compare each individual table row with the complete CSV, avoiding cross-row regex matches.
@@ -289,7 +249,7 @@ def check_numerical_consistency() -> dict:
                 assert hashlib.sha256((Q1_DIR / f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
         included=re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}",
                              "\n".join(p.read_text() for p in (Q1_DIR / 'sections').glob('*.tex')))
-        assert len(included)==8 and len(set(included))==8, 'Expected eight integrated journal figures'
+        assert len(included)==12 and len(set(included))==12, 'Expected twelve integrated journal figures'
     except (AssertionError,OSError,ValueError,KeyError) as exc:
         errors.append(f'Figure integration gate: {exc}')
 
@@ -308,7 +268,7 @@ def check_numerical_consistency() -> dict:
         "check": "numerical_consistency",
         "passed": len(errors) == 0,
         "errors": errors,
-        "detail": "Verified Table 4 against SQLite and per_package.csv; verified Section 5 ground truth; verified k-quorum exclusion table; verified experiments JSON."
+        "detail": "Checked active budget cells, archive-derived workflow ranks, focal BFS endpoints, temporal resolution, authority semantics, figure provenance and threshold histograms."
     }
 
 
@@ -358,13 +318,13 @@ def main():
     print(f"[{'PASS' if abstract_res['passed'] else 'FAIL'}] Abstract: {abstract_res['word_count']} words (target 100-200)")
 
     named_res = check_pdf("main_q1.pdf")
-    print(f"[{'PASS' if named_res['passed'] else 'FAIL'}] Named PDF (main_q1.pdf): {named_res['pages']} pages, {named_res['file_bytes']:,} bytes, Type 3: {named_res.get('type_3_count', 'N/A')}, Overfull: {named_res.get('zero_overfull_hbox')}")
+    print(f"[{'PASS' if named_res['passed'] else 'FAIL'}] Named PDF (main_q1.pdf): {named_res['pages']} pages, {named_res['file_bytes']:,} bytes, Type 3: {named_res.get('type_3_count', 'N/A')}, No overfull boxes: {named_res.get('zero_overfull_hbox')}")
 
     anon_res = check_pdf("main_q1_anonymous.pdf")
-    print(f"[{'PASS' if anon_res['passed'] else 'FAIL'}] Anonymous PDF (main_q1_anonymous.pdf): {anon_res['pages']} pages, {anon_res['file_bytes']:,} bytes, Type 3: {anon_res.get('type_3_count', 'N/A')}, Overfull: {anon_res.get('zero_overfull_hbox')}")
+    print(f"[{'PASS' if anon_res['passed'] else 'FAIL'}] Anonymous PDF (main_q1_anonymous.pdf): {anon_res['pages']} pages, {anon_res['file_bytes']:,} bytes, Type 3: {anon_res.get('type_3_count', 'N/A')}, No overfull boxes: {anon_res.get('zero_overfull_hbox')}")
 
     num_res = check_numerical_consistency()
-    print(f"[{'PASS' if num_res['passed'] else 'FAIL'}] Numerical Consistency: Table 4, Section 5, Task 04 audit")
+    print(f"[{'PASS' if num_res['passed'] else 'FAIL'}] Scientific consistency: active tables, workflow endpoints, temporal evidence and figures")
 
     freeze_res = check_conference_freeze()
     print(f"[{'PASS' if freeze_res['passed'] else 'FAIL'}] Conference Artifact Lock: 4 artifacts verified")

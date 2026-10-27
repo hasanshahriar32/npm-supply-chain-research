@@ -1,26 +1,14 @@
-# Author details for the named manuscript
+# User-supplied author details
 
-The user supplied the following authors in this order:
+Updated with contact details supplied for the EMSE title page.
 
-| Order | Author | Department | Institution |
-|---|---|---|---|
-| 1 | Shahriar Hasan | Department of ECE | Hajee Mohammad Danesh Science and Technology University |
-| 2 | Ashikul Islam | Department of CSE | Hajee Mohammad Danesh Science and Technology University |
+| Order | Author | Department | Email | ORCID |
+|---|---|---|---|---|
+| 1 | Shahriar Hasan | Department of ECE | hasanshahriar32@gmail.com | [0009-0006-4448-9209](https://orcid.org/0009-0006-4448-9209) |
+| 2 | Ashikul Islam | Department of CSE | ashikulislamcf2000@gmail.com | [0009-0009-6384-5223](https://orcid.org/0009-0009-6384-5223) |
 
-The institution spelling has been normalized to “Science and Technology.” Department abbreviations are retained as provided. Email addresses, a corresponding-author designation, contribution roles, and publication approval were not supplied or invented. The supplied order is recorded; this does not assert approval by both individuals.
+Both authors: Hajee Mohammad Danesh Science and Technology University, Basherhat, HSTU, Dinajpur – 5200, Bangladesh.
 
-`authors.json` holds the structured author record. `config/authors.tex` contains the IEEE author block and PDF author metadata for the named draft. Superscripts map Shahriar Hasan to ECE and Ashikul Islam to CSE; the shared university appears below both names in `main_authors.pdf`.
+First and corresponding author: **Shahriar Hasan**. This designation follows the user's response to the corresponding-author question. Department abbreviations are preserved as supplied. ORCID checksums have been validated; identity ownership was not independently verified. Actual co-author submission approval has not been asserted.
 
-## Which version to use
-
-- **Named author draft:** `main_authors.tex` → `main_authors.pdf`. For author review and later camera-ready preparation; this is not an assertion of acceptance or submission readiness.
-- **Anonymous initial submission:** `main.tex` → `main.pdf`. The supplied guideline requires exclusion of authors and affiliations during double-blind review.
-
-Build both from `manuscript/`:
-
-```bash
-bash compile.sh main_authors.tex
-bash compile.sh
-```
-
-The full Overleaf package includes both entry points and this author record. The anonymous typesetting package excludes this document, `authors.json`, `config/authors.tex`, and the named entry point/PDF. Its remaining text inputs are screened for the recorded names and institution; the review PDF is checked separately for those identifiers.
+The standalone title-page PDF and editable source are in `../../submission/emse/`. Author contact information belongs in named submission material and is excluded from the anonymous conference source package. Existing publication archives remain the historical builds recorded in their artifact manifests; the new title page is a separate attachment.

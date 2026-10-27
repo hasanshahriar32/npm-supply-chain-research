@@ -1,7 +1,7 @@
 import AdmZip from "adm-zip";
 import { claimIngestionRun, createPendingSnapshot, getIngestionRun, recordIngestionRun } from "./platformDb";
 
-const repository = "ashik-hstu/npm-supply-chain-research";
+const repository = "hasanshahriar32/npm-supply-chain-research";
 const archivePath = "data/metrics_summary.csv.zip";
 const manifestPath = "platform/research/benchmark_snapshot_manifest.json";
 

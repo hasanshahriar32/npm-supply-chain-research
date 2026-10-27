@@ -1,6 +1,6 @@
 # Journal research draft
 
-The named and anonymous PDFs are research drafts. Their compilation checks do not certify acceptance, submission, author approval, venue compliance, or complete bibliography verification. Author names, order and departments follow `manuscript/submission_files/authors.json`; no emails or IEEE memberships were supplied.
+The named and anonymous PDFs are research drafts. Their compilation checks do not certify acceptance, submission, author approval, venue compliance, or complete bibliography verification. Author names, order and departments follow `manuscript/submission_files/authors.json`; contact details now follow the user-supplied record, with Shahriar Hasan as first and corresponding author. The separate title-page attachment is `../submission/emse/EMSE_Title_Page.pdf`. No IEEE memberships were supplied.
 
 ## Build
 
@@ -31,6 +31,12 @@ The strict-metric report is `../reports/14_q1_strict_quorum_exclusion_fix_and_lo
 
 ## Publication visuals (Task 16)
 
-The current named and anonymous journal PDFs are 17 pages with eight figures. New observation, analysis-methodology, version-continuity and source-partition diagrams complement the existing analyses. The final named acknowledgment sentence was removed as requested. Current shared SVG/PDF/PNG assets match the conference provenance records. See `../reports/16_acknowledgment_and_publication_figure_expansion.md` for the latest artifact lock.
+The Task 16 named and anonymous journal PDFs were 17 pages with eight figures. New observation, analysis-methodology, version-continuity and source-partition diagrams complement the existing analyses. The final named acknowledgment sentence was removed as requested. Current shared SVG/PDF/PNG assets match the conference provenance records. See `../reports/16_acknowledgment_and_publication_figure_expansion.md` for the latest artifact lock.
 
-Task 17 restores the original icon-based architecture in the journal and conference. The added methodology, version-splicing, and quantitative figures are retained. See `../reports/17_original_architecture_restoration.md` for the current artifact lock.
+Task 17 restores the original icon-based architecture in the journal and conference. The added methodology, version-splicing, and quantitative figures are retained. See `../reports/17_original_architecture_restoration.md` for the historical Task 17 artifact lock.
+
+## Evidence reconciliation (27 October 2026)
+
+The current named and anonymous journal PDFs have **15 pages and 12 figures**. Corrected tables, workflow-only account ranks, temporal attempt resolution and unassessed provenance status are documented in [Report 20](../reports/20_evidence_reconciliation_and_figures.md). New source distributions, representation matrices and observation-unit diagrams complement the restored architecture. Exclusion and weighting plots are separate readable figures. Earlier page counts and audit assertions are historical.
+
+Regenerate tables with `python3 scripts/reconcile_full_manuscript.py`, shared figures with `python3 manuscript/scripts/render_research_figures.py`, and journal plots with `python3 manuscript_q1/scripts/render_q1_figures.py` from the repository root. `python3 scripts/verify_reconciled_papers.py` checks active numerical sources and units. The current conference lock binds the rebuilt Task 20 artifacts; numerical verification requires the surrounding repository data.

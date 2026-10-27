@@ -315,7 +315,7 @@ def main():
     with pareto_tex_path.open("w") as f:
         f.write("% Auto-generated Pareto Frontier Table for Q1 Journal Expansion\n")
         f.write("\\begin{table*}[t]\n\\centering\n\\small\n")
-        f.write("\\caption{Multi-objective Pareto frontier across scalarization weight $\\alpha$ at budget $|S|=100$ ($|R_{\\text{wf}}| = 7{,}171$).}\n")
+        f.write("\\caption{Observed greedy tradeoffs across scalarization weight $\\alpha$ at budget $|S|=100$ ($|R_{\\text{wf}}| = 7{,}171$).}\n")
         f.write("\\label{tab:q1_pareto_frontier}\n")
         f.write("\\begin{tabular}{lrrrrrrrr}\n\\toprule\n")
         f.write("& \\multicolumn{4}{c}{Package-Projected Graph} & \\multicolumn{4}{c}{Version-Continuous Graph}\\\\\n")
@@ -324,7 +324,7 @@ def main():
         for alpha in ALPHAS:
             v_name = pareto_name[alpha][100]
             v_vc = pareto_vc[alpha][100]
-            tag = " (Exact Union)" if alpha == 0.0 else (" (Greedy Coverage)" if alpha == 1.0 else (" (Balanced Sweet Spot)" if alpha == 0.5 else ""))
+            tag = " (Exact Union)" if alpha == 0.0 else (" (Greedy Coverage)" if alpha == 1.0 else (" (Equal weighting)" if alpha == 0.5 else ""))
             f.write(f"{alpha:.2f}{tag} & {v_name['C']:,} & {v_name['C_pct']:.2f}\\% & {v_name['H_pct']:.2f}\\% & {v_name['P']:,} & {v_vc['C']:,} & {v_vc['C_pct']:.2f}\\% & {v_vc['H_pct']:.2f}\\% & {v_vc['P']:,}\\\\\n")
         f.write("\\bottomrule\n\\end{tabular}\n\\end{table*}\n")
     print(f"Wrote Pareto LaTeX: {pareto_tex_path}")

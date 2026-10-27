@@ -21,7 +21,7 @@ A frozen acquisition-feasibility wave selected 100 graph identifiers before requ
 | 1 | Shahriar Hasan | Department of ECE |
 | 2 | Ashikul Islam | Department of CSE |
 
-Both authors are affiliated with **Hajee Mohammad Danesh Science and Technology University**. Emails and corresponding-author designation have not been supplied. [submission_files/authors.json](submission_files/authors.json) and [author_details.md](submission_files/author_details.md) preserve the author record.
+Both authors are affiliated with **Hajee Mohammad Danesh Science and Technology University**. Emails, ORCIDs and the shared Dinajpur address are recorded in `submission_files/authors.json`; Shahriar Hasan is first and corresponding author. The separate EMSE title page is in `../submission/emse/`. [submission_files/authors.json](submission_files/authors.json) and [author_details.md](submission_files/author_details.md) preserve the author record.
 
 `main.tex` defaults to anonymous review. `main_authors.tex` enables [config/authors.tex](config/authors.tex). The named version supports author review and later camera-ready preparation; it does not imply acceptance or submission approval.
 
@@ -94,7 +94,7 @@ The acknowledgment thanks the package maintainers, open-source community and pub
 
 ## Reproducible research figures
 
-The conference includes five numbered figures: observation workflow, analysis methodology, budget tradeoffs, source-set partitions, and representation sensitivity. The journal adds a version-splicing explanation and further analysis figures. See the [figure gallery](figures/README.md) for PDF/SVG/PNG sources and previews.
+The conference includes five numbered figures: original architecture, residual-source distribution, budget tradeoffs, source-set partitions, and representation sensitivity. The journal adds a version-splicing explanation and further analysis figures. See the [figure gallery](figures/README.md) for PDF/SVG/PNG sources and previews.
 
 Regenerate the seven available figure sets and numeric tables with `python3 manuscript/scripts/render_research_figures.py` or `make -C manuscript figures`. The master generator invokes `scripts/render_publication_figures.py` for the six current shared visual sets. Everything uses native vector geometry and retained result rows. The older draw.io architecture is historical; current editable assets are SVGs and the renderer.
 
@@ -109,3 +109,11 @@ The final acknowledgment sentence was removed. Both conference PDFs remain six A
 ## Original architecture restored (Task 17)
 
 The original illustrated architecture is restored in both papers. It supplements the new methodology diagram and enhanced result plots. The compact box workflow is retained as an alternative asset. Source PDF/SVG/PNG bytes are checked against the preserved original, and updated builds and locks are documented in `../reports/17_original_architecture_restoration.md`.
+
+## Similarity-report revision (27 October 2026)
+
+The conference body was revised against the reports in `../turnitin_check/`, with clearer attribution, graph units, scenario explanations, and ranking descriptions. Both entry points share the revised text. The supplied similarity report shows 12% for the earlier PDF; the separate academi.cx report estimates AI detection. Neither score certifies the revised PDF. Exact bibliography metadata and the assistance disclosure are preserved. See [the revision record](../reports/18_turnitin_feedback_revision.md) for context, changes, and verification.
+
+## Evidence reconciliation (27 October 2026)
+
+[Report 20](../reports/20_evidence_reconciliation_and_figures.md) supersedes earlier numerical assertions about the named-maintainer example. Both conference variants use generated workflow-only account values and retain six A4 pages. The empirical residual-source plot replaces the generic methodology figure; the original architecture remains intact. Active tables, focal endpoint sets, temporal metadata and new figure provenance pass the expanded scientific gate. Reconciliation inputs regenerate before figures through the Makefile.

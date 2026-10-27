@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-describe("GitHub ingestion credential", () => {
-  it("can access the configured GitHub account with the server-side token", async () => {
+describe("GitHub ingestion repository access", () => {
+  it.skipIf(!process.env.GITHUB_TOKEN)("can read the configured repository with the server-side token", async () => {
     const token = process.env.GITHUB_TOKEN;
     expect(token).toBeTruthy();
-    const response = await fetch("https://api.github.com/user", {
+    const response = await fetch("https://api.github.com/repos/hasanshahriar32/npm-supply-chain-research", {
       headers: {
         Accept: "application/vnd.github+json",
         Authorization: `Bearer ${token}`,
@@ -12,7 +12,7 @@ describe("GitHub ingestion credential", () => {
       },
     });
     expect(response.status).toBe(200);
-    const account = await response.json() as { login?: string };
-    expect(account.login).toBe("ashik-hstu");
+    const repository = await response.json() as { full_name?: string };
+    expect(repository.full_name).toBe("hasanshahriar32/npm-supply-chain-research");
   }, 30_000);
 });

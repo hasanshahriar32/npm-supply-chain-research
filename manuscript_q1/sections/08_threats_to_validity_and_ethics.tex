@@ -1,43 +1,23 @@
 \section{Threats to Validity and Research Ethics}
 \label{sec:threats_to_validity}
-
-Following the ACM SIGSOFT Empirical Standards~\cite{ralph2020}, we systematically examine threats to construct, internal, external, and conclusion validity, alongside research ethics.
+We organize limitations around construct, internal, external, and conclusion validity, informed by empirical reporting guidance~\cite{ralph2020}.
 
 \subsection{Construct Validity}
-Construct validity assesses whether our operationalized metrics accurately capture the real-world phenomena of supply-chain risk and defense:
-\begin{enumerate}
-    \item \textbf{Maintainer Account vs. Compromise Vectors \& Control Efficacy:} Our baseline models treat maintainer account compromise as the primary threat vector. While account takeover (credential stuffing, token exfiltration, phishing) is a dominant real-world supply-chain attack vector, attackers can also compromise packages via compromised CI/CD runners, unpinned actions, or build infrastructure. Furthermore, as revealed during the October 2026 supply-chain incidents~\cite{litellm2026,npmtrustedpub2026}, trusted publishing authorization can depend on mutable repository-name bindings, while adversaries can harvest multiple developer tokens ($k \ge 2$) to circumvent branch protections. Uniform efficacy $H_\eta(S)=\eta H(S)$ and residual-source thresholds $P_k(S)$ are hypothetical sensitivities; neither measures enforcement nor bounds correlated pipeline failures. Release-role and package-approval data would be needed for operational quorum claims.
-    \item \textbf{Declared vs. Executed Dependencies:} Our workflow graph identifies dependencies declared in repository manifests and lockfiles. However, as demonstrated by Weeraddana et al.~\cite{weeraddana2024}, up to $30\%$ of declared dependencies in continuous integration may remain uninvoked during execution. While declared dependencies create an attack surface via install scripts (\texttt{preinstall}/\texttt{postinstall}) and build hooks, fine-grained call-graph reachability could further refine downstream exploitability.
-    \item \textbf{Resolution Invariants:} In our version-continuous graph, dependencies are resolved to the highest available version satisfying the SemVer range at snapshot time. Downstream consumers utilizing strict lockfiles (\texttt{package-lock.json}) may pin earlier patch releases, creating minor divergences between resolved graph edges and localized deployment instances.
-    \item \textbf{Native Runtime and Engine Boundaries:} Our study models dependencies declared within the npm package registry. However, npm packages execute on top of the Node.js runtime and its bundled C/C++ libraries (e.g., Brotli, OpenSSL). As demonstrated by Node.js \texttt{CVE-2026-111497}~\cite{nodejsbrotli2026} (a High-severity memory-corruption flaw in the bundled Brotli decoder), vulnerabilities in underlying execution engines transcend registry-level package manifests, establishing an orthogonal runtime boundary that package-level maintainer controls alone cannot address.
-\end{enumerate}
+Registry maintainer arrays supply username associations, not historical publication authority, token scope, account independence, or a peer-review policy. One maintainer does not prove absence of human review; several do not prove enforced review. Uniform and heterogeneous source weights are modeling assumptions. The perfect hardening model removes selected account origins, not package nodes or paths from other origins.
 
-\subsection{Internal Validity}
-Internal validity concerns potential confounding factors and algorithmic biases in our data processing:
-\begin{enumerate}
-    \item \textbf{Cycle Handling and Topological Invariants:} Circular dependencies in package registries could confound reachability metrics. We addressed this through Kosaraju strongly connected component condensation, collapsing 82 cyclic nodes across 68 components. Sensitivity ablations demonstrated that condensation alters greedy coverage sets by less than $0.15\%$.
-    \item \textbf{Repository URL Disambiguation:} Due to divergent manifest schemas, we resolved 658 repository URL parser disagreements through deterministic normalization rules, preventing repository duplication.
-    \item \textbf{Algorithmic Tie-Breaking:} Greedy submodular selection algorithms encounter multiple candidate maintainers with identical marginal gains. We resolved ties deterministically using maintainer portfolio size and alphanumeric identifier sorting, ensuring perfect reproducibility across runs.
-\end{enumerate}
+The workflow observation is a directory lookup at HEAD. We did not retain workflow YAML, job execution, permission scopes, historical release links, or consumer lockfiles. Dependency and workflow association therefore establishes neither installation nor vulnerable-code execution or secret access. CI dependency studies~\cite{weeraddana2024} and finer-grained vulnerability analysis~\cite{gao2025emse} motivate those distinctions without supplying execution evidence for our endpoints.
 
-\subsection{External and Observational Validity}
-External validity evaluates the generalizability of our findings across software ecosystems:
-\begin{enumerate}
-    \item \textbf{Ecosystem Specifics:} Our empirical study focuses on the npm registry---the largest open-source package ecosystem. While fundamental phenomena such as multi-homing dependency, submodular coverage saturation, and sole-maintainer bottlenecks are structural properties of software dependency networks, specific quantitative parameters (such as the exact $\alpha=0.50$ Pareto knee or 42.44\% version shrinkage) may vary in ecosystems with different dependency paradigms, such as Cargo, Maven, or PyPI.
-    \item \textbf{Enterprise vs. Open-Source Consumers:} Our consumer corpus comprises 7,171 real-world GitHub repositories with active CI/CD workflows. While representative of open-source and modern cloud-native projects, closed-source enterprise organizations operating private artifact proxies (e.g., Nexus, Artifactory) with internal vetting policies may exhibit different exposure profiles.
-\end{enumerate}
+The main exact-version graph is an observed deps.dev edge union, while the temporal companion is a bounded highest-satisfying SemVer approximation. They are different representations. Neither reconstructs npm hoisting, installed versions, overrides, or complete historical dependency trees. Runtime vulnerabilities such as the Node.js Brotli disclosure~\cite{nodejsbrotli2026} are outside the package graph. Residual thresholds are hypothetical source-count rules, without signer groups, role constraints, or measured enforcement.
 
-\subsection{Conclusion Validity and Avoiding Pseudo-Replication}
-A critical methodological vulnerability in empirical software engineering is the misapplication of inferential hypothesis tests (such as $t$-tests or $p$-values) to fixed, complete graph populations:
-\begin{enumerate}
-    \item \textbf{Fixed-Graph Descriptive Accuracy:} Our graph of 25,228 packages and 7,171 workflow repositories represents a fixed, fully measured population snapshot, not a random draw from an infinite statistical universe. Reporting $p$-values across static graph nodes constitutes pseudo-replication, as nodes connected by dependency edges violate sample independence.
-    \item \textbf{Grounded Statistical Quantification:} We avoid spurious inferential claims by reporting exact population descriptive effect sizes ($\Delta C = +1{,}131$ repos, $\Delta H = -22.31\text{ pp}$, $\Delta P = +266$ repos). Where stochastic variation exists---specifically in randomized baseline selection---we report exact finite-population hypergeometric expectations alongside empirical sample standard deviations and Monte Carlo standard errors ($\text{MCSE}_C = 37.5$, $\text{MCSE}_H = 0.026\text{ pp}$) across 200 independent simulation seeds.
-\end{enumerate}
+\subsection{Internal and Observational Validity}
+Independent traversals, transposed source incidence, small-graph cases, and generated result checks validate computations on retained evidence. They cannot recover omitted observations. SCC condensation preserves reach; it is not a source of measured cycle-removal benefit. Ties use ascending username order, not portfolio size, except where portfolio size defines the selection rule itself.
 
-\subsection{Research Ethics and Responsible Disclosure}
-This study was conducted with strict adherence to ethical research standards:
-\begin{enumerate}
-    \item \textbf{No Exploitation or Active Probing:} All analyses were conducted on publicly available metadata and historical package tarballs. No active probing, unauthorized access, or vulnerability exploitation was performed against npm registry infrastructure or GitHub repositories.
-    \item \textbf{Maintainer Privacy and Non-Stigmatization:} Maintainer identifiers analyzed in this study are public npm usernames. We emphasize that identifying a maintainer as a ``single point of failure'' ($|M(p)| = 1$) reflects structural ecosystem under-resourcing and lack of peer review, \textit{not} individual negligence or fault. Open-source maintainers contribute immense voluntary value to digital infrastructure; our findings argue for providing them with institutional backing, sponsored security audits, and automated tooling, rather than assigning culpability.
-    \item \textbf{Responsible Reporting:} All historical compromise records examined in this work have been previously remediated and disclosed by registry operators and upstream security response teams. No unpatched attack vectors or zero-day vulnerabilities are disclosed in this manuscript.
-\end{enumerate}
+Repository normalization is lexical. Excluding inconsistent positive observations tests sensitivity; it does not validate the other remote mappings or repair historical flags. Both main representations mix contexts and acquisition dates. Unknown workflow states and ambiguous zeros can omit eligible endpoints. Historical availability counts describe retained records, including a repeated tuple, and do not establish independent incidents or verified release authority.
+
+\subsection{External and Conclusion Validity}
+The high-impact-seeded expansion is neither registry-wide nor a random sample of npm installations. Public workflow-associated repositories cannot represent private consumer infrastructure without further evidence. Results describe this graph and explicit scenarios. They supply no measured compromise probabilities or causal control effects.
+
+Random orders quantify selection variability. Orders are reused across nested budgets and endpoint definitions, so the resulting 6,000 rows are not independent ecosystem samples. Monte Carlo errors describe simulation means, not npm-wide uncertainty. The seven scalarization settings are exploratory tradeoff points, without a certified global Pareto frontier or an empirically estimated stakeholder preference. Heterogeneous weights are structural sensitivities, not fitted risk priors. Claims about efficacy require a separate intervention study.
+
+\subsection{Ethics and Reporting}
+The analyses read retained public metadata and execute no package payloads, credential probes, or exploitation. Prospective captures omit email addresses and package bodies. Public usernames illustrate structural overlap without implying present-day insecurity, negligence, or historical publishing authority. Incident associations do not validate prediction. Artifact checksums identify retained bytes rather than certify authenticity. Assistance is disclosed, and authors must review the claims, sources, code, and applicable submission requirements.

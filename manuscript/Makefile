@@ -17,12 +17,14 @@ study:
 	python3 ../scripts/study_graph_validity.py
 	python3 ../scripts/check_identifier_scope.py
 figures:
+	python3 ../scripts/reconcile_full_manuscript.py
 	python3 scripts/render_research_figures.py
 profile:
 	python3 ../scripts/profile_structural_study.py
 reproduce:
 	python3 scripts/audit_artifacts.py
 	$(MAKE) study
+	python3 ../scripts/reconcile_full_manuscript.py
 	python3 scripts/render_research_figures.py
 	python3 scripts/verify_manuscript.py
 	bash compile.sh --both

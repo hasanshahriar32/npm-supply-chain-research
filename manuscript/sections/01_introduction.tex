@@ -1,7 +1,7 @@
 \section{Introduction}
-Shared dependencies concentrate npm exposure in upstream packages and maintainer accounts~\cite{zimmermann2019,zahan2022}. Limited defensive budgets require distinguishing three objectives: reviewing distinct downstream repositories, reducing exposure across hypothetical account compromises, and eliminating every observed source at a repository.
+An npm repository can depend on packages linked to several maintainer accounts. Earlier studies measured account reach and metadata signals for security review~\cite{zimmermann2019,zahan2022}. Selecting accounts for distinct repository coverage can differ from selecting them for exposure across compromise origins.
 
-October 2026 disclosures illustrate the boundaries of account controls. npm's SlugFest weakness involved mutable repository-name trust bindings; GitHub announced expiry of unvalidated bindings on October 2~\cite{npmtrustedpub2026,npmexpiry2026}. LiteLLM's final investigation describes an exposed master key followed by CI secret theft and misuse of multiple developer tokens~\cite{litellm2026}. Its published artifacts differed from the official source tag~\cite{litellmincident2026}. Railway reported potential environment-variable exposure and temporarily paused deployments~\cite{railway2026,railwaydisclosure2026}. These contextual cases motivate authority and CI boundaries; they do not validate our graph.
+Recent disclosures show the limits of account selection. SlugFest concerned mutable repository-name trust bindings~\cite{npmtrustedpub2026}; GitHub announced expiration of unvalidated bindings on October 2, 2026~\cite{npmexpiry2026}. LiteLLM reported master-key exposure, CI secret theft, and developer-token misuse~\cite{litellm2026}, with released artifacts differing from the source tag~\cite{litellmincident2026}. Railway described possible environment-variable exposure and a deployment pause~\cite{railway2026,railwaydisclosure2026}. These reports delimit our authority and workflow assumptions; they supply no graph validation.
 
 \begin{figure*}[t]
 \centering
@@ -10,8 +10,8 @@ October 2026 disclosures illustrate the boundaries of account controls. npm's Sl
 \label{fig:system}
 \end{figure*}
 
-Overlapping portfolios distinguish the objectives: a second account may add little coverage but still contribute a compromise-origin scenario. We compare exact portfolio unions at deduplicated workflow-repository endpoints.
+Reviewing a second account adds little coverage when its reach overlaps the first account's. Leaving it unselected nevertheless retains another compromise origin. We measure both quantities and complete source exclusion, deduplicating packages mapped to one workflow repository.
 
 We ask: \textbf{RQ1:} How do coverage and additive exposure selections differ at equal budgets? \textbf{RQ2:} How much covered infrastructure remains reachable from unselected identities? \textbf{RQ3:} How sensitive are results to representation, endpoint units, and observation gaps?
 
-We extend maintainer-reach analysis with five deterministic methods, 200 random orders, six budgets, representation sensitivities, and independent checks. Hybrid, exclusion, threshold, and efficacy sensitivities clarify tradeoffs. A frozen acquisition pilot supports future outcome research without a forecasting claim.
+We compare five rules and 200 random orders at six budgets, then vary representation and observation assumptions. Hybrid and exclusion selections test the tradeoff further. A frozen metadata pilot assesses acquisition feasibility for future outcome research.

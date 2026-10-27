@@ -14,7 +14,7 @@ Applied from the supplied `guideline/guide.md` and `guideline/template_link.txt`
 | LLM acknowledgment | Accurate LLM-use disclosure is present; it does not claim solely non-intellectual use or completed author approval | Disclosure present; policy mismatch remains |
 | LLM use limited to non-intellectual purposes | The guide says models were employed “solely for non-intellectual purposes.” This draft used literature discovery, study design, code development, analysis, drafting, and editing assistance | **Unresolved policy mismatch** |
 | Human review and approval of LLM output | Not asserted; actual authors must review sources, code, claims, and disclosure | Pending |
-| Similarity below 30% | No external similarity-service report available | Not verified |
+| Similarity below 30% | Supplied pre-revision report (`turnitin_check/main - Similarity.pdf`) shows 12% overall similarity, including reference matches | Baseline below threshold; revised PDF requires a fresh report |
 | Authorship, order, and submission approval | Cannot be established by formatting or PDF inspection | Author confirmation required |
 | Originality and no simultaneous submission | No declaration made on the authors' behalf | Author confirmation required |
 | Co-author CMT accounts | No accounts inspected or created | Author action required |

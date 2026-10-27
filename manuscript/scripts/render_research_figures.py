@@ -169,25 +169,33 @@ def main():
     render_analysis_figures.main()
     import render_publication_figures
     render_publication_figures.main()
+    import runpy
+    runpy.run_path(str(PAPER.parent / "scripts/render_review_figures.py"), run_name="__main__")
     stems = {
         "study_system": {"kind": "Logical architecture with original infrastructure glyphs and empirical counts", "in_paper": True},
         "objective_tradeoff": {"kind": "Measured budget curves and analytic random expectations", "in_paper": True},
         "coverage_partition": {"kind": "Measured source-incidence partition at budget 100", "in_paper": True},
         "representation_detail": {"kind": "Measured version-continuity sensitivity", "in_paper": True},
         "observation_workflow": {"kind": "Compact observation flow retained as supplementary alternative", "in_paper": False},
-        "study_methodology": {"kind": "Implemented analysis and validation workflow", "in_paper": True},
+        "study_methodology": {"kind": "Implemented analysis and validation workflow", "in_paper": False},
         "graph_semantics": {"kind": "Illustrative version-splicing mechanism", "in_paper": False},
         "objective_mechanism": {"kind": "Illustrative counterexample computed from declared sets", "in_paper": False},
     }
+    stems.update({
+        'source_multiplicity_compact': {'kind': 'Measured residual-source ECDF', 'in_paper': True},
+        'source_multiplicity': {'kind': 'Source and residual-source distributions', 'in_paper': False},
+        'representation_matrix': {'kind': 'Selection/evaluation representation comparisons', 'in_paper': False},
+        'observation_scope': {'kind': 'Observation units and acquisition counts', 'in_paper': False},
+    })
     def sha(path):
         return hashlib.sha256(path.read_bytes()).hexdigest()
-    inputs = [PAPER / "results/structural_interventions/results.json",
+    inputs = [PAPER.parent / "manuscript_q1/results/quorum_reproducibility.json", PAPER / "results/prospective_cohort/cohort_status.json",PAPER / "results/structural_interventions/results.json",
               PAPER / "results/graph_validity/identifier_scope.json", PAPER / "results/conference_modernization.json"]
     scripts = [Path(__file__).resolve(), PAPER / "scripts/render_system_figures.py",
                PAPER / "scripts/render_analysis_figures.py", PAPER / "scripts/render_technical_architecture.py",
-               PAPER / "scripts/technical_icons.py", PAPER / "scripts/export_drawio.py", PAPER / "scripts/render_publication_figures.py"]
+               PAPER.parent / "scripts/render_review_figures.py", PAPER / "scripts/technical_icons.py", PAPER / "scripts/export_drawio.py", PAPER / "scripts/render_publication_figures.py"]
     outputs = [FIGURES / f"{stem}.{suffix}" for stem in stems for suffix in ("pdf", "svg", "png")]
-    outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json", RESULTS / "publication_figure_data.json"]
+    outputs += [RESULTS / "system_figure_data.json", RESULTS / "analysis_figure_data.json", RESULTS / "publication_figure_data.json", RESULTS / "review_figure_data.json"]
     manifest = {
         "generator": "Original native SVG topology through librsvg; Matplotlib statistical plots; no external imagery or network calls",
         "python_version": platform.python_version(), "matplotlib_version": matplotlib.__version__,

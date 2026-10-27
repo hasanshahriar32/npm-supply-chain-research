@@ -26,7 +26,7 @@ CLERK_SECRET_KEY=sk_...
 POSTGRES_DATABASE_URL=postgresql://...
 ```
 
-For a Vercel deployment, add the same values in **Project Settings → Environment Variables**, plus a server-only `GITHUB_TOKEN` with **Contents: Read** access to `ashik-hstu/npm-supply-chain-research` and a random `CRON_SECRET` with at least 16 characters. The included `vercel.json` runs `GET /api/cron/research-ingestion` daily at **03:00 UTC**. Each execution retrieves the latest committed metrics archive from the private repository, creates a **pending** benchmark snapshot, and requires administrator publication before it becomes current.[1]
+For a Vercel deployment, add the same values in **Project Settings → Environment Variables**, plus a server-only `GITHUB_TOKEN` with **Contents: Read** access to `hasanshahriar32/npm-supply-chain-research` and a random `CRON_SECRET` with at least 16 characters. The included `vercel.json` runs `GET /api/cron/research-ingestion` daily at **03:00 UTC**. Each execution retrieves the latest committed metrics archive from the private repository, creates a **pending** benchmark snapshot, and requires administrator publication before it becomes current.[1]
 
 ## Clerk administrator access
 

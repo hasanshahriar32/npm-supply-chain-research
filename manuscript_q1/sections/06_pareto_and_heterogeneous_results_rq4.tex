@@ -1,48 +1,37 @@
-\section{Pareto Optimization and Heterogeneous Risk: RQ4}
+\section{Scalarized Tradeoffs and Heterogeneous Weights: RQ4}
 \label{sec:pareto_and_weights}
-
-In Research Question 4, we examine whether multi-objective scalarization and heterogeneous risk formulations can overcome the coverage--exposure trade-off and target structural bottlenecks that unweighted heuristics miss.
-
-\subsection{Multi-Objective Pareto Scalarization ($J_\alpha$)}
-To discover the Pareto frontier between submodular coverage $C(S)$ and modular scenario exposure reduction $H(S)$, we evaluated the hybrid objective $J_\alpha(S) = \alpha \frac{C(S)}{|R_{\text{wf}}|} + (1-\alpha) H(S)$ across scalarization weights $\alpha \in \{0.00, 0.10, 0.25, 0.50, 0.75, 0.90, 1.00\}$ at budget $|S|=100$.
-
-Table~\ref{tab:q1_pareto_frontier} presents the Pareto frontier outcomes across both package-projected and version-continuous graphs, and Fig.~\ref{fig:q1_pareto_frontier} depicts the empirical trade-off surface.
+\subsection{Exploratory Scalarization}
+We evaluate $J_\alpha(S)=\alpha C(S)/|R_{\mathrm{wf}}|+(1-\alpha)H(S)$ at seven weights, $\alpha\in\{0,0.10,0.25,0.50,0.75,0.90,1\}$. These greedy solutions trace an observed tradeoff curve. Neither the finite weight sweep nor the approximation guarantee establishes the global Pareto frontier or a universally preferred weight.
 
 \input{tables/q1_pareto_table}
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{q1_pareto_frontier.pdf}
-\caption{Multi-objective Pareto frontier between submodular coverage $C(S)$ and modular exposure reduction $H(S)$ at budget $|S|=100$ under varying scalarization weights $\alpha \in [0.0, 1.0]$. The balanced sweet spot at $\alpha=0.50$ captures $>90\%$ of both single-objective baseline values.}
+\caption{Observed greedy scalarization results at budget 100. Connecting seven evaluated settings guides the eye; the curve is not a certified global Pareto frontier. Equal weighting is a sensitivity choice.}
 \label{fig:q1_pareto_frontier}
 \end{figure}
 
-The empirical Pareto frontier reveals a pronounced knee region at \textbf{$\alpha = 0.50$}:
-\begin{itemize}
-    \item On the package-projected graph, $\alpha=0.50$ achieves $C(S) = 5{,}020$ repositories ($70.00\%$) and $H(S) = 31.19\%$ exposure reduction, simultaneously securing $P(S) = 626$ fully excluded repositories.
-    \item On the version-continuous graph, $\alpha=0.50$ achieves $C(S) = 5{,}000$ repositories ($69.73\%$) and $H(S) = 38.65\%$ exposure reduction ($P=648$).
-\end{itemize}
+At $\alpha=0.50$, the name graph gives $C=5{,}020$, $H=31.19\%$, and $P=626$; the version graph gives $C=5{,}000$, $H=38.65\%$, and $P=648$. The name result retains 90.65\% of greedy's baseline coverage and 92.31\% of exact union's H. Relative to greedy, it loses 518 covered repositories and gains 19.71 percentage points of H. Relative to exact union, it gains 613 repositories and loses 2.60 points of H. A preferred operating point requires review costs and stakeholder preferences that were not measured here.
 
-Compared to pure Greedy Coverage ($\alpha=1.00$), shifting to $\alpha=0.50$ incurs a minor coverage penalty of only $-7.23$ percentage points ($77.23\% \rightarrow 70.00\%$), while delivering a massive gain of \textbf{$+19.71$ percentage points} in exposure reduction ($11.48\% \rightarrow 31.19\%$, a $2.72\times$ increase). Compared to pure Exact Union ($\alpha=0.00$), $\alpha=0.50$ sacrifices only $-2.60$ percentage points of exposure reduction ($33.79\% \rightarrow 31.19\%$) while capturing $+613$ additional covered repositories ($+8.54$ percentage points). Thus, equal-weight scalarization resolves the single-objective trade-off dilemma by retaining over $90\%$ of the baseline coverage and optimal modular exposure reduction simultaneously.
-
-\subsection{Supermodular All-Source Exclusion Breakthrough}
-Because full repository immunization requires eliminating all reachable maintainers ($|\text{rem}(r)| = 0$), we evaluated our adaptive Minimum-Remaining-Source heuristic against standard heuristics. Table~\ref{tab:q1_supermodular_p} documents all-source exclusion counts across budgets $|S| \in \{10, 25, 50, 100\}$.
-
+\subsection{Exclusion-Oriented Heuristic}
 \input{tables/q1_supermodular_p_table}
+
+The lexicographic rule raises P to 1,022 at budget 100: 222 more than greedy and 488 more than exact union. Its $C=5{,}020$ and $H=13.23\%$ show that increasing completed source sets does not simultaneously maximize every objective. These are structural exclusions under ideal source hardening, with no global optimum or measured prevention guarantee.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{q1_supermodular_p.pdf}
+\caption{All-source exclusion P for the direct heuristic, greedy coverage and exact union. All three use the same observed workflow endpoint universe; counts do not measure deployed prevention.}
+\label{fig:q1_supermodular_p_weights}
+\end{figure}
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.92\textwidth]{q1_supermodular_p_and_weights.pdf}
-\caption{Supermodular all-source exclusion and heterogeneous risk optimization: (a) $P(S)$ scaling curves comparing the minimum-remaining-source heuristic against baseline rankings; (b) risk mass reduction across uniform, sole-maintainer, and log-portfolio activity priors.}
-\label{fig:q1_supermodular_p_weights}
+\includegraphics[width=0.94\textwidth]{q1_weight_sensitivity.pdf}
+\caption{Budget-100 exposure shares under uniform, account-sole and package-sole weights. Each column has its own stipulated denominator. Values are structural sensitivities, not estimated attack-risk reductions.}
+\label{fig:q1_weights}
 \end{figure*}
-
-At budget $|S|=100$, the direct $P(S)$ heuristic achieves \textbf{$P(S) = 1{,}022$ fully protected repositories} ($14.25\%$ of the entire corpus). This represents an improvement of:
-\begin{itemize}
-    \item \textbf{$+222$ repositories} ($+27.75\%$ relative gain) over Greedy Coverage ($P=800$), and
-    \item \textbf{$+488$ repositories} ($+91.39\%$ relative gain) over Exact Union ($P=534$).
-\end{itemize}
-Crucially, this supermodular gain is achieved without compromising perimeter defense: the heuristic maintains $C(S) = 5{,}020$ repositories ($70.0\%$) and $H(S) = 13.23\%$. This establishes that registry operators seeking complete repository isolation can achieve nearly double the structural protection of traditional rankings by actively prioritizing maintainers of near-isolated repositories.
 
 \subsection{Strict Zero-Anchored Threshold Sensitivity}
 \label{sec:quorum_exclusion}
@@ -63,20 +52,9 @@ The same ordered maintainer selections are reused at all thresholds, and the Dir
 
 For an additional hypothetical sensitivity, uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$. At $\eta=0.90$, Pareto Hybrid yields $28.07\%$ effective scenario exposure reduction. This uniform multiplier preserves all $H$ rankings and does not estimate a real bypass rate, correlate account failures, or model CI compromise. Its values are assumptions, not incident-derived estimates.
 
-\subsection{Heterogeneous Maintainer Risk Formulations}
-Table~\ref{tab:q1_heterogeneous_weights} reports maintainer prioritization outcomes evaluated under uniform, sole-maintainer ($w^{\text{sole}}$), and log-portfolio activity ($w^{\text{log}}$) risk priors, alongside weight-aware optimization strategies.
-
+\subsection{Heterogeneous Weight Sensitivities}
 \input{tables/q1_heterogeneous_weights_table}
 
-\subsubsection{Account-Level Sole-Maintainer Weighting}
-Under account-level sole-maintainer weighting ($w_m^{\text{sole}} = 1 + |\text{sole\_pkgs}(m)|$), weight-aware optimization ($\arg\max_S H_{\text{sole}}(S)$) eliminates \textbf{$88.04\%$} of ecosystem exposure mass at budget 100. This proves that nearly nine-tenths of solo-maintainer supply-chain exposure across 7,171 workflow repositories is concentrated within just 100 maintainer accounts ($0.819\%$ of the population).
+The account-sole weight increases an account's contribution according to its number of sole-maintained packages; it does not restrict its reachable endpoints to those packages. Ranking by that weighted reach captures 88.04\% of the stipulated account-sole mass. This is concentration under an assumed weighting, not nine-tenths of measured ecosystem risk.
 
-\subsubsection{The Package-Level Sole-Maintainer Bottleneck ($H_{\text{pkg-sole}}$)}
-A crucial discovery from our empirical audit is that account-level metrics severely misspecify package-level single-point-of-failure vulnerabilities. When risk weighting is applied strictly to packages having $|M(p)| = 1$ (no co-maintainers to conduct peer review), unweighted heuristics perform poorly:
-\begin{itemize}
-    \item Unweighted Greedy Coverage eliminates only \textbf{$23.40\%$} of package-level sole-maintainer exposure.
-    \item Unweighted Exact Union eliminates only \textbf{$27.32\%$}.
-    \item By contrast, Weight-Aware Package-Sole Optimization ($\arg\max_S H_{\text{pkg-sole}}(S)$) eliminates \textbf{$67.37\%$} of package-level sole-maintainer exposure mass.
-\end{itemize}
-
-This represents an improvement of \textbf{$+40.05$ percentage points} ($2.47\times$ higher risk reduction) at the exact same budget of 100 maintainers. Furthermore, this targeted optimization maintains high perimeter defense, covering $4{,}718$ workflow repositories ($65.79\%$) and fully excluding $642$ repositories. This fixed-graph result suggests that software supply-chain defenses must differentiate between account-level portfolio breadth and package-level co-maintenance governance: protecting accounts solely by dependency volume leaves the most fragile single-maintainer dependencies exposed.
+The separate package-sole quantity unions reach only from each account's sole-maintained packages. Under that definition, unweighted greedy captures 23.40\%, unweighted exact union 27.32\%, and package-sole-aware ranking 67.37\%. The latter gain is 40.05 percentage points relative to unweighted exact union. Its uniform coverage is 4,718 repositories and $P=642$. These results distinguish account weighting from package-restricted reach. A single observed maintainer is not evidence about review quality or an empirically fitted probability of compromise.

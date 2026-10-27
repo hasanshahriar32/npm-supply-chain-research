@@ -6,6 +6,8 @@ The completed work is a reproducible structural experiment on our collected npm 
 
 Read the [authored paper](manuscript/main_authors.pdf), [anonymous review paper](manuscript/main.pdf), or [full research report](manuscript/research/2026-10-20_full_research_report.md). The [manuscript guide](manuscript/README.md) explains editing, builds and submission artifacts. The [figure gallery](manuscript/figures/README.md) shows the code-generated system diagram and measured analyses, with editable SVG and vector PDF exports.
 
+The [27 October reconciliation](reports/20_evidence_reconciliation_and_figures.md) corrects journal tables, workflow endpoint case-study values, temporal and provenance interpretations, and verification gaps. The conference retains six pages and five figures; the revised journal has fifteen pages and twelve figures. New journal evidence views cover source multiplicity, selection/evaluation representation, and observation units. Use this reconciliation for the corrected achieved status.
+
 ## Main completed findings
 
 Our graph contains **25,228 identifiers**, **12,217 maintainer usernames**, **79,405 account/package relations**, and **88,113 distinct projected dependency adjacencies**. The identifiers include **2,745 bundled-context strings containing `>`** and **22,483 ordinary-shaped names**. Bundled-context strings have no matching registry metadata or maintainer membership in the archive; they must not be counted as independently registered npm packages. We retain the original graph for a reproducible representation study. Removing all context nodes leaves every maintainer/workflow-repository incidence set unchanged, so repository-level C/H/P values for any fixed identity selection are unchanged; all-package endpoints have a different scope. This does not establish that summed or maximum individual-package scores retain their rankings.
@@ -90,7 +92,7 @@ The legacy `calculate_metrics.py` column names include `wormability`, `blast_rad
 1. **Shahriar Hasan** — Department of ECE.
 2. **Ashikul Islam** — Department of CSE.
 
-Both are affiliated with **Hajee Mohammad Danesh Science and Technology University**. The order follows the supplied author record. Emails and a corresponding-author designation have not been supplied.
+Both are affiliated with **Hajee Mohammad Danesh Science and Technology University**. The order follows the supplied author record. Author emails, ORCIDs and the shared Dinajpur address are recorded in `manuscript/submission_files/authors.json`; Shahriar Hasan is first and corresponding author. A separate EMSE title page is available in `submission/emse/`.
 
 Use [main.pdf](manuscript/main.pdf) for the guideline's anonymous initial review. [main_authors.pdf](manuscript/main_authors.pdf) is the named working/camera-ready-preparation draft. The [full Overleaf ZIP](NPM_Supply_Chain_IEEE_Overleaf.zip) contains both entry points and author working material; the [anonymous source ZIP](NPM_Supply_Chain_IEEE_Anonymous_Source.zip) omits author records and research working notes.
 
