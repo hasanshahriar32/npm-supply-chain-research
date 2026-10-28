@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A117",
+    "commit_sha": "bd187a7ff0a793df754e9dc56c206298493ce81a",
+    "key": "A117__file_89b476612e9731e1",
+    "path": ".github/workflows/autofix.yml",
+    "repo": "vueuse/vueuse",
+    "url": "https://raw.githubusercontent.com/vueuse/vueuse/bd187a7ff0a793df754e9dc56c206298493ce81a/.github/workflows/autofix.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A117__file_89b476612e9731e1.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:29.628Z",
+  "content": "name: autofix.ci\n\non:\n  push:\n    branches:\n      - main\n  pull_request:\n    branches:\n      - main\npermissions:\n  contents: read\n\njobs:\n  autofix:\n    runs-on: ubuntu-latest\n    timeout-minutes: 10\n\n    steps:\n      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0\n        with:\n          persist-credentials: false\n\n      - name: Use Node.js lts/*\n        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0\n        with:\n          node-version: lts/*\n\n      - name: Setup\n        run: npm i -g @antfu/ni\n\n      - name: Install\n        run: nci\n\n      - name: Lint\n        run: nr lint --fix\n\n      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4\n",
+  "is_error": false,
+  "error": null
+}

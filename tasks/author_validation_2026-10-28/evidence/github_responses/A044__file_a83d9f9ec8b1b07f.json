@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A044",
+    "commit_sha": "d7235450fbe47e4a6213619b3be93ccb0b64ddbc",
+    "key": "A044__file_a83d9f9ec8b1b07f",
+    "path": ".github/workflows/branch-check.yml",
+    "repo": "joshstevens19/ethereum-bloom-filters",
+    "url": "https://raw.githubusercontent.com/joshstevens19/ethereum-bloom-filters/d7235450fbe47e4a6213619b3be93ccb0b64ddbc/.github/workflows/branch-check.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:23.330Z",
+  "content": "name: Push to branch checks\n\non:\n  push:\n    branches:\n    - master\n    - release/*\n    - feat/*\n    - fix/*\n\njobs:\n  build:\n\n    runs-on: ubuntu-latest\n    \n    steps:\n    - uses: actions/checkout@v1\n    - name: npm install, and test\n      run: |\n        npm install\n        npm test\n      env:\n        CI: true\n",
+  "is_error": false,
+  "error": null
+}

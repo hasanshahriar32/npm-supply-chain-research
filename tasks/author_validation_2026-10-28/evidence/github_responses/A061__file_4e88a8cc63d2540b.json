@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A061",
+    "commit_sha": "68100eecd92ab5bbe3dff25cc454cbe137ef4f05",
+    "key": "A061__file_4e88a8cc63d2540b",
+    "path": ".github/workflows/node.yml",
+    "repo": "airbnb/react-with-styles",
+    "url": "https://raw.githubusercontent.com/airbnb/react-with-styles/68100eecd92ab5bbe3dff25cc454cbe137ef4f05/.github/workflows/node.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:36.074Z",
+  "content": "name: 'Tests: node.js'\n\non: [pull_request, push]\n\njobs:\n  matrix:\n    runs-on: ubuntu-latest\n    outputs:\n      latest: ${{ steps.set-matrix.outputs.requireds }}\n      minors: ${{ steps.set-matrix.outputs.optionals }}\n    steps:\n      - uses: ljharb/actions/node/matrix@main\n        id: set-matrix\n        with:\n          preset: '>=6'\n          type: 'majors'\n\n  majors:\n    needs: [matrix]\n    name: 'latest majors'\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix: ${{ fromJson(needs.matrix.outputs.latest) }}\n\n    steps:\n      - uses: actions/checkout@v3\n        with:\n            fetch-depth: 0\n      - uses: ljharb/actions/node/install@main\n        name: 'nvm install ${{ matrix.node-version }} && npm install'\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm run tests-only\n      - run: bash <(curl -s https://codecov.io/bash) -f coverage/*.json;\n\n  node:\n    name: 'node 6+'\n    needs: [majors]\n    runs-on: ubuntu-latest\n    steps:\n      - run: 'echo tests completed'\n",
+  "is_error": false,
+  "error": null
+}

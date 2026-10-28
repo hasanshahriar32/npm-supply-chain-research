@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A099",
+    "commit_sha": "d041fc47abf1a1d14c0907638fe684b924fac333",
+    "key": "A099__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "goto-bus-stop/browser-pack-flat",
+    "url": "https://raw.githubusercontent.com/goto-bus-stop/browser-pack-flat/d041fc47abf1a1d14c0907638fe684b924fac333/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:23.700Z",
+  "content": "name: Node CI\n\non: [push, pull_request]\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version:\n        - 4.x\n        - 6.x\n        - 8.x\n        - 9.x\n        - 10.x\n        - 11.x\n        - 12.x\n        - 13.x\n        - 14.x\n        - 15.x\n        - 16.x\n        - 17.x\n        - 18.x\n        - 19.x\n        - 20.x\n        - 21.x\n        - 22.x\n\n    steps:\n    - uses: actions/checkout@v4\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n    - name: Install dependencies\n      run: npm install\n    - name: Run tests\n      run: npm test\n",
+  "is_error": false,
+  "error": null
+}

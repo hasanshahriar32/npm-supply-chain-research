@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_eec89f33b0cfef37",
+    "path": ".github/workflows/e2e-jest-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-jest-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_eec89f33b0cfef37.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.815Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-jest-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Jest'\njobs:\n  chore:\n    name: 'Validating Jest'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn init -p\n        yarn add jest\n\n        echo \"it('should pass', () => { expect(true).toBeTruthy(); });\" | tee pass.test.js\n        yarn jest pass.test.js\n\n        echo \"it('should fail', () => { expect(false).toBeTruthy(); });\" | tee fail.test.js\n        ! yarn jest fail.test.js\n\n        yarn add left-pad\n\n        echo \"const leftPad = require('left-pad'); it('should resolve a module', () => { expect(typeof leftPad).toBe('function');});\" | tee module.test.js\n        yarn jest module.test.js\n",
+  "is_error": false,
+  "error": null
+}

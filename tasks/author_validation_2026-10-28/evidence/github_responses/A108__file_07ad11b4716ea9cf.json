@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_07ad11b4716ea9cf",
+    "path": ".github/workflows/onRelease.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/onRelease.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_07ad11b4716ea9cf.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:11.959Z",
+  "content": "name: publish\non:\n  release:\n    # both release and prereleases\n    types: [published]\n  # support manual release in case something goes wrong and needs to be repeated or tested\n  workflow_dispatch:\n    inputs:\n      tag:\n        description: github tag that needs to publish\n        type: string\n        required: true\njobs:\n  # parses the package.json version and detects prerelease tag (ex: beta from 4.4.4-beta.0)\n  getDistTag:\n    outputs:\n      tag: ${{ steps.distTag.outputs.tag }}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.release.tag_name || inputs.tag }}\n      - uses: salesforcecli/github-workflows/.github/actions/getPreReleaseTag@main\n        id: distTag\n  npm:\n    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml@main\n    needs: [getDistTag]\n    with:\n      tag: ${{ needs.getDistTag.outputs.tag || 'latest' }}\n      githubTag: ${{ github.event.release.tag_name || inputs.tag }}\n    secrets:\n      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

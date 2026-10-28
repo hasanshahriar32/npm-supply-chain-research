@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A006",
+    "commit_sha": "7b5d20c543c3de07cd9fad570a9af0b5a0f976f6",
+    "key": "A006__file_aacbd0338bcf5989",
+    "path": ".github/workflows/benchmark.yml",
+    "repo": "dcastil/tailwind-merge",
+    "url": "https://raw.githubusercontent.com/dcastil/tailwind-merge/7b5d20c543c3de07cd9fad570a9af0b5a0f976f6/.github/workflows/benchmark.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:47.528Z",
+  "content": "name: Benchmark\n\non:\n    push:\n        branches:\n            - main\n    pull_request:\n\npermissions:\n    contents: read\n\njobs:\n    benchmark:\n        runs-on: ubuntu-latest\n        steps:\n            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n              with:\n                  persist-credentials: false\n            - name: Use Node.js 24\n              uses: actions/setup-node@v6\n              with:\n                  node-version: 24.18.1\n            - run: corepack enable\n            - run: pnpm install --frozen-lockfile\n            - name: Run benchmark\n              # Pinned from CodSpeedHQ/action@v5.6.0.\n              uses: CodSpeedHQ/action@78102a468f96d8e0ccb92d0ec49425753fc42062\n              with:\n                  # This public repository uses CodSpeed tokenless uploads so PR benchmark code does not receive a long-lived upload token or OIDC permission.\n                  mode: simulation\n                  run: pnpm --filter tailwind-merge bench\n",
+  "is_error": false,
+  "error": null
+}

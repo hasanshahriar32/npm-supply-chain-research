@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A005",
+    "commit_sha": "47773f7b17acc22bfb8bb7869b6ef087d24c0ca9",
+    "key": "A005__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "catdad-experiments/heic-decode",
+    "url": "https://raw.githubusercontent.com/catdad-experiments/heic-decode/47773f7b17acc22bfb8bb7869b6ef087d24c0ca9/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:47.451Z",
+  "content": "name: CI\n\non:\n  push:\n  pull_request:\n    branches: [ master ]\n\nenv:\n  FORCE_COLOR: 1\n\njobs:\n  test:\n    runs-on: ubuntu-latest\n    name: test with node ${{ matrix.node-version }}\n    strategy:\n      matrix:\n        node-version: [12, 14, 16, 18, 20, 22]\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm install\n      - run: npm test\n      - name: Inspect tarball\n        run: npm pack --dry-run\n\n  publish:\n    needs: test\n    runs-on: ubuntu-latest\n    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'pull_request'\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: 16\n          registry-url: https://registry.npmjs.org/\n      - run: npm publish --loglevel verbose\n        env:\n          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}\n",
+  "is_error": false,
+  "error": null
+}

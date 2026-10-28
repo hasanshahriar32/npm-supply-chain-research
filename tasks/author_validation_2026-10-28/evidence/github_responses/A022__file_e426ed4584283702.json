@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A022",
+    "commit_sha": "e13ae0fa7e71feec88958ef5c5f6fa2e9239a291",
+    "key": "A022__file_e426ed4584283702",
+    "path": ".github/workflows/release.yaml",
+    "repo": "ruimarinho/google-libphonenumber",
+    "url": "https://raw.githubusercontent.com/ruimarinho/google-libphonenumber/e13ae0fa7e71feec88958ef5c5f6fa2e9239a291/.github/workflows/release.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:04.117Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n      - master\n\nconcurrency:\n  group: release\n\njobs:\n  release:\n    name: Tag Release\n    if: contains(github.event.head_commit.message, 'Update libphonenumber@')\n    runs-on: ubuntu-latest\n    steps:\n      # The deploy key allows pushing to master past the required status\n      # checks ruleset and, unlike the workflow token, the tag push it\n      # makes triggers the publish workflow.\n      - uses: actions/checkout@v5\n        with:\n          ssh-key: ${{ secrets.RELEASE_DEPLOY_KEY }}\n      - uses: actions/setup-node@v5\n        with:\n          node-version: 24\n      # --ignore-scripts skips the local dist rebuild, matching the\n      # documented release process — the publish workflow rebuilds dist\n      # from src and that artifact is what ships to npm.\n      - name: Bump version and tag\n        run: |\n          git config user.name \"github-actions[bot]\"\n          git config user.email \"41898282+github-actions[bot]@users.noreply.github.com\"\n          npm version patch --ignore-scripts -m \"Release %s\"\n      - run: git push --follow-tags origin master\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A085",
+    "commit_sha": "f3d28054ca7744ea34b01785713860288489d1b5",
+    "key": "A085__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "Rich-Harris/sorcery",
+    "url": "https://raw.githubusercontent.com/Rich-Harris/sorcery/f3d28054ca7744ea34b01785713860288489d1b5/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:06.637Z",
+  "content": "name: CI\non:\n  push:\n    branches: [master]\n  pull_request:\npermissions:\n  contents: read # to fetch code (actions/checkout)\n\njobs:\n  Tests:\n    runs-on: ${{ matrix.os }}\n    timeout-minutes: 15\n    strategy:\n      matrix:\n        include:\n          - node-version: 18\n            os: windows-latest\n          - node-version: 18\n            os: macOS-latest\n          - node-version: 18\n            os: ubuntu-latest\n          - node-version: 20\n            os: ubuntu-latest\n          - node-version: 22\n            os: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n          cache: pnpm\n      - run: pnpm install --frozen-lockfile\n      - run: pnpm test\n        env:\n          CI: true\n  Lint:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    steps:\n      - uses: actions/checkout@v4\n      - uses: pnpm/action-setup@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 18\n          cache: pnpm\n      - name: install\n        run: pnpm install --frozen-lockfile\n      - name: type check\n        run: pnpm build\n      - name: lint\n        run: pnpm lint\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A034",
+    "commit_sha": "bf0052671d7dfd998456eec0e1ac305fa9879dd1",
+    "key": "A034__file_3f5366f6d6df3ec1",
+    "path": ".github/workflows/docker.yml",
+    "repo": "Brooooooklyn/canvas",
+    "url": "https://raw.githubusercontent.com/Brooooooklyn/canvas/bf0052671d7dfd998456eec0e1ac305fa9879dd1/.github/workflows/docker.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:14.735Z",
+  "content": "name: Docker nightly build\n\non:\n  schedule:\n    - cron: '0 1 * * *'\n  workflow_dispatch:\n\npermissions: {}\n\njobs:\n  build_image:\n    name: Build Docker images\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      packages: write\n    steps:\n      - uses: actions/checkout@v7\n\n      - name: Setup QEMU\n        run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes\n\n      - name: Login to GitHub Container Registry\n        uses: docker/login-action@v4\n        with:\n          registry: ghcr.io\n          username: ${{ secrets.GH_CONTAINER_UNAME }}\n          password: ${{ secrets.GITHUB_TOKEN }}\n\n      - name: Build docker image\n        run: |\n          docker build . --pull --no-cache -t ghcr.io/brooooooklyn/canvas/ubuntu-builder:jammy\n          docker build . --pull --no-cache -f musl.Dockerfile -t ghcr.io/brooooooklyn/canvas/musl-builder:lts\n\n      - name: Push docker image\n        run: |\n          docker push ghcr.io/brooooooklyn/canvas/ubuntu-builder:jammy\n          docker push ghcr.io/brooooooklyn/canvas/musl-builder:lts\n\n      - name: Install latest libc++-dev for cross build\n        uses: tj-actions/docker-run@v2\n        with:\n          image: ubuntu:jammy\n          name: libc-build-arm64\n          options: '--platform linux/arm64 --user 0:0 -e GITHUB_TOKEN -v ${{ github.workspace }}/lib/llvm-19:/usr/lib/llvm-19'\n          args: |\n            sh -c \"apt-get update && apt-get install -y wget gnupg2 && wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && echo 'deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' >> /etc/apt/sources.list && echo 'deb-src http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main' >> /etc/apt/sources.list && apt-get update && apt-get install libc++-19-dev libc++abi-19-dev -y --fix-missing --no-install-recommends && rm /usr/lib/llvm-19/lib/libc++abi.so && rm /usr/lib/llvm-19/lib/libunwind.so && rm /usr/lib/llvm-19/lib/libc++.so\"\n\n      - name: Build and push Linux aarch64\n        uses: docker/build-push-action@v7\n        with:\n          file: aarch64.Dockerfile\n          context: .\n          platforms: linux/amd64\n          push: true\n          tags: ghcr.io/brooooooklyn/canvas/ubuntu-builder:jammy-aarch64\n",
+  "is_error": false,
+  "error": null
+}

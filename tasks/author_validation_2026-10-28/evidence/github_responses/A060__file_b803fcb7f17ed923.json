@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A060",
+    "commit_sha": "5a25755538b243641ee5cee38b64a4794c2ba933",
+    "key": "A060__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "zachleat/esm-import-transformer",
+    "url": "https://raw.githubusercontent.com/zachleat/esm-import-transformer/5a25755538b243641ee5cee38b64a4794c2ba933/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:34.201Z",
+  "content": "on:\n  push:\n    branches-ignore:\n      - \"gh-pages\"\njobs:\n  build:\n    runs-on: ${{ matrix.os }}\n    strategy:\n      matrix:\n        os: [\"ubuntu-latest\", \"macos-latest\", \"windows-latest\"]\n        node: [\"16\", \"18\", \"20\", \"22\"]\n    name: Node.js ${{ matrix.node }} on ${{ matrix.os }}\n    steps:\n      - uses: actions/checkout@v3\n      - name: Setup node\n        uses: actions/setup-node@v3\n        with:\n          node-version: ${{ matrix.node }}\n          # cache: npm\n      - run: npm install\n      - run: npm test\nenv:\n  YARN_GPG: no\n",
+  "is_error": false,
+  "error": null
+}

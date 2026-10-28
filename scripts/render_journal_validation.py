@@ -31,11 +31,11 @@ def main():
     heuristic=json.loads((OUT/'heuristic/summary.json').read_text())
     replication=json.loads((OUT/'replication/study_summary.json').read_text())
     labels=['repository_mapping_supported','workflow_file_present','install_directive_observed','lockfile_present','dependency_version_supported']
-    display=['All package mappings supported','Workflow file acquired','Aligned install directive','Relevant root lockfile','Dependency/version example']
+    display=['All package mappings matched','Workflow file acquired','Aligned install directive','Relevant root lockfile','Dependency/version example']
     ar=[[d,audit['labels'][key]['supported_static'],audit['labels'][key]['unknown_requires_review']] for key,d in zip(labels,display)]
-    table('revision_audit_table.tex','Automated evidence candidates in the frozen 120-endpoint audit. Labels await independent author review.',
+    table('revision_audit_table.tex','Automated evidence indicators in the stratified 120-endpoint sample.',
           'tab:revision_audit','lrr',['Evidence criterion','Candidate support','Unresolved'],ar,
-          'The 115 acquired commits are current-time observations. Unresolved states are not negative or safe outcomes; candidate support is not human-validated precision. All mappings assigned to an endpoint must match for the first criterion.')
+          'The 115 acquired commits are current-time observations. Unresolved states are not negative or safe outcomes; automated indicators were not manually validated. All mappings assigned to an endpoint must match for the first criterion.')
     variants={'full_cap10':'Original rule (cap 10)','immediate_only':'Immediate + coverage',
               'no_coverage_tie':'No coverage tie-break','cap_1':'Cap 1','cap_5':'Cap 5','cap_20':'Cap 20','cap_all':'No candidate cap'}
     hr=[]

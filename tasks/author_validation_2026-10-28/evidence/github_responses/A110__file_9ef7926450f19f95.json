@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A110",
+    "commit_sha": "ad916e75555cb08427f12d59efecb18cfb1e3906",
+    "key": "A110__file_9ef7926450f19f95",
+    "path": ".github/workflows/changesets-from-conventional-commits.yml",
+    "repo": "sanity-io/ui",
+    "url": "https://raw.githubusercontent.com/sanity-io/ui/ad916e75555cb08427f12d59efecb18cfb1e3906/.github/workflows/changesets-from-conventional-commits.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A110__file_9ef7926450f19f95.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:16.479Z",
+  "content": "name: Add changeset from conventional commits\n\non:\n  pull_request_target: # zizmor: ignore[dangerous-triggers] gated to renovate[bot]/squiggler-legacy[bot]/squiggler-app[bot]; no PR code is checked out or executed in the reusable workflow\n    types: [opened, synchronize]\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read # for checkout\n\njobs:\n  call:\n    uses: sanity-io/.github/.github/workflows/changesets-from-conventional-commits.yml@main\n    if: github.event.pull_request.user.login == 'renovate[bot]' || github.event.pull_request.user.login == 'squiggler-legacy[bot]' || github.event.pull_request.user.login == 'squiggler-app[bot]'\n    secrets:\n      ECOSPARK_APP_ID: ${{ secrets.ECOSPARK_APP_ID }}\n      ECOSPARK_APP_PRIVATE_KEY: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}\n",
+  "is_error": false,
+  "error": null
+}

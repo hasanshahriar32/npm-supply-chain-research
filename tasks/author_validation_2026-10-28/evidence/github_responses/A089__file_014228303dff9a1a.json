@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A089",
+    "commit_sha": "8da01b01d2fffa48574efc17a99067539f16b998",
+    "key": "A089__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "thlorenz/anchor-markdown-header",
+    "url": "https://raw.githubusercontent.com/thlorenz/anchor-markdown-header/8da01b01d2fffa48574efc17a99067539f16b998/.github/workflows/node.js.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:10.517Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches: [ \"master\" ]\n  pull_request:\n    branches: [ \"master\" ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: [10.x, 12.x, 14.x, 16.x]\n        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/\n\n    steps:\n    - uses: actions/checkout@v6\n\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v6\n      with:\n        node-version: ${{ matrix.node-version }}\n        cache: 'npm'\n\n    - run: npm install\n\n    - run: npm test",
+  "is_error": false,
+  "error": null
+}

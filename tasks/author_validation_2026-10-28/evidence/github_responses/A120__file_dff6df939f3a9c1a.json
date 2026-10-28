@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_dff6df939f3a9c1a",
+    "path": ".github/workflows/e2e-eslint-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-eslint-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_dff6df939f3a9c1a.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:36.078Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-eslint-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E ESLint'\njobs:\n  chore:\n    name: 'Validating ESLint'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn init -p\n        yarn add eslint @stylistic/eslint-plugin\n\n        cat > eslint.config.mjs <<EOT\n        import stylistic from '@stylistic/eslint-plugin'\n\n        export default [\n          {\n            plugins: {\n              '@stylistic': stylistic\n            },\n            rules: {\n              '@stylistic/semi': 'error',\n            }\n          }\n        ]\n        EOT\n\n        echo '42;' | tee ok.js\n        yarn eslint ok.js\n\n        echo '42' | tee ko.js\n        ! yarn eslint ko.js\n\n    - name: 'Running the TypeScript integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn init -p\n        yarn add eslint 'typescript@<7.0.0-0' typescript-eslint\n\n        cat > eslint.config.mjs <<EOT\n        import tseslint from 'typescript-eslint';\n\n        export default tseslint.config(\n          tseslint.configs.recommended,\n          {\n            rules: {\n              '@typescript-eslint/explicit-function-return-type': 'error',\n              '@typescript-eslint/no-unused-vars': 'off',\n            },\n          });\n        EOT\n\n        echo 'const f = (): number => 42;' | tee ok.ts\n        yarn eslint ok.ts\n\n        echo 'const f = () => 42;' | tee ko.ts\n        ! yarn eslint ko.ts\n      if: |\n        success() || failure()\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,62 @@
+{
+  "name": "closure-compiler-npm",
+  "version": "20261025.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": {
+    "packages": [
+      "packages/google-closure-compiler-java",
+      "packages/google-closure-compiler-linux",
+      "packages/google-closure-compiler-linux-arm64",
+      "packages/google-closure-compiler-macos",
+      "packages/google-closure-compiler-windows",
+      "packages/google-closure-compiler"
+    ]
+  },
+  "description": "Check, compile, optimize and compress Javascript with Closure-Compiler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chadkillingsworth/closure-compiler-npm.git"
+  },
+  "contributors": [
+    {
+      "name": "Chad Killingsworth",
+      "email": "chadkillingsworth@gmail.com"
+    }
+  ],
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/chadkillingsworth/closure-compiler-npm/issues"
+  },
+  "homepage": "https://developers.google.com/closure/compiler/",
+  "devDependencies": {
+    "glob": "11.1.0",
+    "graphlib": "2.1.8",
+    "jasmine": "5.10.0",
+    "jasmine-console-reporter": "3.1.0",
+    "minimist": "1.2.8",
+    "ncp": "2.0.0",
+    "semver": "7.7.2"
+  },
+  "resolutions": {
+    "chokidar/glob-parent": "^5.1.2",
+    "expand-brackets/debug": "^3.0.0",
+    "findup-sync/micromatch": "^4.0.8",
+    "glob-stream/glob-parent": "^5.1.2",
+    "glob-watcher": "^6.0.0",
+    "ip-address": "^10.2.0",
+    "matchdep/micromatch": "^4.0.8",
+    "picomatch": ">=4.0.4",
+    "postcss": "^8.4.31",
+    "snapdragon/debug": "^3.0.0",
+    "yargs": "^13.3.0"
+  },
+  "scripts": {
+    "build": "./build-scripts/build.sh",
+    "test": "./build-scripts/test.sh",
+    "test:root": "./build-scripts/jasmine.sh --reporter=jasmine-console-reporter test/*.js",
+    "clean": "./build-scripts/clean.sh",
+    "publish-packages": "./build-scripts/publish.js"
+  },
+  "packageManager": "yarn@4.16.0"
+}

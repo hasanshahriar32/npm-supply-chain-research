@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A097",
+    "commit_sha": "e3fca332d5faa0f84dac70f0e4efd2953f4a369a",
+    "key": "A097__file_70c3a017bfdb629f",
+    "path": ".github/workflows/lint-pr.yml",
+    "repo": "felixmosh/bull-board",
+    "url": "https://raw.githubusercontent.com/felixmosh/bull-board/e3fca332d5faa0f84dac70f0e4efd2953f4a369a/.github/workflows/lint-pr.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:20.796Z",
+  "content": "name: 'Lint PR'\n\non:\n  pull_request_target:\n    types:\n      - opened\n      - reopened\n      - edited\n      - synchronize\n\njobs:\n  main:\n    name: Validate PR title\n    runs-on: ubuntu-slim\n    permissions:\n      pull-requests: read\n    steps:\n      - uses: amannn/action-semantic-pull-request@v6\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

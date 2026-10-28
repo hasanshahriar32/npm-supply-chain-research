@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_8e6b72baaac63c3f",
+    "path": ".github/workflows/e2e-nm-angular-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-nm-angular-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_8e6b72baaac63c3f.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.601Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-nm-angular-workflow.yml\n    - scripts/e2e-setup-ci.sh\n    - packages/yarnpkg-nm/sources/hoist.ts\n    - packages/yarnpkg-nm/sources/buildNodeModulesTree.ts\n    - packages/plugin-nm/sources/NodeModulesLinker.ts\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-nm-angular-workflow.yml\n    - scripts/e2e-setup-ci.sh\n    - packages/yarnpkg-nm/sources/hoist.ts\n    - packages/yarnpkg-nm/sources/buildNodeModulesTree.ts\n    - packages/plugin-nm/sources/NodeModulesLinker.ts\n\nname: 'E2E NM Angular'\njobs:\n  chore:\n    strategy:\n      matrix:\n        platform:\n        - ubuntu-latest\n        - windows-latest\n\n    name: 'Validating Angular install via node-modules linker on ${{matrix.platform}}'\n    runs-on: ${{matrix.platform}}\n\n    steps:\n    - name: Enable git longpaths\n      run: git config --global core.longpaths true\n\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh nm\n\n        # TODO: Angular should be fixed to detect the correct package manager to install with\n        # but for now we need to specify it\n        yarn dlx -p @angular/cli@next ng new berry-angular --interactive=false --package-manager yarn\n\n        cd berry-angular\n\n        yarn ng build --aot\n      shell: bash\n      env:\n        YARN_ENABLE_GLOBAL_CACHE: true\n        YARN_COMPRESSION_LEVEL: 0\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A026",
+    "commit_sha": "aa2145df1bedd0bc8b578dfba684ff745a6f75ad",
+    "key": "A026__file_9977bcef16cc0176",
+    "path": ".github/workflows/changeset.yml",
+    "repo": "thefrontside/ctrlc-windows",
+    "url": "https://raw.githubusercontent.com/thefrontside/ctrlc-windows/aa2145df1bedd0bc8b578dfba684ff745a6f75ad/.github/workflows/changeset.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:09.560Z",
+  "content": "name: Changeset\n\non:\n  push:\n    branches:\n      - \"v[0-9]+\"\n\njobs:\n  create-release-pr:\n    name: Create Changeset PR\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - name: Install Dependencies\n        run: yarn\n      - name: Create Release Pull Request\n        uses: changesets/action@v1\n        env:\n          GITHUB_TOKEN: ${{ secrets.FRONTSIDEJACK_GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_60e7955b22191537",
+    "path": ".github/workflows/e2e-husky-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-husky-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_60e7955b22191537.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.734Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-husky-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Husky'\njobs:\n  chore:\n    name: 'Validating Husky'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        git init\n        echo '/.yarn' > .gitignore\n\n        echo '{\"skipCI\": false, \"hooks\": {\"commit-msg\": \"commitlint -E HUSKY_GIT_PARAMS\"}}' > .huskyrc\n        echo 'module.exports = {extends: [\"@commitlint/config-conventional\"]};' > commitlint.config.js\n\n        yarn init -p\n        yarn add -D husky@^4.0.0-beta.1 @commitlint/{cli,config-conventional}\n\n        git add .\n        ! git commit -m \"Invalid commit message should fail pre-commit check\"\n\n        git commit -m \"test: lint on commitmsg should pass pre-commit check\"\n",
+  "is_error": false,
+  "error": null
+}

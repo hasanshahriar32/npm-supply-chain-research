@@ -93,8 +93,16 @@ def verify(raw_evidence=True):
     publication=json.loads((OUT/'publication_artifacts.json').read_text())
     assert publication['renderer_sha256']==sha(ROOT/'scripts/render_journal_validation.py')
     for p,h in publication['source_sha256'].items():assert sha(ROOT/p)==h,p
+    presentation_path=ROOT/'manuscript_q1/results/emse_figure_presentation.json'
+    presentation=json.loads(presentation_path.read_text()) if presentation_path.exists() else None
     for stem,outputs in publication['figures'].items():
-        for ext,h in outputs.items():assert sha(ROOT/f'manuscript_q1/figures/{stem}.{ext}')==h
+        for ext,h in outputs.items():
+            folder='editorial_inputs/' if presentation and stem in presentation['inputs'] else ''
+            assert sha(ROOT/f'manuscript_q1/figures/{folder}{stem}.{ext}')==h
+            if presentation:
+                assert sha(ROOT/f'manuscript_q1/figures/{stem}.{ext}')==presentation['figures'][stem][ext]
+    if presentation:
+        assert sha(ROOT/'scripts/prepare_emse_figures.py')==presentation['renderer_sha256']
     for name,h in publication['tables'].items():assert sha(ROOT/'manuscript_q1/tables'/name)==h
     return {'status':'PASS','checked_at_utc':stamp(),'baseline_masks_independently_rebuilt':len(masks),
             'sample_units':120,'github_observation_records':observation_count,

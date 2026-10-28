@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A018",
+    "commit_sha": "bde04654c082c3ba4a54ed57c29d91fbc59e54a9",
+    "key": "A018__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "matthewp/robot",
+    "url": "https://raw.githubusercontent.com/matthewp/robot/bde04654c082c3ba4a54ed57c29d91fbc59e54a9/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:59.059Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n    - main\n\njobs:\n  changelog:\n    name: Changelog PR or Release\n    if: ${{ github.ref_name == 'main' && github.repository_owner == 'matthewp' }}\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      pull-requests: write\n      id-token: write # Required for npm trusted publishing (OIDC)\n    strategy:\n      matrix:\n        node-version: [22.x]\n    steps:\n      - uses: actions/checkout@v7\n\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v7\n        with:\n          node-version: ${{ matrix.node-version }}\n\n      # Trusted publishing requires npm >= 11.5.1\n      - name: Update npm\n        run: npm install -g npm@11\n\n      - name: Install NPM Dependencies\n        run: npm ci\n\n      - name: Build\n        run: npm run build --workspaces --if-present\n\n      # No NPM_TOKEN: changesets/action falls back to OIDC trusted publishing\n      - name: Create Release Pull Request or Publish to npm\n        id: changesets\n        uses: changesets/action@v1\n        with:\n          publish: npm run changeset publish\n          commit: '[ci] release'\n          title: '[ci] release'\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n          NPM_CONFIG_PROVENANCE: true\n",
+  "is_error": false,
+  "error": null
+}

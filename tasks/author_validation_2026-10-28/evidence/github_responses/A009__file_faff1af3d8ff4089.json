@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A009",
+    "commit_sha": "8881007614a7c04e1766f0b802992a5dfacfafd7",
+    "key": "A009__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "dumbmatter/fakeIndexedDB",
+    "url": "https://raw.githubusercontent.com/dumbmatter/fakeIndexedDB/8881007614a7c04e1766f0b802992a5dfacfafd7/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:52.757Z",
+  "content": "name: Tests\n\non:\n  push:\n    branches: [master]\n  pull_request:\n    branches: [master]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        include:\n          - node: 18\n            pnpm: 10\n          - node: 20\n            pnpm: 10\n          - node: 22\n            pnpm: 11\n          - node: 24\n            pnpm: 11\n          - node: 26\n            pnpm: 11\n\n    steps:\n      - uses: actions/checkout@v4\n\n      - uses: pnpm/action-setup@v3\n        with:\n          version: ${{ matrix.pnpm }}\n\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node }}\n          cache: pnpm\n\n      - run: pnpm install\n      - run: pnpm test",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - next
+
+  pull_request:
+    branches:
+      - main
+      - next
+
+  merge_group: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Set node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Setup
+        run: npm i -g @antfu/ni
+
+      - name: Install
+        run: nci
+
+      - name: Lint
+        run: nr lint
+
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node: [22.x, lts/*]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Set node version to ${{ matrix.node }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Setup
+        run: npm i -g @antfu/ni
+
+      - name: Install
+        run: nci
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps
+
+      - name: Build
+        run: nr build
+
+      - name: Typecheck
+        run: nr typecheck
+
+      - name: all tests with coverage
+        run: pnpm run test:cov
+
+      - name: other browser tests
+        run: pnpm run test:other-browser
+
+      - name: exports tests
+        run: pnpm run test:exports
+
+      - if: matrix.node == 'lts/*'
+        name: Playground Smoke Test
+        run: cd playgrounds && bash ./build.sh
+
+      - if: matrix.node == 'lts/*'
+        name: Report coverage
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          use_oidc: true
+
+  release-pr:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: lts/*
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - run: pnpm install
+
+      - run: pnpm run build
+
+      - run: pnpm run update:full
+
+      - run: pnpm dlx pkg-pr-new publish --compact --pnpm './packages/*'
+          --packageManager=pnpm,npm,yarn

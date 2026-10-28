@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A055",
+    "commit_sha": "6aeca3a28f690c1bbcb656f20192ecd1ba04ad2a",
+    "key": "A055__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "syntax-tree/hast-util-to-text",
+    "url": "https://raw.githubusercontent.com/syntax-tree/hast-util-to-text/6aeca3a28f690c1bbcb656f20192ecd1ba04ad2a/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:30.886Z",
+  "content": "jobs:\n  main:\n    name: ${{matrix.node}}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v6\n      - uses: actions/setup-node@v6\n        with:\n          node-version: ${{matrix.node}}\n      - run: npm install\n      - run: npm test\n      - uses: codecov/codecov-action@v7\n    strategy:\n      matrix:\n        node:\n          - lts/jod\n          - node\nname: main\non:\n  - pull_request\n  - push\n",
+  "is_error": false,
+  "error": null
+}

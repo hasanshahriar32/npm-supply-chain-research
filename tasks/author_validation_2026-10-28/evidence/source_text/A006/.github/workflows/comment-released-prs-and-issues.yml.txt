@@ -1,0 +1,73 @@
+name: Comment released PRs and issues
+
+on:
+    release:
+        types: [published]
+    workflow_run:
+        workflows: ['npm Publish']
+        types: [completed]
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            head_tag:
+                description: 'Optional head tag override'
+                required: false
+                type: string
+            base_tag:
+                description: 'Optional base tag override'
+                required: false
+                type: string
+            dry_run:
+                description: 'Run without posting comments'
+                required: false
+                type: boolean
+                default: false
+            npm_package_name:
+                description: 'Optional npm package name override'
+                required: false
+                type: string
+
+jobs:
+    release:
+        if: >-
+            ${{
+                github.event_name != 'workflow_run' ||
+                (github.event.workflow_run.conclusion == 'success' &&
+                github.event.workflow_run.event == 'push' &&
+                github.event.workflow_run.head_branch == 'main')
+            }}
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            issues: write
+            pull-requests: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - if: github.event_name == 'workflow_run'
+              id: dev_head_tag
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+              run: |
+                  if [[ ! "$HEAD_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+                    echo "::error::Unexpected workflow_run head SHA: ${HEAD_SHA}"
+                    exit 1
+                  fi
+
+                  # Read package metadata from the published main commit as inert JSON instead of checking out the triggering SHA.
+                  version="$(gh api \
+                    -H "Accept: application/vnd.github.v3.raw+json" \
+                    "/repos/${GITHUB_REPOSITORY}/contents/packages/tailwind-merge/package.json?ref=${HEAD_SHA}" \
+                    | node -p 'JSON.parse(require("node:fs").readFileSync(0, "utf8")).version')"
+                  echo "head_tag=tailwind-merge@${version}-dev.${HEAD_SHA}" >> "$GITHUB_OUTPUT"
+            - uses: ./.github/actions/release-commenter
+              with:
+                  github-token: ${{ github.token }}
+                  comment-template: This was addressed in release {release_link}.
+                  skip-label: skip-release-comment
+                  head-tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_tag || github.event_name == 'workflow_run' && steps.dev_head_tag.outputs.head_tag || '' }}
+                  base-tag: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_tag || '' }}
+                  dry-run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || false }}
+                  npm-package-name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.npm_package_name || '' }}

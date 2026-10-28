@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A010",
+    "commit_sha": "8e4662b39255120b62138312058f5d77c0139a5e",
+    "key": "A010__file_7afcd2d8f7b49bda",
+    "path": ".github/workflows/playwright.yml",
+    "repo": "emilkowalski/sonner",
+    "url": "https://raw.githubusercontent.com/emilkowalski/sonner/8e4662b39255120b62138312058f5d77c0139a5e/.github/workflows/playwright.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:52.609Z",
+  "content": "name: Playwright Tests\non:\n  push:\n    branches: [main, master]\n  pull_request:\n    branches: [main, master]\njobs:\n  test:\n    timeout-minutes: 60\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: 20\n      - run: npm install pnpm@9.15.9 -g\n      - run: pnpm install --no-frozen-lockfile\n      - run: pnpm build\n      - run: npx playwright install --with-deps\n      - run: pnpm test || exit 1\n      - uses: actions/upload-artifact@v4\n        if: always()\n        with:\n          name: playwright-report\n          path: playwright-report/\n          retention-days: 30\n",
+  "is_error": false,
+  "error": null
+}

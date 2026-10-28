@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A076",
+    "commit_sha": "fb987178c2d279a99b0db5ea02e751691703955e",
+    "key": "A076__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "mathjax/MathJax-src",
+    "url": "https://raw.githubusercontent.com/mathjax/MathJax-src/fb987178c2d279a99b0db5ea02e751691703955e/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:57.243Z",
+  "content": "name: Tests\n\non:\n  push:\n    branches:\n      - develop\n  pull_request:\n    branches:\n      - develop\n\njobs:\n  testing:\n    runs-on: ubuntu-latest\n    name: Compile and test MathJax\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v5\n\n      - uses: pnpm/action-setup@v5\n        name: Install pnpm\n        with:\n          version: 10\n          run_install: false\n\n      - name: Install Node.js\n        uses: actions/setup-node@v5\n        with:\n          node-version: 24\n          cache: 'pnpm'\n\n      - name: Install packages\n        run: |\n          pnpm -r i\n          pnpm -s link:src\n\n      - name: Compile MathJax\n        run: |\n          pnpm -s mjs:compile\n          components/bin/makeAll --mjs --terse --build components/mjs\n          pnpm -s cjs:compile\n          pnpm -s cjs:components:src:build\n          components/bin/makeAll --cjs --terse --build components/cjs\n          pnpm -s copy:pkg cjs\n\n      - name: Build tests\n        run: pnpm tsc -p testsuite/tsconfig.json\n          \n      - name: Run tests\n        run: pnpm -s test:gh\n\n      - name: Upload coverage reports to Codecov\n        uses: codecov/codecov-action@v6\n        with:\n          token: ${{ secrets.CODECOV_TOKEN }}\n          slug: mathjax/MathJax-src\n",
+  "is_error": false,
+  "error": null
+}

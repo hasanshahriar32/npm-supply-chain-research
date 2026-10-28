@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A006",
+    "commit_sha": "7b5d20c543c3de07cd9fad570a9af0b5a0f976f6",
+    "key": "A006__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "dcastil/tailwind-merge",
+    "url": "https://raw.githubusercontent.com/dcastil/tailwind-merge/7b5d20c543c3de07cd9fad570a9af0b5a0f976f6/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:49.869Z",
+  "content": "name: Test\n\non:\n    push:\n        branches: ['**']\n    pull_request:\n        branches: ['**']\n\npermissions:\n    contents: read\n\njobs:\n    test:\n        runs-on: ubuntu-latest\n        steps:\n            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n              with:\n                  persist-credentials: false\n            - name: Use Node.js 24\n              uses: actions/setup-node@v6\n              with:\n                  node-version: 24.18.1\n            - run: corepack enable\n            - run: pnpm install --frozen-lockfile\n            - run: pnpm lint\n            - run: pnpm test:types\n            - run: pnpm test\n            - run: pnpm --filter tailwind-merge build\n            - uses: actions/upload-artifact@v7\n              with:\n                  name: build-output\n                  path: packages/tailwind-merge/dist\n                  if-no-files-found: error\n            - run: pnpm --filter tailwind-merge test:exports\n            # The vite package's build and packed-tarball gate come after the library's build on purpose: the gate resolves tailwind-merge through its published shape (dist and types), which the library build above just produced.\n            - run: pnpm --filter @tailwind-merge/vite build\n            - run: pnpm --filter @tailwind-merge/vite test:exports\n            # Same for the Next.js package: its gate runs a real `next build` of a consumer app against the packed tarball, resolving the library through the build above.\n            - run: pnpm --filter @tailwind-merge/next build\n            - run: pnpm --filter @tailwind-merge/next test:exports\n",
+  "is_error": false,
+  "error": null
+}

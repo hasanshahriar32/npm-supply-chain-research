@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A063",
+    "commit_sha": "f6bfe63c90a26589edc9c136df7d4212049668af",
+    "key": "A063__file_279a5a5997dd6e7a",
+    "path": ".github/workflows/snyk.yml",
+    "repo": "Berkmann18/json-fixer",
+    "url": "https://raw.githubusercontent.com/Berkmann18/json-fixer/f6bfe63c90a26589edc9c136df7d4212049668af/.github/workflows/snyk.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:37.943Z",
+  "content": "name: So Now You Know\n\non:\n  push:\n    branches: [master]\n  pull_request:\n    branches: [master]\n\njobs:\n  security:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@master\n      - name: Run Snyk to check for vulnerabilities\n        uses: snyk/actions/node@master\n        env:\n          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}\n        with:\n          command: monitor\n",
+  "is_error": false,
+  "error": null
+}

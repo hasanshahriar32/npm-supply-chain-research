@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A075",
+    "commit_sha": "3d260956bc92a85f140352bd814dc5c9d31fc65a",
+    "key": "A075__file_63e050857aa8769f",
+    "path": ".github/workflows/rebase.yml",
+    "repo": "ljharb/side-channel",
+    "url": "https://raw.githubusercontent.com/ljharb/side-channel/3d260956bc92a85f140352bd814dc5c9d31fc65a/.github/workflows/rebase.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:54.706Z",
+  "content": "name: Automatic Rebase\n\non: [pull_request_target]\n\npermissions:\n  contents: write  # for ljharb/rebase to push code to rebase\n  pull-requests: read  # for ljharb/rebase to get info about PR\n\njobs:\n  _:\n    uses: ljharb/actions/.github/workflows/rebase.yml@main\n    secrets:\n      token: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

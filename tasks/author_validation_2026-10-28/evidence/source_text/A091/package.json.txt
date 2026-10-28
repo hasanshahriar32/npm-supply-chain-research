@@ -1,0 +1,74 @@
+{
+  "name": "rollup-plugin-multi-input",
+  "version": "3.0.0",
+  "description": "rollup plugin for bundling modular libraries",
+  "type": "module",
+  "main": "./dist/plugin.cjs",
+  "module": "./dist/plugin.js",
+  "types": "./dist/plugin.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/plugin.js",
+      "require": "./dist/plugin.cjs"
+    }
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "lint": "biome lint src/plugin.ts",
+    "format": "biome format src/plugin.ts --write",
+    "check": "biome check src/plugin.ts",
+    "build": "rollup --config rollup.config.mjs",
+    "prepare": "npm run lint && npm run build",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run --coverage"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "rollup-plugin",
+    "rollup",
+    "es6",
+    "glob",
+    "multi-entry",
+    "modular",
+    "libraries"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alfredosalzillo/rollup-plugin-multi-input.git"
+  },
+  "author": "alfredo salzillo <alfredosalzillo93@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alfredosalzillo/rollup-plugin-multi-input/issues"
+  },
+  "funding": {
+    "url": "https://github.com/sponsors/alfredosalzillo"
+  },
+  "homepage": "https://github.com/alfredosalzillo/rollup-plugin-multi-input#readme",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.8",
+    "@biomejs/biome": "^2.4.6",
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-swc": "^0.4.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@types/node": "^25.3.5",
+    "rollup": "4.59.0",
+    "rollup-plugin-dts": "^6.2.3",
+    "rollup2": "npm:rollup@2.0.2",
+    "rollup3": "npm:rollup@3.20.2",
+    "rollup4": "npm:rollup@4.55.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "fast-glob": "3.3.3"
+  },
+  "volta": {
+    "node": "24.0.0"
+  }
+}

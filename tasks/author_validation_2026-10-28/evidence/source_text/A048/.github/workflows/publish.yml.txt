@@ -1,0 +1,41 @@
+name: Publish release
+on:
+  # Runs whenever a new release is created in GitHub
+  release:
+    types: [ created ]
+
+jobs:
+  # Publish job
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+      - name: Validate and extract release information
+        id: release
+        uses: manovotny/github-releases-for-automated-package-publishing-action@f8f252288da9babb174750562ce48fa5e5df70f5 # v2.0.1
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        with:
+          # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          always-auth: true
+          # Never trust the cache for release builds!
+          cache: ''
+      - run: npm ci
+      - name: Publish latest version
+        if: steps.release.outputs.tag == ''
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish next version
+        if: steps.release.outputs.tag != ''
+        run: npm publish --provenance --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

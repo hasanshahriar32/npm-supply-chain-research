@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A056",
+    "commit_sha": "c14e0221b1e656c7bb35e7b3d4cdf188719a3599",
+    "key": "A056__file_8e6408444d2bf2be",
+    "path": ".github/workflows/zizmor.yml",
+    "repo": "TanStack/table",
+    "url": "https://raw.githubusercontent.com/TanStack/table/c14e0221b1e656c7bb35e7b3d4cdf188719a3599/.github/workflows/zizmor.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:32.602Z",
+  "content": "name: GitHub Actions Security Analysis\n\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: ['**']\n\npermissions: {}\n\njobs:\n  zizmor:\n    name: Run zizmor\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2\n        with:\n          persist-credentials: false\n\n      - name: Run zizmor\n        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3\n        with:\n          advanced-security: false\n          annotations: true\n",
+  "is_error": false,
+  "error": null
+}

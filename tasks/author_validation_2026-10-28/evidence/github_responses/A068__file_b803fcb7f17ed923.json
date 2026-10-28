@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A068",
+    "commit_sha": "968bf202868005077f535129262d7ce094d231aa",
+    "key": "A068__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "fastify/fast-json-stringify",
+    "url": "https://raw.githubusercontent.com/fastify/fast-json-stringify/968bf202868005077f535129262d7ce094d231aa/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:48.973Z",
+  "content": "name: CI\n\non:\n  push:\n    branches:\n     - main\n     - next\n     - 'v*'\n    paths-ignore:\n      - 'docs/**'\n      - '*.md'\n  pull_request:\n    paths-ignore:\n      - 'docs/**'\n      - '*.md'\n\n# This allows a subsequently queued workflow run to interrupt previous runs\nconcurrency:\n    group: \"${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}\"\n    cancel-in-progress: true\n\npermissions:\n  contents: read\n\njobs:\n  test:\n    permissions:\n      contents: write\n      pull-requests: write\n    uses: fastify/workflows/.github/workflows/plugins-ci.yml@ef591e2186785d5ab36b9fe6a79c7ce2f1d94e57 # v7.0.0\n    with:\n      license-check: true\n      lint: true\n",
+  "is_error": false,
+  "error": null
+}

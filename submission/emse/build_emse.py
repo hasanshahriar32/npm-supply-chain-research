@@ -11,6 +11,8 @@ import shutil
 import subprocess
 import tempfile
 import zipfile
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -72,6 +74,7 @@ def main() -> None:
     preamble = preamble.replace(r"\usepackage[hidelinks]{hyperref}", r"\hypersetup{hidelinks}")
     preamble = preamble.replace(r"\graphicspath{{figures/}}", "")
     preamble += "\n" + r"\usepackage{adjustbox}" + "\n" + r"\raggedbottom" + "\n"
+    preamble += r"\captionsetup[figure]{name=Fig.,labelfont=bf,labelsep=space}" + "\n"
     macros = "\n".join(expand(r"\input{config/" + name + "}") for name in
                        ["research_numbers", "research_method_rows", "reconciliation_numbers", "revision_numbers"])
     abstract = (Q1 / "sections/00_abstract.tex").read_text().replace(
@@ -117,16 +120,33 @@ def main() -> None:
            + "\n".join(author_lines) + "\n" + r"\abstract{" + abstract + "}\n"
            + r"\keywords{" + keywords + "}\n" + r"\maketitle" + "\n" + body
            + "\n" + r"\bibliography{references_q1}" + appendix + "\n" + r"\end{document}" + "\n")
+    # Journal captions end without punctuation; use a brace-aware scan because
+    # captions contain mathematical and formatting commands.
+    for match in reversed(list(re.finditer(r"\\caption\{", tex))):
+        start = match.end()
+        depth, end = 1, start
+        while depth:
+            if tex[end] == "{" and tex[end - 1] != "\\": depth += 1
+            if tex[end] == "}" and tex[end - 1] != "\\": depth -= 1
+            end += 1
+        content = tex[start:end - 1].rstrip().rstrip(".")
+        tex = tex[:start] + content + tex[end - 1:]
+    original_figures = list(dict.fromkeys(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex)))
+    reviewed = json.loads((Q1 / "config/revision_artifact_manifest.json").read_text())
+    assert sorted(original_figures) == reviewed["active_figures"]
+    figure_map = {name: f"Fig{i}.pdf" for i, name in enumerate(original_figures, 1)}
+    for old, new in figure_map.items():
+        tex = tex.replace("{" + old + "}", "{" + new + "}")
     (SOURCE / "EMSE_Manuscript.tex").write_text(tex)
     shutil.copy2(Q1 / "bibliography/references_q1.bib", SOURCE / "references_q1.bib")
     for name in ["sn-jnl.cls", "sn-basic.bst"]:
         shutil.copy2(HERE / "template" / name, SOURCE / name)
     figures = sorted(set(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", tex)))
-    reviewed = json.loads((Q1 / "config/revision_artifact_manifest.json").read_text())
-    assert figures == reviewed["active_figures"], "Active figures differ from reviewed revision manifest"
-    for name in figures:
-        assert Path(name).name == name
-        shutil.copy2(Q1 / "figures" / name, SOURCE / name)
+    # Remove obsolete export figures so stale files cannot be uploaded by mistake.
+    for old in SOURCE.glob("*.pdf"):
+        old.unlink()
+    for old, name in figure_map.items():
+        shutil.copy2(Q1 / "figures" / old, SOURCE / name)
     source_files = ["EMSE_Manuscript.tex", "references_q1.bib", "sn-jnl.cls", "sn-basic.bst", *figures]
     compile_pdf(SOURCE / "EMSE_Manuscript.tex", BUILD)
     shutil.copy2(BUILD / "EMSE_Manuscript.pdf", HERE / "EMSE_Manuscript.pdf")
@@ -136,10 +156,10 @@ def main() -> None:
     title = title_path.read_text().split("% BEGIN GENERATED DECLARATIONS")[0]
     title = title.replace(r"\end{document}", "").rstrip()
     declarations = (Q1 / "sections/10_declarations.tex").read_text()
+    # The separate title page has no bibliography; its data URL is self-contained.
+    declarations = re.sub(r"~?\\cite\{[^}]+\}", "", declarations)
     title += "\n% BEGIN GENERATED DECLARATIONS\n" + r"\newpage" + "\n" + declarations
-    title += ("\n" + r"\subsection*{Publication Status}" + "\n"
-              + "Neither the conference-length draft nor the journal manuscript has been published, accepted, or is under review elsewhere. This manuscript is not an extension of a previously published conference paper.\n\n"
-              + r"\subsection*{Acknowledgments}" + "\n"
+    title += ("\n" + r"\subsection*{Acknowledgments}" + "\n"
               + "The authors thank npm package maintainers and the open-source community for the studied public artifacts, and deps.dev and GitHub for data interfaces.\n"
               + r"\end{document}" + "\n")
     title_path.write_text(title)
@@ -167,15 +187,33 @@ def main() -> None:
     normalized = " ".join(extracted_text.split())
     required = ["Statements and Declarations", "Data Availability", "Code Availability", "Funding", "Competing Interests", "Use of AI Assistance", "hasanshahriar32@gmail.com"]
     content_checks = all(term in normalized for term in required)
-    report = {"date": "2026-10-27", "manuscript": manuscript, "title_page": title_checks,
+    forbidden = ["initially blank", "review sheets", "remain pending", "await independent",
+                 "No reviewer role", "authors must review", "human audit pending"]
+    absent_internal_notes = all(term.casefold() not in normalized.casefold() for term in forbidden)
+    title_text = subprocess.check_output(["pdftotext", str(HERE / "EMSE_Title_Page.pdf"), "-"], text=True)
+    author_checks = all(author["name"] in " ".join(title_text.split()) and
+                        author["email"] in title_text and author["orcid"] in title_text
+                        for author in authors["authors_in_supplied_order"])
+    report = {"date": datetime.now(ZoneInfo('Asia/Dhaka')).date().isoformat(), "manuscript": manuscript, "title_page": title_checks,
               "standalone_archive_build": standalone, "required_content_present": content_checks,
               "abstract_words": len(abstract.split()), "keywords": len(keywords.split(",")), "figures": len(figures),
+              "figure_upload_names": figure_map, "internal_workflow_notes_absent": absent_internal_notes,
+              "title_page_author_details_match": author_checks,
               "data_release_public": json.loads((HERE / "submission_status.json").read_text()).get("public_release_verified", False), "author_contributions_confirmed": False,
               "coauthor_submission_approval_confirmed": authors["submission_approval_confirmed"],
               "sha256": {name: hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() for name in source_files}}
-    report["passed"] = all(x["passed"] for x in [manuscript, title_checks, standalone]) and content_checks
+    report["passed"] = (all(x["passed"] for x in [manuscript, title_checks, standalone])
+                        and content_checks and absent_internal_notes and author_checks
+                        and 150 <= len(abstract.split()) <= 250 and 4 <= len(keywords.split(',')) <= 6)
     (HERE / "validation.json").write_text(json.dumps(report, indent=2) + "\n")
     (HERE / "title_page_validation.json").write_text(json.dumps(title_checks, indent=2) + "\n")
+    metadata = ("TITLE\n" + re.search(r"\\newcommand\{\\PaperTitle\}\{([^}]+)\}", preamble)[1]
+                + "\n\nABSTRACT\n" + abstract.replace(r"\%", "%").replace("--", "–")
+                + "\n\nKEYWORDS\n" + keywords.replace(", ", "; ")
+                + "\n\nDATA REPOSITORY\n"
+                + json.loads((HERE / "submission_status.json").read_text())["public_release_url"]
+                + "\n\nFUNDING\nThis research received no external funding.\n")
+    (HERE / "form_metadata.txt").write_text(metadata)
     print(json.dumps({k: v for k, v in report.items() if k != "sha256"}, indent=2))
     if not report["passed"]:
         raise SystemExit(1)

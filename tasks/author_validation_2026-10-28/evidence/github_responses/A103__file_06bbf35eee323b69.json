@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A103",
+    "commit_sha": "7a75c4af4eedf8c7f514c94906e20a1d2974ea4c",
+    "key": "A103__file_06bbf35eee323b69",
+    "path": ".github/workflows/create-release-pr.yml",
+    "repo": "MetaMask/auto-changelog",
+    "url": "https://raw.githubusercontent.com/MetaMask/auto-changelog/7a75c4af4eedf8c7f514c94906e20a1d2974ea4c/.github/workflows/create-release-pr.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:26.394Z",
+  "content": "name: Create Release Pull Request\n\non:\n  workflow_dispatch:\n    inputs:\n      base-branch:\n        description: 'The base branch for git operations and the pull request.'\n        default: 'main'\n        required: true\n      release-type:\n        description: 'A SemVer version diff, i.e. major, minor, or patch. Mutually exclusive with \"release-version\".'\n        required: false\n      release-version:\n        description: 'A specific version to bump to. Mutually exclusive with \"release-type\".'\n        required: false\n\njobs:\n  create-release-pr:\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      pull-requests: write\n    steps:\n      - name: Checkout and setup environment\n        uses: MetaMask/action-checkout-and-setup@v1\n        with:\n          is-high-risk-environment: true\n\n          # This is to guarantee that the most recent tag is fetched. This can\n          # be configured to a more reasonable value by consumers.\n          fetch-depth: 0\n\n          # We check out the specified branch, which will be used as the base\n          # branch for all git operations and the release PR.\n          ref: ${{ github.event.inputs.base-branch }}\n\n      - uses: MetaMask/action-create-release-pr@v4\n        with:\n          release-type: ${{ github.event.inputs.release-type }}\n          release-version: ${{ github.event.inputs.release-version }}\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

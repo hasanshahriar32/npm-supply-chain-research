@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A075",
+    "commit_sha": "3d260956bc92a85f140352bd814dc5c9d31fc65a",
+    "key": "A075__file_ad181dc539e4f666",
+    "path": ".github/workflows/node-tens.yml",
+    "repo": "ljharb/side-channel",
+    "url": "https://raw.githubusercontent.com/ljharb/side-channel/3d260956bc92a85f140352bd814dc5c9d31fc65a/.github/workflows/node-tens.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:54.393Z",
+  "content": "name: 'Tests: node.js 10 - 20'\n\non: [pull_request, push]\n\npermissions:\n  contents: read\n\njobs:\n  tests:\n    uses: ljharb/actions/.github/workflows/node.yml@main\n    with:\n      range: '>= 10 < 20'\n      type: minors\n      command: npm run tests-only\n\n  node:\n    name: 'node 10 - 20'\n    needs: [tests]\n    runs-on: ubuntu-latest\n    steps:\n      - run: true\n",
+  "is_error": false,
+  "error": null
+}

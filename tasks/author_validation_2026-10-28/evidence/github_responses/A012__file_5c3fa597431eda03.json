@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A012",
+    "commit_sha": "95142567be1731cdb70591d36e82691083cb630f",
+    "key": "A012__file_5c3fa597431eda03",
+    "path": ".github/workflows/build.yml",
+    "repo": "hustcc/size-sensor",
+    "url": "https://raw.githubusercontent.com/hustcc/size-sensor/95142567be1731cdb70591d36e82691083cb630f/.github/workflows/build.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:54.521Z",
+  "content": "name: build\n\non:\n  push:\n    branches: [ master, main ]\n  pull_request:\n    branches: [ master, main ]\n\njobs:\n  build:\n\n    runs-on: macOS-latest\n\n    strategy:\n      matrix:\n        # Updated from [8.x, 10.x, 12.x] to [20.x] to fix build failure on macOS arm64 runners.\n        # Node 8.x is not available on macOS arm64 architecture.\n        node-version: [20.x]\n\n    steps:\n    - uses: actions/checkout@v4\n    \n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n    \n    - name: npm install, build, and test\n      run: |\n        npm install\n        npm run build --if-present\n        npm test\n      env:\n        CI: true\n",
+  "is_error": false,
+  "error": null
+}

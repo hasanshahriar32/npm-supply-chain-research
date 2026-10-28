@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_2744a9261e79335e",
+    "path": ".github/workflows/e2e-next-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-next-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_2744a9261e79335e.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.423Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-next-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Next'\njobs:\n  chore:\n    name: 'Validating Next.js'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test, without TypeScript'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn init\n\n        # Required\n        yarn add react react-dom raw-loader\n        yarn add --no-time-gate next@canary\n\n        mkdir pages\n        echo 'import text from \"raw-loader!./text.txt\"; export default () => <div>{text}</div>;' | tee pages/index.js\n        echo 'hello world!' | tee pages/text.txt\n\n        yarn next build --webpack\n\n    - name: 'Running the integration test, with TypeScript'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn init\n\n        # Required\n        yarn add 'typescript@<7.0.0-0' react react-dom @types/react @types/react-dom @types/node\n        yarn add --no-time-gate next@canary\n\n        # Test itself\n        yarn add raw-loader\n\n        mkdir pages\n        echo 'const text = require(\"raw-loader!./text.txt\").default; export default () => <div>{text}</div>;' | tee pages/home.tsx\n        echo 'hello world!' | tee pages/text.txt\n\n        yarn next build --webpack\n      if: |\n        success() || failure()\n",
+  "is_error": false,
+  "error": null
+}

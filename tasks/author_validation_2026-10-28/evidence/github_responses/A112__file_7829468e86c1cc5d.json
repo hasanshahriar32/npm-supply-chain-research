@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A112",
+    "commit_sha": "a6c2fdf97bd9a37687f31fb3807d23323d877bd8",
+    "key": "A112__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "sindresorhus/eslint-plugin-unicorn",
+    "url": "https://raw.githubusercontent.com/sindresorhus/eslint-plugin-unicorn/a6c2fdf97bd9a37687f31fb3807d23323d877bd8/.github/workflows/main.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A112__file_7829468e86c1cc5d.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.310Z",
+  "content": "name: CI\n\non:\n  pull_request:\n  push:\n    branches:\n      - main\n\npermissions:\n  contents: read\nconcurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\njobs:\n  test:\n    name: Node.js ${{ matrix.node-version }} on ${{ matrix.os }}\n    runs-on: ${{ matrix.os }}\n    strategy:\n      fail-fast: false\n      matrix:\n        node-version:\n          - 26\n          - 24\n          - 22\n        os:\n          - ubuntu-latest\n          - windows-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm install --legacy-peer-deps\n      - run: npm run test:js\n        env:\n          NODE_OPTIONS: --max-old-space-size=8192\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n      - run: npm install --legacy-peer-deps\n      - run: npm run lint\n  run-rules-on-codebase:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n      - run: npm install --legacy-peer-deps\n      - run: npm run run-rules-on-codebase\n  integration:\n    name: Integration test (${{ matrix.group }})\n    strategy:\n      fail-fast: false\n      matrix:\n        group:\n          - \"1\"\n          - \"2\"\n          - \"3\"\n          - \"4\"\n          - \"5\"\n          - \"7\"\n          - \"8\"\n    env:\n      TIMING: 1\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n      - run: npm install --legacy-peer-deps\n      - run: npm run integration -- --group ${{ matrix.group }}\n",
+  "is_error": false,
+  "error": null
+}

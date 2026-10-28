@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A011",
+    "commit_sha": "0185f9a29923c5e4e2a098c7547dfa9c5617e249",
+    "key": "A011__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "harlan-zw/packrup",
+    "url": "https://raw.githubusercontent.com/harlan-zw/packrup/0185f9a29923c5e4e2a098c7547dfa9c5617e249/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:52.544Z",
+  "content": "name: Release\n\npermissions:\n  contents: write\n\non:\n  push:\n    tags:\n      - 'v*'\njobs:\n  release:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          fetch-depth: 0\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@v3\n\n      - name: Set node\n        uses: actions/setup-node@v4\n        with:\n          node-version: 18.x\n\n      - run: npx changelogithub\n        env:\n          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}\n",
+  "is_error": false,
+  "error": null
+}

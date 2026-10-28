@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_23277fcc6e7c6582",
+    "path": ".github/workflows/e2e-gatsby-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-gatsby-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_23277fcc6e7c6582.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.926Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-gatsby-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Gatsby'\njobs:\n  chore:\n    name: 'Validating Gatsby'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn dlx gatsby new my-gatsby\n        cd my-gatsby\n\n        # Gatsby writes to its own directory, so we need to unplug it\n        # https://github.com/gatsbyjs/gatsby/pull/39616\n        yarn unplug gatsby\n\n        # Sharp requires build scripts\n        TEMPFILE=$(mktemp)\n        jq '.dependenciesMeta.sharp.built = true' package.json > \"$TEMPFILE\" && mv \"$TEMPFILE\" package.json\n\n        yarn\n\n        # Test production build\n        yarn build\n",
+  "is_error": false,
+  "error": null
+}

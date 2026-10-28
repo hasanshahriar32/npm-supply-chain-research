@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A045",
+    "commit_sha": "1d3684d6292ea314b7a07a65506b363d45d83009",
+    "key": "A045__file_7ae45ad102eab3b6",
+    "path": "package.json",
+    "repo": "Kcnarf/d3-weighted-voronoi",
+    "url": "https://raw.githubusercontent.com/Kcnarf/d3-weighted-voronoi/1d3684d6292ea314b7a07a65506b363d45d83009/package.json"
+  },
+  "observed_at_utc": "2026-10-27T14:26:23.406Z",
+  "content": "{\n  \"name\": \"d3-weighted-voronoi\",\n  \"version\": \"1.1.3\",\n  \"description\": \"D3 plugin which computes a Weighted Voronoi tesselation\",\n  \"keywords\": [\n    \"d3\",\n    \"d3-module\",\n    \"voronoi\",\n    \"weighted voronoi\",\n    \"diagram\",\n    \"tesselation\"\n  ],\n  \"license\": \"BSD-3-Clause\",\n  \"author\": \" Kcnarf <fl.franck.lebeau@gmail.com>\",\n  \"main\": \"build/d3-weighted-voronoi.js\",\n  \"jsnext:main\": \"index\",\n  \"homepage\": \"https://github.com/Kcnarf/d3-weighted-voronoi#readme\",\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/Kcnarf/d3-weighted-voronoi.git\"\n  },\n  \"bugs\": {\n    \"url\": \"https://github.com/Kcnarf/d3-weighted-voronoi/issues\"\n  },\n  \"scripts\": {\n    \"build\": \"rm -rf build && mkdir build && rollup -c ./rollup.config.js\",\n    \"pretest\": \"yarn run build && rollup -f umd -n vanilla --o build/utils.js -- ./src/utils.js && rollup -f umd -n vanilla --o build/plane3D.js -- ./src/plane3D.js && rollup -f umd -n vanilla --o build/conflictList.js -- ./src/conflictList.js && rollup -f umd -n vanilla --o build/vertex.js -- ./src/vertex.js && rollup -f umd -n vanilla --o build/vector.js -- ./src/vector.js && rollup -f umd -n vanilla --o build/hEdge.js -- ./src/hEdge.js && rollup -f umd -n vanilla --o build/face.js -- ./src/face.js && rollup -f umd -n vanilla --o build/convexHull.js -- ./src/convexHull.js && rollup -f umd -n vanilla --o build/powerDiagram.js -- ./src/powerDiagram.js && rollup -f umd -n vanilla --o build/d3-polygon-clip.js -- ./src/d3-polygon-clip.js\",\n    \"test\": \"tape 'test/**/*-test.js'\",\n    \"precommit\": \"yarn run test && uglifyjs build/d3-weighted-voronoi.js -c -m -o build/d3-weighted-voronoi.min.js\",\n    \"prepublish\": \"zip -j build/d3-weighted-voronoi.zip -- LICENSE README.md build/d3-weighted-voronoi.js build/d3-weighted-voronoi.min.js\"\n  },\n  \"devDependencies\": {\n    \"rollup\": \"0.27\",\n    \"tape\": \"4\",\n    \"uglify-js\": \"~>2.6.0\"\n  },\n  \"dependencies\": {\n    \"d3-polygon\": \"2\",\n    \"d3-array\": \"2\"\n  }\n}\n",
+  "is_error": false,
+  "error": null
+}

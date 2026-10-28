@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A022",
+    "commit_sha": "e13ae0fa7e71feec88958ef5c5f6fa2e9239a291",
+    "key": "A022__file_e81e13daadd1745d",
+    "path": ".github/workflows/publish.yaml",
+    "repo": "ruimarinho/google-libphonenumber",
+    "url": "https://raw.githubusercontent.com/ruimarinho/google-libphonenumber/e13ae0fa7e71feec88958ef5c5f6fa2e9239a291/.github/workflows/publish.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:01.830Z",
+  "content": "name: Publish\n\non:\n  push:\n    tags:\n      - 'v*'\n  workflow_dispatch:\n    inputs:\n      dry-run:\n        description: Run npm publish with --dry-run\n        type: boolean\n        default: false\n\njobs:\n  publish:\n    name: Publish Release\n    runs-on: ubuntu-latest\n    permissions:\n      contents: write\n      id-token: write\n    steps:\n      - uses: actions/checkout@v5\n      - uses: actions/setup-node@v5\n        with:\n          node-version: 24\n          registry-url: https://registry.npmjs.org/\n      - run: npm install\n      - run: npm publish ${{ inputs.dry-run == true && '--dry-run' || '' }}\n      - if: startsWith(github.ref, 'refs/tags/v')\n        run: gh release create \"$GITHUB_REF_NAME\" --generate-notes --title \"$GITHUB_REF_NAME\"\n        env:\n          GH_TOKEN: ${{ github.token }}\n",
+  "is_error": false,
+  "error": null
+}

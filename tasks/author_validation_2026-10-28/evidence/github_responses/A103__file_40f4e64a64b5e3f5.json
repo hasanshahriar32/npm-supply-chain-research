@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A103",
+    "commit_sha": "7a75c4af4eedf8c7f514c94906e20a1d2974ea4c",
+    "key": "A103__file_40f4e64a64b5e3f5",
+    "path": ".github/workflows/security-code-scanner.yml",
+    "repo": "MetaMask/auto-changelog",
+    "url": "https://raw.githubusercontent.com/MetaMask/auto-changelog/7a75c4af4eedf8c7f514c94906e20a1d2974ea4c/.github/workflows/security-code-scanner.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:26.435Z",
+  "content": "name: MetaMask Security Code Scanner\n\non:\n  push:\n    branches:\n      - main\n  pull_request:\n    branches:\n      - main\n  workflow_dispatch:\n\njobs:\n  run-security-scan:\n    runs-on: ubuntu-latest\n    permissions:\n      actions: read\n      contents: read\n      security-events: write\n    steps:\n      - name: MetaMask Security Code Scanner\n        uses: MetaMask/action-security-code-scanner@v1\n        with:\n          repo: ${{ github.repository }}\n          paths_ignored: |\n            .storybook/\n            '**/__snapshots__/'\n            '**/*.snap'\n            '**/*.stories.js'\n            '**/*.stories.tsx'\n            '**/*.test.browser.ts*'\n            '**/*.test.js*'\n            '**/*.test.ts*'\n            '**/fixtures/'\n            '**/jest.config.js'\n            '**/jest.environment.js'\n            '**/mocks/'\n            '**/test*/'\n            docs/\n            e2e/\n            merged-packages/\n            node_modules\n            storybook/\n            test*/\n          rules_excluded: example\n          project_metrics_token: ${{ secrets.SECURITY_SCAN_METRICS_TOKEN }}\n          slack_webhook: ${{ secrets.APPSEC_BOT_SLACK_WEBHOOK }}\n",
+  "is_error": false,
+  "error": null
+}

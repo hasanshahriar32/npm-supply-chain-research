@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A013",
+    "commit_sha": "6a1b7a4e8f86ebc9c41a76937ab9673466ca4dd0",
+    "key": "A013__file_be2c9642e19f3f4f",
+    "path": ".github/workflows/publish-coverage.yml",
+    "repo": "iamolegga/nestjs-pino",
+    "url": "https://raw.githubusercontent.com/iamolegga/nestjs-pino/6a1b7a4e8f86ebc9c41a76937ab9673466ca4dd0/.github/workflows/publish-coverage.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:54.701Z",
+  "content": "name: publish-coverage\n\non:\n  workflow_call:\n\njobs:\n  publish-coverage:\n    runs-on: ubuntu-latest\n    steps:\n\n      - uses: actions/checkout@v7.0.1\n        with:\n          fetch-depth: 0\n\n      - uses: actions/cache@v6.1.0\n        with:\n          path: coverage\n          # restore cache from build-lint-test wf with key=sha-(oneof nestjs version)-(oneof nodejs version)\n          key: ${{ github.sha }}-12-24\n\n      - uses: qltysh/qlty-action/coverage@v2.4.0\n        with:\n            token: ${{ secrets.QLTY_COVERAGE_TOKEN }}\n            files: ${{github.workspace}}/coverage/lcov.info\n",
+  "is_error": false,
+  "error": null
+}

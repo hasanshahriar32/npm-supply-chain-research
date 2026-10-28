@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A111",
+    "commit_sha": "e0e0f9a6d7e92bcee25bd70b53cfde900e82da57",
+    "key": "A111__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "SAP/ui5-project",
+    "url": "https://raw.githubusercontent.com/SAP/ui5-project/e0e0f9a6d7e92bcee25bd70b53cfde900e82da57/.github/workflows/test.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A111__file_faff1af3d8ff4089.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:18.379Z",
+  "content": "name: Tests\n\non:\n  push:\n    branches:\n      - v4\n  pull_request:\n    branches:\n      - v4\n\n# No permissions are required for this workflow\npermissions: {}\n\njobs:\n  test:\n    name: Unit and Integration\n    strategy:\n      fail-fast: false # Do not stop other jobs if one fails\n      matrix:\n        version: [\"20.11.0\", 22, 24, 25, 26]\n        os: [ubuntu-24.04, windows-2025, macos-15]\n    runs-on: ${{ matrix.os }}\n    steps:\n\n    - uses: actions/checkout@v7\n\n    - name: Setup Node.js\n      uses: actions/setup-node@v7\n      with:\n        node-version: ${{ matrix.version }}\n\n    - name: Install dependencies\n      run: npm ci\n\n    - name: Run unit tests\n      run: npm run unit\n",
+  "is_error": false,
+  "error": null
+}

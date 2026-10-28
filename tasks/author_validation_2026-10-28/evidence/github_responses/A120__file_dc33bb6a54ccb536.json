@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_dc33bb6a54ccb536",
+    "path": ".github/workflows/e2e-gulp-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-gulp-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_dc33bb6a54ccb536.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:35.800Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-gulp-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Gulp'\njobs:\n  chore:\n    name: 'Validating Gulp'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Run Gulp E2E test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n        yarn init -p\n        yarn add -D gulp\n\n        # Test running Gulp with a simple default task.\n        echo \"const gulp = require('gulp'); const defaultTaskPrintCheck = (cb) => { console.log('Success: ran gulp task'); cb(); }; exports.default = defaultTaskPrintCheck;\" | tee gulpfile.js\n        yarn gulp\n\n        # Test using the Gulp API and run public task via CLI.\n        echo \"const gulp = require('gulp'); const testGulpAPI = (cb) => { const scriptFile = gulp.src('./gulpfile.js'); if (scriptFile) { console.log('Success: used gulp API import.'); } cb(); }; exports.testGulpAPI = testGulpAPI;\" | tee gulpfile.js\n        yarn gulp testGulpAPI\n",
+  "is_error": false,
+  "error": null
+}

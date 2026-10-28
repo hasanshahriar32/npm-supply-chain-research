@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A107",
+    "commit_sha": "67b32d049d41dac10b8ccba96208af522d1c8f40",
+    "key": "A107__file_93a89f16f6717d1e",
+    "path": ".github/workflows/audit.yml",
+    "repo": "npm/npm-profile",
+    "url": "https://raw.githubusercontent.com/npm/npm-profile/67b32d049d41dac10b8ccba96208af522d1c8f40/.github/workflows/audit.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:32.615Z",
+  "content": "# This file is automatically added by @npmcli/template-oss. Do not edit.\n\nname: Audit\n\non:\n  workflow_dispatch:\n  schedule:\n    # \"At 08:00 UTC (01:00 PT) on Monday\" https://crontab.guru/#0_8_*_*_1\n    - cron: \"0 8 * * 1\"\n\npermissions:\n  contents: read\n\njobs:\n  audit:\n    name: Audit Dependencies\n    if: github.repository_owner == 'npm'\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n        shell: bash\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n      - name: Setup Git User\n        run: |\n          git config --global user.email \"npm-cli+bot@github.com\"\n          git config --global user.name \"npm CLI robot\"\n      - name: Setup Node\n        uses: actions/setup-node@v6\n        id: node\n        with:\n          node-version: 26.x\n          check-latest: contains('26.x', '.x')\n      - name: Install Latest npm\n        uses: ./.github/actions/install-latest-npm\n        with:\n          node: ${{ steps.node.outputs.node-version }}\n      - name: Install Dependencies\n        run: npm i --ignore-scripts --no-audit --no-fund --package-lock\n      - name: Run Production Audit\n        run: npm audit --omit=dev\n      - name: Run Full Audit\n        run: npm audit --audit-level=none\n",
+  "is_error": false,
+  "error": null
+}

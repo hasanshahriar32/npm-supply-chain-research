@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A038",
+    "commit_sha": "7281f1b8f09637ab383c1aab4d14247d683bc15d",
+    "key": "A038__file_c7731b29de71fca2",
+    "path": ".github/workflows/website.yml",
+    "repo": "enisdenjo/graphql-ws",
+    "url": "https://raw.githubusercontent.com/enisdenjo/graphql-ws/7281f1b8f09637ab383c1aab4d14247d683bc15d/.github/workflows/website.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:19.429Z",
+  "content": "name: Website\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n    branches:\n      - master\n    # we always want new site previews because the api reference changes are in code\n    # paths:\n    #   - website/**\n\njobs:\n  check-types:\n    name: Check types\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Setup and install\n        uses: the-guild-org/shared-config/setup@v1\n        with:\n          node-version-file: .node-version\n          working-directory: website\n      - name: Check\n        working-directory: website\n        run: yarn check:types\n\n  deploy:\n    name: Deploy\n    runs-on: ubuntu-latest\n    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'push'\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v4\n      - name: Setup\n        uses: the-guild-org/shared-config/setup@v1\n        with:\n          node-version-file: .node-version\n      - name: Install\n        working-directory: website\n        run: yarn install\n      - name: Generate documentation\n        run: yarn gendocs\n      - name: Deploy\n        uses: the-guild-org/shared-config/website-cf@main\n        env:\n          NEXT_BASE_PATH: ${{ github.ref == 'refs/heads/master' && '/graphql/ws' || '' }}\n          SITE_URL: ${{ github.ref == 'refs/heads/master' && 'https://the-guild.dev/graphql/ws' || '' }}\n        with:\n          cloudflareApiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}\n          cloudflareAccountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\n          githubToken: ${{ secrets.GITHUB_TOKEN }}\n          projectName: graphql-ws\n          prId: ${{ github.event.pull_request.number }}\n          websiteDirectory: website\n          buildScript: yarn build\n          artifactDir: out\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A037",
+    "commit_sha": "ee46926a7bcd7751dbd12abf35128d6c6e42bf56",
+    "key": "A037__file_f089b0e55b389f53",
+    "path": ".github/workflows/publish-npm.yml",
+    "repo": "dperini/nwsapi",
+    "url": "https://raw.githubusercontent.com/dperini/nwsapi/ee46926a7bcd7751dbd12abf35128d6c6e42bf56/.github/workflows/publish-npm.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:19.795Z",
+  "content": "name: 'publish: npm'\nrun-name: 'publish: npm (v2 ${{ inputs.release-as }}, dry-run=${{ inputs.dry-run }})'\n\non:\n  workflow_dispatch:\n    inputs:\n      release-as:\n        description: 'patch, minor, or an exact stable 2.x.y version'\n        type: string\n        default: patch\n        required: true\n      dist-tag:\n        description: 'Use v2 once latest points to v3'\n        type: choice\n        options: [latest, v2]\n        default: latest\n      dry-run:\n        description: 'Test the package without reserving or staging a version'\n        type: boolean\n        default: true\n\npermissions:\n  contents: read\n\nconcurrency:\n  group: nwsapi-v2-release\n  cancel-in-progress: false\n\njobs:\n  stage:\n    if: github.repository == 'dperini/nwsapi' && github.ref == 'refs/heads/master'\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    environment: npm-publish\n    permissions:\n      contents: write\n      id-token: write\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n      - uses: ./.github/actions/setup\n      - name: Test source and release tooling\n        run: npm test\n      - name: Qualify and stage v2\n        env:\n          GH_TOKEN: ${{ github.token }}\n          RELEASE_AS: ${{ inputs.release-as }}\n          DIST_TAG: ${{ inputs.dist-tag }}\n          DRY_RUN: ${{ inputs.dry-run }}\n        shell: bash\n        run: |\n          args=(--release-as \"$RELEASE_AS\" --tag \"$DIST_TAG\")\n          if [ \"$DRY_RUN\" = true ]; then args+=(--dry-run); fi\n          npm run npm:stage -- \"${args[@]}\"\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,62 @@
+{
+  "name": "nanoevents",
+  "version": "10.0.0",
+  "description": "Simple and tiny (108 bytes) event emitter library",
+  "keywords": [
+    "EventEmitter",
+    "Events",
+    "emit",
+    "emitter",
+    "event",
+    "pub/sub",
+    "publish",
+    "reactor",
+    "subscribe"
+  ],
+  "license": "MIT",
+  "author": "Andrey Sitnik <andrey@sitnik.ru>",
+  "repository": "ai/nanoevents",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./index.d.ts",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test:coverage": "bnt --coverage 100 --coverage-exclude '**/*.test.*' --coverage-exclude 'test/*'",
+    "test:lint": "oxlint",
+    "test:types": "check-dts",
+    "test:size": "size-limit",
+    "test": "pnpm run /^test:/"
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/ai"
+    }
+  ],
+  "devDependencies": {
+    "@logux/oxc-configs": "^0.4.1",
+    "@size-limit/preset-small-lib": "^12.1.0",
+    "@types/node": "^26.1.1",
+    "actions-up": "^1.16.0",
+    "better-node-test": "^0.8.4",
+    "check-dts": "^2.0.0",
+    "eslint-plugin-prefer-let": "^4.2.2",
+    "oxlint": "^1.74.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "size-limit": "^12.1.0",
+    "tinybench": "^6.0.2",
+    "typescript": "^7.0.2"
+  },
+  "size-limit": [
+    {
+      "import": "{ createNanoEvents }",
+      "limit": "108 B"
+    }
+  ],
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0 || >=26.0.0"
+  }
+}

@@ -3,6 +3,8 @@
 
 We first report our empirical findings for Research Questions 1 and 2 on the retained 25,228-identifier graph, spanning multi-budget trade-offs, multi-homing mechanics, and representation fidelity.
 
+Figure~\ref{fig:q1_source_partition} partitions covered endpoints by whether any unselected source remains.
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{coverage_partition.pdf}
@@ -11,7 +13,7 @@ We first report our empirical findings for Research Questions 1 and 2 on the ret
 \end{figure}
 
 \subsection{RQ1: Coverage vs. Additive Exposure Trade-Off}
-Table~\ref{tab:multi_budget_comparison} reports empirical prioritization outcomes across maintainer budgets $|S| \in \{1, 5, 10, 25, 50, 100\}$. The top 100 maintainers represent only $0.819\%$ of the 12,217 unique maintainers in our ecosystem, yet their prioritization commands vast reach over downstream workflow repositories.
+Figure~\ref{fig:objective_tradeoff} shows the coverage and exposure trajectories. Table~\ref{tab:multi_budget_comparison} reports empirical prioritization outcomes across maintainer budgets $|S| \in \{1, 5, 10, 25, 50, 100\}$. The top 100 maintainers represent only $0.819\%$ of the 12,217 unique maintainers in our ecosystem, yet their prioritization commands vast reach over downstream workflow repositories.
 
 \input{tables/q1_multi_budget_table}
 
@@ -42,11 +44,12 @@ Greedy's $P=800$ is 11.18\% of source-reachable repositories; exact union gives 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{representation_detail.pdf}
-\caption{Cross-representation divergence: preserving exact-version continuity removes some paths introduced by version merging and reduces total identity-repository exposure pairs by $42.44\%$, shifting maintainer leverage.}
+\caption{Cross-representation divergence: preserving exact-version continuity removes some paths introduced by version merging and reduces total identity-repository exposure pairs by $42.44\%$, shifting maintainer leverage. Gray denotes name projection and teal denotes version continuity.}
 \label{fig:representation_detail}
 \end{figure}
 
 \subsection{RQ2: Version-Continuity Representation and Selection Penalties}
+Figure~\ref{fig:representation_detail} summarizes pair mass and budget-100 outcomes under the two representations.
 Comparing the package-projected name graph against the observed exact-version edge union reveals substantial sensitivity to representation:
 \begin{enumerate}
     \item \textbf{Exposure Shrinkage:} Preserving version continuity contracts total maintainer-repository exposure pairs from $462{,}170$ to $266{,}016$---an exact reduction of \textbf{$42.44\%$}.

@@ -8,8 +8,11 @@ The bounded acquisition retains at most 500 nodes per root and 2,500 exact (pack
 Of 95 roots with parsed GitHub mappings, 89 yield a commit observation and 74 yield a directory listing at that pinned commit. Requiring both dependency acquisition and directory observation retains 70 root records, which map to 66 repository endpoints; 65 have an observed source. The acquired directory is still a presence proxy. Missing mappings, commit observations, and directory observations remain documented missingness rather than evidence of safety. Requests span a collection window rather than a shared instantaneous cutoff.
 
 \subsection{Within-Cohort Tradeoffs and Representation}
+Table~\ref{tab:revision_replication} compares the budget-100 results within each representation.
 \input{tables/revision_replication_table}
 At budget 100, greedy coverage reaches \ReplicationGreedyC{} of \ReplicationEndpoints{} endpoints, while exact union reaches \ReplicationUnionC{}. Their within-cohort H values are 11.19\% and 44.95\%. This budget selects 9.51\% of the cohort's observed accounts, compared with 0.82\% in the original graph; equal absolute budgets do not imply equal population shares. The original exclusion heuristic gives $P=34$, compared with greedy's 11 and union's four; the immediate-completion variant gives 28. Thus the simpler rule's slight original-graph advantage does not transport to this cohort.
+
+Figure~\ref{fig:revision_replication} shows the within-cohort budget curves.
 
 \begin{figure*}[t]
 \centering
@@ -21,5 +24,6 @@ At budget 100, greedy coverage reaches \ReplicationGreedyC{} of \ReplicationEndp
 Version continuity reduces pair mass from 2,494 to 2,411, a \ReplicationPairDecrease\% decrease. The original graph's 42.44\% decrease therefore does not describe a universal representation correction. The two acquisitions differ in roots, observed graph extent, versions and dates; their difference cannot be attributed solely to temporal change. The repeated coverage--exposure ordering is descriptive evidence of transport under these explicit observation conditions, not a measured intervention effect.
 
 \subsection{Common Endpoints and Eligible Accounts}
+Table~\ref{tab:revision_common} reports results on the common population.
 \input{tables/revision_common_table}
 We also reoptimize on 65 common repository keys with 1,036 accounts eligible in both datasets. Each dataset retains its full observed source sets, including origins outside the common candidate pool. H retains the relevant dataset's pair denominator. At budget 100, coverage remains greater for greedy than exact union in both graphs; the direct heuristic gives the largest P among these three compared rules. Top-100 Jaccard overlaps between reoptimized selections are 0.667 for exact union, 0.835 for greedy and 0.587 for direct exclusion. Shared observations and graph-bounding differences preclude treating these as independent ecosystem samples or a causal stability estimate.

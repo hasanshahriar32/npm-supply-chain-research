@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_2832baa5db895caf",
+    "path": ".github/workflows/create-github-release.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/create-github-release.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_2832baa5db895caf.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:12.051Z",
+  "content": "name: create-github-release\n\non:\n  push:\n    branches:\n      - main\n      - prerelease/**\n    tags-ignore:\n      - \"*\"\n  workflow_dispatch:\n    inputs:\n      prerelease:\n        type: string\n        description: \"Name to use for the prerelease: beta, dev, etc. NOTE: If this is already set in the package.json, it does not need to be passed in here.\"\n\njobs:\n  release:\n    uses: salesforcecli/github-workflows/.github/workflows/create-github-release.yml@main\n    secrets:\n      SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}\n    with:\n      prerelease: ${{ inputs.prerelease }}\n      # If this is a push event, we want to skip the release if there are no semantic commits\n      # However, if this is a manual release (workflow_dispatch), then we want to disable skip-on-empty\n      # This helps recover from forgetting to add semantic commits ('fix:', 'feat:', etc.)\n      skip-on-empty: ${{ github.event_name == 'push' }}\n      generate-readme: false\n",
+  "is_error": false,
+  "error": null
+}

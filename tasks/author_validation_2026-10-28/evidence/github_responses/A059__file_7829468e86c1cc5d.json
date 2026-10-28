@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A059",
+    "commit_sha": "69b10d61dfc27e59be57eb8a51ba7c1830451e90",
+    "key": "A059__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "wooorm/stringify-entities",
+    "url": "https://raw.githubusercontent.com/wooorm/stringify-entities/69b10d61dfc27e59be57eb8a51ba7c1830451e90/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:34.748Z",
+  "content": "name: main\non:\n  - pull_request\n  - push\njobs:\n  main:\n    name: ${{matrix.node}}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v3\n      - uses: actions/setup-node@v3\n        with:\n          node-version: ${{matrix.node}}\n      - run: npm install\n      - run: npm test\n      - uses: codecov/codecov-action@v3\n    strategy:\n      matrix:\n        node:\n          - lts/hydrogen\n          - node\n",
+  "is_error": false,
+  "error": null
+}

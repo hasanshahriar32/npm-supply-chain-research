@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A082",
+    "commit_sha": "90970fd0a7859a169fa7889dbc5d9efe2c9c7de1",
+    "key": "A082__file_2c84033033d49186",
+    "path": ".github/workflows/release-please.yml",
+    "repo": "remarkablemark/html-react-parser",
+    "url": "https://raw.githubusercontent.com/remarkablemark/html-react-parser/90970fd0a7859a169fa7889dbc5d9efe2c9c7de1/.github/workflows/release-please.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:04.555Z",
+  "content": "name: release-please\non:\n  push:\n    branches:\n      - master\n\npermissions: read-all\n\njobs:\n  release-please:\n    runs-on: ubuntu-latest\n    outputs:\n      release_created: ${{ steps.release.outputs.release_created }}\n    permissions:\n      contents: write\n      pull-requests: write\n\n    steps:\n      - name: Release Please\n        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0\n        id: release\n        with:\n          release-type: node\n\n  publish:\n    runs-on: ubuntu-latest\n    needs: release-please\n    if: ${{ needs.release-please.outputs.release_created }}\n    permissions:\n      id-token: write\n\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n\n      - name: Use Node.js\n        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n          node-version-file: .nvmrc\n          registry-url: https://registry.npmjs.org\n\n      - name: Install dependencies\n        run: npm ci --prefer-offline --ignore-scripts\n\n      - name: Publish\n        run: npm publish --provenance --access public\n",
+  "is_error": false,
+  "error": null
+}

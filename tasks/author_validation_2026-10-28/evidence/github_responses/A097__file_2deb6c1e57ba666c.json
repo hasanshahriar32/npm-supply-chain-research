@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A097",
+    "commit_sha": "e3fca332d5faa0f84dac70f0e4efd2953f4a369a",
+    "key": "A097__file_2deb6c1e57ba666c",
+    "path": ".github/workflows/nextjs.yml",
+    "repo": "felixmosh/bull-board",
+    "url": "https://raw.githubusercontent.com/felixmosh/bull-board/e3fca332d5faa0f84dac70f0e4efd2953f4a369a/.github/workflows/nextjs.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:20.930Z",
+  "content": "name: Next.js examples\n\n# Builds the Next.js examples and checks the @bull-board/ui assets get traced into\n# the serverless function (#444). Not run per-commit — building an example is overkill\n# and the adapter has its own tests. Manual, plus once post-merge when the example\n# changes. The library's own resolution is covered by ui-base-path.spec.ts in main CI.\non:\n  workflow_dispatch:\n  push:\n    branches:\n      - master\n    paths:\n      - 'examples/with-nextjs-app/**'\n      - 'examples/with-nextjs-pages/**'\n      - 'scripts/check-nextjs-trace.mjs'\n      - '.github/workflows/nextjs.yml'\n\njobs:\n  build-and-trace:\n    name: Build examples and check asset tracing\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout repo\n        uses: actions/checkout@v6\n\n      - name: Use Node 22.x\n        uses: actions/setup-node@v6\n        with:\n          node-version: 22.x\n\n      - name: Build each example on each Next.js version and check tracing\n        run: |\n          set -uo pipefail\n          failures=()\n          for example in with-nextjs-app with-nextjs-pages; do\n            for next in 15 16; do\n              echo \"::group::$example on next@$next\"\n              if (\n                set -e\n                cd \"examples/$example\"\n                npm install --no-audit --no-fund\n                npm install --no-audit --no-fund \"next@$next\"\n                rm -rf .next\n                npm run build\n              ) && node scripts/check-nextjs-trace.mjs \"examples/$example\"; then\n                echo \"PASS: $example on next@$next\"\n              else\n                echo \"FAIL: $example on next@$next\"\n                failures+=(\"$example@next$next\")\n              fi\n              echo \"::endgroup::\"\n            done\n          done\n          if [ ${#failures[@]} -ne 0 ]; then\n            echo \"Failed: ${failures[*]}\"\n            exit 1\n          fi\n",
+  "is_error": false,
+  "error": null
+}

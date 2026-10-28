@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A026",
+    "commit_sha": "aa2145df1bedd0bc8b578dfba684ff745a6f75ad",
+    "key": "A026__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "thefrontside/ctrlc-windows",
+    "url": "https://raw.githubusercontent.com/thefrontside/ctrlc-windows/aa2145df1bedd0bc8b578dfba684ff745a6f75ad/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:09.380Z",
+  "content": "name: Test\n\non:\n  pull_request:\n    branches:\n      - \"v[0-9]+\"\n\njobs:\n  test:\n    runs-on: ${{ matrix.platform }}\n    name: ${{ matrix.platform }} test node@${{ matrix.node-version }}\n    strategy:\n      fail-fast: false\n      matrix:\n        platform: [ubuntu-latest, windows-latest]\n        node-version: [\"14\", \"16\", \"18\"]\n    steps:\n      - uses: actions-rs/toolchain@v1\n        with:\n          toolchain: 1.63\n      - uses: actions/checkout@v3\n      - run: yarn install\n      - run: yarn build\n      # specifically running this after build\n      # using the n-api, the default node on github actions\n      # should build a .node that works in any of the node\n      # versions that we have specified in the matrix\n      - uses: volta-cli/action@v3\n        with:\n          node-version: ${{ matrix.node-version }}\n          yarn-version: 1.22.19\n      - run: yarn test\n",
+  "is_error": false,
+  "error": null
+}

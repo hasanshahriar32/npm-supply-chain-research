@@ -96,7 +96,13 @@ def verify(root=ROOT):
   renderer='scripts/render_review_figures.py'if 'review_figure' in rel else'manuscript_q1/scripts/render_q1_figures.py'
   assert sha(root/renderer)==record['renderer_sha256']
   for stem,outputs in record['figures'].items():
-   for ext,h in outputs.items():assert sha(root/figure_root/f'{stem}.{ext}')==h,(stem,ext)
+   for ext,h in outputs.items():
+    presentation_path=root/'manuscript_q1/results/emse_figure_presentation.json'
+    presentation=json.loads(presentation_path.read_text()) if presentation_path.exists() else None
+    if figure_root=='manuscript_q1/figures' and presentation and stem in presentation['inputs']:
+     assert sha(root/figure_root/'editorial_inputs'/f'{stem}.{ext}')==h,(stem,ext,'original')
+     assert sha(root/figure_root/f'{stem}.{ext}')==presentation['figures'][stem][ext],(stem,ext,'presentation')
+    else:assert sha(root/figure_root/f'{stem}.{ext}')==h,(stem,ext)
   if 'review_figure'in rel:
    for label,mat in record['representation_matrices'].items():
     method,key=label.split('/')

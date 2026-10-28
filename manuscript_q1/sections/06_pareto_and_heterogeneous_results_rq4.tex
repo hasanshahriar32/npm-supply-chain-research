@@ -1,7 +1,7 @@
 \section{Exclusion Heuristic Validation: RQ3}
 \label{sec:pareto_and_weights}
 \subsection{Baseline Gain and Component Ablations}
-On the original graph, the direct heuristic yields $P=1{,}022$ at budget 100, compared with greedy coverage's 800 and exact union's 534. This gain comes with $C=5{,}020$ and $H=13.23\%$; it does not maximize every objective. Table~\ref{tab:q1_supermodular_p} retains the multi-budget comparison.
+On the original graph, the direct heuristic yields $P=1{,}022$ at budget 100, compared with greedy coverage's 800 and exact union's 534. This gain comes with $C=5{,}020$ and $H=13.23\%$; it does not maximize every objective. Table~\ref{tab:q1_supermodular_p} and Figure~\ref{fig:q1_supermodular_p_weights} report the multi-budget comparison.
 \input{tables/q1_supermodular_p_table}
 
 \begin{figure}[t]
@@ -11,13 +11,14 @@ On the original graph, the direct heuristic yields $P=1{,}022$ at budget 100, co
 \label{fig:q1_supermodular_p_weights}
 \end{figure}
 
-The new runner parameterizes the original lexicographic rule and reproduces its complete retained 100-account order before introducing variants. It changes the candidate cap to 1, 5, 20 and unrestricted, removes reciprocal remaining-source scoring or the coverage tie-break, and repeats tied choices under 30 frozen seeds. These are component sensitivities, not independent ecosystem observations.
+The ablation analysis parameterizes the original lexicographic rule and reproduces its complete retained 100-account order before introducing variants. It changes the candidate cap to 1, 5, 20 and unrestricted, removes reciprocal remaining-source scoring or the coverage tie-break, and repeats tied choices under 30 frozen seeds. These are component sensitivities, not independent ecosystem observations.
 \input{tables/revision_heuristic_table}
 
 Removing reciprocal scoring gives $P=1{,}024$, two more than the original rule, together with $C=5{,}043$ and $H=11.75\%$. The immediate-completion variant uses coverage then identity order to resolve zero-gain cases. Candidate-cap changes and removing the coverage tie-break retain the original budget-100 P on this graph. All 30 tie runs also yield $P=1{,}022$. These outcomes provide no evidence that the reciprocal term improves original-graph exclusion; its usefulness must be assessed across other observed populations. Single-run timing in Table~\ref{tab:revision_heuristic} characterizes the implementation rather than a hardware-independent performance guarantee.
 
 \subsection{Candidate-Restricted Exact Benchmarks}
 We freeze 20 empirical candidate pools and 12 synthetic overlap instances, each with 20 eligible accounts and budgets 1, 3 and 5. Exhaustive enumeration evaluates every eligible subset. Empirical instances preserve complete endpoint source sets: sources outside the candidate pool remain unselected and can prevent exclusion. Candidate pools are constructed from low-cardinality source sets and reach-ranked fill accounts, so these are tractable diagnostic instances rather than a random sample of full-graph optimization problems.
+Table~\ref{tab:revision_exact} reports the restricted-optimum comparisons.
 \input{tables/revision_exact_table}
 
 The original heuristic reaches the restricted optimum in \HeuristicExactHits{} of \HeuristicExactSettings{} settings. It matches 51 of 60 empirical settings and 35 of 36 synthetic settings. Its worst empirical deficit is \HeuristicWorstGap{} endpoints and its minimum achieved-to-optimal ratio is 16.46\%; the worst synthetic deficit is one endpoint. Figure~\ref{fig:revision_audit_benchmarks}(b) shows the gap distributions. The 96 settings reuse 32 instances across budgets and are not independent replicates. These diagnostics identify substantive failure cases; neither the hit count nor the synthetic results certify the original full graph's optimum or an approximation ratio.

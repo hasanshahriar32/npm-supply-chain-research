@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A015",
+    "commit_sha": "a3c81aa384e97716ecfc751f46eab394b2d50a08",
+    "key": "A015__file_e98936aa52a6dd74",
+    "path": ".github/workflows/nodejs.yml",
+    "repo": "kuceb/cypress-plugin-tab",
+    "url": "https://raw.githubusercontent.com/kuceb/cypress-plugin-tab/a3c81aa384e97716ecfc751f46eab394b2d50a08/.github/workflows/nodejs.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:57.701Z",
+  "content": "name: Node CI\n\non: [push]\n\njobs:\n  test-e2e:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        cypress-version: ['10.11.0', '15.1.0']\n\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: '20'\n          cache: yarn\n\n      - name: install\n        run: yarn install --frozen-lockfile\n\n      - name: install Cypress ${{ matrix.cypress-version }}\n        run: yarn add -D cypress@${{ matrix.cypress-version }}\n\n      - name: test against Cypress ${{ matrix.cypress-version }}\n        run: yarn test-e2e\n        env:\n          CI: true\n",
+  "is_error": false,
+  "error": null
+}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A014",
+    "commit_sha": "889b20b6f6bf5fb62ca4c95d154c38b435b4616b",
+    "key": "A014__file_1102636ac9e880a7",
+    "path": ".github/workflows/github-ci.yaml",
+    "repo": "jwalton/js-promise-breaker",
+    "url": "https://raw.githubusercontent.com/jwalton/js-promise-breaker/889b20b6f6bf5fb62ca4c95d154c38b435b4616b/.github/workflows/github-ci.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:56.858Z",
+  "content": "name: GitHub CI\non:\n  push:\n    branches:\n      - master\n    paths-ignore:\n      - \"**.md\"\n  pull_request:\n    paths-ignore:\n      - \"**.md\"\n\n# If someone pushes to a branch, cancel previous workflows.\nconcurrency:\n  group: test-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n\njobs:\n    test:\n        runs-on: ubuntu-latest\n        strategy:\n            matrix:\n                node-versions: ['22', '24', 'lts/*']\n        steps:\n            - uses: actions/checkout@v4\n            - name: Setup Node ${{ matrix.node-version }}\n              uses: actions/setup-node@v4\n              with:\n                  node-version: ${{ matrix.node-version }}\n            - run: npm install\n            - name: test\n              run: npm test\n",
+  "is_error": false,
+  "error": null
+}

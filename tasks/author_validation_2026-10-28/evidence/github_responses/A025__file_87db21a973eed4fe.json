@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A025",
+    "commit_sha": "a3fac78f200ec7f8d5b20eaf09add25f1c2c4208",
+    "key": "A025__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "tada5hi/smob",
+    "url": "https://raw.githubusercontent.com/tada5hi/smob/a3fac78f200ec7f8d5b20eaf09add25f1c2c4208/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:04.263Z",
+  "content": "name: Release\n\non:\n    push:\n        branches: [master]\n\nconcurrency:\n    group: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n    contents: write\n    pull-requests: write\n    id-token: write\n\nenv:\n    PRIMARY_NODE_VERSION: 24\n\njobs:\n    release:\n        name: Release\n        runs-on: ubuntu-latest\n        steps:\n            - name: Release Please\n              id: release\n              uses: googleapis/release-please-action@v5\n              with:\n                  token: ${{ secrets.GITHUB_TOKEN }}\n\n            - name: Checkout\n              if: steps.release.outputs.releases_created == 'true'\n              uses: actions/checkout@v6\n\n            - name: Install\n              if: steps.release.outputs.releases_created == 'true'\n              uses: ./.github/actions/install\n              with:\n                  node-version: ${{ env.PRIMARY_NODE_VERSION }}\n                  registry-url: 'https://registry.npmjs.org'\n\n            - name: Build\n              if: steps.release.outputs.releases_created == 'true'\n              uses: ./.github/actions/build\n\n            - name: Publish\n              if: steps.release.outputs.releases_created == 'true'\n              uses: tada5hi/monoship@v2\n\n            - name: Coverage\n              if: steps.release.outputs.releases_created == 'true'\n              run: |\n                  npm run test:coverage\n\n            - name: Upload report\n              if: steps.release.outputs.releases_created == 'true'\n              uses: codecov/codecov-action@v4.1.1\n              with:\n                  token: ${{ secrets.codecov }}\n                  directory: ./coverage/\n",
+  "is_error": false,
+  "error": null
+}

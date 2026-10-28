@@ -1,0 +1,43 @@
+{
+  "name": "sanity-ui-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Sanity.io <hello@sanity.io>",
+  "scripts": {
+    "build": "pnpm --filter @sanity/ui build && pnpm --filter figma-plugin-sanity-ui build",
+    "changeset": "changeset",
+    "clean": "pnpm --recursive clean",
+    "dev": "pnpm --filter sanity-ui-storybook dev",
+    "dev:docs": "pnpm --filter sanity-ui-docs dev",
+    "dev:studio": "pnpm --filter sanity-ui-studio dev",
+    "format": "oxfmt . --no-error-on-unmatched-pattern",
+    "knip": "knip --treat-config-hints-as-errors",
+    "lint": "pnpm run oxlint",
+    "lint:fix": "pnpm lint --fix --fix-suggestions",
+    "oxlint": "oxlint --disable-nested-config",
+    "react-devtools-mcp:chrome": "pnpm --filter sanity-ui-storybook react-devtools-mcp:chrome",
+    "react-devtools-mcp:storybook": "ENABLE_REACT_DEVTOOLS_MCP=true pnpm dev",
+    "release": "changeset publish",
+    "storybook:build": "pnpm --filter sanity-ui-storybook build",
+    "test": "pnpm --filter @sanity/ui test",
+    "test:browser": "pnpm --filter sanity-ui-storybook test",
+    "test:coverage": "pnpm --filter @sanity/ui exec vitest run --coverage",
+    "watch": "pnpm --filter @sanity/ui watch"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "catalog:",
+    "eslint-plugin-storybook": "^10.6.2",
+    "knip": "^6.42.0",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "oxlint-tsgolint": "^7.0.2004",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@12.14.0"
+}

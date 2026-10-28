@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A033",
+    "commit_sha": "34166d7e96f2b1f3a099a20c9408741a9a7cacec",
+    "key": "A033__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "bjornharrtell/jsts",
+    "url": "https://raw.githubusercontent.com/bjornharrtell/jsts/34166d7e96f2b1f3a099a20c9408741a9a7cacec/.github/workflows/node.js.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:15.082Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches: [ master ]\n  pull_request:\n    branches: [ master ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [22.x]\n    steps:\n    - uses: actions/checkout@v4\n    - name: Use Node.js ${{ matrix.node-version }}\n      uses: actions/setup-node@v4\n      with:\n        node-version: ${{ matrix.node-version }}\n        cache: 'yarn'\n    - run: yarn\n    - run: yarn \n",
+  "is_error": false,
+  "error": null
+}

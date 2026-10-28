@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A082",
+    "commit_sha": "90970fd0a7859a169fa7889dbc5d9efe2c9c7de1",
+    "key": "A082__file_0e6e5ca89e96a26e",
+    "path": ".github/workflows/size-limit.yml",
+    "repo": "remarkablemark/html-react-parser",
+    "url": "https://raw.githubusercontent.com/remarkablemark/html-react-parser/90970fd0a7859a169fa7889dbc5d9efe2c9c7de1/.github/workflows/size-limit.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:04.594Z",
+  "content": "name: size\non:\n  pull_request:\n    branches:\n      - master\n\npermissions: read-all\n\njobs:\n  size:\n    runs-on: ubuntu-latest\n    env:\n      CI_JOB_NUMBER: 1\n    permissions:\n      pull-requests: write\n\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n\n      - name: Size Limit\n        uses: andresz1/size-limit-action@94bc357df29c36c8f8d50ea497c3e225c3c95d1d # v1.8.0\n        with:\n          github_token: ${{ github.token }}\n",
+  "is_error": false,
+  "error": null
+}

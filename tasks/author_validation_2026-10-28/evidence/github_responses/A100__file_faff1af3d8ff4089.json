@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A100",
+    "commit_sha": "e06534e25b780c9d3f4e37d7acc3743fae78d434",
+    "key": "A100__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "gruntjs/grunt-contrib-cssmin",
+    "url": "https://raw.githubusercontent.com/gruntjs/grunt-contrib-cssmin/e06534e25b780c9d3f4e37d7acc3743fae78d434/.github/workflows/test.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:23.629Z",
+  "content": "name: Tests\n\non:\n  push:\n    branches:\n      - \"**\"\n      - \"!dependabot/**\"\n  pull_request:\n  workflow_dispatch:\n\nenv:\n  FORCE_COLOR: 2\n\njobs:\n  run:\n    name: Node ${{ matrix.node }} on ${{ matrix.os }}\n    runs-on: ${{ matrix.os }}\n\n    strategy:\n      fail-fast: false\n      matrix:\n        os: [ubuntu-latest, windows-latest]\n        node: [14, 16, 18, 20]\n\n    steps:\n      - name: Clone repository\n        uses: actions/checkout@v3\n        with:\n          persist-credentials: false\n\n      - name: Set up Node.js\n        uses: actions/setup-node@v3\n        with:\n          node-version: ${{ matrix.node }}\n\n      - name: Install npm dependencies\n        run: npm ci\n\n      - name: Run tests\n        run: npm test\n\n      # We test multiple Windows shells because of prior stdout buffering issues\n      # filed against Grunt. https://github.com/joyent/node/issues/3584\n      - name: Run PowerShell tests\n        run: \"npm test # PowerShell\" # Pass comment to PS for easier debugging\n        shell: powershell\n        if: startsWith(matrix.os, 'windows')\n",
+  "is_error": false,
+  "error": null
+}

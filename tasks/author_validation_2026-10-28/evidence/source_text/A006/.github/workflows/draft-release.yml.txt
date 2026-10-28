@@ -1,0 +1,61 @@
+name: Draft Release
+
+on:
+    push:
+        branches: [main]
+    # pull_request_target instead of pull_request so the autolabeler gets a write-capable token on fork PRs; the plain pull_request token is read-only for forks, which made labeling fail with "Resource not accessible by integration". Safe because the auto_label job never checks out or executes PR code.
+    pull_request_target:
+        types: [opened, reopened, synchronize]
+
+jobs:
+    update_release_draft_tailwind_merge:
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: read
+        steps:
+            # Pinned from release-drafter/release-drafter@v7.3.0.
+            - uses: release-drafter/release-drafter@c2e2804cc59f45f57076a99af580d0fedb697927
+              with:
+                  config-name: release-drafter-tailwind-merge.yml
+                  token: ${{ github.token }}
+
+    update_release_draft_vite:
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: read
+        steps:
+            # Pinned from release-drafter/release-drafter@v7.3.0.
+            - uses: release-drafter/release-drafter@c2e2804cc59f45f57076a99af580d0fedb697927
+              with:
+                  config-name: release-drafter-vite.yml
+                  token: ${{ github.token }}
+
+    update_release_draft_next:
+        if: github.event_name == 'push'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: read
+        steps:
+            # Pinned from release-drafter/release-drafter@v7.3.0.
+            - uses: release-drafter/release-drafter@c2e2804cc59f45f57076a99af580d0fedb697927
+              with:
+                  config-name: release-drafter-next.yml
+                  token: ${{ github.token }}
+
+    auto_label:
+        if: github.event_name == 'pull_request_target'
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+        steps:
+            # Pinned from release-drafter/release-drafter@v7.3.0. The autolabeler section lives in the tailwind-merge config; labels are repo-wide, so it runs once.
+            - uses: release-drafter/release-drafter/autolabeler@c2e2804cc59f45f57076a99af580d0fedb697927
+              with:
+                  config-name: release-drafter-tailwind-merge.yml
+                  token: ${{ github.token }}

@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A066",
+    "commit_sha": "d521639a80b9e7af6ebf4f74ac9dd5ac18c9a79c",
+    "key": "A066__file_74c9ec5ec6d2baa9",
+    "path": ".github/workflows/pr-title-check.yml",
+    "repo": "deepgram/deepgram-js-sdk",
+    "url": "https://raw.githubusercontent.com/deepgram/deepgram-js-sdk/d521639a80b9e7af6ebf4f74ac9dd5ac18c9a79c/.github/workflows/pr-title-check.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:41.164Z",
+  "content": "name: Title Check\npermissions:\n  contents: read\n\non:\n  pull_request:\n    types:\n      - opened\n      - edited\n      - synchronize\n      - reopened\n\njobs:\n  title-check:\n    name: Title Check\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout repo\n        uses: actions/checkout@v6\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v6\n        with:\n          node-version: \"20\"\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@v4\n\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile --ignore-scripts\n\n      - name: Validate PR title\n        env:\n          PR_TITLE: ${{ github.event.pull_request.title }}\n        run: |\n          echo \"$PR_TITLE\" | pnpm exec commitlint -g .github/.commitlintrc.json\n",
+  "is_error": false,
+  "error": null
+}

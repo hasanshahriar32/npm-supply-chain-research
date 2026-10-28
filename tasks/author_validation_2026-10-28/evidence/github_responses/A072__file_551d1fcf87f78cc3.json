@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A072",
+    "commit_sha": "b3e1a74ac48df34369a93ad87507147e9531d1d0",
+    "key": "A072__file_551d1fcf87f78cc3",
+    "path": ".github/workflows/publish.yml",
+    "repo": "jsdom/html-encoding-sniffer",
+    "url": "https://raw.githubusercontent.com/jsdom/html-encoding-sniffer/b3e1a74ac48df34369a93ad87507147e9531d1d0/.github/workflows/publish.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:50.278Z",
+  "content": "name: Publish\n\non:\n  push:\n    tags:\n      - 'v*'\n\npermissions:\n  id-token: write\n  contents: read\n\njobs:\n  publish:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/setup-node@v7\n        with:\n          node-version: lts/*\n          registry-url: https://registry.npmjs.org\n      - run: npm ci\n      - run: npm run lint\n      - run: npm test\n      - run: npm publish\n",
+  "is_error": false,
+  "error": null
+}

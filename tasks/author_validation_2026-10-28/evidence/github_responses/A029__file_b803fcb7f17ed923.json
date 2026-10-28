@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A029",
+    "commit_sha": "d5df5239da69c26c9a3c7eb2a5a0e475f98efecf",
+    "key": "A029__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "webdriverio-community/node-safaridriver",
+    "url": "https://raw.githubusercontent.com/webdriverio-community/node-safaridriver/d5df5239da69c26c9a3c7eb2a5a0e475f98efecf/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:12.032Z",
+  "content": "name: CI\n\non:\n  push:\n    branches:\n      - main\n  pull_request:\n\njobs:\n  build:\n    runs-on: macos-latest\n    steps:\n      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1\n      - name: Use Node.js\n        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0\n        with:\n          node-version: 20\n      - name: Install Dependencies\n        run: npm ci\n      - name: Build\n        run: npm run build\n      - name: 🧪 Run Tests\n        run: npm test\n",
+  "is_error": false,
+  "error": null
+}

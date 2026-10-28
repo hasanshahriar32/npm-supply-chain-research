@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A074",
+    "commit_sha": "547244f61dc04b77a90d4c627a079ae5a9ace138",
+    "key": "A074__file_63e050857aa8769f",
+    "path": ".github/workflows/rebase.yml",
+    "repo": "ljharb/json-stable-stringify",
+    "url": "https://raw.githubusercontent.com/ljharb/json-stable-stringify/547244f61dc04b77a90d4c627a079ae5a9ace138/.github/workflows/rebase.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:53.142Z",
+  "content": "name: Automatic Rebase\n\non: [pull_request_target]\n\npermissions:\n  contents: read\n\njobs:\n  _:\n    permissions:\n      contents: write  # for ljharb/rebase to push code to rebase\n      pull-requests: read  # for ljharb/rebase to get info about PR\n\n    name: \"Automatic Rebase\"\n\n    runs-on: ubuntu-latest\n\n    steps:\n      - uses: actions/checkout@v3\n      - uses: ljharb/rebase@master\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

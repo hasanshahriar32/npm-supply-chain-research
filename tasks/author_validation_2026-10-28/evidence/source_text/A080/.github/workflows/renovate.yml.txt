@@ -1,0 +1,16 @@
+name: Add changeset to Renovate updates
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  call:
+    uses: portabletext/.github/.github/workflows/changesets-from-conventional-commits.yml@a311e91e5c045a8986adf91bb0d3e35808e1704c # main
+    if: github.event.pull_request.user.login == 'renovate[bot]'
+    secrets: inherit

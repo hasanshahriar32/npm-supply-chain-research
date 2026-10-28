@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_8b1dff209b15d207",
+    "path": ".github/workflows/push-master.yml",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/.github/workflows/push-master.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:59.645Z",
+  "content": "name: Master\non:\n  push:\n    branches:\n      - master\n\njobs:\n  master:\n    if: \"! startsWith(github.event.head_commit.message, '[CI Skip]')\"\n    strategy:\n      matrix:\n        step: ['build:release']\n    runs-on: ubuntu-latest\n    env:\n      YARN_ENABLE_SCRIPTS: false\n      CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}\n      GH_PAT: ${{ secrets.GH_PAT_BOT }}\n      GH_RELEASE_GITHUB_API_TOKEN: ${{ secrets.GH_PAT_BOT }}\n      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n    steps:\n    - uses: actions/checkout@v4\n      with:\n        fetch-depth: 0\n        token: ${{ secrets.GH_PAT_BOT }}\n        ref: ${{ github.ref }}\n    - uses: actions/setup-node@v4\n      with:\n        node-version: 'lts/*'\n    - name: Set Execute Permissions\n      run: chmod +x ./scripts/*\n    - name: Run Install Build Deps\n      run: bash ./scripts/install-build-deps.sh\n    - name: build\n      run: |\n        yarn install --immutable\n        yarn ${{ matrix.step }}\n",
+  "is_error": false,
+  "error": null
+}

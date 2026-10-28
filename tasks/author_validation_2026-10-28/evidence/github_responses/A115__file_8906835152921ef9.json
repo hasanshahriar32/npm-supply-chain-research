@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A115",
+    "commit_sha": "d7cb3ec00d24943f58694365e2a180c88dac6b91",
+    "key": "A115__file_8906835152921ef9",
+    "path": ".github/workflows/examples.yml",
+    "repo": "stdlib-js/number-float64-base-exponent",
+    "url": "https://raw.githubusercontent.com/stdlib-js/number-float64-base-exponent/d7cb3ec00d24943f58694365e2a180c88dac6b91/.github/workflows/examples.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A115__file_8906835152921ef9.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:24.978Z",
+  "content": "#/\n# @license Apache-2.0\n#\n# Copyright (c) 2021 The Stdlib Authors.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n#    http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n#/\n\n# Workflow name:\nname: examples\n\n# Workflow triggers:\non:\n  # Allow the workflow to be manually run:\n  workflow_dispatch:\n\n# Workflow jobs:\njobs:\n\n  # Define a job to run the package examples...\n  examples:\n\n    # Define display name:\n    name: 'Run examples'\n\n    # Define the type of virtual host machine on which to run the job:\n    runs-on: ubuntu-latest\n\n    # Define the sequence of job steps...\n    steps:\n\n      # Checkout repository:\n      - name: 'Checkout repository'\n        # Pin action to full length commit SHA\n        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0\n\n      # Install Node.js:\n      - name: 'Install Node.js'\n        # Pin action to full length commit SHA\n        uses: actions/setup-node@b39b52d1213e96004bfcb1c61a8a6fa8ab84f3e8 # v4.0.1\n        with:\n          node-version: 20\n        timeout-minutes: 5\n\n      # Install dependencies:\n      - name: 'Install production and development dependencies'\n        run: |\n          npm install || npm install || npm install\n        timeout-minutes: 15\n\n      # Run examples:\n      - name: 'Run examples'\n        run: |\n          npm run examples\n",
+  "is_error": false,
+  "error": null
+}

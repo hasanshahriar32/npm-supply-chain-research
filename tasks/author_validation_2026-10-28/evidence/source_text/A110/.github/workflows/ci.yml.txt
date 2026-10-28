@@ -1,0 +1,158 @@
+name: CI
+
+on:
+  # Build on pushes branches that have a PR (including drafts)
+  pull_request:
+  # Build on commits pushed to the default branch
+  push:
+    branches: [main]
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm lint --format github
+      - run: pnpm build
+
+  knip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Run Knip
+        run: pnpm knip --reporter github-actions
+
+  test:
+    needs: [build]
+    runs-on: ${{ matrix.os }}
+    name: Test ${{ matrix.runtime }} / ${{ matrix.os }} / styled-components@${{ matrix.styled-components }}
+    # Keep prerelease failures non-blocking until v7 is stable.
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        runtime: [node@lts]
+        styled-components: [devDependencies, '6.1.0']
+        include:
+          - os: macos-latest
+            runtime: node@lts
+            styled-components: devDependencies
+          - os: ubuntu-latest
+            runtime: node@lts
+            styled-components: test
+            experimental: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          runtime: ${{ matrix.runtime }}
+      - name: Pin styled-components@${{ matrix.styled-components }}
+        if: matrix.styled-components != 'devDependencies'
+        env:
+          SC_SPEC: ${{ matrix.styled-components }}
+        run: |
+          SC_VERSION="$(npm view "styled-components@${SC_SPEC}" version)"
+          echo "Resolved styled-components@${SC_SPEC} to ${SC_VERSION}"
+          grep -q '^  styled-components: ' pnpm-workspace.yaml
+          sed -i -E "s|^  styled-components: .+$|  styled-components: ${SC_VERSION}|" pnpm-workspace.yaml
+          sed -i '/^minimumReleaseAgeExclude:/a\  - styled-components' pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile
+      - run: pnpm test
+
+  # Aggregates the matrix under the name the branch protection rule requires.
+  # Experimental legs can't fail it: `continue-on-error` legs that fail still
+  # aggregate to `success`.
+  test-required:
+    name: Test node@lts / ubuntu-latest
+    needs: [test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        env:
+          RESULT: ${{ needs.test.result }}
+        run: |
+          echo "Test matrix result: $RESULT"
+          test "$RESULT" = success
+
+  coverage:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm test:coverage
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          if-no-files-found: ignore
+          name: ui-coverage
+          path: packages/ui/coverage/
+
+  storybook-test:
+    runs-on: ubuntu-latest
+    name: Storybook test / styled-components@${{ matrix.styled-components }}
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        styled-components: [devDependencies, '6.1.0']
+        include:
+          - styled-components: test
+            experimental: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Pin styled-components@${{ matrix.styled-components }}
+        if: matrix.styled-components != 'devDependencies'
+        env:
+          SC_SPEC: ${{ matrix.styled-components }}
+        run: |
+          SC_VERSION="$(npm view "styled-components@${SC_SPEC}" version)"
+          echo "Resolved styled-components@${SC_SPEC} to ${SC_VERSION}"
+          grep -q '^  styled-components: ' pnpm-workspace.yaml
+          sed -i -E "s|^  styled-components: .+$|  styled-components: ${SC_VERSION}|" pnpm-workspace.yaml
+          sed -i '/^minimumReleaseAgeExclude:/a\  - styled-components' pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile
+      - name: Store Playwright's version
+        id: playwright-version
+        run: |
+          PLAYWRIGHT_VERSION=$(pnpm --filter sanity-ui-storybook exec playwright --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "Playwright's version: $PLAYWRIGHT_VERSION"
+          echo "version=${PLAYWRIGHT_VERSION}" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers for Playwright's version
+        id: cache-playwright-browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.playwright-version.outputs.version }}-playwright-browsers-chromium
+      - name: Install Playwright browsers
+        if: steps.cache-playwright-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter sanity-ui-storybook exec playwright install --with-deps chromium
+      - run: pnpm test:browser
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: vitest-failure-screenshots-styled-components-${{ matrix.styled-components }}
+          path: apps/storybook/**/__screenshots__/
+          if-no-files-found: ignore
+
+  # See `test-required`.
+  storybook-test-required:
+    name: storybook-test
+    needs: [storybook-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        env:
+          RESULT: ${{ needs.storybook-test.result }}
+        run: |
+          echo "Storybook test matrix result: $RESULT"
+          test "$RESULT" = success

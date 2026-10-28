@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A062",
+    "commit_sha": "28f1a732a832dd40f4e6549975679366276eabdf",
+    "key": "A062__file_09793c303182c720",
+    "path": ".github/workflows/labels.yml",
+    "repo": "archiverjs/node-compress-commons",
+    "url": "https://raw.githubusercontent.com/archiverjs/node-compress-commons/28f1a732a832dd40f4e6549975679366276eabdf/.github/workflows/labels.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:36.417Z",
+  "content": "---\nname: Sync labels\n\n# yamllint disable-line rule:truthy\non:\n  push:\n    branches:\n      - main\n    paths:\n      - .github/labels.yml\n  workflow_dispatch:\n\njobs:\n  labels:\n    name: Sync labels\n    runs-on: ubuntu-latest\n    steps:\n      - name: Check out code from GitHub\n        uses: actions/checkout@v6\n      - name: Run Label Syncer\n        uses: micnncim/action-label-syncer@v1.3.0\n        env:\n          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

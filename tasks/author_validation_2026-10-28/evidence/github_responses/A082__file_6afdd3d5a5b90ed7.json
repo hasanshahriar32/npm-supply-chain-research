@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A082",
+    "commit_sha": "90970fd0a7859a169fa7889dbc5d9efe2c9c7de1",
+    "key": "A082__file_6afdd3d5a5b90ed7",
+    "path": ".github/workflows/commitlint.yml",
+    "repo": "remarkablemark/html-react-parser",
+    "url": "https://raw.githubusercontent.com/remarkablemark/html-react-parser/90970fd0a7859a169fa7889dbc5d9efe2c9c7de1/.github/workflows/commitlint.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:04.638Z",
+  "content": "name: commitlint\non: [push, pull_request]\n\npermissions: read-all\n\njobs:\n  commitlint:\n    runs-on: ubuntu-latest\n\n    steps:\n      - name: Checkout repository\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1\n        with:\n          fetch-depth: 0\n\n      - name: Use Node.js\n        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0\n        with:\n          cache: npm\n          node-version-file: .nvmrc\n\n      - name: Install dependencies\n        run: npm ci --prefer-offline\n\n      - name: Lint commit message\n        run: npx commitlint --from=HEAD~1\n",
+  "is_error": false,
+  "error": null
+}

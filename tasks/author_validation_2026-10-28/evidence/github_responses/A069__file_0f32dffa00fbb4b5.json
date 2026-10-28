@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A069",
+    "commit_sha": "00f41407ef64b4944060ca3e7fd2d637916a71ea",
+    "key": "A069__file_0f32dffa00fbb4b5",
+    "path": ".github/workflows/ossf-scorecard.yml",
+    "repo": "fastify/fast-uri",
+    "url": "https://raw.githubusercontent.com/fastify/fast-uri/00f41407ef64b4944060ca3e7fd2d637916a71ea/.github/workflows/ossf-scorecard.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:43.632Z",
+  "content": "name: OSSF Scorecard Analysis\n\n# **What it does**: Runs OSSF Scorecard analysis on the repository and uploads the results.\n# **Why we have it**: Security scanning.\n\non:\n    branch_protection_rule:\n    push:\n        branches:\n            - main\n        paths-ignore:\n            - \"docs/**\"\n            - \"*.md\"\n    schedule:\n        #        ┌───────────── minute (0 - 59)\n        #        │  ┌───────────── hour (0 - 23)\n        #        │  │ ┌───────────── day of the month (1 - 31)\n        #        │  │ │ ┌───────────── month (1 - 12 or JAN-DEC)\n        #        │  │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)\n        #        │  │ │ │ │\n        #        │  │ │ │ │\n        #        │  │ │ │ │\n        #        *  * * * *\n        - cron: \"21 17 * * 0\"\n    # Allows this workflow to be run manually from the Actions tab\n    workflow_dispatch:\n\n# This allows a subsequently queued workflow run to interrupt previous runs\nconcurrency:\n    group: \"${{ github.workflow }}-${{ github.event.pull_request.head.label || github.head_ref || github.ref }}\"\n    cancel-in-progress: true\n\npermissions:\n    contents: read\n\njobs:\n    analysis:\n        name: OSSF Scorecard Analysis\n        permissions:\n            contents: read\n            id-token: write\n            security-events: write\n        uses: fastify/workflows/.github/workflows/reusable-ossf-scorecard.yml@ef591e2186785d5ab36b9fe6a79c7ce2f1d94e57 #v7.0.0\n        with:\n            publish_results: true\n",
+  "is_error": false,
+  "error": null
+}

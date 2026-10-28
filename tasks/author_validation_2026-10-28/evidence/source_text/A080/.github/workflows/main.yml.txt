@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Lint & Build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version: lts/*
+      - run: pnpm install
+      - run: pnpm lint -f github
+      - run: pnpm build
+
+  test:
+    runs-on: ${{ matrix.platform }}
+    name: Node.js ${{ matrix.node-version }} / ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-latest, windows-latest]
+        node-version: [lts/*]
+        include:
+          - platform: ubuntu-latest
+            node-version: current
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version: ${{ matrix.node-version }}
+      - run: pnpm install
+      - run: pnpm test

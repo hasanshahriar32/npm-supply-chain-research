@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A107",
+    "commit_sha": "67b32d049d41dac10b8ccba96208af522d1c8f40",
+    "key": "A107__file_63bd641104d10e25",
+    "path": ".github/workflows/codeql-analysis.yml",
+    "repo": "npm/npm-profile",
+    "url": "https://raw.githubusercontent.com/npm/npm-profile/67b32d049d41dac10b8ccba96208af522d1c8f40/.github/workflows/codeql-analysis.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:31.808Z",
+  "content": "# This file is automatically added by @npmcli/template-oss. Do not edit.\n\nname: CodeQL\n\non:\n  push:\n    branches:\n      - main\n      - release/v*\n  pull_request:\n    branches:\n      - main\n      - release/v*\n  schedule:\n    # \"At 10:00 UTC (03:00 PT) on Monday\" https://crontab.guru/#0_10_*_*_1\n    - cron: \"0 10 * * 1\"\n\npermissions:\n  contents: read\n\njobs:\n  analyze:\n    name: Analyze\n    runs-on: ubuntu-latest\n    permissions:\n      actions: read\n      contents: read\n      security-events: write\n    steps:\n      - name: Checkout\n        uses: actions/checkout@v6\n      - name: Setup Git User\n        run: |\n          git config --global user.email \"npm-cli+bot@github.com\"\n          git config --global user.name \"npm CLI robot\"\n      - name: Initialize CodeQL\n        uses: github/codeql-action/init@v3\n        with:\n          languages: javascript\n      - name: Perform CodeQL Analysis\n        uses: github/codeql-action/analyze@v3\n",
+  "is_error": false,
+  "error": null
+}

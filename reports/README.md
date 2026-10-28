@@ -39,3 +39,5 @@ The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX
 
 
 - [Report 24: coauthor name correction](24_author_name_correction.md) — full name updated to Md. Ashikul Islam; current submission deliverables rebuilt.
+
+- [Report 25: EMSE manuscript and guideline correction](25_emse_guideline_correction.md) — professional scientific wording, factual AI disclosure, bibliography and upload checks; no fabricated human reviews.

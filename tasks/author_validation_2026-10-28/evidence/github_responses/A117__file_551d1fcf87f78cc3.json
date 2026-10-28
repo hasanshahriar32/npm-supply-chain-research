@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A117",
+    "commit_sha": "bd187a7ff0a793df754e9dc56c206298493ce81a",
+    "key": "A117__file_551d1fcf87f78cc3",
+    "path": ".github/workflows/publish.yml",
+    "repo": "vueuse/vueuse",
+    "url": "https://raw.githubusercontent.com/vueuse/vueuse/bd187a7ff0a793df754e9dc56c206298493ce81a/.github/workflows/publish.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A117__file_551d1fcf87f78cc3.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:29.674Z",
+  "content": "name: Publish Package\n\npermissions:\n  id-token: write\n  contents: write\n\n# Releases are cut with `nr release` (bumpp --pr), which opens a `release/*`\n# pull request. Merging that PR tags the merge commit and publishes from here.\non:\n  pull_request:\n    types:\n      - closed\n    branches:\n      - main\n\njobs:\n  publish-npm:\n    # Only merged `release/*` pull requests that originate from this repository.\n    # The same-repo check is essential: a fork can name its branch `release/*`\n    # too, and this job runs with publishing credentials.\n    if: >-\n      github.event.pull_request.merged == true &&\n      github.event.pull_request.head.repo.full_name == github.repository &&\n      startsWith(github.event.pull_request.head.ref, 'release/')\n\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout\n        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0\n        with:\n          # The merge commit is what carries the bumped version\n          ref: ${{ github.event.pull_request.merge_commit_sha }}\n          fetch-depth: 0\n          persist-credentials: false\n\n      - name: Install pnpm\n        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10\n\n      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0\n        with:\n          node-version: lts/*\n          registry-url: https://registry.npmjs.org/\n          cache: pnpm\n\n      - name: Read version\n        id: version\n        run: echo \"version=$(node -p \"require('./package.json').version\")\" >>\n          \"$GITHUB_OUTPUT\"\n\n      - name: Create tag\n        env:\n          GH_TOKEN: ${{ github.token }}\n          VERSION: ${{ steps.version.outputs.version }}\n          SHA: ${{ github.event.pull_request.merge_commit_sha }}\n        run: |\n          gh api \"repos/$GITHUB_REPOSITORY/git/refs\" \\\n            -f ref=\"refs/tags/v$VERSION\" \\\n            -f sha=\"$SHA\"\n          # Mirror it locally, changelogithub resolves the release from git tags\n          git tag \"v$VERSION\"\n\n      - run: npm i -g npm@latest\n\n      - run: pnpm install\n\n      - run: npx changelogithub --no-group\n        continue-on-error: true\n        env:\n          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}\n\n      - run: pnpm run update:full\n\n      - run: pnpm run publish:ci\n        env:\n          NODE_OPTIONS: --max-old-space-size=6144\n",
+  "is_error": false,
+  "error": null
+}

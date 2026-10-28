@@ -1,15 +1,17 @@
-\section{Historical Metadata and Prospective Feasibility}
+\section{Historical Metadata and Acquisition Feasibility}
 \label{sec:temporal_authority}
 The historical companion asks what retained registry metadata can support before an event cutoff. It is separate from the cross-sectional reverse-reach experiment. It does not test whether the primary rankings would have predicted historical compromise.
 
 \subsection{Bounded Cutoff-SemVer Reconstruction}
 For each retained root record, the reconstruction chooses the highest currently retained, non-prerelease version satisfying a runtime dependency range and published by the root cutoff. Expansion stops at depth three or 250 nodes per root. Peer, optional, development, bundled, workspace, override, git, and tarball dependency behavior is excluded. Deleted historical versions may be unavailable; present-day retention cannot recreate every past registry state.
 
+Table~\ref{tab:q1_temporal_reconstruction} summarizes the bounded reconstruction.
 \input{tables/q1_temporal_reconstruction_table}
 
 The source contains 45 root records but 44 distinct event/root/cutoff tuples: one \texttt{node-ipc} tuple is repeated. We report retained-record counts without treating them as independent incidents. Of 1,848 recorded edge attempts, 1,841 resolve and seven have unavailable target registries, yielding 99.62\% among recorded attempts. This percentage excludes unvisited expansions beyond the bounds. The 1,272 node count is summed across roots, not globally deduplicated. One record reaches the node cap. These measurements do not establish full-tree completeness, downstream population reconstruction, or unbiased historical rankings.
 
 \subsection{Release-Field Availability and Authority Limits}
+Table~\ref{tab:q1_release_authority} reports the availability of release fields.
 \input{tables/q1_release_authority_table}
 
 The availability audit finds predecessor metadata for 44 of 45 retained records, repository-field comparison availability for 42, and \texttt{gitHead}-field comparison availability for 34. Availability does not show that URLs stayed equal, commits were valid or available, or a publisher retained authority. The audit classified no field deltas, built no authority scores, and evaluated no release-gating control.
@@ -18,9 +20,5 @@ All 45 records contain \texttt{dist.integrity} and embedded maintainer metadata.
 
 The LiteLLM source-tag/artifact discrepancy~\cite{litellmincident2026} illustrates why artifact identity, intended source, and release authority must be evaluated separately. Contextual reports do not add observations to the 45-record companion.
 
-\subsection{Prospective Acquisition and Outcome Requirements}
-Before requests, we froze 100 identifiers sampled uniformly without replacement from the 25,228-identifier graph frame (seed 20261020). The 92 ordinary-shaped names produced 90 metadata captures and two HTTP 404 responses; eight bundled-context identifiers returned HTTP 405. These failures expose a sampling-frame defect. No selected identifier was replaced. A new registry-level wave would require a separately frozen frame of valid units.
-
-The cutoff is October 20, 2026, 00:48:38 Asia/Dhaka; the 90-day horizon ends January 18, 2027. All 100 outcomes remain pending. No positive or negative outcome labels, trained models, predicted probabilities, or forecasting metrics exist. The protocol is an internal feasibility plan, not external preregistration.
-
-A future outcome study must define its eligible population, surveillance sources, reporting-delay and censoring rules, and campaign/family grouping before examining outcomes. Unreported packages must remain unlabeled unless a specified follow-up procedure supports another interpretation. Retrospective incident lists can support documented-event studies, but cannot alone estimate false-positive rates for an unspecified population. The current acquisition pilot establishes request feasibility and frame limitations, not predictive validity.
+\subsection{Metadata-Acquisition Pilot}
+A separate metadata pilot sampled 100 identifiers uniformly without replacement from the original 25,228-identifier frame (seed 20261020). Of 92 ordinary-shaped names, 90 yielded metadata and two returned HTTP 404; all eight bundled-context identifiers returned HTTP 405. No identifier was replaced. The acquisition cutoff was October 20, 2026, 00:48:38 Asia/Dhaka. The pilot characterizes retrieval feasibility and sampling-frame defects; it includes no measured incident outcomes or forecasting evaluation.

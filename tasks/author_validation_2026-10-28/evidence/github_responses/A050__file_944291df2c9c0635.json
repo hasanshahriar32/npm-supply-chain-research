@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A050",
+    "commit_sha": "a395f53aa4763170636bee90d50b38f700f7c84a",
+    "key": "A050__file_944291df2c9c0635",
+    "path": ".github/workflows/ci.yaml",
+    "repo": "orchidjs/unicode-variants",
+    "url": "https://raw.githubusercontent.com/orchidjs/unicode-variants/a395f53aa4763170636bee90d50b38f700f7c84a/.github/workflows/ci.yaml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:28.415Z",
+  "content": "name: Node.js CI\n\non:\n  push:\n    branches:\n      - main\n  pull_request:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n\n    strategy:\n      matrix:\n        node-version: ['22.x', '24.x', '26.x']\n\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1\n        with:\n          persist-credentials: false\n\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm ci\n      - run: npm run build\n      - run: npm run test\n      - run: npm run test:types\n",
+  "is_error": false,
+  "error": null
+}

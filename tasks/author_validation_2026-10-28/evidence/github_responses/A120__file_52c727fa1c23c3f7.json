@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A120",
+    "commit_sha": "8f638c0806ec8f3758adb13d93567fc782f9c903",
+    "key": "A120__file_52c727fa1c23c3f7",
+    "path": ".github/workflows/e2e-prettier-workflow.yml",
+    "repo": "yarnpkg/berry",
+    "url": "https://raw.githubusercontent.com/yarnpkg/berry/8f638c0806ec8f3758adb13d93567fc782f9c903/.github/workflows/e2e-prettier-workflow.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A120__file_52c727fa1c23c3f7.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:37.597Z",
+  "content": "on:\n  schedule:\n  - cron: '0 */4 * * *'\n  push:\n    branches:\n    - master\n  pull_request:\n    paths:\n    - .github/actions/prepare/action.yml\n    - .github/workflows/e2e-prettier-workflow.yml\n    - scripts/e2e-setup-ci.sh\n\nname: 'E2E Prettier'\njobs:\n  chore:\n    name: 'Validating Prettier'\n    runs-on: ubuntu-latest\n\n    steps:\n    - uses: actions/checkout@v4\n\n    - uses: ./.github/actions/prepare\n\n    - name: 'Running the integration test'\n      run: |\n        source scripts/e2e-setup-ci.sh\n\n        yarn init -p\n        yarn add prettier\n\n        echo 'semi: true' > .prettierrc\n\n        echo '42;' | tee ok.js\n        yarn prettier --check ok.js\n\n        echo '42' | tee ko.js\n        ! yarn prettier --check ko.js\n",
+  "is_error": false,
+  "error": null
+}

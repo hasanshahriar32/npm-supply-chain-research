@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A108",
+    "commit_sha": "4ea48166d9cc9e49861b193232cc82ee0ad84966",
+    "key": "A108__file_faff1af3d8ff4089",
+    "path": ".github/workflows/test.yml",
+    "repo": "oclif/eslint-config-oclif-typescript",
+    "url": "https://raw.githubusercontent.com/oclif/eslint-config-oclif-typescript/4ea48166d9cc9e49861b193232cc82ee0ad84966/.github/workflows/test.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A108__file_faff1af3d8ff4089.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:12.005Z",
+  "content": "name: tests\non:\n  push:\n    branches-ignore: [main]\n  workflow_dispatch:\n\njobs:\n  yarn-lockfile-check:\n    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main\n  linux-unit-tests:\n    needs: yarn-lockfile-check\n    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main\n    with:\n      skipTsDepCheck: true\n",
+  "is_error": false,
+  "error": null
+}

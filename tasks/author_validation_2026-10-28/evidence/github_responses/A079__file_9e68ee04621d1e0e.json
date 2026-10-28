@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A079",
+    "commit_sha": "65286fb3ecacf8b3a1fa4a60b265f861f5a32eef",
+    "key": "A079__file_9e68ee04621d1e0e",
+    "path": ".github/workflows/auto-merge.yml",
+    "repo": "polkadot-js/wasm",
+    "url": "https://raw.githubusercontent.com/polkadot-js/wasm/65286fb3ecacf8b3a1fa4a60b265f861f5a32eef/.github/workflows/auto-merge.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:59.235Z",
+  "content": "name: bot\n\non:\n  pull_request:\n    types: [labeled]\n\njobs:\n  merge:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: jacogr/action-merge@d2d64b4545acd93b0a9575177d3d215ae3f92029\n        with:\n          checks: pr (build),pr (lint),pr (test)\n          labels: -auto\n          strategy: squash\n          token: ${{ secrets.GH_PAT_BOT }}\n",
+  "is_error": false,
+  "error": null
+}

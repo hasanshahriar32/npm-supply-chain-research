@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A083",
+    "commit_sha": "fc2d264ccee621e24074da0de655ceff6be7f1bc",
+    "key": "A083__file_7829468e86c1cc5d",
+    "path": ".github/workflows/main.yml",
+    "repo": "remarkjs/remark-retext",
+    "url": "https://raw.githubusercontent.com/remarkjs/remark-retext/fc2d264ccee621e24074da0de655ceff6be7f1bc/.github/workflows/main.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:27:06.688Z",
+  "content": "jobs:\n  main:\n    name: ${{matrix.node}}\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: ${{matrix.node}}\n      - run: npm install\n      - run: npm test\n      - uses: codecov/codecov-action@v5\n    strategy:\n      matrix:\n        node:\n          - lts/hydrogen\n          - node\nname: main\non:\n  - pull_request\n  - push\n",
+  "is_error": false,
+  "error": null
+}

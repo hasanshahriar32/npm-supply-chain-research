@@ -1,0 +1,15 @@
+{
+  "request": {
+    "audit_id": "A110",
+    "commit_sha": "ad916e75555cb08427f12d59efecb18cfb1e3906",
+    "key": "A110__file_9081e470dec7c9fa",
+    "path": ".github/workflows/format-if-needed.yml",
+    "repo": "sanity-io/ui",
+    "url": "https://raw.githubusercontent.com/sanity-io/ui/ad916e75555cb08427f12d59efecb18cfb1e3906/.github/workflows/format-if-needed.yml",
+    "destination": "manuscript_q1/results/revision_validation/endpoint_audit/github_responses/A110__file_9081e470dec7c9fa.json"
+  },
+  "observed_at_utc": "2026-10-27T18:23:16.465Z",
+  "content": "name: Auto format\n\non:\n  push:\n    branches: [main]\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  contents: read # for checkout\n\njobs:\n  if-needed:\n    uses: sanity-io/.github/.github/workflows/format.yml@main\n    secrets: inherit\n",
+  "is_error": false,
+  "error": null
+}

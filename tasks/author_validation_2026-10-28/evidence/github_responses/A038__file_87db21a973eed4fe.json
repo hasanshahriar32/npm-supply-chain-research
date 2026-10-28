@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A038",
+    "commit_sha": "7281f1b8f09637ab383c1aab4d14247d683bc15d",
+    "key": "A038__file_87db21a973eed4fe",
+    "path": ".github/workflows/release.yml",
+    "repo": "enisdenjo/graphql-ws",
+    "url": "https://raw.githubusercontent.com/enisdenjo/graphql-ws/7281f1b8f09637ab383c1aab4d14247d683bc15d/.github/workflows/release.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:19.477Z",
+  "content": "name: Release\n\non:\n  push:\n    branches:\n      - master\n  pull_request:\n\nconcurrency: ${{ github.workflow }}-${{ github.ref }}\n\npermissions:\n  id-token: write # required for OIDC\n  pull-requests: write\n  contents: write\n\njobs:\n  snapshot:\n    if: github.event_name == 'pull_request'\n    name: Snapshot\n    uses: the-guild-org/shared-config/.github/workflows/release-snapshot.yml@v1\n    with:\n      node-version-file: .node-version\n      npmTag: ${{ github.event.pull_request.title == 'Upcoming Release Changes' && 'rc' || 'alpha' }}\n      restoreDeletedChangesets: ${{ github.event.pull_request.title == 'Upcoming Release Changes' && true || false }}\n    secrets:\n      githubToken: ${{ secrets.GITHUB_TOKEN }}\n  stable:\n    if: github.ref == 'refs/heads/master'\n    name: Stable\n    uses: the-guild-org/shared-config/.github/workflows/release-stable.yml@v1\n    with:\n      node-version-file: .node-version\n      releaseScript: changeset publish\n      versionScript: changeset version\n    secrets:\n      githubToken: ${{ secrets.GITHUB_TOKEN }}\n",
+  "is_error": false,
+  "error": null
+}

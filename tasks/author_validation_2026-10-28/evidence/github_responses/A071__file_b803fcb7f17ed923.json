@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A071",
+    "commit_sha": "182e9c3ea81136c73d7c700d471bec6d52f1f398",
+    "key": "A071__file_b803fcb7f17ed923",
+    "path": ".github/workflows/ci.yml",
+    "repo": "isaacs/prismjs-terminal",
+    "url": "https://raw.githubusercontent.com/isaacs/prismjs-terminal/182e9c3ea81136c73d7c700d471bec6d52f1f398/.github/workflows/ci.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:50.246Z",
+  "content": "name: CI\n\non:\n  push:\n    branches: [\"main\"]\n  pull_request_target:\n    paths:\n      - 'src/**'\n      - 'test/**'\n      - '*.json'\n      - '*.js'\n      - '*.ts'\n      - 'lib/**'\n      - 'scripts/**'\n  workflow_dispatch:\n\njobs:\n  build:\n    strategy:\n      matrix:\n        node-version: [22.x, 24.x]\n        platform:\n        - os: ubuntu-latest\n          shell: bash\n        - os: macos-latest\n          shell: bash\n        - os: windows-latest\n          shell: bash\n        - os: windows-latest\n          shell: powershell\n      fail-fast: false\n\n    runs-on: ${{ matrix.platform.os }}\n    defaults:\n      run:\n        shell: ${{ matrix.platform.shell }}\n\n    steps:\n      - name: Checkout Repository\n        uses: actions/checkout@v5\n\n      - name: Use Nodejs ${{ matrix.node-version }}\n        uses: actions/setup-node@v6\n        with:\n          node-version: ${{ matrix.node-version }}\n\n      - name: Install dependencies\n        run: npm install\n\n      - name: Run Tests\n        run: npm test -- -c -t0\n",
+  "is_error": false,
+  "error": null
+}

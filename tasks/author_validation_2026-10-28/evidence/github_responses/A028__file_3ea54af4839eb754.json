@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A028",
+    "commit_sha": "b95fe6a022713e008d075c6ced7dbce8aa917d53",
+    "key": "A028__file_3ea54af4839eb754",
+    "path": ".github/workflows/checks.yml",
+    "repo": "unjs/rc9",
+    "url": "https://raw.githubusercontent.com/unjs/rc9/b95fe6a022713e008d075c6ced7dbce8aa917d53/.github/workflows/checks.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:26:11.905Z",
+  "content": "name: checks\non: { push: {}, pull_request: {} }\njobs:\n  checks:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7\n      - run: npm i -fg corepack && corepack enable\n      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7\n        with: { node-version: lts/*, cache: \"pnpm\" }\n      - run: pnpm install\n      - run: pnpm typecheck\n      - run: pnpm vitest --coverage\n      - run: pnpm run lint\n      # - uses: codecov/codecov-action@v5\n      #   with: { token: \"${{ secrets.CODECOV_TOKEN }}\" }\n",
+  "is_error": false,
+  "error": null
+}

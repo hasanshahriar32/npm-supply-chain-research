@@ -1,0 +1,369 @@
+name: Build CI
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch: {}
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  # Build the compiler jar file from the submodule
+  build-compiler:
+    name: Build Compiler
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FORCE_COLOR: 1
+      NODE_VERSION: 24.x
+    steps:
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # 5.2.0
+        with:
+          distribution: adopt-hotspot
+          java-version: 21
+          java-package: jdk
+          architecture: x64
+      - name: Setup Bazelisk
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          # Avoid downloading Bazel every time.
+          bazelisk-cache: true
+          # Store build cache per workflow.
+          disk-cache: ${{ github.workflow }}
+          # Share repository cache between workflows.
+          repository-cache: true
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+        with:
+          submodules: recursive
+      - name: Fetch submodule tags
+        working-directory: compiler
+        run: git fetch --tags https://github.com/google/closure-compiler.git
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Install packages
+        run: YARN_ENABLE_COLORS=true yarn install
+      - name: Build jar
+        # unset ANDROID_HOME to prevent bazel from trying to use the Android SDK
+        run: unset ANDROID_HOME && ./build-scripts/build-compiler.js
+      - name: Tests
+        run: YARN_ENABLE_COLORS=true yarn test:root
+      - name: Upload contrib folder
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Contrib folder
+          path: compiler/contrib
+      - name: Upload externs folder
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Externs folder
+          path: compiler/externs
+      - name: Upload compiler jar
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/compiler.jar
+
+  # Build the native image on Linux
+  build-linux:
+    name: Build Linux Native Image
+    needs: build-compiler
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    env:
+      NODE_VERSION: 22.x
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Install GraalVM
+        uses: graalvm/setup-graalvm@329c42c5f4c343bceb505f0b28cc8499bc2bf174 # 1.5.4
+        with:
+          java-version: 25
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: true
+          native-image-musl: true
+      - name: Download compiler jar
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/
+      - name: Download contrib folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Contrib folder
+          path: packages/google-closure-compiler/contrib
+      - name: Download externs folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Externs folder
+          path: packages/google-closure-compiler/externs
+      - name: Install packages
+        run: YARN_ENABLE_COLORS=true yarn install
+      - name: Build image
+        working-directory: packages/google-closure-compiler-linux
+        run: |
+          cp ../google-closure-compiler-java/compiler.jar compiler.jar
+          yarn run build
+      - name: Tests
+        run: FORCE_COLOR=1 yarn workspaces foreach -A --no-private run test
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Linux image
+          path: packages/google-closure-compiler-linux/compiler
+
+  # Build the native image on Linux
+  # The runner image determines GLIBC compatibility and should not be changed without
+  # understanding the impact. See https://github.com/google/closure-compiler-npm/issues/280
+  build-linux-arm64:
+    name: Build Linux Native Image for arm processors
+    needs: build-compiler
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04-arm
+    env:
+      NODE_VERSION: 22.x
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@329c42c5f4c343bceb505f0b28cc8499bc2bf174 # 1.5.4
+        with:
+          java-version: 25
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: true
+      - name: Download compiler jar
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/
+      - name: Download contrib folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Contrib folder
+          path: packages/google-closure-compiler/contrib
+      - name: Download externs folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Externs folder
+          path: packages/google-closure-compiler/externs
+      - name: Install packages
+        run: YARN_ENABLE_COLORS=true yarn install
+      - name: Build image
+        working-directory: packages/google-closure-compiler-linux-arm64
+        run: |
+          cp ../google-closure-compiler-java/compiler.jar compiler.jar
+          yarn run build
+      - name: Tests
+        run: FORCE_COLOR=1 yarn workspaces foreach -A --no-private run test
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Linux arm64 image
+          path: packages/google-closure-compiler-linux-arm64/compiler
+
+  # Build the native image on MacOS
+  build-macos:
+    name: Build MacOS Native Image
+    needs: build-compiler
+    permissions:
+      contents: read
+    runs-on: macos-latest
+    env:
+      NODE_VERSION: 24.x
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@329c42c5f4c343bceb505f0b28cc8499bc2bf174 # 1.5.4
+        with:
+          java-version: 25
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: true
+      - name: Download compiler jar
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/
+      - name: Download contrib folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Contrib folder
+          path: packages/google-closure-compiler/contrib
+      - name: Download externs folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Externs folder
+          path: packages/google-closure-compiler/externs
+      - name: Install packages
+        run: YARN_ENABLE_COLORS=true yarn install
+      - name: Build image
+        working-directory: packages/google-closure-compiler-macos
+        run: |
+          cp ../google-closure-compiler-java/compiler.jar compiler.jar
+          yarn run build
+      - name: Tests
+        run: FORCE_COLOR=1 yarn workspaces foreach -A --no-private run test
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: MacOS image
+          path: packages/google-closure-compiler-macos/compiler
+
+  # Build the native image on Windows
+  build-windows:
+    name: Build Windows Native Image
+    needs: build-compiler
+    permissions:
+      contents: read
+    runs-on: windows-latest
+    env:
+      NODE_VERSION: 26.x
+      FORCE_COLOR: 1
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: yarn
+      - name: Setup GraalVM
+        uses: graalvm/setup-graalvm@329c42c5f4c343bceb505f0b28cc8499bc2bf174 # 1.5.4
+        with:
+          java-version: 25
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: true
+      - name: Download compiler jar
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/
+      - name: Download contrib folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Contrib folder
+          path: packages/google-closure-compiler/contrib
+      - name: Download externs folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Externs folder
+          path: packages/google-closure-compiler/externs
+      - name: Install packages
+        run: yarn install
+      - name: Build image
+        working-directory: packages/google-closure-compiler-windows
+        run: |
+          cp ../google-closure-compiler-java/compiler.jar compiler.jar
+          yarn run build
+      - name: Tests
+        shell: cmd
+        run: yarn workspaces foreach -A --no-private run test
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        with:
+          name: Windows image
+          path: packages/google-closure-compiler-windows/compiler.exe
+
+  # Publish the packages if needed
+  publish-packages:
+    name: Publish Packages
+    permissions:
+      id-token: write  # Required for OIDC
+      contents: read
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    env:
+      NODE_VERSION: 26.x
+      FORCE_COLOR: 1
+    needs:
+      - build-linux
+      - build-linux-arm64
+      - build-macos
+      - build-windows
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # 6.0.3
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # 6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org/
+          cache: yarn
+      - name: Download compiler jar
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Compiler.jar
+          path: packages/google-closure-compiler-java/
+      - name: Download Linux image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Linux image
+          path: packages/google-closure-compiler-linux/
+      - name: Download Linux arm64 image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Linux arm64 image
+          path: packages/google-closure-compiler-linux-arm64/
+      - name: Download MacOS image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: MacOS image
+          path: packages/google-closure-compiler-macos/
+      - name: Download Windows image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Windows image
+          path: packages/google-closure-compiler-windows/
+      - name: Download contrib folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Contrib folder
+          path: packages/google-closure-compiler/contrib
+      - name: Download externs folder
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          name: Externs folder
+          path: packages/google-closure-compiler/externs
+      - name: Mark binaries executable
+        run: |
+          chmod 755 packages/google-closure-compiler-linux/compiler
+          chmod 755 packages/google-closure-compiler-linux-arm64/compiler
+          chmod 755 packages/google-closure-compiler-macos/compiler
+          chmod 755 packages/google-closure-compiler-windows/compiler.exe
+      - name: Install packages
+        run: YARN_ENABLE_COLORS=true yarn install
+      - name: Prepare for publish
+        run: ./build-scripts/add-os-restrictions.js
+      - name: Publish packages to npm
+        run: |
+          npm --version
+          yarn publish-packages

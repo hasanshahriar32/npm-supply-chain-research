@@ -1,0 +1,14 @@
+{
+  "request": {
+    "audit_id": "A007",
+    "commit_sha": "8cee1b4564ab77caf4e316901040b8289043a4b4",
+    "key": "A007__file_014228303dff9a1a",
+    "path": ".github/workflows/node.js.yml",
+    "repo": "dmonad/lib0",
+    "url": "https://raw.githubusercontent.com/dmonad/lib0/8cee1b4564ab77caf4e316901040b8289043a4b4/.github/workflows/node.js.yml"
+  },
+  "observed_at_utc": "2026-10-27T14:25:49.861Z",
+  "content": "name: Testing Lib0\non:\n  push:\n    branches: [main]\n  pull_request:\n    branches: [main]\njobs:\n  lint:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - name: Use Node.js 22.x\n        uses: actions/setup-node@v4\n        with:\n          node-version: 26.x\n      - run: npm ci\n      - run: npm run lint\n      - run: npm run dist\n  test:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [26.x]\n    steps:\n      - uses: actions/checkout@v4\n      - name: Use Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n      - run: npm ci\n      - run: npm test\n  test-deno:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: denoland/setup-deno@v2\n        with:\n          deno-version: v2.x\n      - run: deno run -A src/test.js\n",
+  "is_error": false,
+  "error": null
+}

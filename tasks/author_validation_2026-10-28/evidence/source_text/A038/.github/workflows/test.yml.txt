@@ -1,0 +1,33 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: Node v${{matrix.node}} with graphql@${{matrix.graphql}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+        graphql: [15, 16, 17]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version: ${{matrix.node}}
+      - name: Install
+        run: yarn add --dev graphql@${{matrix.graphql}}
+      - name: Downgrade uWebSockets.js
+        if: matrix.node == 20
+        run: yarn add --dev uWebSockets.js@github:uNetworking/uWebSockets.js#v20.51.0
+      - name: Info
+        run: yarn info graphql
+      - name: Test
+        run: yarn test

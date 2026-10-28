@@ -136,7 +136,7 @@ def check_pdf(pdf_name: str) -> dict:
         identities = [a['name'] for a in authors['authors_in_supplied_order']] + [authors['institution']]
         if any(name in normalized for name in identities):
             res['errors'].append('Recorded author identity in anonymous journal PDF')
-        if 'AI assistance was used' not in normalized:
+        if 'OpenAI Codex was used' not in normalized:
             res['errors'].append('Assistance disclosure missing from anonymous journal PDF')
         if 'hasanshahriar32' in normalized:
             res['errors'].append('Author-identifying artifact URL in anonymous journal PDF')
@@ -245,10 +245,19 @@ def check_numerical_consistency() -> dict:
     # Task 16: new workflow/semantics diagrams and shared result plots are bound
     # to the conference figure evidence rather than copied without provenance.
     try:
+        presentation=json.loads((Q1_DIR/'results/emse_figure_presentation.json').read_text())
+        assert presentation['renderer_sha256']==hashlib.sha256((ROOT/'scripts/prepare_emse_figures.py').read_bytes()).hexdigest()
+        for stem, outputs in presentation['figures'].items():
+            for ext, expected in outputs.items():
+                assert hashlib.sha256((Q1_DIR/f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
+                assert hashlib.sha256((Q1_DIR/f'figures/editorial_inputs/{stem}.{ext}').read_bytes()).hexdigest()==presentation['inputs'][stem][ext]
+        def original_figure_hash(stem, ext):
+            folder='figures/editorial_inputs' if stem in presentation['inputs'] else 'figures'
+            return hashlib.sha256((Q1_DIR/f'{folder}/{stem}.{ext}').read_bytes()).hexdigest()
         figure_record=json.loads((ROOT / 'manuscript/results/publication_figure_data.json').read_text())
         for stem, outputs in figure_record['figures'].items():
             for ext, expected in outputs.items():
-                assert hashlib.sha256((Q1_DIR / f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
+                assert original_figure_hash(stem,ext)==expected
         def expand_active(text):
             return re.sub(r"\\input\{([^}]+)\}",lambda m:expand_active((Q1_DIR/(m[1]+'.tex')).read_text()),text)
         included=re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}",
@@ -259,7 +268,7 @@ def check_numerical_consistency() -> dict:
         revision=json.loads((Q1_DIR/'results/revision_validation/publication_artifacts.json').read_text())
         for stem,outputs in revision['figures'].items():
             for ext,expected in outputs.items():
-                assert hashlib.sha256((Q1_DIR/f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
+                assert original_figure_hash(stem,ext)==expected
     except (AssertionError,OSError,ValueError,KeyError) as exc:
         errors.append(f'Figure integration gate: {exc}')
 
@@ -307,7 +316,7 @@ def check_submission_sections() -> dict:
             if author[field] not in named:
                 errors.append(f"Named PDF: missing author {field}")
     return {"check": "submission_sections", "passed": not errors, "errors": errors,
-            "detail": "Required declarations, assistance in methods, contacts and six-keyword limit; public data release remains pending."}
+            "detail": "Required declarations, assistance in methods, contacts and six-keyword limit; public data release is linked in the named version."}
 
 
 def check_conference_freeze() -> dict:
