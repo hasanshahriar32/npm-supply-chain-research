@@ -1,0 +1,413 @@
+"""Generate the executive roadmap and practical guide PDF for author validation."""
+from pathlib import Path
+import shutil
+import subprocess
+
+HERE = Path('/home/ashik/Desktop/npm-supply-chain-research/tasks/author_validation_2026-10-28')
+
+LATEX_CONTENT = r'''\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=20mm]{geometry}
+\usepackage{xcolor,enumitem,listings,fancyhdr,array,tabularx,booktabs}
+\usepackage[bookmarks=false,colorlinks=true,linkcolor=taskblue,urlcolor=taskblue,citecolor=taskblue]{hyperref}
+\usepackage{xurl}
+
+\definecolor{taskblue}{HTML}{0D3B66}
+\definecolor{taskaccent}{HTML}{E07A5F}
+\definecolor{taskpale}{HTML}{F4F6F8}
+\definecolor{taskgreen}{HTML}{2A9D8F}
+\definecolor{taskgray}{HTML}{4A5568}
+\definecolor{boxborder}{HTML}{CBD5E0}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist{leftmargin=*,itemsep=2pt,topsep=3pt}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  rulecolor=\color{boxborder},
+  backgroundcolor=\color{taskpale},
+  xleftmargin=4pt,
+  xrightmargin=4pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{\color{taskblue}Author Validation Tasks: Executive Roadmap \& Action Guide}}
+\fancyhead[R]{\small\color{taskgray}October 2026}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{\small\color{taskgray}EMSE Research Workflow}
+\setlength{\headheight}{14pt}
+
+\begin{document}
+
+\begin{titlepage}
+\vspace*{10mm}
+{\color{taskblue}\Huge\bfseries Author Validation Tasks:\\[6pt]Executive Roadmap \& Practical Guide\par}
+\vspace{6mm}
+{\Large\textbf{For Authors:} Md. Ashikul Islam \& Shahriar Hasan\par}
+\vspace{3mm}
+{\large\textbf{Manuscript:} \textit{Maintainer Prioritization in npm Supply Chains: Objectives, Representation Sensitivity, and Metadata Limits}\par}
+{\large\textbf{Target Journal:} Empirical Software Engineering (EMSE), Springer\par}
+\vspace{8mm}
+
+\colorbox{taskpale}{
+\parbox{0.96\linewidth}{
+\vspace{3mm}
+\textbf{\large\color{taskblue}Executive Summary at a Glance}\\[4pt]
+This separate executive document explains \textbf{what} the author validation package is about, \textbf{what tasks} you must complete, \textbf{which direction} to pursue, and \textbf{how to handle} each task efficiently and rigorously.
+\begin{itemize}[leftmargin=15pt,topsep=4pt]
+  \item \textbf{Task 1 (Human Audit):} Each author independently audits 120 sampled repositories across 5 static evidence criteria (600 decisions each, 1,200 total), followed by joint adjudication of disagreements.
+  \item \textbf{Task 2 (Author Contributions):} Document each author's real, factual contributions using the CRediT role matrix.
+  \item \textbf{Task 3 (Manuscript Approval):} Both authors independently read, verify, and formally approve the 34-page final EMSE submission PDF.
+  \item \textbf{Integration \& Handoff:} Run the validation pipeline scripts, compute Cohen's $\kappa$, update manuscript tables, and submit corrections to Editorial Manager.
+\end{itemize}
+\vspace{2mm}
+}
+}
+
+\vfill
+\noindent\textbf{Prepared:} 30 October 2026\\
+\textbf{Workplace Reference:} \nolinkurl{/home/ashik/Desktop/npm-supply-chain-research/tasks/author_validation_2026-10-28/}\\
+\textbf{Status:} Clear Action Plan \& Procedural Handbook
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+\section{What This Package Is About (Context \& Purpose)}
+
+\subsection{Research Context}
+In our research study submitted to \textit{Empirical Software Engineering} (EMSE), we investigate how maintainer prioritization algorithms in npm are sensitive to objective scalarizations, graph representations, and metadata availability limits.
+
+As part of the comprehensive revision and journal validation (Reports 22--24):
+\begin{enumerate}
+  \item All automated algorithmic benchmarks, 288 method comparisons, and 100-root prospective fresh cohort runs have been fully executed and verified.
+  \item A probability sample of \textbf{120 GitHub repository endpoints} was frozen across 4 source-cardinality strata (30 per stratum) from 7,158 source-reachable endpoints.
+  \item Machine-automated collectors extracted provisional indicators (such as whether workflows or lockfiles exist).
+\end{enumerate}
+
+\subsection{Why Author Human Validation Is Needed}
+In the current manuscript, we explicitly report automated indicators while disclosing that \textbf{they have not yet been manually validated by humans}. 
+
+Reviewers in top empirical software engineering journals expect evidence that automated heuristics accurately reflect ground truth. By conducting an independent human audit:
+\begin{itemize}
+  \item You provide \textbf{empirical ground truth} verifying whether npm packages legitimately map to pinned repository workflows and lockfiles.
+  \item You calculate formal \textbf{inter-rater reliability} (Cohen's $\kappa$ and percentage agreement) before consensus adjudication.
+  \item You transform automated indicators into \textbf{audited scientific findings}, substantially increasing the rigor and defensibility of the paper.
+\end{itemize}
+
+\subsection{Three Inviolable Principles}
+\begin{enumerate}
+  \item \textbf{Strict Independence:} Neither author may see, discuss, or copy the other's initial label decisions during the initial pass.
+  \item \textbf{Auditable Evidence:} Every label must be backed by concrete file paths and code references in the evidence notes.
+  \item \textbf{Legitimate Uncertainty:} If evidence is ambiguous, missing, or inaccessible, the valid label is \nolinkurl{unknown}. Never guess or force a \nolinkurl{supported} label.
+\end{enumerate}
+
+\section{What Type of Tasks You Need to Complete}
+
+There are \textbf{three core tasks} required from the human authors, followed by the computational handoff:
+
+\subsection{Task 1: Independent 120-Endpoint Human Audit (600 Decisions Each)}
+Each author opens their assigned, dedicated CSV spreadsheet in \nolinkurl{tasks/author_validation_2026-10-28/reviews/}:
+\begin{itemize}
+  \item \nolinkurl{Md_Ashikul_Islam_independent_labels.csv}
+  \item \nolinkurl{Shahriar_Hasan_independent_labels.csv}
+\end{itemize}
+Both sheets contain the identical 120 audit IDs (\nolinkurl{A001} to \nolinkurl{A120}). For each endpoint, you inspect the static repository evidence at the exact pinned commit SHA and record 5 distinct labels:
+
+\begin{enumerate}
+  \item \textbf{Criterion 1: \nolinkurl{repository_mapping_supported}}
+  \begin{itemize}
+    \item \textit{Question:} Does the npm registry repository field accurately link to this GitHub repository, and does the relevant \nolinkurl{package.json} (at the root or in a monorepo workspace) declare this package name?
+  \end{itemize}
+  \item \textbf{Criterion 2: \nolinkurl{workflow_file_present}}
+  \begin{itemize}
+    \item \textit{Question:} Is there an actual GitHub Actions workflow YAML file in \nolinkurl{.github/workflows/} at the pinned commit?
+  \end{itemize}
+  \item \textbf{Criterion 3: \nolinkurl{install_directive_observed}}
+  \begin{itemize}
+    \item \textit{Question:} Do workflow steps contain an active shell instruction (e.g. \nolinkurl{npm ci}, \nolinkurl{npm install}, \nolinkurl{pnpm install}, \nolinkurl{yarn install}) that applies to this package or its root workspace?
+  \end{itemize}
+  \item \textbf{Criterion 4: \nolinkurl{lockfile_present}}
+  \begin{itemize}
+    \item \textit{Question:} Is there a relevant lockfile (\nolinkurl{package-lock.json}, \nolinkurl{pnpm-lock.yaml}, \nolinkurl{yarn.lock}, \nolinkurl{npm-shrinkwrap.json}) governing the package?
+  \end{itemize}
+  \item \textbf{Criterion 5: \nolinkurl{dependency_version_supported}}
+  \begin{itemize}
+    \item \textit{Question:} Can you find at least one concrete dependency declared in \nolinkurl{package.json} and locate its corresponding resolved, pinned version in the applicable lockfile?
+  \end{itemize}
+\end{enumerate}
+
+\textbf{Allowed Label Values:} Each cell must contain \textit{only} one of these three lowercase strings:
+\begin{itemize}
+  \item \nolinkurl{supported} --- The static evidence clearly satisfies the criterion.
+  \item \nolinkurl{unsupported} --- The evidence affirmatively contradicts the criterion or complete tree inspection proves its absence.
+  \item \nolinkurl{unknown} --- The evidence is ambiguous, incomplete, or acquisition failed (e.g. 404, rate limit, capped candidate tree).
+\end{itemize}
+
+\subsection{Task 2: Author Contributions Statement}
+Open \nolinkurl{tasks/author_validation_2026-10-28/templates/actual_contributions.csv}.
+\begin{itemize}
+  \item Record short, factual statements describing what each author actually did across CRediT roles (Conceptualization, Methodology, Software, Data Curation, Validation, Analysis, Writing).
+  \item Roles must reflect real historical and current work, not assigned merely based on first vs second author order.
+\end{itemize}
+
+\subsection{Task 3: Final Manuscript Review and Approval}
+Open \nolinkurl{tasks/author_validation_2026-10-28/templates/manuscript_approval.md}.
+\begin{itemize}
+  \item Both authors must read the complete 34-page final EMSE article PDF (not just this guide).
+  \item Verify author spelling (\textbf{Md. Ashikul Islam} and \textbf{Shahriar Hasan}), affiliations, email contacts, and ORCIDs.
+  \item Check consistency between figures, tables, and narrative claims.
+  \item Sign off on the approval checklist with the exact PDF filename, date, and SHA-256 hash.
+\end{itemize}
+
+\clearpage
+\section{In Which Direction You Should Go (Execution Roadmap)}
+
+To complete these tasks smoothly without burnout or protocol deviations, follow this 5-phase sequential roadmap:
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{l p{3.2cm} X l}
+\toprule
+\textbf{Phase} & \textbf{Objective} & \textbf{Key Actions \& Deliverables} & \textbf{Time} \\
+\midrule
+\textbf{Phase 0} & Calibration \& Setup & Open \nolinkurl{Evidence_Index.html}; do calibration on 5 real rows. & 1--2 hrs \\
+\addlinespace
+\textbf{Phase 1} & Independent Review Passes & Each author completes 120 rows in their own CSV across 12 batches. Run \nolinkurl{validate_reviews.py}. & 15--25 hrs / author \\
+\addlinespace
+\textbf{Phase 2} & Preservation \& Adjudication & Freeze initial CSVs (SHA-256). Run adjudication generator. Resolve in \nolinkurl{adjudication.csv}. & 2--4 hrs \\
+\addlinespace
+\textbf{Phase 3} & Formal Documentation & Fill \nolinkurl{actual_contributions.csv}; read final PDF; sign \nolinkurl{manuscript_approval.md}. & 3--4 hrs \\
+\addlinespace
+\textbf{Phase 4} & Pipeline Integration & Run \nolinkurl{study_validated_endpoints.py}; update paper tables; submit to EMSE. & 1--2 hrs \\
+\bottomrule
+\end{tabularx}
+\caption{Structured 5-Phase Implementation Roadmap}
+\end{table}
+
+\subsection{Phase 0: Calibration and Setup (Day 1)}
+\begin{enumerate}
+  \item \textbf{Open the Evidence Index:} Double-click \nolinkurl{Evidence_Index.html} in your web browser. This offline-ready index links all retained registry JSONs, commit SHAs, and source-text files.
+  \item \textbf{Open Your Personal Review Sheet:} Open your assigned CSV in a proper editor (LibreOffice Calc, Excel, or VS Code). Ensure UTF-8 encoding is selected and text columns are preserved without scientific formatting.
+  \item \textbf{Calibration Run:} Time yourselves independently on the first 5 rows (\nolinkurl{A001} to \nolinkurl{A005}). Do not share decisions yet. This establishes your realistic pace (typically 8--15 minutes per endpoint).
+\end{enumerate}
+
+\subsection{Phase 1: Independent Review Passes (Days 2 to 10)}
+\begin{enumerate}
+  \item \textbf{Batch Schedule:} Break the 120 rows into 12 manageable sessions of 10 rows each (e.g. 1 to 2 sessions per day).
+  \item \textbf{Strict Independence:} Never peek at your coauthor's sheet or compare notes until all 120 rows are completed.
+  \item \textbf{Continuous Local Validation:} At the end of each session, run the automated structural checker:
+  \begin{lstlisting}[language=bash]
+python3 tasks/author_validation_2026-10-28/validate_reviews.py
+  \end{lstlisting}
+  This checks that your IDs are untouched, all 5 labels are valid, and evidence notes are present.
+\end{enumerate}
+
+\subsection{Phase 2: Reconciliation and Adjudication (Day 11)}
+\begin{enumerate}
+  \item \textbf{Freeze Initial CSVs:} Once both sheets pass validation, record their SHA-256 checksums. \textbf{Never alter initial labels after this point!} Initial disagreement is legitimate scientific data used to calculate Cohen's $\kappa$.
+  \item \textbf{Copy to Canonical Location \& Detect Disagreements:}
+  \begin{lstlisting}[language=bash]
+cp tasks/author_validation_2026-10-28/reviews/Shahriar_Hasan_independent_labels.csv manuscript_q1/review_packets/
+cp tasks/author_validation_2026-10-28/reviews/Md_Ashikul_Islam_independent_labels.csv manuscript_q1/review_packets/
+python3 scripts/study_validated_endpoints.py --label-source human
+  \end{lstlisting}
+  \item \textbf{Adjudicate Disagreements:} The script generates \nolinkurl{manuscript_q1/review_packets/adjudication.csv} listing only rows where your labels differed. Both authors sit together, review the evidence, and agree on an \nolinkurl{adjudicated_label} and documented \nolinkurl{reason}.
+\end{enumerate}
+
+\subsection{Phase 3: Formal Documentation (Day 12)}
+\begin{enumerate}
+  \item Fill \nolinkurl{tasks/author_validation_2026-10-28/templates/actual_contributions.csv}.
+  \item Read the generated final manuscript PDF in \nolinkurl{manuscript/build/main_authors.pdf}.
+  \item Fill and personally sign \nolinkurl{tasks/author_validation_2026-10-28/templates/manuscript_approval.md}.
+\end{enumerate}
+
+\subsection{Phase 4: Pipeline Integration \& Journal Submission (Day 13)}
+\begin{enumerate}
+  \item Re-run \nolinkurl{python3 scripts/study_validated_endpoints.py --label-source human}. This produces verified metrics, stratified population estimates, and Cohen's $\kappa$.
+  \item Rebuild the final paper: tables and text update automatically to reflect adjudicated human results.
+  \item Submit the updated manuscript package and cover letter via the EMSE Editorial Manager portal.
+\end{enumerate}
+
+\clearpage
+\section{How to Handle These Tasks Practically (Inspection Protocol)}
+
+\subsection{Standard Operating Procedure for Every Endpoint (8 Steps)}
+Follow this exact sequence for each audit row:
+
+\begin{enumerate}
+  \item \textbf{Identify the Row:} Note the \nolinkurl{audit_id} (e.g. \nolinkurl{A002}), repository, and pinned \nolinkurl{commit_sha} in your CSV.
+  \item \textbf{Find in HTML Index:} Press \texttt{Ctrl+F} in \nolinkurl{Evidence_Index.html} and type \nolinkurl{A002}.
+  \item \textbf{Inspect Repository Mapping (Criterion 1):}
+  \begin{itemize}
+    \item Click the retained registry JSON. Note the package name, version, and \nolinkurl{repository} URL.
+    \item Click the pinned GitHub \nolinkurl{package.json} (or monorepo subfolder). Verify that \nolinkurl{"name"} matches the npm package.
+    \item If identical, assign \nolinkurl{supported}. If mismatched or conflicting, assign \nolinkurl{unsupported}. If tree/request failed, assign \nolinkurl{unknown}.
+  \end{itemize}
+  \item \textbf{Inspect Workflow Presence (Criterion 2):}
+  \begin{itemize}
+    \item Check the list of workflow files in \nolinkurl{.github/workflows/}.
+    \item If at least one valid YAML workflow exists at the pinned commit, assign \nolinkurl{supported}.
+    \item If the repository tree was fully inspected and no workflows exist, assign \nolinkurl{unsupported}. If incomplete/404, assign \nolinkurl{unknown}.
+  \end{itemize}
+  \item \textbf{Inspect Install Directive (Criterion 3):}
+  \begin{itemize}
+    \item Open the workflow source text (e.g. \nolinkurl{test.yml} or \nolinkurl{ci.yml}).
+    \item Search for \nolinkurl{run: npm ci}, \nolinkurl{npm install}, \nolinkurl{pnpm i}, or \nolinkurl{yarn install}.
+    \item Check working directory: does it apply to this package or the monorepo root?
+    \item If yes, assign \nolinkurl{supported}. If workflows exist but none install dependencies, assign \nolinkurl{unsupported}. If unresolvable or reusable workflow inaccessible, assign \nolinkurl{unknown}.
+  \end{itemize}
+  \item \textbf{Inspect Lockfile Presence (Criterion 4):}
+  \begin{itemize}
+    \item Look for \nolinkurl{package-lock.json}, \nolinkurl{pnpm-lock.yaml}, or \nolinkurl{yarn.lock} at root or package level.
+    \item If present and covering this package, assign \nolinkurl{supported}. If proved absent, assign \nolinkurl{unsupported}. If uncertain, assign \nolinkurl{unknown}.
+  \end{itemize}
+  \item \textbf{Inspect Dependency/Version Pair (Criterion 5):}
+  \begin{itemize}
+    \item Pick one dependency in \nolinkurl{package.json} (e.g. \nolinkurl{"typescript": "^5.0.0"}).
+    \item Open the lockfile and find that package entry. Look for the resolved version (e.g. \nolinkurl{5.2.2}).
+    \item If found and matching, assign \nolinkurl{supported}. If lockfile has no dependencies or doesn't resolve it, assign \nolinkurl{unsupported}. If lockfile absent or unparseable, assign \nolinkurl{unknown}.
+  \end{itemize}
+  \item \textbf{Write Evidence Notes:} Enter structured notes in \nolinkurl{evidence_notes}. Follow the standard template:
+\begin{lstlisting}
+Mapping: [package@version -> path/name; registry match];
+Workflow: [.github/workflows/ci.yml];
+Install: [ci job, step 'Install deps', run: pnpm i];
+Lock: [pnpm-lock.yaml covering workspace];
+Version: [typescript ^5.0 -> resolved 5.2.2 in lockfile];
+Reason: [explanation if unknown or unsupported].
+\end{lstlisting}
+\end{enumerate}
+
+\subsection{Decision Matrix: Supported vs Unsupported vs Unknown}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{lXXX}
+\toprule
+\textbf{Criterion} & \textbf{Supported} & \textbf{Unsupported} & \textbf{Unknown} \\
+\midrule
+\textbf{Mapping} & Registry URL matches repo AND manifest \nolinkurl{package.json} has matching name. & Manifest has conflicting name or repo points elsewhere. & 404 error, missing commit, or repo deleted. \\
+\addlinespace
+\textbf{Workflow} & Readable \nolinkurl{.github/workflows/*.yml} file present at pinned commit. & Complete directory tree inspected; zero workflow files exist. & Tree listing failed, truncated, or unreadable. \\
+\addlinespace
+\textbf{Install} & Active install step found (\nolinkurl{npm ci}, \nolinkurl{pnpm i}, etc.) in relevant path. & Workflows present, but do not execute any install step. & Complex composite/reusable action cannot be resolved. \\
+\addlinespace
+\textbf{Lockfile} & Relevant lockfile exists at root or in package directory. & Adequately inspected tree shows no lockfile. & Retrieval capped or workspace coverage ambiguous. \\
+\addlinespace
+\textbf{Dep/Version} & At least 1 dependency in \nolinkurl{package.json} matches resolved lockfile entry. & Lockfile lacks the dependency or manifest has zero dependencies. & Lockfile absent, truncated, or format unparseable. \\
+\bottomrule
+\end{tabularx}
+\caption{Exact Decision Matrix Across the Five Criteria}
+\end{table}
+
+\clearpage
+\section{Key Edge Cases and Practical Tips}
+
+\subsection{How to Handle Monorepos (e.g. A002: arthurfiorette/tinylibs)}
+\begin{itemize}
+  \item In monorepos, the root \nolinkurl{package.json} often names the root workspace rather than the sampled package.
+  \item Look inside the subpackages listed in the HTML index (e.g. \nolinkurl{packages/cache-parser/package.json}).
+  \item For lockfiles, root lockfiles (such as \nolinkurl{pnpm-lock.yaml} at repository root) usually govern all workspace packages. Document that the root lockfile covers the package workspace.
+\end{itemize}
+
+\subsection{Handling Missing Data or 404s}
+\begin{itemize}
+  \item A 404 response or network error \textbf{is NOT unsupported}. It means evidence could not be acquired. Always mark as \nolinkurl{unknown}.
+  \item Do not substitute the pinned commit with today's HEAD branch. The research requires inspecting the frozen commit SHA.
+\end{itemize}
+
+\subsection{Critical Do's and Don'ts}
+\begin{itemize}[leftmargin=18pt]
+  \item[\textcolor{taskgreen}{\textbf{DO:}}] Use lowercase \nolinkurl{supported}, \nolinkurl{unsupported}, and \nolinkurl{unknown}.
+  \item[\textcolor{taskgreen}{\textbf{DO:}}] Save frequently and run \nolinkurl{python3 validate_reviews.py} after every session.
+  \item[\textcolor{taskgreen}{\textbf{DO:}}] Write specific, informative notes (file paths, step names, package versions).
+  \item[\textcolor{taskaccent}{\textbf{DON'T:}}] Never peek at or share decisions with your coauthor before both initial passes are finished.
+  \item[\textcolor{taskaccent}{\textbf{DON'T:}}] Never change your initial CSV during adjudication. Adjudications go into a separate file (\nolinkurl{adjudication.csv}).
+  \item[\textcolor{taskaccent}{\textbf{DON'T:}}] Do not execute, build, or run any repository code. All review is purely static, read-only inspection.
+  \item[\textcolor{taskaccent}{\textbf{DON'T:}}] Do not leave blank cells. A blank cell means unfinished review, whereas \nolinkurl{unknown} means inspected but ambiguous/unavailable.
+\end{itemize}
+
+\section{Master Reference of Files and Locations}
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{p{4.5cm}X}
+\toprule
+\textbf{File / Directory} & \textbf{Purpose and Usage} \\
+\midrule
+\nolinkurl{Author_Validation_Guide.pdf} & Printable 18-section comprehensive study protocol. \\
+\nolinkurl{Evidence_Index.html} & Offline-ready browser index linking all 120 endpoints, pinned SHAs, and source files. \\
+\nolinkurl{Evidence_Packet.md} & Detailed markdown evidence dossier with all raw endpoint records. \\
+\nolinkurl{reviews/Md_Ashikul_Islam_independent_labels.csv} & Working review sheet for Md. Ashikul Islam (120 rows). \\
+\nolinkurl{reviews/Shahriar_Hasan_independent_labels.csv} & Working review sheet for Shahriar Hasan (120 rows). \\
+\nolinkurl{templates/actual_contributions.csv} & Form to describe real author contributions across CRediT roles. \\
+\nolinkurl{templates/manuscript_approval.md} & Checklist for formal manuscript review and sign-off. \\
+\nolinkurl{templates/review_session_log.csv} & Optional log to record review session times and access issues. \\
+\nolinkurl{validate_reviews.py} & Local automated checker for sheet structure and completeness. \\
+\nolinkurl{scripts/study_validated_endpoints.py} & Pipeline analysis script computing agreement, kappa, and estimates. \\
+\bottomrule
+\end{tabularx}
+\caption{Author Validation Directory File Reference}
+\end{table}
+
+\vspace{10mm}
+\begin{center}
+\colorbox{taskpale}{
+\parbox{0.92\linewidth}{
+\centering\vspace{2mm}
+\textbf{\color{taskblue}Summary Reminder}\\
+You are now fully equipped to proceed. Start with \textbf{Phase 0} today by opening \nolinkurl{Evidence_Index.html} and timing your first 5 rows in your respective CSV sheets. Happy reviewing!
+\vspace{2mm}
+}
+}
+\end{center}
+
+\end{document}
+'''
+
+def main():
+    tex_path = HERE / 'Author_Validation_Executive_Roadmap.tex'
+    tex_path.write_text(LATEX_CONTENT, encoding='utf-8')
+    print('Wrote', tex_path)
+
+    compiler = shutil.which('tectonic') or '/home/ashik/.local/bin/tectonic'
+    build_dir = HERE / 'build'
+    build_dir.mkdir(exist_ok=True)
+    for p in build_dir.glob('Author_Validation_Executive_Roadmap*'):
+        try:
+            p.unlink()
+        except Exception:
+            pass
+
+    cmd = [compiler, '--keep-logs', '--outdir', str(build_dir), tex_path.name]
+    print('Compiling with tectonic...')
+    res = subprocess.run(cmd, cwd=HERE, text=True, capture_output=True)
+    if res.returncode != 0:
+        print('Compilation failed:')
+        print(res.stdout)
+        print(res.stderr)
+        raise RuntimeError('Tectonic build failed')
+
+    out_pdf = build_dir / 'Author_Validation_Executive_Roadmap.pdf'
+    dest_pdf = HERE / 'Author_Validation_Executive_Roadmap.pdf'
+    shutil.copy2(out_pdf, dest_pdf)
+    
+    # Also copy to reports for high visibility
+    reports_pdf = Path('/home/ashik/Desktop/npm-supply-chain-research/reports/Author_Validation_Executive_Roadmap.pdf')
+    shutil.copy2(out_pdf, reports_pdf)
+
+    print(f'Successfully built:\n  {dest_pdf}\n  {reports_pdf}')
+
+if __name__ == '__main__':
+    main()

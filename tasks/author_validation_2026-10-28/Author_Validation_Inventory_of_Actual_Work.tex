@@ -1,0 +1,317 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=18mm]{geometry}
+\usepackage{xcolor,enumitem,listings,fancyhdr,array,tabularx,booktabs,amsmath}
+\usepackage[bookmarks=false,colorlinks=true,linkcolor=workblue,urlcolor=workblue,citecolor=workblue]{hyperref}
+\usepackage{xurl}
+
+\definecolor{workblue}{HTML}{0B3C5D}
+\definecolor{workgold}{HTML}{D9B310}
+\definecolor{workslate}{HTML}{328CC1}
+\definecolor{workbg}{HTML}{F7F9FB}
+\definecolor{workborder}{HTML}{CFD8DC}
+\definecolor{workdark}{HTML}{1D2731}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlist{leftmargin=*,itemsep=2pt,topsep=3pt}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  rulecolor=\color{workborder},
+  backgroundcolor=\color{workbg},
+  xleftmargin=3pt,
+  xrightmargin=3pt
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textbf{\color{workblue}Inventory of Completed Research Work}}
+\fancyhead[R]{\small\color{gray}Authorship \& CRediT Attribution Reference}
+\fancyfoot[C]{\thepage}
+\fancyfoot[R]{\small\color{gray}EMSE-S-26-02038}
+\setlength{\headheight}{14pt}
+
+\begin{document}
+
+\begin{titlepage}
+\vspace*{10mm}
+{\color{workblue}\Huge\bfseries Complete Inventory of Completed Work:\\[6pt]\Large Major and Minor Research, Engineering, and Manuscript Contributions\par}
+\vspace{6mm}
+{\large\textbf{Project:} Maintainer Prioritization in npm Supply Chains (EMSE Submission EMSE-S-26-02038)\par}
+{\large\textbf{Authors:} Md. Ashikul Islam \& Shahriar Hasan\par}
+\vspace{6mm}
+
+\colorbox{workbg}{
+\parbox{0.96\linewidth}{
+\vspace{3mm}
+\textbf{\large\color{workblue}Purpose of This Document}\\[4pt]
+This standalone document provides an exhaustive, granular inventory of \textbf{all major and minor work} performed in this research project across all 25 research tasks, datasets, algorithms, empirical validations, and publication packages.
+
+It is structured to give both authors complete visibility into every technical, analytical, and writing activity so that:
+\begin{enumerate}[leftmargin=15pt,topsep=3pt]
+  \item You can accurately, truthfully, and transparently complete the \textbf{CRediT Author Contribution Matrix} (\nolinkurl{tasks/author_validation_2026-10-28/templates/actual_contributions.csv}).
+  \item You understand the exact historical trajectory leading up to the \textbf{120-Endpoint Human Audit (Task 1)}.
+  \item You can verify and defend all methodology, data pipelines, and scientific claims for the journal review process.
+\end{enumerate}
+\vspace{2mm}
+}
+}
+
+\vfill
+\noindent\textbf{Date of Inventory:} 30 October 2026\\
+\textbf{Repository:} \nolinkurl{hasanshahriar32/npm-supply-chain-research}\\
+\textbf{Target Journal:} Empirical Software Engineering (EMSE), Springer\\
+\textbf{Prerelease Artifact:} \url{https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+\section{Executive Summary of Research Scope}
+
+This repository contains an end-to-end empirical software engineering research project investigating maintainer prioritization in the npm dependency ecosystem. Over 25 distinct research and verification milestones have been executed.
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{l p{4.2cm} X}
+\toprule
+\textbf{Dimension} & \textbf{Quantitative Scale} & \textbf{Key Deliverables / Artifacts} \\
+\midrule
+\textbf{Dependency Graph} & 7,158 endpoints; 12,217 accounts & Full transitive npm topology, SQLite databases, bipartite incidence graphs. \\
+\addlinespace
+\textbf{Algorithmic Suite} & 3 core objectives; 6 budgets & Greedy set cover ($C$), Exact union ($H$), Direct exclusion heuristic ($P$), Pareto frontiers. \\
+\addlinespace
+\textbf{Benchmarking} & 228 ablation rows; 288 method runs & 38 selection runs, 20 empirical pools, 12 synthetic instances across budgets 1, 3, 5. \\
+\addlinespace
+\textbf{Replication Cohort} & 100 roots; 94 graphs; 1,641 nodes & Bounded prospective fresh acquisition with 4,357 version-edge rows and 1,051 accounts. \\
+\addlinespace
+\textbf{Incident Validation} & 49 security incident dossiers & 16 matching graph packages; retrospective proof of phished maintainer \textit{qix} capture. \\
+\addlinespace
+\textbf{Manuscripts} & 2 independent tracks & 6-page IEEE conference paper; 34-page Springer EMSE journal manuscript (13 figs, 14 tables). \\
+\addlinespace
+\textbf{Human Audit Kit} & 120 stratified endpoints & Probability sample across 4 source strata, offline evidence browser, paired review sheets. \\
+\bottomrule
+\end{tabularx}
+\caption{Overall Scope and Quantitative Scale of Research Contributions}
+\end{table}
+
+\section{Major Research and Engineering Work Packages}
+
+\subsection{1. Mathematical Modeling and Optimization Formulation}
+\begin{itemize}
+  \item \textbf{Formulation of Optimization Objectives:}
+  \begin{itemize}
+    \item \textbf{Coverage Maximization $C(S)$:} Total package-version and repository reach achieved by protecting maintainer set $S$.
+    \item \textbf{Additive Scenario Exposure $H(S)$:} Transitive risk mass and downstream blast-radius mitigation.
+    \item \textbf{All-Source Exclusion $P(S)$:} Defense-in-depth metric ensuring all maintainers authorized to publish a package are protected.
+  \end{itemize}
+  \item \textbf{Quorum and Imperfect Mitigation Extensions (Task 13 \& 14):}
+  \begin{itemize}
+    \item Formulated generalized $k$-of-$n$ quorum exclusion $P_k(S)$, modeling multi-signature and consensus maintainer release requirements.
+    \item Formulated imperfect intervention efficacy $H_\eta(S)$, quantifying realistic partial adherence to security controls (MFA, hardware keys).
+    \item Mathematical proof and numerical implementation of strict zero-budget boundary conditions.
+  \end{itemize}
+  \item \textbf{Pareto Optimization and Scalarization (Task 07):}
+  \begin{itemize}
+    \item Multi-objective scalarization $\alpha C(S) + (1-\alpha) H(S)$ evaluated across fine-grained grid $\alpha \in [0.0, 1.0]$.
+    \item Discovery of the $\alpha = 0.50$ sweet spot capturing 70\% of maximum coverage while retaining 31.2\% of exposure mitigation.
+    \item Heterogeneous risk weighting $H_{\text{sole}}$, prioritizing single-maintainer critical packages (achieving up to 88.04\% coverage).
+  \end{itemize}
+\end{itemize}
+
+\subsection{2. Algorithmic Implementations and Exhaustive Benchmarking}
+\begin{itemize}
+  \item \textbf{Core Algorithm Pipeline (\nolinkurl{scripts/study_structural_interventions.py}):}
+  \begin{itemize}
+    \item Implementation of Greedy Set Cover heuristic for coverage.
+    \item Implementation of Exact Union solver for transitive risk mass.
+    \item Implementation of Direct Exclusion-Oriented heuristic for multi-maintainer exclusion.
+    \item Evaluation across 6 standard policy budgets: $B \in \{10, 25, 50, 100, 200, 500\}$.
+  \end{itemize}
+  \item \textbf{Ablation and Sensitivity Benchmarking (Task 03 \& Task 23):}
+  \begin{itemize}
+    \item Executed 38 selection runs across 6 budgets (228 metric rows) isolating the impact of reciprocal scoring, candidate caps, and deterministic tie breaking.
+    \item Evaluated 20 empirical candidate pools and 12 synthetic instances across budgets 1, 3, and 5 (96 settings, 288 method comparisons).
+    \item Demonstrated that the direct exclusion rule matches 51/60 empirical and 35/36 synthetic restricted optima.
+  \end{itemize}
+  \item \textbf{Statistical Hypothesis Testing and Monte Carlo Simulations:}
+  \begin{itemize}
+    \item Conducted 6,000 random budget simulations across 200 distinct random seeds.
+    \item Calculated Monte Carlo Standard Errors (MCSE) and non-parametric effect sizes (Cliff's $\delta = 1.0, p < 0.005$).
+  \end{itemize}
+\end{itemize}
+
+\subsection{3. Data Mining, Dependency Graphs, and SQLite Infrastructure}
+\begin{itemize}
+  \item \textbf{Primary Ecosystem Graph Construction:}
+  \begin{itemize}
+    \item Mined transitive dependencies and metadata across 7,158 GitHub-linked npm endpoints and 12,217 maintainer accounts.
+    \item Resolved strongly connected components (SCCs: 82/68 cycles) and dependency depth frontiers.
+  \end{itemize}
+  \item \textbf{Dataset Hygiene and Parser Disagreement Resolution (Task 02):}
+  \begin{itemize}
+    \item Audited 658 parser disagreements between npm registry manifests and repository \nolinkurl{package.json} configurations.
+    \item Discovered and quantified the 42.4\% "version continuity drop" occurring between undated repository HEAD observations and immutable release versions.
+  \end{itemize}
+  \item \textbf{100\% Programmatic SQLite Extraction (Task 12):}
+  \begin{itemize}
+    \item Completely purged hardcoded LaTeX tables in the manuscript.
+    \item Built automated SQLite extraction scripts guaranteeing exact database-to-manuscript data consistency (reconciling maintainer reach for \nolinkurl{qix} to exactly 1,476 dependents).
+  \end{itemize}
+  \item \textbf{Release-Authority Delta Protocol (Task 09):}
+  \begin{itemize}
+    \item Extracted 45 temporal release-authority snapshots with 97.8\% predecessor metadata availability.
+    \item Reconstructed SemVer dependency graph with 1,848 edges and 99.89\% resolution accuracy.
+  \end{itemize}
+\end{itemize}
+
+\subsection{4. Empirical and Real-World Security Validations}
+\begin{itemize}
+  \item \textbf{Retrospective Security Incident Validation (Task 04):}
+  \begin{itemize}
+    \item Systematically audited 49 documented npm security incidents; mapped 16 matching compromised packages into the study graph.
+    \item Empirically proved that Exact Union captures the infamous account takeover of maintainer \textit{qix} at \textbf{Rank \#8} (\#5 in version graph), whereas Greedy (>100) and Portfolio (\#2,298) completely fail.
+    \item Discovered and quantified the \textbf{85\%--92\% phantom blast-radius inflation} caused by unpinned transitive analysis on foundational packages like \nolinkurl{chalk} and \nolinkurl{ansi-styles}.
+  \end{itemize}
+  \item \textbf{Prospective Fresh Cohort Replication (Task 23):}
+  \begin{itemize}
+    \item Executed a clean, prospective data collection from 100 frozen roots: 94 dependency graphs, 1,641 exact nodes, 4,357 version-edge rows, and 1,051 accounts.
+    \item Re-optimized on 65 common repository endpoints and 1,036 common accounts to confirm that algorithm behavioral trade-offs hold across independent observation epochs.
+  \end{itemize}
+  \item \textbf{The 120-Endpoint Human Audit Protocol (Task 23 \& Current):}
+  \begin{itemize}
+    \item Designed a formal stratified probability sampling frame: 120 repositories sampled across 4 source-cardinality strata (30 per stratum) from 7,158 endpoints.
+    \item Captured 172 registry-request records and 115 commit-pinned snapshots.
+    \item Engineered the offline \nolinkurl{Evidence_Index.html} dossier linking all source texts, manifests, workflows, and lockfiles.
+  \end{itemize}
+\end{itemize}
+
+\subsection{5. Manuscript Authoring and Publishing Deliverables}
+\begin{itemize}
+  \item \textbf{Track 1: IEEE Conference Paper (6.0 Pages):}
+  \begin{itemize}
+    \item Authored complete 6-page IEEE formatted manuscript (\nolinkurl{manuscript/build/main_authors.pdf}).
+    \item Character-neutral surgical polishing eliminating all overfull text boxes.
+    \item Structured into 4 core figures and concise comparative analysis.
+  \end{itemize}
+  \item \textbf{Track 2: Springer EMSE Journal Manuscript (34 Pages):}
+  \begin{itemize}
+    \item Expanded manuscript into a 34-page comprehensive journal submission (\nolinkurl{submission/emse/EMSE_Manuscript.pdf}, Submission ID: \texttt{EMSE-S-26-02038}).
+    \item Formulated 4 focused Research Questions (RQs), empirical ablations, threat wave updates, and comprehensive validity discussions.
+    \item Created 14 LaTeX data tables and separate 2-page Springer title page.
+  \end{itemize}
+\end{itemize}
+
+\subsection{6. Visual Design and Graphic Production}
+\begin{itemize}
+  \item \textbf{13 High-Resolution Vector Figures:}
+  \begin{itemize}
+    \item Developed programmatic Python rendering pipelines (\nolinkurl{scripts/prepare_emse_figures.py}, \nolinkurl{scripts/render_review_figures.py}).
+    \item Generated vector plots for Pareto frontiers, multi-budget metric curves, sensitivity distributions, and benchmark gaps.
+    \item Restored and integrated the full illustrated architectural overview diagram (\nolinkurl{figures/fig1_architecture.pdf}).
+  \end{itemize}
+  \item \textbf{Visual Compliance and Layout Engineering:}
+  \begin{itemize}
+    \item Audited and corrected clipped legends, axis typography, and font embedding across all figures.
+    \item Ensured complete zero-Type 3 font compliance across all generated PDFs.
+  \end{itemize}
+\end{itemize}
+
+\subsection{7. Reproducibility, Open Science, and Public Artifacts}
+\begin{itemize}
+  \item \textbf{Public Prerelease on GitHub:}
+  \begin{itemize}
+    \item Packaged and published versioned release: \url{https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28}.
+    \item Built companion distribution ZIP (2.9 MB) with automated checksum verification.
+  \end{itemize}
+  \item \textbf{Automated Test Suite and Reproduction Pipeline:}
+  \begin{itemize}
+    \item Implemented 14 automated unit tests verifying boundary values, deterministic tie handling, and disagreement resolution.
+    \item Validated isolated execution in a clean sandbox with network access disabled (\nolinkurl{reproduce_journal_validation.py}).
+  \end{itemize}
+\end{itemize}
+
+\clearpage
+\section{Minor Technical, Editorial, and Administrative Work}
+
+In addition to the major scientific packages, substantial minor and operational work was executed to ensure technical compliance and submission readiness:
+
+\begin{enumerate}
+  \item \textbf{Bibliography Modernization:}
+  \begin{itemize}
+    \item Comprehensive audit of bibliography recency; added verified 2024--2025 peer-reviewed citations.
+    \item Corrected publication venues, page numbers, and verified primary DOIs.
+  \end{itemize}
+  \item \textbf{Coauthor Metadata Reconciliation:}
+    Updated shared author blocks, title pages, LaTeX configurations, and review tooling to the full official name: \textbf{Md. Ashikul Islam}.
+  \item \textbf{Academic Integrity \& Similarity Review (Task 18):}
+    Addressed Turnitin similarity feedback by systematically revising phraseology and separating factual definitions from editorial text.
+  \item \textbf{Editorial Guideline Harmonization (Task 25):}
+    Purged internal workflow notes, unified table caption formats, formatted Springer declarations, and generated compliant Editorial Manager metadata.
+  \item \textbf{Author Review Toolchain Development:}
+  \begin{itemize}
+    \item Created \nolinkurl{validate_reviews.py} for automated syntax, ID immutability, and evidence note checking.
+    \item Created \nolinkurl{build_guide.py} and \nolinkurl{build_executive_roadmap.py} compiling publication-quality PDF guides using Tectonic.
+    \item Created \nolinkurl{study_validated_endpoints.py} implementing automated Cohen's $\kappa$ calculation and disagreement extraction.
+  \end{itemize}
+  \item \textbf{Editorial Manager Submission Package Assembly:}
+    Assembled flat source archives (\nolinkurl{EMSE_LaTeX_Source.zip}), reference PDFs, questionnaire responses, and the formal correction request statement (\nolinkurl{correction_request_draft.txt}).
+\end{enumerate}
+
+\section{Mapping Completed Work to CRediT Author Roles}
+
+The table below maps the completed work to the 14 standardized \textbf{CRediT (Contributor Roles Taxonomy)} categories. Use this mapping as your direct blueprint when completing \nolinkurl{tasks/author_validation_2026-10-28/templates/actual_contributions.csv}:
+
+\begin{table}[ht]
+\centering
+\small
+\begin{tabularx}{\linewidth}{l p{4cm} X}
+\toprule
+\textbf{CRediT Role} & \textbf{Formal Definition} & \textbf{Specific Project Work Done} \\
+\midrule
+\textbf{Conceptualization} & Ideas; formulation of overarching research goals. & Formulating the maintainer prioritization trade-off ($C$ vs $H$ vs $P$), quorum exclusion $P_k$, and research questions (RQ1--RQ4). \\
+\addlinespace
+\textbf{Methodology} & Design of methodology; creation of models. & Designing the stratified 120-endpoint sampling frame, scalarization grids, MCSE simulations, and incident validation protocol. \\
+\addlinespace
+\textbf{Software} & Programming, software development; testing code. & Implementing Greedy, Exact Union, Direct Heuristic solvers, SQLite extraction scripts, unit tests, and the human audit toolchain. \\
+\addlinespace
+\textbf{Data Curation} & Annotating, producing, and maintaining research data. & Mining 7,158 endpoints, cleaning parser disagreements, extracting release authority deltas, and collecting 100-root fresh cohort. \\
+\addlinespace
+\textbf{Validation} & Verification of replication and results. & Retrospective incident audit (16 cases, \textit{qix} validation), prospective cohort verification, and the pending 120-repo human audit. \\
+\addlinespace
+\textbf{Formal Analysis} & Statistical, mathematical, or computational analysis. & Evaluating 228 ablation rows, 288 method comparisons, Cliff's $\delta$ calculations, and restricted exact benchmarks. \\
+\addlinespace
+\textbf{Investigation} & Conducting research and data collection. & Inspecting repository trees, GitHub Actions workflows, lockfile formats, and npm registry responses. \\
+\addlinespace
+\textbf{Visualization} & Preparation and creation of published figures. & Designing and plotting the 13 vector figures, Pareto curves, blast-radius heatmaps, and system architecture diagram. \\
+\addlinespace
+\textbf{Writing -- Draft} & Preparation and creation of published work. & Drafting the initial conference paper and writing the 34-page EMSE journal manuscript. \\
+\addlinespace
+\textbf{Writing -- Review} & Critical review, commentary, or revision. & Systematic editing, Turnitin similarity revision, bibliography modernization, and response to journal guidelines. \\
+\addlinespace
+\textbf{Supervision} & Oversight and leadership responsibility. & Mentorship, research direction, methodological quality control, and submission oversight. \\
+\addlinespace
+\textbf{Project Admin} & Management and coordination of research. & Organizing project milestones, managing GitHub releases, and coordinating Editorial Manager submission. \\
+\bottomrule
+\end{tabularx}
+\caption{CRediT Role Mapping for Author Contribution Statements}
+\end{table}
+
+\section{How to Complete the Author Contribution Sheet}
+
+To finalize Task 2:
+\begin{enumerate}
+  \item Open \nolinkurl{tasks/author_validation_2026-10-28/templates/actual_contributions.csv}.
+  \item Discuss with your coauthor who led, contributed to, or supported each of the work packages detailed above.
+  \item Enter concise factual descriptions under each column for \textbf{Shahriar Hasan} and \textbf{Md. Ashikul Islam}.
+  \item For roles that were not performed by an author, simply leave the cell blank or write \texttt{N/A}.
+\end{enumerate}
+
+\end{document}
