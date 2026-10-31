@@ -1,0 +1,87 @@
+{
+  "name": "nuqs-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": {
+    "name": "François Best",
+    "email": "contact@francoisbest.com",
+    "url": "https://francoisbest.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/47ng/nuqs"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test --log-order=stream",
+    "mutation": "turbo run mutation --filter=nuqs",
+    "mutation:config-test": "pnpm --filter nuqs mutation:config-test",
+    "verify": "packages/scripts/verify-release/verify.production.ts",
+    "// setup:worktree": "Prepare a linked worktree: validate tools, own dependencies, and install the lockfile",
+    "setup:worktree": "node packages/scripts/worktree-setup.mjs",
+    "test:worktree-setup": "pnpm --filter scripts exec vitest run worktree-setup.test.mjs",
+    "// setup:hooks": "Opt-in per clone (not on install). Removes only the obsolete Husky path, adds the tracked config idempotently, and verifies the worktree hook",
+    "setup:hooks": "if [ \"$(git config --local --get core.hooksPath || true)\" = .husky/_ ]; then git config --local --unset core.hooksPath; fi && git config --local --replace-all include.path ../.gitconfig '^\\.\\./\\.gitconfig$' && git hook list post-checkout",
+    "typegen": "pnpm -r run typegen",
+    "lint": "pnpm run typegen && pnpm run -w --parallel --stream '/^lint:/'",
+    "lint:knip": "knip",
+    "lint:prettier": "prettier --check ./packages/nuqs",
+    "lint:sherif": "sherif"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^21.2.0",
+    "commitlint": "^21.2.1",
+    "knip": "catalog:knip",
+    "prettier": "3.9.5",
+    "publint": "^0.3.21",
+    "sherif": "^1.13.0",
+    "turbo": "^2.10.5",
+    "typescript": "catalog:typescript"
+  },
+  "packageManager": "pnpm@12.9.1",
+  "prettier": {
+    "arrowParens": "avoid",
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "useTabs": false
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ],
+    "rules": {
+      "type-enum": [
+        2,
+        "always",
+        [
+          "build",
+          "chore",
+          "ci",
+          "clean",
+          "doc",
+          "feat",
+          "fix",
+          "perf",
+          "ref",
+          "revert",
+          "style",
+          "test"
+        ]
+      ],
+      "subject-case": [
+        0,
+        "always",
+        "sentence-case"
+      ],
+      "body-leading-blank": [
+        2,
+        "always",
+        true
+      ]
+    }
+  }
+}

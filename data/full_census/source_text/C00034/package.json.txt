@@ -1,0 +1,70 @@
+{
+  "name": "eslint-plugin-lit",
+  "version": "0.0.0-dev",
+  "type": "module",
+  "description": "lit-html support for ESLint",
+  "main": "lib/index.js",
+  "files": [
+    "lib/",
+    "!lib/test",
+    "docs",
+    "custom_types"
+  ],
+  "scripts": {
+    "clean": "premove ./lib ./coverage",
+    "lint": "eslint \"src/**/*.ts\"",
+    "prebuild": "npm run clean",
+    "build": "tsc",
+    "dev": "npm run lint && npm run build && npm run test",
+    "test": "c8 --reporter=lcov --reporter=text-summary mocha \"lib/test/**/*_test.js\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/43081j/eslint-plugin-lit.git"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "lit-html",
+    "lit-element"
+  ],
+  "author": "James Garbutt <https://github.com/43081j>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/43081j/eslint-plugin-lit/issues"
+  },
+  "homepage": "https://github.com/43081j/eslint-plugin-lit#readme",
+  "engines": {
+    "node": ">= 18"
+  },
+  "dependencies": {
+    "parse5": "^8.0.1",
+    "parse5-htmlparser2-tree-adapter": "^8.0.1"
+  },
+  "peerDependencies": {
+    "eslint": ">= 8"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^8.0.6",
+    "@babel/plugin-proposal-decorators": "^8.0.2",
+    "@eslint/js": "^10.0.1",
+    "@types/chai": "^5.2.3",
+    "@types/eslint": "^8.4.6",
+    "@types/estree": "^1.0.9",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^26.6.3",
+    "c8": "^12.0.0",
+    "chai": "^6.2.2",
+    "eslint": "^10.11.0",
+    "eslint-plugin-eslint-plugin": "^7.6.2",
+    "espree": "^11.2.0",
+    "mocha": "^12.0.2",
+    "premove": "^4.0.0",
+    "prettier": "^3.9.9",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.70.1"
+  }
+}

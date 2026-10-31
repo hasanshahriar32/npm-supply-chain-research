@@ -1,0 +1,493 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - next
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+  # Invoked as the release gate by release-draft.yml: re-runs the full
+  # matrix on the exact commit being staged, so the published bytes are
+  # the bytes that passed CI. The caller passes only TURBO_* (no
+  # `secrets: inherit`) to keep the credential surface minimal; the other
+  # secrets are declared so this workflow type-checks under all triggers,
+  # and resolve to empty (their steps no-op) when called.
+  workflow_call:
+    inputs:
+      finalNotification:
+        description: >-
+          Post the aggregate "CI passed" Slack ping when the whole matrix
+          succeeds. Defaults true (normal push/PR/dispatch); release-draft's
+          gate passes false so a release run isn't pinged twice (Finalize
+          posts the release card).
+        type: boolean
+        default: true
+        required: false
+        # Callers MUST pass a literal boolean (`finalNotification: false`), never
+        # an expression (`finalNotification: ${{ … }}`). A reusable-workflow input
+        # produced by an expression is delivered as a string regardless of the
+        # declared `type`, and the ci-notify gate (`toJSON(...) != 'false'`) skips
+        # only on the boolean token "false" — a string "false" stringifies to the
+        # quoted `"false"`, which is unequal, so the ping would no longer suppress.
+    secrets:
+      TURBO_TOKEN:
+        required: false
+      TURBO_TEAM:
+        required: false
+      SLACK_WEBHOOK_URL:
+        required: false
+      ISR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: 3 # Diplay chalk colors
+
+jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install root workspace dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --workspace-root
+      - name: Check monorepo with Sherif
+        run: pnpm run lint:sherif
+      - name: Check source code formatting
+        run: |
+          set +e # Allow Prettier to fail, but capture the error code
+          output=$(./node_modules/.bin/prettier --list-different ./packages/nuqs 2>&1)
+          exit_code=$?
+          set -e
+          if [ $exit_code -ne 0 ]; then
+            echo "$output" | while IFS= read -r file; do
+              echo "::warning file=$file::Prettier detected formatting issues in $file"
+            done
+            exit $exit_code
+          else
+            echo "No formatting issues found"
+          fi
+      - name: Install all dependencies for Knip
+        run: pnpm install --ignore-scripts --frozen-lockfile
+      - name: Generate types
+        run: pnpm run typegen
+      - name: Run Knip (nuqs package)
+        run: pnpm run lint:knip --workspace packages/nuqs
+      - name: Run Knip (e2e packages)
+        run: |
+          pnpm run lint:knip --workspace packages/e2e/next
+          pnpm run lint:knip --workspace packages/e2e/react
+          pnpm run lint:knip --workspace packages/e2e/react-router/v5
+          pnpm run lint:knip --workspace packages/e2e/react-router/v6
+          pnpm run lint:knip --workspace packages/e2e/react-router/v7
+          pnpm run lint:knip --workspace packages/e2e/react-router/v8
+          pnpm run lint:knip --workspace packages/e2e/remix
+          pnpm run lint:knip --workspace packages/e2e/tanstack-router
+      - name: Run Knip (docs)
+        run: pnpm run lint:knip --workspace packages/docs
+      - name: Run Knip (examples)
+        run: |
+          pnpm run lint:knip --workspace packages/examples/next-app
+          pnpm run lint:knip --workspace packages/examples/trpc
+
+  publint:
+    name: Package Linting
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --filter nuqs...
+      - name: Build package
+        run: pnpm build --filter nuqs
+      - name: Run publint on package.json
+        run: pnpm publint packages/nuqs
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: publint
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  ci-scripts:
+    name: CI (scripts)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --filter scripts
+      - name: Run tests
+        run: pnpm run test --filter scripts
+
+  ci-core:
+    name: CI (core)
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --filter nuqs...
+      - name: Install Playwright Chromium
+        run: ./node_modules/.bin/playwright install chromium
+        working-directory: packages/nuqs
+      - name: Run tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter nuqs
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+
+  docs:
+    name: Docs Typecheck & Build
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    permissions:
+      contents: read
+      actions: read # the docs build reads the workflow-run status when rendering the landing-page CI component.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter docs...
+      - name: Type-check and test docs
+        run: pnpm run test --filter docs
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+      - name: Build docs
+        run: pnpm run build --filter docs
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: docs
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  e2e-next:
+    # Watch out! When changing the job name,
+    # update the required checks in GitHub
+    # branch protection settings for `next`.
+    name: E2E (next@${{ matrix.next-version }}${{ matrix.base-path && ' ⚾' || ''}}${{ matrix.react-compiler && ' ⚛️' || ''}}${{ matrix.cache-components && ' 💾' || ''}})
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    strategy:
+      fail-fast: false
+      matrix:
+        # Watch out! When changing the compat grid,
+        # update the required checks in GitHub
+        # branch protection settings for `next`.
+        base-path: [false]
+        react-compiler: [false]
+        cache-components: [false]
+        next-version:
+          # Only keep versions where there were relevant changes in the app router core,
+          # and the previous one to use as a baseline.
+          - "14.2.0"
+          # - '14.2.3' # before vercel/next.js#66755
+          - "14.2.4" # after vercel/next.js#66755
+          # - '14.2.7' # before vercel/next.js#69509
+          - "14.2.8" # after vercel/next.js#69509
+          - "15.0.0"
+          - "15.1.0"
+          - "15.2.0"
+          - latest
+        include:
+          - next-version: "14.2.0"
+            base-path: "/base"
+          - next-version: "15.0.0"
+            base-path: "/base"
+          - next-version: "latest"
+            base-path: "/base"
+          - next-version: "latest"
+            react-compiler: true
+          - next-version: "latest"
+            base-path: "/base"
+            react-compiler: true
+          - next-version: "latest"
+            cache-components: true
+          - next-version: "latest"
+            cache-components: true
+            react-compiler: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile ${{ matrix.next-version != 'latest' && '--filter e2e-next...' || '' }}
+      - name: Install Next.js version ${{ matrix.next-version }}
+        if: ${{ matrix.next-version != 'local' }}
+        env:
+          NEXT_VERSION: ${{ matrix.next-version }}
+        run: |
+          sed -i -E "s/^([[:space:]]+next: ).*$/\1${NEXT_VERSION}/" pnpm-workspace.yaml
+          pnpm install --no-frozen-lockfile ${{ matrix.next-version != 'latest' && '--filter e2e-next...' || '' }}
+      - name: Run cacheComponents codemod
+        if: ${{ matrix.cache-components }}
+        run: pnpm run cacheComponents:codemod
+        working-directory: packages/e2e/next
+      - name: Run integration tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter e2e-next
+        env:
+          BASE_PATH: ${{ matrix.base-path && matrix.base-path || '/' }}
+          REACT_COMPILER: ${{ matrix.react-compiler }}
+          CACHE_COMPONENTS: ${{ matrix.cache-components }}
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+      - name: Save Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          path: packages/e2e/next/.playwright/*
+          name: playwright-next-${{ matrix.next-version }}${{ matrix.base-path && '-basePath' || ''}}${{ matrix.react-compiler && '-react-compiler' || ''}}${{ matrix.cache-components && '-cache-components' || ''}}
+          include-hidden-files: true
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: next@${{ matrix.next-version }}${{ matrix.base-path && ' basePath' || ''}}${{ matrix.react-compiler && ' react-compiler' || ''}}${{ matrix.cache-components && '-cache-components' || ''}}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  e2e-react:
+    name: E2E (react-fpn-${{ matrix.full-page-nav-on-shallow-false }})
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    strategy:
+      fail-fast: false
+      matrix:
+        full-page-nav-on-shallow-false: [false, true]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter e2e-react...
+      - name: Run tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter e2e-react
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+          FULL_PAGE_NAV_ON_SHALLOW_FALSE: ${{ matrix.full-page-nav-on-shallow-false }}
+      - name: Save Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          path: packages/e2e/react/.playwright/*
+          name: playwright-react-fpn-${{ matrix.full-page-nav-on-shallow-false }}
+          include-hidden-files: true
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: react-fpn-${{ matrix.full-page-nav-on-shallow-false }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  e2e-react-router:
+    name: E2E (react-router ${{ matrix.react-router-version }})
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    strategy:
+      fail-fast: false
+      matrix:
+        react-router-version:
+          - "v6"
+          - "v7"
+          - "v8"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter e2e-react-router-${{ matrix.react-router-version }}...
+      - name: Run tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter e2e-react-router-${{ matrix.react-router-version }}
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+      - name: Save Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          path: packages/e2e/react-router/${{ matrix.react-router-version }}/.playwright/*
+          name: playwright-react-router-${{ matrix.react-router-version }}
+          include-hidden-files: true
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: react-router-${{ matrix.react-router-version }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  e2e-remix:
+    name: E2E (remix)
+    runs-on: ubuntu-24.04-arm
+    needs: [ci-core]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter e2e-remix...
+      - name: Run tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter e2e-remix
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+      - name: Save Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          path: packages/e2e/remix/.playwright/*
+          name: playwright-remix
+          include-hidden-files: true
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: remix
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  e2e-tanstack-router:
+    name: E2E (tanstack-router)
+    runs-on: ubuntu-22.04-arm
+    needs: [ci-core]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter e2e-tanstack-router...
+      - name: Run tests
+        run: pnpm run test ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }} --filter e2e-tanstack-router
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          E2E_NO_CACHE_ON_RERUN: ${{ github.run_attempt }}
+      - name: Save Playwright report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: failure()
+        with:
+          path: packages/e2e/tanstack-router/.playwright/*
+          name: playwright-tanstack-router
+          include-hidden-files: true
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        name: Notify on Slack
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          jobName: tanstack-router
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  ci-notify:
+    name: Notify on Slack
+    runs-on: ubuntu-24.04-arm
+    needs:
+      - docs
+      - lint
+      - publint
+      - ci-scripts
+      - ci-core
+      - e2e-next
+      - e2e-react
+      - e2e-react-router
+      - e2e-remix
+      - e2e-tanstack-router
+    # Suppress the success ping only when a caller explicitly passes
+    # finalNotification: false. toJSON is load-bearing: a bare comparison hits
+    # GitHub's mismatched-type coercion (booleans and unset → numbers, the
+    # string 'false' → NaN), so both naive forms are wrong — `!= false` skips
+    # normal runs (an unset input coerces equal to false) and `!= 'false'` keeps
+    # the ping on the gate (boolean false ≠ NaN). toJSON stringifies first,
+    # rendering only a real boolean false as the token "false"; every other
+    # state (true, or unset on push/PR/dispatch) compares unequal and runs. No
+    # status function here, so the implicit needs-success gate still applies →
+    # this stays a success-only ping.
+    if: ${{ toJSON(inputs.finalNotification) != 'false' }}
+    steps:
+      - uses: 47ng/actions-slack-notify@df42545060c07ca99a040d0a520ab8457ce3c222
+        with:
+          status: ${{ job.status }}
+          jobName: Continuous Integration
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

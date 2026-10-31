@@ -1,0 +1,93 @@
+{
+  "name": "axios-cookiejar-support",
+  "version": "7.0.0",
+  "description": "Add tough-cookie support to axios.",
+  "keywords": [
+    "axios",
+    "cookie",
+    "cookiejar",
+    "cookies",
+    "tough-cookie"
+  ],
+  "homepage": "https://github.com/3846masa/axios-cookiejar-support#readme",
+  "bugs": {
+    "url": "https://github.com/3846masa/axios-cookiejar-support/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/3846masa/axios-cookiejar-support.git"
+  },
+  "funding": "https://github.com/sponsors/3846masa",
+  "license": "MIT",
+  "author": "3846masa <3846masahiro+git@gmail.com>",
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "browser": {
+        "types": "./dist/index.d.ts",
+        "default": "./noop.js"
+      },
+      "default": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "noop.js"
+  ],
+  "scripts": {
+    "prebuild": "rimraf dist",
+    "build": "tsc --project tsconfig.build.json",
+    "format": "pnpm run --sequential \"/^format:.*/\"",
+    "format:eslint": "eslint --fix .",
+    "format:prettier": "prettier --write .",
+    "prelint": "pnpm run build",
+    "lint": "pnpm run \"/^lint:.*/\"",
+    "lint:eslint": "eslint .",
+    "lint:prettier": "prettier --check .",
+    "lint:tsc": "tsc --noEmit",
+    "release": "release-it",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "http-cookie-agent": "^8.0.0"
+  },
+  "devDependencies": {
+    "@3846masa/configs": "github:3846masa/configs#9ffb3a40336b68880522a465710f62be1c5223a7",
+    "@release-it/conventional-changelog": "11.0.1",
+    "@types/eslint": "9.6.1",
+    "@types/node": "22.19.17",
+    "axios": "1.21.0",
+    "conventional-changelog-conventionalcommits": "9.3.1",
+    "disposablestack": "1.1.8",
+    "release-it": "20.2.1",
+    "rimraf": "6.1.3",
+    "tough-cookie": "6.0.2",
+    "typescript": "6.0.3",
+    "vitest": "4.1.12"
+  },
+  "peerDependencies": {
+    "axios": ">=0.20.0",
+    "tough-cookie": ">=4.0.0"
+  },
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pnpm": {
+    "overrides": {
+      "conventional-changelog-conventionalcommits": "$conventional-changelog-conventionalcommits"
+    }
+  }
+}

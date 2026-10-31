@@ -1,0 +1,46 @@
+name: PR Preview
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+    paths:
+      - "packages/nuqs/**"
+
+concurrency:
+  group: pkg-pr-new-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+cache-mode: read
+
+jobs:
+  deploy-preview:
+    name: Deploy to pkg.pr.new
+    if: |
+      contains(github.event.pull_request.author_association, 'MEMBER') ||
+      contains(github.event.pull_request.labels.*.name, 'deploy:preview')
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --filter nuqs...
+      - name: Build package
+        run: pnpm build --filter nuqs
+      - name: Set package version
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          npm pkg set "version=0.0.0-preview.${HEAD_SHA}"
+          echo "::notice title=Install (PR)::pnpm add https://pkg.pr.new/nuqs@${PR_NUMBER}"
+          echo "::notice title=Install (SHA)::pnpm add https://pkg.pr.new/nuqs@${HEAD_SHA}"
+          echo "::notice title=Version::0.0.0-preview.${HEAD_SHA}"
+        working-directory: packages/nuqs
+      - name: Publish to pkg.pr.new
+        run: pnpx pkg-pr-new publish --compact './packages/nuqs' --no-template
+          --packageManager=pnpm --pnpm

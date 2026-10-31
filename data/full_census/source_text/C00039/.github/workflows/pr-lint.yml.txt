@@ -1,0 +1,53 @@
+name: Lint PR Title
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  contents: read
+
+cache-mode: read
+
+jobs:
+  lint-pr-title:
+    name: Lint PR Title
+    # Skip merged PRs and body-only edits (we lint titles, not bodies).
+    if: >-
+      ${{ !github.event.pull_request.merged &&
+          (github.event.action != 'edited' || github.event.changes.title.from) }}
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install scripts dependencies
+        run: pnpm install --ignore-scripts --frozen-lockfile --filter scripts
+      - name: Get changed files
+        id: changed-files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # NUL-delimited from git, then NUL -> newline for $GITHUB_OUTPUT
+          # transport. Filenames containing whitespace survive the round trip.
+          delim="EOF_$(openssl rand -hex 16)"
+          {
+            printf 'files<<%s\n' "$delim"
+            git diff -z --name-only "$BASE_SHA...$HEAD_SHA" | tr '\0' '\n'
+            printf '%s\n' "$delim"
+          } >> "$GITHUB_OUTPUT"
+      - name: Validate PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.files }}
+        run: ./packages/scripts/validate-pr-title.ts
