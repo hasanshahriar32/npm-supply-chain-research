@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    # run linting with our development node/npm versions (per package.json
+    # volta config)
+
+    name: 'Lint - ${{ matrix.os }}'
+    runs-on: '${{ matrix.os }}-latest'
+
+    strategy:
+      matrix:
+        os: [windows, ubuntu]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: volta-cli/action@615a78f6c83e116339c53b94f3f82b4d6c0b7d18 # v5.0.0
+      - name: install dependencies
+        run: npm install
+      - name: lint
+        run: npm run lint
+
+  test:
+    # run linting with our development node/npm versions (per package.json
+    # volta config)
+
+    name: 'Tests - Node (${{ matrix.node-version }}) - ${{ matrix.os }}'
+    runs-on: '${{ matrix.os }}-latest'
+
+    strategy:
+      matrix:
+        os: [windows, ubuntu]
+        node-version: [22.x]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: volta-cli/action@615a78f6c83e116339c53b94f3f82b4d6c0b7d18 # v5.0.0
+      - name: install dependencies
+        run: npm install
+      - name: build
+        run: npm run build
+      - name: test
+        run: npm test
+
+  floating-dependencies:
+    # test using latest allowed dependencies within our semver ranges this is
+    # an early warning detection for failures introduced by transitive
+    # dependencies
+
+    name: 'Floating Dependencies - ${{ matrix.os }}'
+    runs-on: '${{ matrix.os }}-latest'
+
+    strategy:
+      matrix:
+        os: [windows, ubuntu]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: volta-cli/action@615a78f6c83e116339c53b94f3f82b4d6c0b7d18 # v5.0.0
+      - name: install dependencies
+        run: npm install --no-package-lock --legacy-peer-deps
+      - name: build
+        run: npm run build
+      - name: test
+        run: npm test

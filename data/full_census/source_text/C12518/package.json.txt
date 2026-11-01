@@ -1,0 +1,108 @@
+{
+	"name": "xo",
+	"version": "5.0.1",
+	"description": "JavaScript/TypeScript linter (ESLint wrapper) with great defaults",
+	"license": "MIT",
+	"repository": "xojs/xo",
+	"funding": "https://github.com/sponsors/sindresorhus",
+	"author": "Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com)",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		},
+		"./eslint-adapter": {
+			"types": "./dist/lib/eslint-adapter.d.ts",
+			"default": "./dist/lib/eslint-adapter.js"
+		}
+	},
+	"bin": "./dist/cli.js",
+	"sideEffects": false,
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"build": "npm run clean && tsc",
+		"build:watch": "tsc --watch",
+		"clean": "rm -rf dist",
+		"lint": "node dist/cli.js",
+		"prepare": "npm run build && husky",
+		"release": "np",
+		"test": "npm run build && npm run lint && npm run test:setup && node --enable-source-maps --test \"dist/test/**/*.test.js\"",
+		"test:setup": "node scripts/setup-tests"
+	},
+	"files": [
+		"dist/*.js",
+		"dist/*.d.ts",
+		"dist/lib/*.js",
+		"dist/lib/*.d.ts",
+		"dist/lib/rules/*.js",
+		"dist/lib/rules/*.d.ts"
+	],
+	"keywords": [
+		"cli-app",
+		"cli",
+		"xoxo",
+		"happy",
+		"happiness",
+		"code",
+		"quality",
+		"style",
+		"lint",
+		"linter",
+		"jshint",
+		"jslint",
+		"eslint",
+		"validate",
+		"code style",
+		"standard",
+		"strict",
+		"check",
+		"checker",
+		"verify",
+		"enforce",
+		"hint",
+		"simple",
+		"javascript",
+		"typescript"
+	],
+	"dependencies": {
+		"@sindresorhus/tsconfig": "^8.1.0",
+		"arrify": "^3.0.0",
+		"cosmiconfig": "^10.0.0",
+		"define-lazy-prop": "^3.0.0",
+		"eslint": "^10.8.0",
+		"eslint-config-xo": "^3.0.2",
+		"eslint-formatter-pretty": "^7.1.0",
+		"find-cache-directory": "^6.0.0",
+		"get-stdin": "^10.0.0",
+		"get-tsconfig": "^4.14.1",
+		"globby": "^16.2.2",
+		"jiti": "^2.7.0",
+		"meow": "^14.1.0",
+		"micromatch": "^4.0.8",
+		"open-editor": "^6.0.0",
+		"path-exists": "^5.0.0",
+		"prettier": "^3.9.6",
+		"type-fest": "^5.8.0",
+		"typescript": "^6.0.3"
+	},
+	"devDependencies": {
+		"@types/micromatch": "^4.0.10",
+		"@types/node": "^26.1.2",
+		"dedent": "^1.7.2",
+		"eslint-plugin-vue": "^10.10.0",
+		"execa": "^10.0.1",
+		"husky": "^9.1.7",
+		"np": "^12.0.1",
+		"temp-dir": "^3.0.0",
+		"xo": "file:."
+	},
+	"nyc": {
+		"reporter": [
+			"text",
+			"lcov"
+		]
+	}
+}

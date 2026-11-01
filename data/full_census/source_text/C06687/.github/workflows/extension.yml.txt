@@ -1,0 +1,64 @@
+name: Publish devtools extension
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    branches:
+      - main
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'microsoft' && (contains(github.event.head_commit.message, 'applying package updates') || github.event_name == 'workflow_dispatch') }}
+
+    permissions:
+      contents: 'read'
+      actions: 'read'
+
+    outputs:
+      status: ${{ steps.verify-extension-changed.outputs.any_changed }}
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+
+      - name: Verify extension has changed
+        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        id: verify-extension-changed
+        with:
+          files: |
+            packages/devtools/package.json
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ needs.check.outputs.status == 'true' || github.event_name == 'workflow_dispatch' }}
+    needs: check
+
+    permissions:
+      contents: 'read'
+      actions: 'read'
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: 'yarn'
+          node-version: '24'
+
+      - run: yarn install --immutable
+      - run: yarn nx run-many --target=build --projects=@griffel/devtools --parallel --max-parallel=3
+      - run: yarn nx run @griffel/devtools:pack-extension
+
+      - name: Upload extension
+        uses: mobilefirstllc/cws-publish@569e87bc9a54ad7712ba6dc154a110d88af63b85 # 2.1.1
+        with:
+          action: 'publish'
+          refresh_token: ${{ secrets.CHROME_EXT_REFRESH_TOKEN }}
+          client_id: ${{ secrets.CHROME_EXT_CLIENT_ID }}
+          client_secret: ${{ secrets.CHROME_EXT_CLIENT_SECRET }}
+          extension_id: ${{ secrets.CHROME_EXT_APP_ID }}
+          zip_file: ./dist/packages/ext.zip

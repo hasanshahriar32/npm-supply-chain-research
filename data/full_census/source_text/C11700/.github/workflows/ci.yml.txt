@@ -1,0 +1,221 @@
+name: Build & Deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+      - run: npm run build
+      - run: npm install
+      - run: npm run bundle
+      - run: npm run bundle:min
+      - run: npm run doc
+      - run: npm run coverage
+      
+      - uses: jaywcjlove/coverage-badges-cli@main
+      - name: Generate Contributors Images
+        uses: jaywcjlove/github-action-contributors@main
+        with:
+          filter-author: (renovate\[bot\]|renovate-bot|dependabot\[bot\])
+          output: coverage/CONTRIBUTORS.svg
+          avatarSize: 42
+
+      - run: cp -rp coverage website/build
+      # - run: npm install @jsdevtools/npm-publish -g
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-alpha/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-block/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-convert/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-compact/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-colorful/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-circle/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-github/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-chrome/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-editable-input/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-editable-input-hsla/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-editable-input-rgba/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-hue/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-name/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-material/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-saturation/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-shade-slider/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-sketch/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-slider/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-swatch/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/color-wheel/package.json
+      # - run: npm-publish --token="${{ secrets.NPM_TOKEN }}" ./packages/drag-event-interactive/package.json
+
+      - name: Create Tag
+        id: create_tag
+        uses: jaywcjlove/create-tag-action@main
+        with:
+          package-path: ./packages/color/package.json
+
+      - name: get tag version
+        id: tag_version
+        uses: jaywcjlove/changelog-generator@main
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          commit_message: ${{steps.tag_version.outputs.tag}} ${{ github.event.head_commit.message }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./website/build
+
+      - name: Generate Changelog
+        id: changelog
+        uses: jaywcjlove/changelog-generator@main
+        if: steps.create_tag.outputs.successful
+        with:
+          head-ref: ${{steps.create_tag.outputs.version}}
+          filter-author: (jaywcjlove|小弟调调™|dependabot\[bot\]|Renovate Bot)
+          filter: '[R|r]elease[d]\s+[v|V]\d(\.\d+){0,2}'
+
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        if: steps.create_tag.outputs.successful
+        with:
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.create_tag.outputs.version }}
+          tag: ${{ steps.create_tag.outputs.version }}
+          body: |
+            [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-048754?logo=buymeacoffee)](https://jaywcjlove.github.io/#/sponsor) [![](https://img.shields.io/badge/Open%20in-unpkg-blue)](https://uiwjs.github.io/npm-unpkg/#/pkg/@uiw/react-color@${{steps.create_tag.outputs.versionNumber}}/file/README.md)
+            
+            Documentation ${{ steps.changelog.outputs.tag }}: https://raw.githack.com/uiwjs/react-color/${{ steps.changelog.outputs.gh-pages-short-hash }}/index.html  
+            Comparing Changes: ${{ steps.changelog.outputs.compareurl }}  
+
+            ```bash
+            npm i @uiw/react-color@${{steps.create_tag.outputs.versionNumber}}
+            ```
+
+            ${{ steps.changelog.outputs.changelog }}
+
+      # - name: Coveralls
+      #   uses: coverallsapp/github-action@master
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    
+      - name: 📦 @uiw/react-color publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color
+      
+      - name: 📦 @uiw/react-color-alpha publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-alpha
+      
+      - name: 📦 @uiw/react-color-block publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-block
+      
+      - name: 📦 @uiw/react-color-convert publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-convert
+      
+      - name: 📦 @uiw/react-color-compact publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-compact
+      
+      - name: 📦 @uiw/react-color-colorful publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-colorful
+      
+      - name: 📦 @uiw/react-color-circle publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-circle
+      
+      - name: 📦 @uiw/react-color-github publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-github
+      
+      - name: 📦 @uiw/react-color-chrome publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-chrome
+      
+      - name: 📦 @uiw/react-color-editable-input publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-editable-input
+      
+      - name: 📦 @uiw/react-color-editable-input-hsla publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-editable-input-hsla
+      
+      - name: 📦 @uiw/react-color-editable-input-rgba publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-editable-input-rgba
+      
+      - name: 📦 @uiw/react-color-hue publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-hue
+      
+      - name: 📦 @uiw/react-color-name publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-name
+      
+      - name: 📦 @uiw/react-color-material publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-material
+      
+      - name: 📦 @uiw/react-color-saturation publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-saturation
+      
+      - name: 📦 @uiw/react-color-shade-slider publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-shade-slider
+      
+      - name: 📦 @uiw/react-color-sketch publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-sketch
+      
+      - name: 📦 @uiw/react-color-slider publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-slider
+      
+      - name: 📦 @uiw/react-color-swatch publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-swatch
+      
+      - name: 📦 @uiw/react-color-wheel publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/color-wheel
+      
+      - name: 📦 @uiw/react-drag-event-interactive publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        continue-on-error: true
+        working-directory: ./packages/drag-event-interactive

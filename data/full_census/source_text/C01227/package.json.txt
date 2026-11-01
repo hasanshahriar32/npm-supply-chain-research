@@ -1,0 +1,106 @@
+{
+  "name": "restricted-input",
+  "version": "4.2.0",
+  "description": "Restrict inputs to certain valid characters (e.g. formatting phone or card numbers)",
+  "author": "Braintree <code@getbraintree.com> (https://www.braintreepayments.com/)",
+  "license": "MIT",
+  "main": "dist/main.js",
+  "files": [
+    "dist",
+    "supports-input-formatting.js"
+  ],
+  "homepage": "https://github.com/braintree/restricted-input",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/braintree/restricted-input.git"
+  },
+  "bugs": "https://github.com/braintree/restricted-input/issues",
+  "keywords": [
+    "input",
+    "formatting",
+    "filtering",
+    "text",
+    "spacing",
+    "restrict"
+  ],
+  "scripts": {
+    "format": "prettier --write .",
+    "build": "tsc --declaration",
+    "build:app": "mkdir -p dist-app; browserify ./src/main.ts -p [ tsify --strict ] -o dist-app/restricted-input.js -s RestrictedInput -v",
+    "predoc": "npm run build",
+    "doc": "jsdoc -r -R README.md -d jsdoc dist/lib/",
+    "doc:watch": "npm run doc && chokidar 'src/lib/**/*.ts' -c 'npm run doc'",
+    "prestart": "npm run build:app",
+    "start": "node ./test/support/server.js",
+    "development": "npm start & chokidar 'src/lib/**/*.ts' -c 'npm run build:app; echo $(tput setaf 2)rebuilt$(tput sgr0)'",
+    "lint": "eslint src test",
+    "posttest": "npm run lint",
+    "test": "npm run test:unit",
+    "test:watch": "jest --watchAll",
+    "test:unit": "jest test/unit",
+    "test:integration": "playwright test --config=test/integration/playwright.config.ts",
+    "test:integration:local": "playwright test --config=playwright.local.config.ts",
+    "test:all": "npm run test && npm run test:integration",
+    "prepublishOnly": "npm run build && npm run build:app",
+    "prettier": "prettier --write .",
+    "prepare": "husky",
+    "commit": "cz"
+  },
+  "dependencies": {
+    "@braintree/browser-detection": "^2.1.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@playwright/test": "1.59.1",
+    "@types/jest": "^30.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
+    "browserify": "^17.0.1",
+    "browserstack-local": "^1.5.10",
+    "chokidar-cli": "^3.0.0",
+    "commitizen": "^4.3.1",
+    "cz-customizable": "^7.5.4",
+    "dotenv": "^17.3.1",
+    "eslint": "^9.39.2",
+    "eslint-config-braintree": "^7.0.1",
+    "eslint-plugin-prettier": "^5.5.5",
+    "express": "^5.2.1",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jest-util": "^30.2.0",
+    "jsdoc": "^4.0.5",
+    "playwright": "1.59.1",
+    "prettier": "^3.8.1",
+    "ts-jest": "^29.4.6",
+    "tsify": "^5.0.4",
+    "typescript": "^5.9.3"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "preset": "ts-jest",
+    "setupFilesAfterEnv": [
+      "./test/unit/global.ts"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/dist"
+    ],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 80,
+        "statements": 80,
+        "branches": 80,
+        "functions": 80
+      }
+    }
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-customizable"
+    }
+  }
+}

@@ -1,0 +1,113 @@
+name: benchmark
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# Without this, two runs racing on the same PR can both find no existing
+# marker comment and each create their own duplicate (post-benchmark-comment.js
+# does a check-then-act listComments/createComment with no locking).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  benchmark:
+    name: benchmark ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            id: ubuntu
+            name: ubuntu
+            title: Ubuntu
+          - os: macos-latest
+            id: macos
+            name: macOS
+            title: macOS
+          - os: windows-latest
+            id: windows
+            name: windows
+            title: Windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Where the build-ts-loader action builds the PR branch - on Windows it
+      # copies the checkout to C:\source\ts-loader first. The base branch is
+      # checked out alongside it at "$ROOT-main".
+      ROOT: ${{ matrix.os == 'windows-latest' && 'C:/source/ts-loader' || github.workspace }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: ./.github/actions/build-ts-loader
+
+      # Checked out into a sibling worktree rather than a second checkout step
+      # so both builds can run from disk at the same time.
+      - name: checkout base branch into a worktree
+        working-directory: ${{ env.ROOT }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || 'origin/main' }}
+        run: git worktree add "$ROOT-main" "$BASE_SHA"
+
+      - name: install & build (base branch)
+        working-directory: ${{ env.ROOT }}-main
+        run: |
+          npm ci
+          npm run build
+
+      # --root-a is the PR branch built by the build-ts-loader action;
+      # --root-b is the base branch worktree built in the previous step.
+      - name: run benchmark
+        working-directory: ${{ env.ROOT }}
+        run: |
+          npm run benchmark -- \
+            --root-a "$ROOT" --label-a "PR branch" \
+            --root-b "$ROOT-main" --label-b "base branch"
+
+      - name: write job summary
+        if: always()
+        run: cat "$ROOT/.benchmark/benchmark-results.md" >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: upload results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-results-${{ matrix.id }}
+          path: ${{ env.ROOT }}/.benchmark/benchmark-results.*
+          if-no-files-found: ignore
+
+      # Only runs with a writable token - GitHub automatically issues a
+      # read-only GITHUB_TOKEN for fork PRs, so this step is a silent no-op
+      # there. The step summary above still carries the numbers for everyone.
+      - name: comment on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          MARKER: <!-- ts-loader-benchmark:${{ matrix.id }} -->
+          TITLE: Benchmark (${{ matrix.title }})
+        with:
+          script: |
+            const path = require('path');
+            const postComment = require(path.join(process.env.GITHUB_WORKSPACE, '.github/scripts/post-benchmark-comment.js'));
+            await postComment({
+              github,
+              context,
+              resultsPath: path.join(process.env.ROOT, '.benchmark/benchmark-results.md'),
+              marker: process.env.MARKER,
+              title: process.env.TITLE,
+            });

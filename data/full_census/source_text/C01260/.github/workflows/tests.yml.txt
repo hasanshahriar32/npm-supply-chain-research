@@ -1,0 +1,29 @@
+name: ci
+on:
+  workflow_call:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+jobs:
+  org-tests:
+    uses: brickhouse-tech/.github/.github/workflows/tests.yml@main
+    with:
+      build: true
+
+  gate:
+    name: gate
+    needs: [org-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          results=($(echo '${{ toJSON(needs.*.result) }}' | jq -r '.[]'))
+          for r in "${results[@]}"; do
+            if [[ "$r" != "success" ]]; then
+              echo "A required job did not succeed: $r"
+              exit 1
+            fi
+          done
+          echo "All jobs passed"

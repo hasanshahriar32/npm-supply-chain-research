@@ -1,0 +1,120 @@
+name: Skills CI
+concurrency: skills_ci
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7.0.1
+
+      - name: Install all skills (local)
+        run: |
+          npx skills add . --skill '*' --agent github-copilot --yes --copy
+          echo "✅ Successfully installed all skills locally"
+
+      - name: Debug directory structure
+        if: always()
+        run: |
+          echo "📁 Full directory listing of agent directories:"
+          for dir in .agents .claude .github/skills; do
+            if [ -d "$dir" ]; then
+              echo "=== $dir ==="
+              find "$dir" -type f | head -50
+            fi
+          done
+          echo "=== looking for any SKILL.md ==="
+          find . -name "SKILL.md" -not -path "./node_modules/*" -not -path "./skills/*" | head -50
+
+      - name: Verify skills installed
+        run: |
+          if [ ! -d ".agents/skills" ]; then
+            echo "❌ .agents/skills directory not found"
+            exit 1
+          fi
+
+          count=0
+          for skill in .agents/skills/*/; do
+            [ -d "$skill" ] || continue
+            skill_name=$(basename "$skill")
+            if [ -f "$skill/SKILL.md" ]; then
+              echo "✅ Found $skill_name/SKILL.md"
+              count=$((count + 1))
+            else
+              echo "📂 Contents of $skill_name:"
+              ls -laR "$skill"
+              echo "❌ $skill_name/SKILL.md not found"
+              exit 1
+            fi
+          done
+
+          if [ "$count" -eq 0 ]; then
+            echo "❌ No skills found in .agents/skills/"
+            exit 1
+          fi
+
+          echo "✅ All $count skills successfully installed"
+
+  test-remote:
+    runs-on: ubuntu-latest
+    # Run only on push to main
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Install all skills (remote)
+        run: |
+          npx skills add zaggino/z-schema --skill '*' --agent github-copilot --yes --copy
+          echo "✅ Successfully installed all skills from GitHub"
+
+      - name: Debug directory structure
+        if: always()
+        run: |
+          echo "📁 Full directory listing of agent directories:"
+          for dir in .agents .claude .github/skills; do
+            if [ -d "$dir" ]; then
+              echo "=== $dir ==="
+              find "$dir" -type f | head -50
+            fi
+          done
+
+      - name: Verify skills installed
+        run: |
+          if [ ! -d ".agents/skills" ]; then
+            echo "❌ .agents/skills directory not found"
+            exit 1
+          fi
+
+          count=0
+          for skill in .agents/skills/*/; do
+            [ -d "$skill" ] || continue
+            skill_name=$(basename "$skill")
+            if [ -f "$skill/SKILL.md" ]; then
+              echo "✅ Found $skill_name/SKILL.md"
+              count=$((count + 1))
+            else
+              echo "📂 Contents of $skill_name:"
+              ls -laR "$skill"
+              echo "❌ $skill_name/SKILL.md not found"
+              exit 1
+            fi
+          done
+
+          if [ "$count" -eq 0 ]; then
+            echo "❌ No skills found in .agents/skills/"
+            exit 1
+          fi
+
+          echo "✅ All $count skills successfully installed"

@@ -1,0 +1,188 @@
+name: sdk/browser
+
+on:
+  push:
+    branches: [main, 'feat/**']
+    paths-ignore:
+      - '**.md' #Do not need to run CI for markdown changes.
+  pull_request:
+    branches: [main, 'feat/**']
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  build-test-browser:
+    permissions:
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # Node versions to run on.
+        version: [22, 24]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./actions/setup-yarn
+        with:
+          node-version: ${{ matrix.version }}
+          registry-url: 'https://registry.npmjs.org'
+      - id: shared
+        name: Shared CI Steps
+        uses: ./actions/ci
+        with:
+          workspace_name: '@launchdarkly/js-client-sdk'
+          workspace_path: packages/sdk/browser
+      - name: Check package size
+        if: github.event_name == 'pull_request' && matrix.version == '24'
+        uses: ./actions/package-size
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          target_file: 'packages/sdk/browser/dist/index.js'
+          package_name: '@launchdarkly/js-client-sdk'
+          pr_number: ${{ github.event.number }}
+          size_limit: 35000
+
+      # Contract Tests
+      - name: Install contract test dependencies
+        run: yarn workspaces focus @launchdarkly/browser-contract-test-service
+
+      - name: Install Playwright browsers
+        run: yarn workspace @launchdarkly/browser-contract-test-service install-playwright-browsers
+
+      - name: Build shared contract test utils
+        run: yarn workspaces foreach -pR --topological-dev --from '@launchdarkly/js-contract-test-utils' run build
+
+      - name: Build contract test entity (browser app)
+        run: yarn workspace @launchdarkly/browser-contract-test-service run build
+
+      - name: Start contract test adapter in background
+        run: |
+          yarn workspace @launchdarkly/browser-contract-test-service run start:adapter > /tmp/adapter.log 2>&1 &
+          echo $! > /tmp/adapter.pid
+
+      - name: Serve browser app with http-server
+        run: |
+          npx http-server packages/sdk/browser/contract-tests/entity/dist -p 5173 --cors > /tmp/http-server.log 2>&1 &
+          echo $! > /tmp/http-server.pid
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for adapter on port 8001..."
+          for i in {1..30}; do
+            if nc -z localhost 8001; then
+              echo "Adapter WebSocket ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Timeout waiting for adapter"
+              cat /tmp/adapter.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo "Waiting for HTTP server on port 5173..."
+          for i in {1..30}; do
+            if curl -s http://localhost:5173 > /dev/null; then
+              echo "HTTP server ready"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Timeout waiting for HTTP server"
+              cat /tmp/http-server.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Open browser app in headless Chromium
+        run: |
+          node packages/sdk/browser/contract-tests/entity/open-browser.mjs http://localhost:5173 > /tmp/playwright.log 2>&1 &
+          echo $! > /tmp/playwright.pid
+          sleep 5  # Give the browser time to initialize and connect via WebSocket
+
+      - name: Run contract tests (FDv1)
+        uses: launchdarkly/gh-actions/actions/contract-tests@contract-tests-v1
+        with:
+          test_service_port: 8000
+          token: ${{ secrets.GITHUB_TOKEN }}
+          stop_service: 'false'
+          extra_params: '--skip-from=${{ github.workspace }}/packages/sdk/browser/contract-tests/suppressions.txt'
+
+      - name: Run contract tests (FDv2)
+        uses: launchdarkly/gh-actions/actions/contract-tests@contract-tests-v1
+        with:
+          test_service_port: 8000
+          token: ${{ secrets.GITHUB_TOKEN }}
+          stop_service: 'false'
+          version: v3
+          extra_params: '--skip-from=${{ github.workspace }}/packages/sdk/browser/contract-tests/suppressions_datamode_changes.txt'
+
+      # Reopen the entity with the fetch EventSource toggle. The adapter recreates its REST
+      # server when the new page connects over the WebSocket.
+      - name: Restart browser app with the fetch EventSource
+        run: |
+          kill $(cat /tmp/playwright.pid) || true
+          node packages/sdk/browser/contract-tests/entity/open-browser.mjs 'http://localhost:5173/?eventsource=fetch' > /tmp/playwright-fetch.log 2>&1 &
+          echo $! > /tmp/playwright.pid
+          sleep 5  # Give the browser time to initialize and connect via WebSocket
+
+      # The v2 harness exercises the FDv1 default path over the fetch EventSource. REPORT
+      # streaming runs here without a capability gate.
+      - name: Run contract tests (FDv1, fetch EventSource)
+        uses: launchdarkly/gh-actions/actions/contract-tests@contract-tests-v1
+        with:
+          test_service_port: 8000
+          token: ${{ secrets.GITHUB_TOKEN }}
+          stop_service: 'false'
+          extra_params: '--skip-from=${{ github.workspace }}/packages/sdk/browser/contract-tests/suppressions_fetch_eventsource.txt'
+
+      # This run proves the fetch-based EventSource against the FDv2 suite, including the
+      # usePost POST streaming variants.
+      - name: Run contract tests (FDv2, fetch EventSource)
+        uses: launchdarkly/gh-actions/actions/contract-tests@contract-tests-v1
+        with:
+          test_service_port: 8000
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: v3
+          extra_params: '--skip-from=${{ github.workspace }}/packages/sdk/browser/contract-tests/suppressions_datamode_changes.txt'
+
+      - name: Print logs on failure
+        if: failure()
+        run: |
+          echo "=== Adapter Log ==="
+          cat /tmp/adapter.log || echo "No adapter log"
+          echo "=== HTTP Server Log ==="
+          cat /tmp/http-server.log || echo "No http-server log"
+          echo "=== Playwright Log ==="
+          cat /tmp/playwright.log || echo "No playwright log"
+          echo "=== Playwright Log (fetch EventSource) ==="
+          cat /tmp/playwright-fetch.log || echo "No fetch playwright log"
+
+      - name: Cleanup contract test services
+        if: always()
+        run: |
+          [ -f /tmp/playwright.pid ] && kill $(cat /tmp/playwright.pid) || true
+          [ -f /tmp/http-server.pid ] && kill $(cat /tmp/http-server.pid) || true
+          [ -f /tmp/adapter.pid ] && kill $(cat /tmp/adapter.pid) || true
+          pkill -f "playwright" || true
+          pkill -f "http-server" || true
+          pkill -f "sdk-testharness-server" || true
+
+  run-example:
+    # Fork PRs cannot use OIDC to get the e2e SDK keys. Skip this job for them.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./actions/setup-yarn
+        with:
+          node-version: 24
+      - uses: ./actions/run-example
+        with:
+          workspace_name: '@launchdarkly/browser-example'
+          aws_assume_role: ${{ vars.AWS_ROLE_ARN }}
+          before_test: 'yarn workspace @launchdarkly/browser-example playwright install --with-deps chromium'

@@ -1,0 +1,105 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Bazel Build and Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build_and_test:
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [17, 21]
+
+    name: Build and Test (Java ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ startsWith(github.head_ref, 'release-please--') && secrets.RELEASE_PLEASE_TOKEN || github.token }}
+
+      # Bazel needs a JDK. Setup Java from matrix.
+      - name: Setup Java JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java-version }}
+
+      # Setup Bazel with optimized caching
+      # - bazelisk-cache: Caches Bazel downloads based on .bazelversion
+      # - disk-cache: Stores build outputs, shared across PRs
+      # - repository-cache: Stores external dependencies
+      # - cache-save: Always save cache to enable reuse across PR pushes
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@083175551ceeceebc757ebee2127fde78840ca77 # 0.18.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-java${{ matrix.java-version }}
+          repository-cache: true
+          cache-save: true
+
+      - name: Check if this is a release-please PR
+        id: check-release-please
+        run: |
+          if [[ "${GITHUB_HEAD_REF}" == release-please--* ]]; then
+            echo "is_release_please=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release_please=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Pin Java dependencies
+        run: bazelisk run @maven//:pin
+
+      - name: Commit maven_install.json updates for release-please PR
+        if: steps.check-release-please.outputs.is_release_please == 'true' && matrix.java-version == 17
+        run: |
+          # Use CLA-covered maintainer identity from MAINTAINERS.yaml
+          git config user.name "$(yq '.ci.commit_author.name' MAINTAINERS.yaml)"
+          git config user.email "$(yq '.ci.commit_author.email' MAINTAINERS.yaml)"
+          if ! git diff --quiet maven_install.json; then
+            git add maven_install.json
+            git commit -m "chore: update maven_install.json"
+            git push
+            echo "maven_install.json updated and pushed"
+          else
+            echo "No maven_install.json changes needed"
+          fi
+
+      - name: Check for changes in maven_install.json
+        if: steps.check-release-please.outputs.is_release_please != 'true'
+        id: git-check
+        run: |
+          if [[ -n "$(git status --porcelain maven_install.json)" ]]; then
+            echo "::error::'maven_install.json' has been modified. Please run 'bazelisk run @maven//:pin' locally and commit the updated file."
+            exit 1
+          fi
+
+      - name: Build all targets (Java ${{ matrix.java-version }})
+        run: bazelisk build --config=java${{ matrix.java-version }} //... -- -//dart/...
+      - name: Test all targets (Java ${{ matrix.java-version }})
+        run: bazelisk test --config=java${{ matrix.java-version }} --test_output=errors //... -- -//dart/...

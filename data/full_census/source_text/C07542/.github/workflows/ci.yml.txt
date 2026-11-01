@@ -1,0 +1,170 @@
+---
+name: CI
+
+permissions: {}
+
+env:
+  CI: true
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+
+jobs:
+  lint:
+    needs:
+      - build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [lts/*]
+        os: [ubuntu-latest]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore dist cache
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: node-v${{ matrix.node-version }}-${{ github.sha }}
+
+      - name: Linting
+        run: pnpm lint
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [lts/*]
+        os: [ubuntu-latest]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Building
+        run: pnpm build
+
+      - name: Cache dist
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: node-v${{ matrix.node-version }}-${{ github.sha }}
+
+  test:
+    needs:
+      - build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [lts/*]
+        os: [ubuntu-latest, windows-latest]
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm playwright-core install chromium
+
+      - name: Restore dist cache
+        uses: actions/cache@v4
+        with:
+          path: dist
+          enableCrossOsArchive: true
+          key: node-v${{ matrix.node-version }}-${{ github.sha }}
+
+      - name: Testing
+        run: pnpm test
+
+  edge-release:
+    if: |
+      github.event_name == 'push' &&
+      !startsWith(github.event.head_commit.message, '[skip-release]') &&
+      !startsWith(github.event.head_commit.message, 'chore') &&
+      !startsWith(github.event.head_commit.message, 'docs')
+    needs:
+      - lint
+      - build
+      - test
+    runs-on: ${{ matrix.os }}
+    permissions:
+      id-token: write
+    strategy:
+      matrix:
+        node-version: [lts/*]
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout codes
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore dist cache
+        uses: actions/cache@v4
+        with:
+          path: dist
+          key: node-v${{ matrix.node-version }}-${{ github.sha }}
+
+      - name: Release Edge
+        run: ./scripts/release-edge.sh

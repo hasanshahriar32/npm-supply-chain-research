@@ -1,0 +1,70 @@
+{
+  "name": "@playroom/monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cypress": "start-server-and-test build-and-serve:all '9000|9001|9002' 'pnpm --filter @playroom/cypress test'",
+    "cypress:dev": "start-server-and-test start:all '9000|9001|9002' 'pnpm --filter @playroom/cypress open'",
+    "cypress:verify": "pnpm --filter @playroom/cypress exec cypress verify",
+    "start": "pnpm start:basic",
+    "start:basic": "pnpm --filter @playroom/basic-fixture start",
+    "build:basic": "pnpm --filter @playroom/basic-fixture build",
+    "serve:basic": "pnpm --filter @playroom/basic-fixture serve",
+    "start:themed": "pnpm --filter @playroom/themed-fixture start",
+    "build:themed": "pnpm --filter @playroom/themed-fixture build",
+    "serve:themed": "pnpm --filter @playroom/themed-fixture serve",
+    "start:typescript": "pnpm --filter @playroom/typescript-fixture start",
+    "build:typescript": "pnpm --filter @playroom/typescript-fixture build",
+    "serve:typescript": "pnpm --filter @playroom/typescript-fixture serve",
+    "start:all": "pnpm --filter './fixtures/*' start",
+    "build:all": "pnpm --filter './fixtures/*' build",
+    "serve:all": "pnpm --filter './fixtures/*' serve",
+    "build-and-serve:all": "pnpm package && pnpm build:all && pnpm serve:all",
+    "lint": "pnpm run --no-bail /^lint:.*/",
+    "lint:eslint": "NODE_OPTIONS=--max_old_space_size=8192 eslint --cache .",
+    "lint:knip": "knip",
+    "lint:prettier": "prettier --list-different .",
+    "lint:tsc": "tsc --noEmit",
+    "format": "pnpm lint:eslint --fix && prettier --write .",
+    "version": "changeset version",
+    "release": "pnpm package && changeset publish",
+    "package": "pnpm --filter playroom package",
+    "test": "vitest --run",
+    "post-commit-status": "pnpm --filter @playroom/scripts post-commit-status",
+    "deploy-preview": "surge -p ./fixtures/themed/dist",
+    "prepare": "husky",
+    "changeset": "changeset"
+  },
+  "lint-staged": {
+    "**/*": [
+      "eslint",
+      "prettier --write --ignore-unknown"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seek-oss/playroom.git"
+  },
+  "author": "SEEK",
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "^24.19.2",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^9.23.0",
+    "eslint-config-seek": "^15.0.6",
+    "husky": "^9.1.7",
+    "knip": "^6.41.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.6",
+    "start-server-and-test": "^3.0.13",
+    "surge": "^0.24.6",
+    "typescript": "^5.0.0 || ^6.0.0",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "packageManager": "pnpm@11.15.1"
+}

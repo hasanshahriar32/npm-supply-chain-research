@@ -1,0 +1,65 @@
+{
+  "name": "ember-try-config",
+  "version": "4.0.0",
+  "description": "Configuration generator for ember-try",
+  "keywords": [
+    "ember-try"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ember-cli/ember-try-config.git"
+  },
+  "license": "MIT",
+  "author": "Katie Gengler",
+  "main": "lib/auto-scenario-config-for-ember.js",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "npm-run-all lint test:jest",
+    "test:jest": "jest --projects jest.config.js",
+    "update-known-versions": "node bin/update-known-versions.js"
+  },
+  "dependencies": {
+    "ember-source-channel-url": "^3.0.0",
+    "lodash": "^4.17.21",
+    "package-json": "^6.5.0",
+    "remote-git-tags": "^3.0.0",
+    "semver": "^7.3.5"
+  },
+  "devDependencies": {
+    "codecov": "^3.8.3",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "glob": "^7.1.7",
+    "jest": "^26.6.3",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.3.2",
+    "release-it": "^14.10.1",
+    "release-it-lerna-changelog": "^3.1.0"
+  },
+  "engines": {
+    "node": "10.* || 12.* || >= 14"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "release-it": {
+    "hooks": {
+      "after:bump": "npm run update-known-versions"
+    },
+    "plugins": {
+      "release-it-lerna-changelog": {
+        "infile": "CHANGELOG.md",
+        "launchEditor": true
+      }
+    },
+    "git": {
+      "tagName": "v${version}"
+    },
+    "github": {
+      "release": true,
+      "tokenRef": "GITHUB_AUTH"
+    }
+  }
+}

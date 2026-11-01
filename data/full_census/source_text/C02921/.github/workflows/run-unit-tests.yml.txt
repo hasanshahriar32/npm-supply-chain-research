@@ -1,0 +1,51 @@
+name: Checks
+on:
+  pull_request:
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: ${{ github.workflow }} - ${{ github.event.pull_request.id }}
+  cancel-in-progress: true
+
+jobs:
+  pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      # https://github.com/marketplace/actions/checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v7.0.1
+
+      # https://github.com/marketplace/actions/setup-pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          version: 11.11.0
+          run_install: false
+
+      # https://github.com/marketplace/actions/setup-node-js-environment
+      - name: Setup NodeJS
+        uses: actions/setup-node@v7.1.0
+        with:
+          cache: pnpm
+          node-version: lts/*
+          check-latest: true
+
+      - name: Install dependencies
+        run: pnpm install ${{ github.actor != 'dependabot[bot]' && '--frozen-lockfile' || '--no-frozen-lockfile' }}
+
+      - run: echo "${{ toJSON(env) }}"
+
+      - name: Lint
+        run: pnpm lint
+
+        # We need to build before test to make the example project work
+      - name: Build
+        run: pnpm build
+
+      - name: Type check
+        run: pnpm check
+
+      - name: Unit-Tests
+        run: pnpm test

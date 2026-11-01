@@ -1,0 +1,28 @@
+name: NPM Publish
+
+on:
+  push:
+    tags: v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: NPM Publish
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: yarn --frozen-lockfile
+      - name: Build
+        run: yarn build
+      # Tests are failing on ubuntu-latest runners while windows-latest runners can't run NPM publish
+      # - name: Test
+      #   run: yarn test
+      - name: Publish
+        uses: JS-DevTools/npm-publish@v2
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          tag: ${{ endsWith(github.ref_name, 'next') && 'next' || 'latest' }}

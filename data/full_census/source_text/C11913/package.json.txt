@@ -1,0 +1,71 @@
+{
+  "name": "vega",
+  "private": true,
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vega/vega.git"
+  },
+  "scripts": {
+    "build": "lerna run build && npm run docsbuild",
+    "build-editor-preview": "scripts/build-editor-preview.sh",
+    "clean": "lerna clean --yes && lerna exec -- del-cli build && lerna exec -- del-cli LICENSE && del-cli node_modules package-lock.json",
+    "data": "rsync -r node_modules/vega-datasets/data/* docs/data",
+    "docs": "cd docs && bundle exec jekyll serve -I -l",
+    "docsbuild": "cd packages/vega/build && cp vega.js* vega.min.js* vega-core.js vega-core.min.js* vega-schema.json ../../../docs/",
+    "license": "lerna exec -- cp ../../LICENSE .",
+    "release": "npm run license && lerna publish from-package",
+    "serve": "serve packages/vega/ -l 8080",
+    "test": "npm run test:no-lint && npm run lint",
+    "test:no-lint": "lerna run test --ignore vega-typings && lerna run test --scope vega-typings",
+    "typecheck": "tsc",
+    "lint": "eslint -c eslint.config.js .",
+    "format": "npm run lint -- --fix",
+    "postinstall": "scripts/postinstall.sh",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.29.7",
+    "@babel/core": "^7.29.7",
+    "@babel/plugin-transform-runtime": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@blazediff/core": "^1.9.3",
+    "@definitelytyped/dtslint": "0.2.46",
+    "@eslint/js": "^10.0.1",
+    "@rollup/plugin-babel": "^6.1.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/node": "^26.6.3",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "canvas": "^3.2.3",
+    "del-cli": "^7.0.0",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "jsdom": "^30.1.1",
+    "lerna": "^10.0.1",
+    "lint-staged": "^16.4.0",
+    "pngjs": "^7.0.0",
+    "prettier": "^3.9.5",
+    "rollup": "^4.62.2",
+    "rollup-plugin-bundle-size": "^1.0.3",
+    "serve": "^14.2.6",
+    "tape": "^5.10.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.64.0",
+    "vega-datasets": "^3.2.1"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,cjs}": "eslint --fix"
+  }
+}

@@ -1,0 +1,33 @@
+name: publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g npm@latest
+      - run: npm install
+      - run: git submodule update --init
+      - run: npm run test-ci
+      - name: Publish beta version to npm
+        if: ${{ github.event.release.prerelease }}
+        run: npm publish --tag beta
+      - name: Publish to npm
+        if: ${{ !github.event.release.prerelease }}
+        run: npm publish
+      # - name: Commit bundles to ajv-dist
+      #   run: ./scripts/publish-bundles
+      #   env:
+      #     GH_TOKEN_PUBLIC: ${{ secrets.GH_TOKEN_PUBLIC }}
+      #     GIT_USER_EMAIL: ${{ secrets.GIT_USER_EMAIL }}
+      #     GIT_USER_NAME: ${{ secrets.GIT_USER_NAME }}

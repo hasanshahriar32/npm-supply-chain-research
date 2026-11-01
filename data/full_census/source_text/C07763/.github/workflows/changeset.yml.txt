@@ -1,0 +1,29 @@
+name: Changeset
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+      - labeled
+      - unlabeled
+
+concurrency:
+  group: changeset-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'ignore-changeset') }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0 # Include history so Changesets finds merge-base
+          # Submodules not needed: this job only checks for a changeset.
+      - name: Set up environment
+        uses: ./.github/actions/setup
+      - name: Check changeset
+        run: npx changeset status --since=origin/${{ github.base_ref }}

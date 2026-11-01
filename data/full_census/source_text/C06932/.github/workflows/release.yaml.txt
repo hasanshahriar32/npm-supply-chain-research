@@ -1,0 +1,49 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract release notes from CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v version="$version" '
+            index($0, "## [" version "] - ") == 1 {
+              found = 1
+              next
+            }
+            found && /^## \[/ {
+              exit
+            }
+            found {
+              print
+            }
+          ' CHANGELOG.md > release-notes.md
+
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::No CHANGELOG section found for ${TAG}"
+            exit 1
+          fi
+
+      - name: Create or update GitHub Release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${TAG}" > /dev/null 2>&1; then
+            gh release edit "${TAG}" --title "${TAG}" --notes-file release-notes.md
+          else
+            gh release create "${TAG}" --title "${TAG}" --notes-file release-notes.md
+          fi

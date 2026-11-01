@@ -1,0 +1,44 @@
+{
+  "name": "stream-read-all",
+  "author": "Lloyd Brookes <75pound@gmail.com>",
+  "version": "5.0.2",
+  "description": "Returns a promise which fulfils with the supplied stream's content",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/75lb/stream-read-all.git"
+  },
+  "type": "module",
+  "exports": {
+    "import": "./index.js",
+    "require": "./dist/index.cjs"
+  },
+  "keywords": [
+    "concat",
+    "stream",
+    "read",
+    "all",
+    "collect",
+    "buffers",
+    "concatenate"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=12.20"
+  },
+  "scripts": {
+    "test": "npm run dist && npm run test:ci",
+    "test:ci": "75lb-nature test-runner test.js",
+    "dist": "75lb-nature cjs-build index.js"
+  },
+  "files": [
+    "index.js",
+    "dist"
+  ],
+  "standard": {
+    "ignore": [
+      "tmp",
+      "dist"
+    ],
+    "envs": []
+  }
+}

@@ -1,0 +1,33 @@
+name: Format code
+
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
+
+jobs:
+  format:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
+        cache: 'npm'
+    - run: USE_LOCAL_BUILD=true npm ci
+    - name: Check code formatting (run 'npm run format' to fix)
+      run: |
+        if ! npx prettier '**/*.ts' '**/*.mjs' '**/*.json' --check; then
+          echo "::error::Code formatting check failed. Please run 'npm run format' locally to format the code."
+          exit 1
+        fi
+    - name: Check linter (run 'npm run lint' to check, 'npm run lint-fix' to fix)
+      run: |
+        if ! npm run lint; then
+          echo "::error::Linter check failed. Please run 'npm run lint' (or 'npm run lint-fix') locally to fix lint errors."
+          exit 1
+        fi

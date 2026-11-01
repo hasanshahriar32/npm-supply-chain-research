@@ -1,0 +1,73 @@
+{
+  "name": "react-svg-loader",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Optimize svg and load it as a React Component",
+  "keywords": [
+    "loader",
+    "react",
+    "react-svg-loader",
+    "webpack",
+    "webpack-loader"
+  ],
+  "homepage": "https://github.com/boopathi/react-svg-loader#readme",
+  "bugs": {
+    "url": "https://github.com/boopathi/react-svg-loader/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boopathi/react-svg-loader.git"
+  },
+  "license": "MIT",
+  "author": "boopathi",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b packages",
+    "clean": "yarn build --clean && rm -rf example/public coverage .nyc_output",
+    "cover": "NODE_ENV=test nyc --reporter=lcov ts-node ./node_modules/tape/bin/tape tests/*.ts",
+    "eslint": "eslint .",
+    "lint": "yarn eslint",
+    "publish-master": "lerna publish -c --yes -m 'chore(nightly): publish %s'",
+    "test": "NODE_ENV=test ts-node ./node_modules/tape/bin/tape tests/*.ts | faucet",
+    "watch": "yarn build --watch"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.5.4",
+    "@babel/preset-env": "^7.5.4",
+    "@babel/preset-flow": "^7.0.0",
+    "@babel/register": "^7.4.4",
+    "@types/lodash.clonedeep": "^4.5.6",
+    "@types/node": "^12.6.2",
+    "@types/tape": "^4.2.33",
+    "@typescript-eslint/eslint-plugin": "^1.11.0",
+    "@typescript-eslint/parser": "^1.11.0",
+    "babel-plugin-add-module-exports": "^1.0.2",
+    "babel-plugin-istanbul": "^5.1.4",
+    "chalk": "^2.4.2",
+    "eslint": "^6.0.1",
+    "eslint-plugin-prettier": "^3.1.0",
+    "eslint-plugin-react": "^7.14.2",
+    "faucet": "0.0.1",
+    "lerna": "^3.15.0",
+    "nyc": "^14.1.1",
+    "prettier": "^1.18.2",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-test-renderer": "^16.8.6",
+    "tap-nyc": "^1.0.3",
+    "tape": "^4.11.0",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.3"
+  },
+  "nyc": {
+    "all": true,
+    "include": [
+      "packages/**"
+    ],
+    "extension": [
+      ".ts"
+    ]
+  }
+}

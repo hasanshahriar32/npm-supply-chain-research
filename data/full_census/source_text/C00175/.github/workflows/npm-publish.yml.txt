@@ -1,0 +1,1242 @@
+# #
+#   @type               github workflow
+#   @author             Aetherinox
+#   @url                https://github.com/Aetherinox
+#   @usage              builds and releases a new node package
+#                       creates a new github release
+#
+#   @secrets            secrets.SELF_TOKEN                                          self github personal access token (fine-grained)
+#                       secrets.SELF_TOKEN_CL                                       self github personal access token (classic)
+#                       secrets.NPM_TOKEN                                           self npmjs access token
+#                       secrets.PYPI_API_TOKEN                                      self Pypi API token (production site) - https://pypi.org/
+#                       secrets.PYPI_API_TEST_TOKEN                                 self Pypi API token (test site) - https://test.pypi.org/
+#                       secrets.SELF_DOCKERHUB_TOKEN                                self Dockerhub token
+#                       secrets.CODECOV_TOKEN                                       codecov upload token for nodejs projects
+#                       secrets.MAXMIND_GELITE_TOKEN                                maxmind API token
+#                       secrets.CF_ACCOUNT_ID                                       cloudflare account id
+#                       secrets.CF_ACCOUNT_TOKEN                                    cloudflare account token
+#                       secrets.ORG_TOKEN                                           org github personal access token (fine-grained)
+#                       secrets.ORG_TOKEN_CL                                        org github personal access token (classic)
+#                       secrets.ORG_DOCKERHUB_TOKEN                                 org dockerhub secret
+#                       secrets.ORG_GITEA_TOKEN                                     org gitea personal access token (classic) with package:write permission
+#                       secrets.BOT_GPG_KEY_ASC                                     bot gpg private key (armored) | BEGIN PGP PRIVATE KEY BLOCK
+#                       secrets.BOT_GPG_KEY_B64                                     bot gpg private key (binary) converted to base64
+#                       secrets.BOT_GPG_PASSPHRASE                                  bot gpg private key passphrase
+#                       secrets.DISCORD_WEBHOOK_CHAN_GITHUB_RELEASES                discord webhook to report release notifications from github to discord
+#                       secrets.DISCORD_WEBHOOK_CHAN_GITHUB_WORKFLOWS               discord webhook to report workflow notifications from github to discord
+#                       secrets.DISCORD_WEBHOOK_CHAN_GITHUB_UPDATES                 discord webhook to report activity notifications from github to discord
+#
+#   @local              these workflows can be tested locally through the use of `act`
+#                           https://github.com/nektos/act
+#                       Extract act to folder
+#                       Add system env var with path to act.exe
+#                       Run the commands:
+#                           git pull https://github.com/username/repo
+#                           act -W .github/workflows/npm-publish.yml -P ubuntu-latest=catthehacker/ubuntu:full-22.04
+#                           act -W .github/workflows/npm-publish.yml -s TOKEN_CL=XXXXXXXXXX --pull=false
+# #
+
+name: '📦 Publish › Package'
+run-name: '📦 Publish › Package'
+
+# #
+#   triggers
+# #
+
+on:
+    workflow_dispatch:
+        inputs:
+
+            # #
+            #   Name of the plugin to use when creating the release zip filename
+            #     e.g: toasted-notifier-v1.0.0.zip
+            # #
+
+            PROJECT_NAME:
+                description:          '📦 Name of App'
+                required:             true
+                default:              'toasted-notifier'
+                type:                 string
+
+            # #
+            #   ENABLE:     Package will only be released to Github releases package
+            #   DISABLE:    Package will be uploaded to Github GHCR, NpmJS, and a Github release will be made
+            # #
+
+            GITHUB_ONLY:
+                description:          '🧪 Github Only (NpmJS Excluded)'
+                required:             true
+                default:              false
+                type:                 boolean
+
+            # #
+            #   ENABLE:   the changelog generated in releases tab will only display single commits.
+            #   DISABLE:  the changelog shows pull requests completed based on their labels
+            # #
+
+            CHANGELOG_MODE_COMMIT:
+                description:          '📑 Use Commits Instead of PRs'
+                required:             true
+                default:              true
+                type:                 boolean
+
+            # #
+            #   ENABLE:   Will show all types of commits, including uncategorized
+            #   DISABLE:  WIll only show actions that have been categorized using the format
+            #                type(scope): description
+            #                type: description
+            # #
+
+            SHOW_UNCATEGORIZED:
+                description:          '🗂️ Show Uncategorized Commits'
+                required:             true
+                default:              false
+                type:                 boolean
+
+            # #
+            #   true            released version will be marked as a development build and will have the v1.x.x-development tag instead of -latest
+            #   false           release version will be marked with -latest docker tag
+            # #
+
+            RC_RELEASE:
+                description:        '🧪 Release RC (Pre-release)'
+                required:           true
+                default:            false
+                type:               boolean
+
+            # #
+            #   only needed if env variable `RC_RELEASE` = true
+            #   sets the version number for the release candidate
+            #       e.g: toasted-notifier-v1.0.0-rc.1
+            # #
+
+            RC_VERSION:
+                description:        '🧪 RC (Pre-release) Ver (toasted-notifier-rc.1)'
+                required:           false
+                type:               string
+                default:            '1'
+
+# #
+#   environment variables
+# #
+
+env:
+    PROJECT_NAME:                   ${{ github.event.inputs.PROJECT_NAME || 'toasted-notifier' }}
+    GITHUB_ONLY:                    ${{ github.event.inputs.GITHUB_ONLY || false }}
+    CHANGELOG_MODE_COMMIT:          ${{ github.event.inputs.CHANGELOG_MODE_COMMIT || true }}
+    SHOW_UNCATEGORIZED:             ${{ github.event.inputs.SHOW_UNCATEGORIZED || false }}
+    RC_RELEASE:                     ${{ github.event.inputs.RC_RELEASE || false }}
+    RC_VERSION:                     ${{ github.event.inputs.RC_VERSION || '1' }}
+    ASSIGN_USER:                    Aetherinox
+    BOT_NAME_1:                     EuropaServ
+    BOT_NAME_2:                     BinaryServ
+    BOT_NAME_DEPENDABOT:            dependabot[bot]
+    BOT_NAME_RENOVATE:              renovate[bot]
+    GPG_KEY_BASE64:                 ${{ secrets.ADMINSERV_GPG_KEY_B64 }}
+    GPG_KEY_PASSPHRASE:             ${{ secrets.ADMINSERV_GPG_PASSPHRASE }}
+
+# #
+#   Jobs
+# #
+
+jobs:
+
+    # #
+    #   Job › Initialize
+    # #
+
+    job-initialize:
+        name: >-
+            📦 Publish › Initialize
+        runs-on: ubuntu-latest
+      # runs-on: apollo-x64
+        timeout-minutes: 5
+        outputs:
+            package_version: ${{ steps.task_initialize_package_getversion.outputs.PACKAGE_VERSION }}
+        permissions:
+            contents: write
+            packages: write
+        steps:
+
+            # #
+            #   Initialize › Checkout
+            # #
+
+            - name: '☑️ Checkout'
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            # #
+            #   Initialize › Job Information
+            # #
+
+            - name: >-
+                  🔄 Load Job
+              uses: qoomon/actions--context@v4
+              id: 'context'
+
+            # #
+            #   Initialize › Start
+            # #
+
+            - name: >-
+                  ✅ Start
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Starting Job ${{ steps.context.outputs.job_name }}"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+                  year="$(date +'%Y')"
+                  echo "YEAR=${year}" >> $GITHUB_ENV
+
+                  now="$(date +'%m-%d-%Y %H:%M:%S')"
+                  echo "NOW=${now}" >> $GITHUB_ENV
+
+                  now_short="$(date +'%m-%d-%Y')"
+                  echo "now_short=${now_short}" >> $GITHUB_ENV
+
+                  now_long="$(date +'%m-%d-%Y %H:%M')"
+                  echo "now_long=${now_long}" >> $GITHUB_ENV
+
+                  now_docker="$(date +'%Y%m%d')"
+                  echo "now_docker=${now_docker}" >> $GITHUB_ENV
+
+                  now_docker_ts="$(date -u +'%FT%T.%3NZ')"
+                  echo "now_docker_ts=${now_docker}" >> $GITHUB_ENV
+
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  sudo apt -qq update
+                  sudo apt -qq install tree
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " Runner .............. ${{ runner.name }}"
+                  echo " Workflow ............ ${{ github.workflow }} (#${{ github.workflow_ref }})"
+                  echo " Run Number .......... #${{ github.run_number }}"
+                  echo " Ref ................. #${{ github.ref }}"
+                  echo " Ref Name ............ #${{ github.ref_name }}"
+                  echo " Event Name .......... #${{ github.event_name }}"
+                  echo " Repo ................ #${{ github.repository }}"
+                  echo " Repo Owner .......... #${{ github.repository_owner }}"
+                  echo " Run ID .............. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  echo " Triggered By ........ ${{ github.actor }}"
+                  echo " SHA 1 ............... ${GITHUB_SHA}"
+                  echo " SHA 2 ............... ${{ github.sha }}"
+                  echo " Workspace ........... ${{ github.workspace }}"
+                  echo " PWD ................. ${PWD}"
+                  echo " Job Name ............ ${{ steps.context.outputs.job_name }}"
+                  echo " Job ID .............. ${{ steps.context.outputs.job_id }}"
+                  echo " Job URL ............. ${{ steps.context.outputs.job_url }}"
+                  echo " Run ID .............. ${{ steps.context.outputs.run_id }}"
+                  echo " Run Attempt ......... ${{ steps.context.outputs.run_attempt }}"
+                  echo " Run Number .......... ${{ steps.context.outputs.run_number }}"
+                  echo " Run URL ............. ${{ steps.context.outputs.run_url }}"
+                  echo " Run Env ............. ${{ steps.context.outputs.environment }}"
+                  echo " Run Env URL ......... ${{ steps.context.outputs.environment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Deployment URL .. ${{ steps.context.outputs.deployment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Runner Name ..... ${{ steps.context.outputs.runner_name }}"
+                  echo " Run Runner ID ....... ${{ steps.context.outputs.runner_id }}"
+                  echo " Year ................ ${year}"
+                  echo " Now ................. ${now}"
+                  echo " Now (Short) ......... ${now_short}"
+                  echo " Now (Long) .......... ${now_long}"
+                  echo " Now (Docker) ........ ${now_docker}"
+                  echo " Now (Docker TS) ..... ${now_docker_ts}"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  tree -I node_modules -I .git
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Get version from package.json VERSION value
+            # #
+
+            - name: '👁️‍🗨️ Get Package Version'
+              id: task_initialize_package_getversion
+              run: |
+                  VER=$(cat package.json | jq -r '.version')
+                  echo "PACKAGE_VERSION=$VER" >> $GITHUB_OUTPUT
+
+            - name: '👁️‍🗨️ Get Package Version › Print'
+              run: |
+                  echo "VERSION: ${{ steps.task_initialize_package_getversion.outputs.PACKAGE_VERSION }}"
+
+    # #
+    #   Job › Publish › Npmjs
+    # #
+
+    job-publish-npm:
+        name: >-
+          📦 Package › Npmjs
+        runs-on: ubuntu-latest
+      # runs-on: apollo-x64
+        timeout-minutes: 5
+        needs: [ job-initialize ]
+        if: |
+            startsWith( inputs.GITHUB_ONLY, false )
+        env:
+            PACKAGE_VERSION: ${{ needs.job-initialize.outputs.package_version }}
+        permissions:
+            contents: read
+            packages: write
+        steps:
+
+            # #
+            #   Publish › NpmJS › Checkout
+            # #
+
+            - name: '☑️ Checkout'
+              uses: actions/checkout@v4
+
+            # #
+            #   Publish › NpmJS › Job Information
+            # #
+
+            - name: >-
+                  🔄 Load Job
+              uses: qoomon/actions--context@v4
+              id: 'context'
+
+            # #
+            #   Publish › NpmJS › Start
+            # #
+
+            - name: >-
+                  ✅ Start
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Starting Job ${{ steps.context.outputs.job_name }}"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+                  year="$(date +'%Y')"
+                  echo "YEAR=${year}" >> $GITHUB_ENV
+
+                  now="$(date +'%m-%d-%Y %H:%M:%S')"
+                  echo "NOW=${now}" >> $GITHUB_ENV
+
+                  now_short="$(date +'%m-%d-%Y')"
+                  echo "now_short=${now_short}" >> $GITHUB_ENV
+
+                  now_long="$(date +'%m-%d-%Y %H:%M')"
+                  echo "now_long=${now_long}" >> $GITHUB_ENV
+
+                  now_docker="$(date +'%Y%m%d')"
+                  echo "now_docker=${now_docker}" >> $GITHUB_ENV
+
+                  now_docker_ts="$(date -u +'%FT%T.%3NZ')"
+                  echo "now_docker_ts=${now_docker}" >> $GITHUB_ENV
+
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  sudo apt -qq update
+                  sudo apt -qq install tree
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " Runner .............. ${{ runner.name }}"
+                  echo " Workflow ............ ${{ github.workflow }} (#${{ github.workflow_ref }})"
+                  echo " Run Number .......... #${{ github.run_number }}"
+                  echo " Ref ................. #${{ github.ref }}"
+                  echo " Ref Name ............ #${{ github.ref_name }}"
+                  echo " Event Name .......... #${{ github.event_name }}"
+                  echo " Repo ................ #${{ github.repository }}"
+                  echo " Repo Owner .......... #${{ github.repository_owner }}"
+                  echo " Run ID .............. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  echo " Triggered By ........ ${{ github.actor }}"
+                  echo " SHA 1 ............... ${GITHUB_SHA}"
+                  echo " SHA 2 ............... ${{ github.sha }}"
+                  echo " Workspace ........... ${{ github.workspace }}"
+                  echo " PWD ................. ${PWD}"
+                  echo " Job Name ............ ${{ steps.context.outputs.job_name }}"
+                  echo " Job ID .............. ${{ steps.context.outputs.job_id }}"
+                  echo " Job URL ............. ${{ steps.context.outputs.job_url }}"
+                  echo " Run ID .............. ${{ steps.context.outputs.run_id }}"
+                  echo " Run Attempt ......... ${{ steps.context.outputs.run_attempt }}"
+                  echo " Run Number .......... ${{ steps.context.outputs.run_number }}"
+                  echo " Run URL ............. ${{ steps.context.outputs.run_url }}"
+                  echo " Run Env ............. ${{ steps.context.outputs.environment }}"
+                  echo " Run Env URL ......... ${{ steps.context.outputs.environment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Deployment URL .. ${{ steps.context.outputs.deployment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Runner Name ..... ${{ steps.context.outputs.runner_name }}"
+                  echo " Run Runner ID ....... ${{ steps.context.outputs.runner_id }}"
+                  echo " Year ................ ${year}"
+                  echo " Now ................. ${now}"
+                  echo " Now (Short) ......... ${now_short}"
+                  echo " Now (Long) .......... ${now_long}"
+                  echo " Now (Docker) ........ ${now_docker}"
+                  echo " Now (Docker TS) ..... ${now_docker_ts}"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  tree -I node_modules -I .git
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › NpmJS › Setup NodeJS
+            # #
+
+            - name: '⚙️ Setup Node'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20.x'
+                  registry-url: 'https://registry.npmjs.org/'
+                  always-auth: true
+                  scope: '@aetherinox'
+
+            # #
+            #   Publish › NpmJS › Setup Packages
+            # #
+
+            - name: '📦 Install NPM & Apt Packages'
+              run: |
+                  sudo apt update
+                  sudo npm install
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # #
+            #   Publish › NpmJS › Run pretty and lint
+            # #
+
+            - name: '🔍 Run Pretty & Linter'
+              run: |
+                  npm run lint
+
+            # #
+            #   Publish › NpmJS > Dry Run
+            # #
+
+            - name: '🧪 Publish: Dry Run'
+              run: |
+                  npm publish --dry-run
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # #
+            #   Publish › NpmJS › Verbose › List Tree
+            # #
+
+            - name: '🌲 Verbose › Tree Listing'
+              run: |
+                  find . -type f ! -path './node_modules/*' ! -path './.git/*' ! -path './.github/*' \
+                      | xargs stat --printf="%y %n\n" \
+                      | sort -n
+
+            # #
+            #   Publish › NpmJS > Live Publish
+            # #
+
+            - name: '📦 Publish: Live'
+              run: |
+                  npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    # #
+    #   Job > Publish › Github Package
+    # #
+
+    job-publish-gpr:
+        name: >-
+            📦 Package › Github
+        runs-on: ubuntu-latest
+      # runs-on: apollo-x64
+        timeout-minutes: 5
+        needs: [ job-initialize ]
+        if: |
+            startsWith( inputs.GITHUB_ONLY, false )
+        env:
+            PACKAGE_VERSION: ${{ needs.job-initialize.outputs.package_version }}
+        permissions:
+            contents: read
+            packages: write
+        steps:
+
+            # #
+            #   Publish › Github GHCR › Checkout
+            # #
+
+            - name: '☑️ Checkout'
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            # #
+            #   Publish › Github GHCR › Job Information
+            # #
+
+            - name: >-
+                  🔄 Load Job
+              uses: qoomon/actions--context@v4
+              id: 'context'
+
+            # #
+            #   Publish › Github GHCR › Start
+            # #
+
+            - name: >-
+                  ✅ Start
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Starting Job ${{ steps.context.outputs.job_name }}"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+                  year="$(date +'%Y')"
+                  echo "YEAR=${year}" >> $GITHUB_ENV
+
+                  now="$(date +'%m-%d-%Y %H:%M:%S')"
+                  echo "NOW=${now}" >> $GITHUB_ENV
+
+                  now_short="$(date +'%m-%d-%Y')"
+                  echo "now_short=${now_short}" >> $GITHUB_ENV
+
+                  now_long="$(date +'%m-%d-%Y %H:%M')"
+                  echo "now_long=${now_long}" >> $GITHUB_ENV
+
+                  now_docker="$(date +'%Y%m%d')"
+                  echo "now_docker=${now_docker}" >> $GITHUB_ENV
+
+                  now_docker_ts="$(date -u +'%FT%T.%3NZ')"
+                  echo "now_docker_ts=${now_docker}" >> $GITHUB_ENV
+
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  sudo apt -qq update
+                  sudo apt -qq install tree
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " Runner .............. ${{ runner.name }}"
+                  echo " Workflow ............ ${{ github.workflow }} (#${{ github.workflow_ref }})"
+                  echo " Run Number .......... #${{ github.run_number }}"
+                  echo " Ref ................. #${{ github.ref }}"
+                  echo " Ref Name ............ #${{ github.ref_name }}"
+                  echo " Event Name .......... #${{ github.event_name }}"
+                  echo " Repo ................ #${{ github.repository }}"
+                  echo " Repo Owner .......... #${{ github.repository_owner }}"
+                  echo " Run ID .............. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  echo " Triggered By ........ ${{ github.actor }}"
+                  echo " SHA 1 ............... ${GITHUB_SHA}"
+                  echo " SHA 2 ............... ${{ github.sha }}"
+                  echo " Workspace ........... ${{ github.workspace }}"
+                  echo " PWD ................. ${PWD}"
+                  echo " Job Name ............ ${{ steps.context.outputs.job_name }}"
+                  echo " Job ID .............. ${{ steps.context.outputs.job_id }}"
+                  echo " Job URL ............. ${{ steps.context.outputs.job_url }}"
+                  echo " Run ID .............. ${{ steps.context.outputs.run_id }}"
+                  echo " Run Attempt ......... ${{ steps.context.outputs.run_attempt }}"
+                  echo " Run Number .......... ${{ steps.context.outputs.run_number }}"
+                  echo " Run URL ............. ${{ steps.context.outputs.run_url }}"
+                  echo " Run Env ............. ${{ steps.context.outputs.environment }}"
+                  echo " Run Env URL ......... ${{ steps.context.outputs.environment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Deployment URL .. ${{ steps.context.outputs.deployment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Runner Name ..... ${{ steps.context.outputs.runner_name }}"
+                  echo " Run Runner ID ....... ${{ steps.context.outputs.runner_id }}"
+                  echo " Year ................ ${year}"
+                  echo " Now ................. ${now}"
+                  echo " Now (Short) ......... ${now_short}"
+                  echo " Now (Long) .......... ${now_long}"
+                  echo " Now (Docker) ........ ${now_docker}"
+                  echo " Now (Docker TS) ..... ${now_docker_ts}"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  tree -I node_modules -I .git
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › Github GHCR › Setup NodeJS
+            # #
+
+            - name: '⚙️ Setup Node'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20.x'
+                  registry-url: 'https://npm.pkg.github.com/'
+                  scope: '@aetherinox'
+
+            # #
+            #   Publish › Github GHCR › Find & Replace Package Name
+            #
+            #   Required when pushing to Github. Package name must start with @scope / username.
+            # #
+
+            - name: '🔎 Find and Replace (Start)'
+              uses: jacobtomlinson/gha-find-replace@v3
+              with:
+                  find: '"name": "${{ env.PROJECT_NAME }}"'
+                  replace: '"name": "@aetherinox/${{ env.PROJECT_NAME }}"'
+                  include: "package.json"
+                  regex: true
+
+            # #
+            #   Publish › Github GHCR › Setup Packages
+            # #
+
+            - name: '📦 Install NPM & Apt Packages'
+              run: |
+                  sudo apt update
+                  sudo npm install
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # #
+            #   Publish › Github GHCR › Run pretty and lint
+            # #
+
+            - name: '🔍 Run Pretty & Linter'
+              run: |
+                  npm run lint
+
+            # #
+            #   Publish › Github GHCR > Dry Run
+            # #
+
+            - name: '🧪 Publish: Dry Run'
+              run: |
+                  npm publish --dry-run
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.SELF_TOKEN_CL }}
+
+            # #
+            #   Publish › Github GHCR › Verbose › List Tree
+            # #
+
+            - name: '🌲 Verbose › Tree Listing'
+              run: |
+                  find . -type f ! -path './node_modules/*' ! -path './.git/*' ! -path './.github/*' \
+                      | xargs stat --printf="%y %n\n" \
+                      | sort -n
+
+            # #
+            #   Publish › Github GHCR > Live Publish
+            # #
+
+            - name: '📦 Publish: Live'
+              run: |
+                  npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # #
+            #   Publish › Github GHCR › Find & Replace Package Name
+            #
+            #   Required when pushing to Github. Package name must start with @scope / username.
+            # #
+
+            - name: '🔎 Find and Replace (End)'
+              uses: jacobtomlinson/gha-find-replace@v3
+              with:
+                  find: '"name": "@aetherinox/${{ env.PROJECT_NAME }}"'
+                  replace: '"name": "${{ env.PROJECT_NAME }}"'
+                  include: "package.json"
+                  regex: true
+
+    # #
+    #   Job › Publish › Github Release
+    # #
+
+    job-release:
+        name: >-
+            📦 Publish › Release
+        runs-on: ubuntu-latest
+      # runs-on: apollo-x64
+        timeout-minutes: 5
+        needs: [ job-initialize ]
+        env:
+            PACKAGE_VERSION: ${{ needs.job-initialize.outputs.package_version }}
+        if: |
+            always()
+            && contains(needs.*.result, 'success')
+            && !contains(needs.*.result, 'failure')
+        permissions:
+            contents: write
+            packages: write
+        steps:
+
+            # #
+            #   Publish › Github Release › Checkout
+            # #
+
+            - name: '☑️ Checkout'
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            # #
+            #   Publish › Github Release › Job Information
+            # #
+
+            - name: >-
+                  🔄 Load Job
+              uses: qoomon/actions--context@v4
+              id: 'context'
+
+            # #
+            #   Publish › Github Release › Start
+            # #
+
+            - name: >-
+                  ✅ Start
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Starting Job ${{ steps.context.outputs.job_name }}"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+                  year="$(date +'%Y')"
+                  echo "YEAR=${year}" >> $GITHUB_ENV
+
+                  now="$(date +'%m-%d-%Y %H:%M:%S')"
+                  echo "NOW=${now}" >> $GITHUB_ENV
+
+                  now_short="$(date +'%m-%d-%Y')"
+                  echo "now_short=${now_short}" >> $GITHUB_ENV
+
+                  now_long="$(date +'%m-%d-%Y %H:%M')"
+                  echo "now_long=${now_long}" >> $GITHUB_ENV
+
+                  now_docker="$(date +'%Y%m%d')"
+                  echo "now_docker=${now_docker}" >> $GITHUB_ENV
+
+                  now_docker_ts="$(date -u +'%FT%T.%3NZ')"
+                  echo "now_docker_ts=${now_docker}" >> $GITHUB_ENV
+
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  sudo apt -qq update
+                  sudo apt -qq install tree
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " Runner .............. ${{ runner.name }}"
+                  echo " Workflow ............ ${{ github.workflow }} (#${{ github.workflow_ref }})"
+                  echo " Run Number .......... #${{ github.run_number }}"
+                  echo " Ref ................. #${{ github.ref }}"
+                  echo " Ref Name ............ #${{ github.ref_name }}"
+                  echo " Event Name .......... #${{ github.event_name }}"
+                  echo " Repo ................ #${{ github.repository }}"
+                  echo " Repo Owner .......... #${{ github.repository_owner }}"
+                  echo " Run ID .............. https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  echo " Triggered By ........ ${{ github.actor }}"
+                  echo " SHA 1 ............... ${GITHUB_SHA}"
+                  echo " SHA 2 ............... ${{ github.sha }}"
+                  echo " Workspace ........... ${{ github.workspace }}"
+                  echo " PWD ................. ${PWD}"
+                  echo " Job Name ............ ${{ steps.context.outputs.job_name }}"
+                  echo " Job ID .............. ${{ steps.context.outputs.job_id }}"
+                  echo " Job URL ............. ${{ steps.context.outputs.job_url }}"
+                  echo " Run ID .............. ${{ steps.context.outputs.run_id }}"
+                  echo " Run Attempt ......... ${{ steps.context.outputs.run_attempt }}"
+                  echo " Run Number .......... ${{ steps.context.outputs.run_number }}"
+                  echo " Run URL ............. ${{ steps.context.outputs.run_url }}"
+                  echo " Run Env ............. ${{ steps.context.outputs.environment }}"
+                  echo " Run Env URL ......... ${{ steps.context.outputs.environment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Deployment URL .. ${{ steps.context.outputs.deployment_url }}"
+                  echo " Run Deployment ...... ${{ steps.context.outputs.deployment_id }}"
+                  echo " Run Runner Name ..... ${{ steps.context.outputs.runner_name }}"
+                  echo " Run Runner ID ....... ${{ steps.context.outputs.runner_id }}"
+                  echo " Year ................ ${year}"
+                  echo " Now ................. ${now}"
+                  echo " Now (Short) ......... ${now_short}"
+                  echo " Now (Long) .......... ${now_long}"
+                  echo " Now (Docker) ........ ${now_docker}"
+                  echo " Now (Docker TS) ..... ${now_docker_ts}"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  tree -I node_modules -I .git
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › Github Release › Setup Packages
+            # #
+
+            - name: '📦 Install NPM & Apt Packages'
+              run: |
+                  sudo apt update
+                  sudo npm install
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+            # #
+            #   Publish › Github Release › Print Version Debug
+            # #
+
+            - name: '🪪 Test Next Job Version'
+              run: |
+                  echo "VERSION: ${{ env.PACKAGE_VERSION }}"
+
+            # #
+            #   Publish › Github Release › Run pretty and lint
+            # #
+
+            - name: '🔍 Run Pretty & Linter'
+              run: |
+                  npm run lint
+
+            # #
+            #   Publish › Github Release › Execute npm generate so that a uuid and guid can be created
+            # #
+
+            - name: '🪪 Generate IDs'
+            # working-directory: ./tvapp2
+              run: |
+                  npm run root:generate
+
+            # #
+            #   Publish › Github Release › .ENV (Get)
+            #   Get guid and uuid from env variable generated by npm
+            # #
+
+            - name: '🪪 .ENV › Get'
+              id: task_release_dotenv_get
+              uses: falti/dotenv-action@v1
+           #  with:
+           #      path: "./.env"
+
+            # #
+            #   Publish › Github Release › .ENV (Print)
+            #   Show guid and uuid from env variable generated by npm
+            # #
+
+            - name: '🪪 .ENV › Read'
+              run: |
+                  echo "GUID: ${{ steps.task_release_dotenv_get.outputs.GUID }}"
+                  echo "UUID: ${{ steps.task_release_dotenv_get.outputs.UUID }}"
+
+            # #
+            #   Publish › Github Release › Build › Stable
+            # #
+
+            - name: '🔨 Build › Stable › ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.zip'
+              id: task_release_build_st
+              if: |
+                  startsWith( inputs.RC_RELEASE, false ) ||
+                  startsWith( env.RC_RELEASE, false )
+              run: |
+                  echo Building STABLE Package ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.zip
+                  zip -r ${{ inputs.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.zip package.json README.md LICENSE.md index.js lib notifiers vendor example test
+                  ls
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.ADMINSERV_TOKEN_CL }}
+
+            # #
+            #   Publish › Github Release › Build › Release Candidate
+            # #
+
+            - name: '🔨 Build › Release Candidate › ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}-rc.${{ inputs.RC_VERSION }}.zip'
+              id: task_release_build_rc
+              if: |
+                  startsWith( inputs.RC_RELEASE, true ) ||
+                  startsWith( env.RC_RELEASE, true )
+              run: |
+                  echo Building PRE-RELEASE Package ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}-rc.${{ inputs.RC_VERSION }}.zip
+                  zip -r ${{ inputs.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}-rc.${{ inputs.RC_VERSION }}.zip package.json README.md LICENSE.md index.js lib notifiers vendor example test
+                  ls
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.ADMINSERV_TOKEN_CL }}
+
+            # #
+            #   Publish › Github Release › GPG › Import Key (No Passphrase)
+            #
+            #   requires your GPG private key, converted to base64 binary .gpg (not armored .asc)
+            # #
+
+            - name: '🪪 GPG › Import Signing Key › W/o Passphrase'
+              if: env.GPG_KEY_BASE64 != '' && env.GPG_KEY_PASSPHRASE == ''
+              run: |
+                  echo "$GPG_KEY_BASE64" | base64 -di | gpg --import
+
+            # #
+            #   Publish › Github Release › GPG › Import Key (With Passphrase)
+            #
+            #   requires your GPG private key, converted to base64 binary .gpg (not armored .asc)
+            # #
+
+            - name: '🪪 GPG › Import Signing Key › w/ Passphrase'
+              if: env.GPG_KEY_BASE64 != '' && env.GPG_KEY_PASSPHRASE != ''
+              run: |
+                  echo "$GPG_KEY_BASE64" | base64 -di > /tmp/signing-key.gpg
+                  echo "$GPG_KEY_PASSPHRASE" | gpg --pinentry-mode loopback --passphrase-fd 0 --import /tmp/signing-key.gpg
+                  (echo "$GPG_KEY_PASSPHRASE"; echo; echo) | gpg --command-fd 0 --pinentry-mode loopback --change-passphrase $(gpg --list-secret-keys --with-colons 2> /dev/null | grep '^sec:' | cut --delimiter ':' --fields 5 | tail -n 1)
+
+            # #
+            #   Publish › Github Release › Checksum › Stable
+            # #
+
+            - name: '🆔 Checksum › Stable'
+              if: |
+                  startsWith( inputs.RC_RELEASE, false ) ||
+                  startsWith( env.RC_RELEASE, false )
+              run: |
+                  filename_zip="${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.zip"
+
+                  #  get sha1 and sha256 for .zip and .gz files
+                  find . -maxdepth 1 \( -name '*.zip' -o -name '*.gz' \) -printf '%P\n' | xargs -r sha1sum | gpg --digest-algo sha256 --clearsign > sha1sum.txt.asc
+                  find . -maxdepth 1 \( -name '*.zip' -o -name '*.gz' \) -printf '%P\n' | xargs -r sha256sum | gpg --digest-algo sha256 --clearsign > sha256sum.txt.asc
+
+                  #  get sha1sum; assign to variable
+                  sha1sum="$(shasum --algorithm 1 ${filename_zip} | awk '{ print $1 }')"
+                  echo "SHA1SUM=${sha1sum}" >> $GITHUB_ENV
+
+                  #  get sha256sum; assign to variable
+                  sha256sum="$(shasum --algorithm 256 ${filename_zip} | awk '{ print $1 }')"
+                  echo "SHA256SUM=${sha256sum}" >> $GITHUB_ENV
+
+                  #  no longer needed, replaced by find . command
+                  #  shasum --algorithm 256 ${filename_zip} > SHA256SUMS.txt
+                  echo "FILE_ZIP=${filename_zip}" >> $GITHUB_ENV
+
+            # #
+            #   Publish › Github Release › Checksum › RC
+            # #
+
+            - name: '🆔 Checksum › Release Candidate'
+              if: |
+                  startsWith( inputs.RC_RELEASE, true ) ||
+                  startsWith( env.RC_RELEASE, true )
+              run: |
+                  filename_zip="${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}-rc.${{ inputs.RC_VERSION }}.zip"
+
+                  #  get sha1 and sha256 for .zip and .gz files
+                  find . -maxdepth 1 \( -name '*.zip' -o -name '*.gz' \) -printf '%P\n' | xargs -r sha1sum | gpg --digest-algo sha256 --clearsign > sha1sum.txt.asc
+                  find . -maxdepth 1 \( -name '*.zip' -o -name '*.gz' \) -printf '%P\n' | xargs -r sha256sum | gpg --digest-algo sha256 --clearsign > sha256sum.txt.asc
+
+                  #  get sha1sum; assign to variable
+                  sha1sum="$(shasum --algorithm 1 ${filename_zip} | awk '{ print $1 }')"
+                  echo "SHA1SUM=${sha1sum}" >> $GITHUB_ENV
+
+                  #  get sha256sum; assign to variable
+                  sha256sum="$(shasum --algorithm 256 ${filename_zip} | awk '{ print $1 }')"
+                  echo "SHA256SUM=${sha256sum}" >> $GITHUB_ENV
+
+                  #  no longer needed, replaced by find . command
+                  #  shasum --algorithm 256 ${filename_zip} > SHA256SUMS.txt
+                  echo "FILE_ZIP=${filename_zip}" >> $GITHUB_ENV
+
+            # #
+            #   Publish › Github Release › Checksum › Print
+            # #
+
+            - name: '🆔 Checksum › Print'
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Checksums"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " File ..................... ${{ env.FILE_ZIP }}"
+                  echo " SHA1 ..................... ${{ env.SHA1SUM }}"
+                  echo " SHA256 ................... ${{ env.SHA256SUM }}"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › Github Release › Contributor Images
+            # #
+
+            - name: '🥸 Contributors › Generate'
+              id: task_release_contribs_generate
+              uses: jaywcjlove/github-action-contributors@main
+              with:
+                  filter-author: (renovate\[bot\]|renovate-bot|dependabot\[bot\])
+                  output: CONTRIBUTORS.svg
+                  avatarSize: 42
+
+            # #
+            #   Publish › Github Release › Changelog › Generate Tags
+            #
+            #   generates a changelog from the github api. requires a PREVIOUS_TAG in order to figure
+            #   out the changes made between the two versions.
+            #
+            #   outputs:
+            #       ${{ steps.changelog.outputs.changelog }}
+            # #
+
+            - name: '📝 Changelog › Pre Setup (Categorized Commits)'
+              id: task_release_changelog_categorized_sha_set
+              run: |
+                  echo "TAG_LAST=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+                  echo "COMMIT_LAST=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+            # #
+            #   Publish › Github Release › Changelog › Build (Categorized)
+            #
+            #   generates a changelog from the github api. requires a TAG_LAST in order to figure
+            #   out the changes made between the two versions.
+            #
+            #   outputs:
+            #       ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+            # #
+
+            - name: '📝 Changelog › Build (Categorized)'
+              id: task_release_changelog_categorized
+              if: |
+                  startsWith( inputs.SHOW_UNCATEGORIZED, false ) ||
+                  startsWith( env.SHOW_UNCATEGORIZED, false )
+              uses: mikepenz/release-changelog-builder-action@v5
+              with:
+                  token: ${{ secrets.ADMINSERV_TOKEN }}
+                  #fromTag: "${{ env.TAG_LAST }}"
+                  #toTag: "${{ github.ref }}"
+                  configuration: ".github/changelog-configuration.json"
+                  ignorePreReleases: false
+                  commitMode: ${{ inputs.CHANGELOG_MODE_COMMIT || env.CHANGELOG_MODE_COMMIT }}
+                  fetchReleaseInformation: true
+                  fetchViaCommits: true
+                  configurationJson: |
+                    {
+                      "template": "## Release Info \n| Item | Value |\n| --- | --- |\n|<sub>📄 ${{ env.FILE_ZIP }}</sub>|<sub>NodeJS package source</sub>|\n|<sub>📄 sha256sum.txt.asc</sub>|<sub>Signed SHA256 hash digest</sub>|\n|<sub>📄 sha1sum.txt.asc</sub>|<sub>Signed SHA1 hash digest</sub>|\n|<sub>🏷️ SHA256</sub>|<sub>`${{ env.SHA256SUM }}`</sub>|\n|<sub>🏷️ GUID</sub>|<sub>`${{ steps.task_release_dotenv_get.outputs.GUID }}`</sub>|\n|<sub>🏷️ UUID</sub>|<sub>`${{ steps.task_release_dotenv_get.outputs.UUID }}`</sub>|\n|<sub>🕟 Stamp</sub>|<sub>`#{{FROM_TAG}}-#{{FROM_TAG_DATE}} 🔺 #{{TO_TAG}}-#{{TO_TAG_DATE}}`</sub>|\n|<sub>📅 Last Release</sub>|<sub>`#{{DAYS_SINCE}} days ago`</sub>|\n\n<br>\n\n---\n\n<br>\n\n### What's New\nThis release contains the following changes:\n\n<br>\n\n---\n\n<br>\n\n### Statistics\nHow the files have changed:\n<ul><li><a href='#{{RELEASE_DIFF}}'>Changed files</a> : <b>#{{CHANGED_FILES}}</b></li><li>Changes : <b>#{{CHANGES}}</b></li><li>Commits : <b>#{{COMMITS}}</b></li><li>Additions : <b>#{{ADDITIONS}}</b></li><li>Deletions : <b>#{{DELETIONS}}</b></li><li>PRs (categorized) : <b>#{{CATEGORIZED_COUNT}}</b></li><li>PRs (uncategorized) : <b>#{{UNCATEGORIZED_COUNT}}</b></li><li>PRs (open) : <b>#{{OPEN_COUNT}}</b></li>\n<br />\n</ul>\n\n<br>\n\n---\n\n<br>\n\n### Pull Requests\nThis release is associated with the following pull requests:\n#{{CHANGELOG}}\n\n<br>\n\n---\n\n<br>\n\n"
+                    }
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ADMINSERV_TOKEN }}
+
+            # #
+            #   Publish › Github Release › Changelog › Build (Uncategorized)
+            #
+            #   generates a changelog from the github api. requires a TAG_LAST in order to figure
+            #   out the changes made between the two versions.
+            #
+            #   outputs:
+            #       ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+            #
+            #   shows only categorized commits using the commit standards
+            #                type(scope): description
+            #                type: description
+            # #
+
+            - name: '📝 Changelog › Build (Uncategorized)'
+              id: task_release_changelog_uncategorized
+              if: |
+                  startsWith( inputs.SHOW_UNCATEGORIZED, true ) ||
+                  startsWith( env.SHOW_UNCATEGORIZED, true )
+              uses: mikepenz/release-changelog-builder-action@v5
+              with:
+                  token: ${{ secrets.ADMINSERV_TOKEN }}
+                  #fromTag: "${{ env.TAG_LAST }}"
+                  #toTag: "${{ github.ref }}"
+                  configuration: ".github/changelog-configuration.json"
+                  ignorePreReleases: false
+                  commitMode: ${{ inputs.CHANGELOG_MODE_COMMIT || env.CHANGELOG_MODE_COMMIT }}
+                  fetchReleaseInformation: true
+                  fetchViaCommits: true
+                  configurationJson: |
+                    {
+                      "template": "## Release Info \n| Item | Value |\n| --- | --- |\n|<sub>📄 ${{ env.FILE_ZIP }}</sub>|<sub>NodeJS package source</sub>|\n|<sub>📄 sha256sum.txt.asc</sub>|<sub>Signed SHA256 hash digest</sub>|\n|<sub>📄 sha1sum.txt.asc</sub>|<sub>Signed SHA1 hash digest</sub>|\n|<sub>🏷️ SHA256</sub>|<sub>`${{ env.SHA256SUM }}`</sub>|\n|<sub>🏷️ GUID</sub>|<sub>`${{ steps.task_release_dotenv_get.outputs.GUID }}`</sub>|\n|<sub>🏷️ UUID</sub>|<sub>`${{ steps.task_release_dotenv_get.outputs.UUID }}`</sub>|\n|<sub>🕟 Stamp</sub>|<sub>`#{{FROM_TAG}}-#{{FROM_TAG_DATE}} 🔺 #{{TO_TAG}}-#{{TO_TAG_DATE}}`</sub>|\n|<sub>📅 Last Release</sub>|<sub>`#{{DAYS_SINCE}} days ago`</sub>|\n\n<br>\n\n---\n\n<br>\n\n### What's New\nThis release contains the following changes:\n\n<br>\n\n---\n\n<br>\n\n### Statistics\nHow the files have changed:\n<ul><li><a href='#{{RELEASE_DIFF}}'>Changed files</a> : <b>#{{CHANGED_FILES}}</b></li><li>Changes : <b>#{{CHANGES}}</b></li><li>Commits : <b>#{{COMMITS}}</b></li><li>Additions : <b>#{{ADDITIONS}}</b></li><li>Deletions : <b>#{{DELETIONS}}</b></li><li>PRs (categorized) : <b>#{{CATEGORIZED_COUNT}}</b></li><li>PRs (uncategorized) : <b>#{{UNCATEGORIZED_COUNT}}</b></li><li>PRs (open) : <b>#{{OPEN_COUNT}}</b></li>\n<br />\n</ul>\n\n<br>\n\n---\n\n<br>\n\n### Commits (#{{UNCATEGORIZED_COUNT}})\nThe following commits are uncategorized:\n#{{UNCATEGORIZED}}\n\n<br>\n\n---\n\n<br>\n\n### Pull Requests\nThis release is associated with the following pull requests:\n#{{CHANGELOG}}\n\n<br>\n\n"
+                    }
+              env:
+                  GITHUB_TOKEN: ${{ secrets.ADMINSERV_TOKEN }}
+
+            # #
+            #   Publish › Github Release › Changelog › Convert step into ENV
+            #
+            #   This is a requirement in order for the action mikepenz/release-changelog-builder-action@v5 to work properly.
+            #   If you use special characters like quotes and tildes in your push comments, bash will have no way of knowing
+            #   if it's part of the changelog, or code itself.
+            #
+            #   By converting the step into an env var, we quote the text, and it fixes the issue.
+            #
+            #   For every step that you need to print the changelog text, first define the env var
+            #   env:
+            #       CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+            #
+            #   Then you can call the changelog in the body / run command with
+            #       echo "$CHANGELOG_CATEGORIZED"
+            # #
+
+            - name: '🙊 Changelog › Step to Env › Categorized'
+              id: task_release_changelog_escape_categorized
+              if: |
+                  startsWith( inputs.SHOW_UNCATEGORIZED, false ) ||
+                  startsWith( env.SHOW_UNCATEGORIZED, false )
+              env:
+                  CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  CHANGELOG_UNCATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Changelog [Categorized]"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " $CHANGELOG_CATEGORIZED"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            - name: '🙊 Changelog › Step to Env › Uncategorized'
+              id: task_release_changelog_escape_uncategorized
+              if: |
+                  startsWith( inputs.SHOW_UNCATEGORIZED, true ) ||
+                  startsWith( env.SHOW_UNCATEGORIZED, true )
+              env:
+                  CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  CHANGELOG_UNCATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " Changelog [Uncategorized]"
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo -e
+                  echo " $CHANGELOG_UNCATEGORIZED"
+                  echo -e
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › Github Release › Verbose › List Tree
+            # #
+
+            - name: '🌲 Verbose › Tree Listing'
+              run: |
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+                  echo " PWD ..................... ${PWD}"
+                  echo " GITHUB.WORKSPACE ........ ${{ github.workspace }}"
+                  echo -e
+                  echo -e
+                  tree -I node_modules
+                  echo "―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――"
+
+            # #
+            #   Publish › Github Release › Tag › Pre Create
+            #
+            #   in order to use the changelog github action, you must pre-create the tag otherwise
+            #   the changelog action will have no idea what tag you are going to be creating and
+            #   the list of commits will not be for the correct release.
+            # #
+
+            - name: '🔖 Tag › Pre Create ${{ env.PACKAGE_VERSION }}'
+              id: task_release_tag_create
+              uses: rickstaa/action-create-tag@v1
+              with:
+                  tag: ${{ env.PACKAGE_VERSION }}
+                  tag_exists_error: false
+                  message: 'Latest release'
+                  gpg_private_key: ${{ secrets.ADMINSERV_GPG_KEY_ASC }}
+                  gpg_passphrase: ${{ secrets.ADMINSERV_GPG_PASSPHRASE }}
+
+            # #
+            #   Publish › Github Release › Tag › Confirm
+            #
+            #   check if tag already exists
+            # #
+
+            - name: '🔖 Tag › Confirm ${{ env.PACKAGE_VERSION }}'
+              run: |
+                  echo "Tag already present: ${{ env.TAG_EXISTS }}"
+                  echo "Tag already present: ${{ steps.task_release_tag_create.outputs.tag_exists }}"
+
+            # #
+            #   Publish › Github Release › Post Release (Stable)
+            #
+            #   outputs:
+            #       [RELEASE ID]:
+            #           ${{ steps.task_release_bundle_rc.outputs.id
+            #           ${{ steps.task_release_bundle_st.outputs.id
+            # #
+
+            - name: '🏳️ Post › Stable'
+              id: task_release_bundle_st
+              if: |
+                  startsWith( inputs.RC_RELEASE, false ) ||
+                  startsWith( env.RC_RELEASE, false )
+              uses: softprops/action-gh-release@v2
+              env:
+                  CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  CHANGELOG_UNCATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  GITHUB_TOKEN: ${{ secrets.ADMINSERV_TOKEN_CL }}
+              with:
+                  token: ${{ secrets.ADMINSERV_TOKEN_CL }}
+                  name: v${{ env.PACKAGE_VERSION }}
+                  tag_name: ${{ env.PACKAGE_VERSION }}
+                  target_commitish: ${{ github.event.inputs.branch }}
+                  draft: false
+                  generate_release_notes: false
+                  files: |
+                      ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}.zip
+                      sha1sum.txt.asc
+                      sha256sum.txt.asc
+                  prerelease: false
+                  body: |
+                      ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                      ${{ steps.task_release_changelog_uncategorized.outputs.changelog }}
+
+            # #
+            #   Publish › Github Release › Post Release (Release Candidate)
+            #
+            #   outputs:
+            #       [RELEASE ID]:
+            #           ${{ steps.task_release_bundle_rc.outputs.id
+            #           ${{ steps.task_release_bundle_st.outputs.id
+            # #
+
+            - name: '🏳️ Post › Release Candidate'
+              id: task_release_bundle_rc
+              if: |
+                  startsWith( inputs.RC_RELEASE, true ) ||
+                  startsWith( env.RC_RELEASE, true )
+              uses: softprops/action-gh-release@v2
+              env:
+                  CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  CHANGELOG_UNCATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  GITHUB_TOKEN: ${{ secrets.ADMINSERV_TOKEN_CL }}
+              with:
+                  token: ${{ secrets.ADMINSERV_TOKEN }}
+                  name: v${{ env.PACKAGE_VERSION }}
+                  tag_name: ${{ env.PACKAGE_VERSION }}
+                  target_commitish: ${{ github.event.inputs.branch }}
+                  draft: false
+                  generate_release_notes: false
+                  files: |
+                      ${{ env.PROJECT_NAME }}-${{ env.PACKAGE_VERSION }}-rc.${{ inputs.RC_VERSION }}.zip
+                      sha1sum.txt.asc
+                      sha256sum.txt.asc
+                  prerelease: false
+                  body: |
+                      > [!WARNING]
+                      > This is a **release candidate**, which means it is not a stable release and could contain bugs. You should download it at your own risk.
+
+                      ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                      ${{ steps.task_release_changelog_uncategorized.outputs.changelog }}
+
+            # #
+            #   Release › Print Status
+            #
+            #   For every step that you need to print the changelog text, first define the env var
+            #   env:
+            #       CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+            #
+            #   Then you can call the changelog in the body / run command with
+            #       echo "$CHANGELOG_CATEGORIZED"
+            # #
+
+            - name: '🎛️ Status › Print'
+              id: task_release_status_print
+              env:
+                  CHANGELOG_CATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+                  CHANGELOG_UNCATEGORIZED: ${{ steps.task_release_changelog_categorized.outputs.changelog }}
+              run: |
+                  echo "Printing Variables"
+                  echo
+                  echo "---- CHANGELOG ---------------------------------------------------------------"
+                  echo "$CHANGELOG_CATEGORIZED"
+                  echo "$CHANGELOG_UNCATEGORIZED"
+                  echo "---- CHANGELOG ---------------------------------------------------------------"
+                  echo ""
+                  echo ""
+                  echo "---- VARIABLES ---------------------------------------------------------------"
+                  echo "Package Version ............ ${{ env.PACKAGE_VERSION }}"
+                  echo "Tag: Previous .............. ${{ env.TAG_LAST }}"
+                  echo "Tag: Now.... ............... ${{ github.ref }}"
+                  echo "Last Commit ................ ${{ env.COMMIT_LAST }}"
+                  echo "ST Output ID ............... ${{ steps.task_release_bundle_st.outputs.id }}"
+                  echo "RC Output ID ............... ${{ steps.task_release_bundle_rc.outputs.id }}"
+                  echo "---- CHANGELOG ---------------------------------------------------------------"

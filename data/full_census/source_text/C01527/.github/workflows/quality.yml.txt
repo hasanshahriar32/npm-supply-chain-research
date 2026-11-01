@@ -1,0 +1,155 @@
+name: Quality
+
+on:
+  push:
+    branches:
+      - v2
+  pull_request:
+    branches:
+      - v2
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/v2' }}
+
+jobs:
+  build-native:
+    name: Build native binding
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+        with:
+          ignore-scripts: 'true'
+
+      - name: Setup Rust
+        uses: ./.github/composite-actions/setup-rust
+        with:
+          cache-key: native
+
+      - name: Build native binding
+        run: pnpm --filter @pandacss/compiler build:native
+
+      - name: Upload native binding
+        uses: actions/upload-artifact@v7
+        with:
+          name: compiler-native
+          path: |
+            packages/compiler/*.node
+            packages/compiler/binding.cjs
+            packages/compiler/native.d.ts
+          if-no-files-found: error
+
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run Prettier
+        run: pnpm prettier
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Run ESLint
+        run: pnpm lint
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+  tests:
+    name: Unit Tests
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Download native binding
+        uses: actions/download-artifact@v8
+        with:
+          name: compiler-native
+          path: packages/compiler
+
+      - name: Generate codegen fixtures
+        run: pnpm codegen codegen
+
+      - name: Run tests
+        run: pnpm test
+
+  codegen-tests:
+    name: Codegen Tests
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Download native binding
+        uses: actions/download-artifact@v8
+        with:
+          name: compiler-native
+          path: packages/compiler
+
+      - name: Run codegen tests
+        run: pnpm test:codegen
+
+  compiler-tests:
+    name: Compiler Tests
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Download native binding
+        uses: actions/download-artifact@v8
+        with:
+          name: compiler-native
+          path: packages/compiler
+
+      - name: Run compiler tests
+        run: pnpm --filter @pandacss/compiler test
+
+  types:
+    name: TypeScript
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install
+        uses: ./.github/composite-actions/install
+
+      - name: Download native binding
+        uses: actions/download-artifact@v8
+        with:
+          name: compiler-native
+          path: packages/compiler
+
+      - name: Run TypeScript type check
+        run: pnpm typecheck

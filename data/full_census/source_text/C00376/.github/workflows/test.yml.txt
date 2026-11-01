@@ -1,0 +1,23 @@
+name: Test
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        eslint-version: [9, 10]
+    name: Test (Node 24, ESLint ${{ matrix.eslint-version }})
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install ESLint ${{ matrix.eslint-version }}
+        run: npm i -D eslint@${{ matrix.eslint-version }} --legacy-peer-deps
+      - name: Run tests
+        run: npm run build && npm run spec -- --testPathIgnorePatterns="test/e2e-repo.spec.ts|test/flat-config-typing.spec.ts"

@@ -1,0 +1,122 @@
+name: Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Node
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          cache: 'npm'
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Tests
+        run: npx vitest run test/
+
+      - name: Example tests
+        run: npx vitest run examples/
+
+      - name: Build
+        run: npm run build
+
+  runtime-lint-coverage:
+    name: Runtime, Linting, and Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          cache: 'npm'
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Copy Data
+        run: npm run data
+
+      - name: Set up playwright
+        run: npx playwright install chromium
+
+      - name: Build
+        run: npm run build:only
+
+      - name: Typechecks
+        run: npx tsc
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Runtime tests
+        run: npm run test:runtime -- --browser.headless
+
+      - name: Test coverage
+        run: npm run test:cover
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7.1.1
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-cli:
+    name: CLI
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          cache: 'npm'
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build:only
+
+      - name: Compile Vega
+        run: |
+          bin/vl2vg examples/specs/bar.vl.json -p > bar.vg.json
+          cat bar.vg.json
+
+      - name: Diff compiled Vega
+        run: diff bar.vg.json examples/compiled/bar.vg.json
+
+      - name: Compile PNG, SVG, PDF
+        run: |
+          bin/vl2png examples/specs/bar.vl.json > bar.png
+          bin/vl2svg examples/specs/bar.vl.json > bar.svg
+          bin/vl2pdf examples/specs/bar.vl.json > bar.pdf
+
+      - name: Compile from stdin (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          bin/vl2vg -p < examples/specs/bar.vl.json > bar-stdin.vg.json
+          bin/vl2png < examples/specs/bar.vl.json > bar-stdin.png
+          bin/vl2svg < examples/specs/bar.vl.json > bar-stdin.svg
+          bin/vl2pdf < examples/specs/bar.vl.json > bar-stdin.pdf

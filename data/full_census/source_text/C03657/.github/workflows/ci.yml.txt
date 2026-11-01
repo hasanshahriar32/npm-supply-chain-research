@@ -1,0 +1,421 @@
+
+name: "CI: Build & Test"
+on:
+  push:
+    branches:
+      - main
+      - release/**
+  pull_request:
+
+permissions:
+  contents: read
+  packages: read      # Required for GHCR
+
+jobs:
+  job_lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: "package.json"
+      - name: Install Yarn (if not yet installed)
+        run: yarn --version || npm install -g yarn@1.22.22
+      - name: Install dependencies
+        run: yarn install --ignore-engines --ignore-scripts --frozen-lockfile
+      - name: Lint
+        run: yarn lint
+
+  job_compile:
+    name: Compile Binary (v${{ matrix.node }}) ${{ matrix.target_platform || matrix.os }}, ${{ matrix.arch || matrix.container }}, ${{ contains(matrix.container, 'alpine') && 'musl' || 'glibc'  }}
+    runs-on: ${{ matrix.os }}
+    container:
+      image: ${{ matrix.container }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # x64 glibc
+          - os: ubuntu-22.04
+            container: ghcr.io/getsentry/sentry-test-ubuntu-20.04-amd64:0dd255f3d41d013c1db4c4e08ffd22ee7959c3cc
+            node: 18
+            binary: linux-x64-glibc-108
+          - os: ubuntu-22.04
+            container: ghcr.io/getsentry/sentry-test-ubuntu-20.04-amd64:0dd255f3d41d013c1db4c4e08ffd22ee7959c3cc
+            node: 20
+            binary: linux-x64-glibc-115
+          - os: ubuntu-22.04
+            container: ghcr.io/getsentry/sentry-test-ubuntu-20.04-amd64:0dd255f3d41d013c1db4c4e08ffd22ee7959c3cc
+            node: 22
+            binary: linux-x64-glibc-127
+          - os: ubuntu-22.04
+            container: ghcr.io/getsentry/sentry-test-ubuntu-20.04-amd64:0dd255f3d41d013c1db4c4e08ffd22ee7959c3cc
+            node: 24
+            binary: linux-x64-glibc-137
+          - os: ubuntu-22.04
+            container: ghcr.io/getsentry/sentry-test-ubuntu-20.04-amd64:0dd255f3d41d013c1db4c4e08ffd22ee7959c3cc
+            node: 26
+            binary: linux-x64-glibc-147
+
+            # x64 musl
+          - os: ubuntu-22.04
+            container: node:18-alpine3.17
+            node: 18
+            binary: linux-x64-musl-108
+          - os: ubuntu-22.04
+            container: node:20-alpine3.17
+            node: 20
+            binary: linux-x64-musl-115
+          - os: ubuntu-22.04
+            container: node:22-alpine3.18
+            node: 22
+            binary: linux-x64-musl-127
+          - os: ubuntu-22.04
+            container: node:24-alpine3.20
+            node: 24
+            binary: linux-x64-musl-137
+          - os: ubuntu-22.04
+            container: node:26-alpine3.22
+            node: 26
+            binary: linux-x64-musl-147
+
+            # arm64 glibc
+          - os: ubuntu-22.04
+            arch: arm64
+            node: 18
+            binary: linux-arm64-glibc-108
+          - os: ubuntu-22.04
+            arch: arm64
+            node: 20
+            binary: linux-arm64-glibc-115
+          - os: ubuntu-22.04
+            arch: arm64
+            node: 22
+            binary: linux-arm64-glibc-127
+          - os: ubuntu-22.04
+            arch: arm64
+            node: 24
+            binary: linux-arm64-glibc-137
+          - os: ubuntu-22.04
+            arch: arm64
+            node: 26
+            binary: linux-arm64-glibc-147
+
+            # arm64 musl
+          - os: ubuntu-22.04
+            arch: arm64
+            container: node:18-alpine3.17
+            node: 18
+            binary: linux-arm64-musl-108
+          - os: ubuntu-22.04
+            arch: arm64
+            container: node:20-alpine3.17
+            node: 20
+            binary: linux-arm64-musl-115
+          - os: ubuntu-22.04
+            arch: arm64
+            container: node:22-alpine3.18
+            node: 22
+            binary: linux-arm64-musl-127
+          - os: ubuntu-22.04
+            arch: arm64
+            container: node:24-alpine3.20
+            node: 24
+            binary: linux-arm64-musl-137
+          - os: ubuntu-22.04
+            arch: arm64
+            container: node:26-alpine3.22
+            node: 26
+            binary: linux-arm64-musl-147
+
+            # macos x64
+          - os: macos-15-intel
+            node: 18
+            arch: x64
+            binary: darwin-x64-108
+          - os: macos-15-intel
+            node: 20
+            arch: x64
+            binary: darwin-x64-115
+          - os: macos-15-intel
+            node: 22
+            arch: x64
+            binary: darwin-x64-127
+          - os: macos-15-intel
+            node: 24
+            arch: x64
+            binary: darwin-x64-137
+          - os: macos-15-intel
+            node: 26
+            arch: x64
+            binary: darwin-x64-147
+
+            # macos arm64
+          - os: macos-15
+            arch: arm64
+            node: 18
+            target_platform: darwin
+            binary: darwin-arm64-108
+          - os: macos-15
+            arch: arm64
+            node: 20
+            target_platform: darwin
+            binary: darwin-arm64-115
+          - os: macos-15
+            arch: arm64
+            node: 22
+            target_platform: darwin
+            binary: darwin-arm64-127
+          - os: macos-15
+            arch: arm64
+            node: 24
+            target_platform: darwin
+            binary: darwin-arm64-137
+          - os: macos-15
+            arch: arm64
+            node: 26
+            target_platform: darwin
+            binary: darwin-arm64-147
+
+            # windows x64
+          - os: windows-2022
+            node: 18
+            arch: x64
+            binary: win32-x64-108
+          - os: windows-2022
+            node: 20
+            arch: x64
+            binary: win32-x64-115
+          - os: windows-2022
+            node: 22
+            arch: x64
+            binary: win32-x64-127
+          - os: windows-2022
+            node: 24
+            arch: x64
+            binary: win32-x64-137
+          - os: windows-2022
+            node: 26
+            arch: x64
+            binary: win32-x64-147
+
+    steps:
+      - name: Setup (alpine)
+        if: contains(matrix.container, 'alpine')
+        run: |
+          apk add --no-cache build-base git g++ make curl python3
+          ln -sf python3 /usr/bin/python
+
+      - name: Check out current commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      # Note: On alpine images, this does nothing
+      # The node version will be the one that is installed in the image
+      # If you want to change the node version, you need to change the image
+      # For non-alpine images, this will install the correct version of node
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: contains(matrix.container, 'alpine') == false
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install Yarn (if not yet installed)
+        run: yarn --version || npm install -g yarn@1.22.22
+
+      - name: Increase yarn network timeout on Windows
+        if: contains(matrix.os, 'windows')
+        run: yarn config set network-timeout 600000 -g
+
+      - name: Install dependencies
+        run: yarn install --ignore-engines --ignore-scripts --frozen-lockfile
+
+      - name: Configure safe directory
+        run: |
+          git config --global --add safe.directory "*"
+
+      - name: Setup python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        if: ${{ !contains(matrix.container, 'alpine') }}
+        id: python-setup
+        with:
+          python-version: "3.9.13"
+
+      # Node 26 V8 headers include <source_location>, which requires a newer C++ toolchain.
+      # Our ubuntu-20.04 glibc container defaults to an older compiler, so upgrade only this target.
+      - name: Setup compiler (Node 26 glibc x64)
+        if: matrix.binary == 'linux-x64-glibc-147'
+        run: |
+          # The base container ships a stale Yarn apt source with an expired/missing key.
+          # Remove it so apt-get update can succeed for toolchain installation.
+          rm -f /etc/apt/sources.list.d/yarn.list
+          apt-get update
+          apt-get install -y software-properties-common
+          add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          apt-get update
+          apt-get install -y gcc-12 g++-12
+          echo "CC=gcc-12" >> "$GITHUB_ENV"
+          echo "CXX=g++-12" >> "$GITHUB_ENV"
+
+      - name: Setup (arm64| ${{ contains(matrix.container, 'alpine') && 'musl' || 'glibc'  }})
+        if: matrix.arch == 'arm64' && !contains(matrix.container, 'alpine') && matrix.target_platform != 'darwin'
+        run: |
+          sudo apt-get update
+          sudo apt install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Setup Musl
+        if: contains(matrix.container, 'alpine')
+        run: |
+          curl -OL https://storage.googleapis.com/sentry-dev-infra-build-assets/aarch64-linux-musl-cross.tgz
+          tar -xzvf aarch64-linux-musl-cross.tgz
+          $(pwd)/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc --version
+
+      # configure node-gyp
+      - name: Configure node-gyp
+        if: matrix.arch != 'arm64'
+        run: yarn build:bindings:configure
+
+      - name: Remove unsupported Node LTO flags
+        if: matrix.os == 'windows-2022' && matrix.node == 26 && matrix.arch != 'arm64'
+        shell: pwsh
+        run: |
+          $projectFiles = Get-ChildItem -Path build -Filter *.vcxproj -Recurse
+          foreach ($file in $projectFiles) {
+            $content = Get-Content -Raw -Path $file.FullName
+            $content = $content -replace '(?i)\s*-flto=(thin|full)', ''
+            $content = $content -replace '(?i)\s*/flto=(thin|full)', ''
+            $content = $content -replace '(?i)\s*/opt:lldltojobs=\d+', ''
+            Set-Content -Path $file.FullName -Value $content -NoNewline
+          }
+
+      - name: Configure node-gyp (arm64, ${{ contains(matrix.container, 'alpine') && 'musl' || 'glibc'  }})
+        if: matrix.arch == 'arm64' && matrix.target_platform != 'darwin'
+        run: yarn build:bindings:configure:arm64
+
+      - name: Configure node-gyp (arm64, darwin)
+        if: matrix.arch == 'arm64' && matrix.target_platform == 'darwin'
+        run: yarn build:bindings:configure:arm64
+
+      # build bindings
+      - name: Build Bindings
+        if: matrix.arch != 'arm64'
+        run: |
+          yarn build:bindings
+
+      - name: Build Bindings (arm64, ${{ contains(matrix.container, 'alpine') && 'musl' || 'glibc'  }})
+        if: matrix.arch == 'arm64' && contains(matrix.container, 'alpine') && matrix.target_platform != 'darwin'
+        run: |
+          CC=$(pwd)/aarch64-linux-musl-cross/bin/aarch64-linux-musl-gcc \
+          CXX=$(pwd)/aarch64-linux-musl-cross/bin/aarch64-linux-musl-g++ \
+          BUILD_ARCH=arm64 \
+          yarn build:bindings
+
+      - name: Build Bindings (arm64, ${{ contains(matrix.container, 'alpine') && 'musl' || 'glibc'  }})
+        if: matrix.arch == 'arm64' && !contains(matrix.container, 'alpine') && matrix.target_platform != 'darwin'
+        run: |
+          CC=aarch64-linux-gnu-gcc \
+          CXX=aarch64-linux-gnu-g++ \
+          BUILD_ARCH=arm64 \
+          yarn build:bindings:arm64
+
+      - name: Build Bindings (arm64, darwin)
+        if: matrix.arch == 'arm64' && matrix.target_platform == 'darwin'
+        run: |
+          BUILD_PLATFORM=darwin \
+          BUILD_ARCH=arm64 \
+          yarn build:bindings:arm64
+
+      - name: Build
+        run: yarn build:lib
+
+      - name: Archive Binary
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: stack-trace-${{ matrix.binary }}
+          path: ${{ github.workspace }}/lib/stack-trace-${{matrix.binary}}.node
+          if-no-files-found: error
+
+  job_build:
+    name: Build Package
+    needs: [job_compile]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: "package.json"
+
+      - name: Install Yarn (if not yet installed)
+        run: yarn --version || npm install -g yarn@1.22.22
+
+      - name: Install dependencies
+        run: yarn install --ignore-engines --ignore-scripts --frozen-lockfile
+
+      - name: Build TypeScript
+        run: yarn build:lib
+
+      - name: Extract Prebuilt Binaries
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: stack-trace-*
+          path: ${{ github.workspace }}/lib/
+          merge-multiple: true
+
+      - name: Pack tarball
+        run: yarn build:tarball
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ github.sha }}
+          retention-days: 90
+          path: ${{ github.workspace }}/*.tgz
+
+  job_test_bindings:
+    name: Test (v${{ matrix.node }}) ${{ matrix.os }}
+    needs: [job_build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [
+            ubuntu-24.04,
+            ubuntu-22.04,
+            ubuntu-22.04-arm,
+            macos-latest, # macOS arm64
+            macos-15-intel, # macOS x64
+            windows-latest,
+          ]
+        node: [18, 20, 22, 24, 26]
+    steps:
+      - name: Check out current commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: yarn install --ignore-engines --ignore-scripts --frozen-lockfile
+      - name: Download Tarball
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ github.sha }}
+      - name: Run tests
+        run: yarn test
+
+  job_required_jobs_passed:
+    name: All required jobs passed
+    needs: [job_lint, job_test_bindings]
+    # Always run this, even if a dependent job failed
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for failures
+        if: contains(needs.*.result, 'failure')
+        run: |
+          echo "One of the dependent jobs have failed. You may need to re-run it." && exit 1

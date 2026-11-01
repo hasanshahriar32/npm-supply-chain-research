@@ -1,0 +1,97 @@
+{
+  "author": "Eugene Sharygin <eush77@gmail.com>",
+  "bugs": "https://github.com/syntax-tree/unist-util-select/issues",
+  "contributors": [
+    "Eugene Sharygin <eush77@gmail.com>",
+    "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+    "Christian Murphy <christian.murphy.42@gmail.com>"
+  ],
+  "dependencies": {
+    "@types/unist": "^3.0.0",
+    "css-selector-parser": "^3.0.0",
+    "devlop": "^1.1.0",
+    "nth-check": "^2.0.0",
+    "zwitch": "^2.0.0"
+  },
+  "description": "unist utility to select nodes with CSS-like selectors",
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "c8": "^11.0.0",
+    "prettier": "^3.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-preset-wooorm": "^11.0.0",
+    "type-coverage": "^2.0.0",
+    "typescript": "^6.0.0",
+    "unist-builder": "^4.0.0",
+    "xo": "^2.0.0"
+  },
+  "exports": "./index.js",
+  "files": [
+    "lib/",
+    "index.d.ts.map",
+    "index.d.ts",
+    "index.js"
+  ],
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/unified"
+  },
+  "keywords": [
+    "ast",
+    "attribute",
+    "child",
+    "descendant",
+    "expression",
+    "filter",
+    "find",
+    "match",
+    "node",
+    "selector",
+    "select",
+    "sibling",
+    "tree",
+    "type",
+    "unist-util",
+    "unist",
+    "utility",
+    "util",
+    "visit",
+    "walk"
+  ],
+  "license": "MIT",
+  "name": "unist-util-select",
+  "overrides": {
+    "c8": {
+      "yargs": "^18.0.0"
+    }
+  },
+  "prettier": {
+    "bracketSpacing": false,
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "useTabs": false
+  },
+  "remarkConfig": {
+    "plugins": [
+      "remark-preset-wooorm"
+    ]
+  },
+  "repository": "syntax-tree/unist-util-select",
+  "scripts": {
+    "build": "tsc --build --clean && tsc --build && type-coverage",
+    "format": "remark --frail --output --quiet -- . && prettier --log-level warn --write -- . && xo --fix",
+    "prepack": "npm run build && npm run format",
+    "test-api": "node --conditions development test/index.js",
+    "test-coverage": "c8 --100 --reporter lcov npm run test-api",
+    "test": "npm run build && npm run format && npm run test-coverage"
+  },
+  "sideEffects": false,
+  "typeCoverage": {
+    "atLeast": 100,
+    "strict": true
+  },
+  "type": "module",
+  "version": "5.1.0"
+}

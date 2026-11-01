@@ -1,0 +1,50 @@
+{
+  "name": "workflow-workspace",
+  "private": true,
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@changesets/assemble-release-plan": "^7.0.0",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
+    "@changesets/config": "^4.0.0",
+    "@changesets/pre": "^3.0.0",
+    "@changesets/read": "^1.0.0",
+    "@manypkg/get-packages": "^3.1.0",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/runner": "catalog:",
+    "esbuild": "catalog:",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "turbo": "^2.8.11",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": "^24.0.0"
+  },
+  "packageManager": "pnpm@11.24.0",
+  "scripts": {
+    "prepare": "husky",
+    "build": "turbo build --filter='./packages/*'",
+    "test": "turbo test",
+    "clean": "turbo clean",
+    "typecheck": "turbo typecheck",
+    "test:e2e": "vitest run packages/core/e2e/e2e.test.ts packages/core/e2e/e2e-agent.test.ts packages/core/e2e/e2e-dynamic-workflow.test.ts",
+    "test:e2e:event-log-race-repro": "vitest run packages/core/e2e/event-log-race-repro.test.ts",
+    "test:e2e:event-log-race-repro:local": "bash scripts/event-log-race-repro-local.sh",
+    "test:e2e:nextjs-webpack:staged": "node scripts/test-staged-nextjs-webpack.mjs",
+    "test:docs": "pnpm --filter @workflow/docs-typecheck test:docs",
+    "bench": "vitest run packages/core/e2e/benchmark.test.ts",
+    "lint": "biome check",
+    "format": "biome format --write",
+    "changeset": "changeset",
+    "ci:version": "changeset version",
+    "ci:publish": "pnpm build && changeset publish",
+    "release:notes": "node scripts/generate-release-notes.mjs",
+    "workbench:stage": "node scripts/stage-workbench-with-tarballs.mjs"
+  },
+  "lint-staged": {
+    "**/*": "biome format --write --no-errors-on-unmatched"
+  }
+}

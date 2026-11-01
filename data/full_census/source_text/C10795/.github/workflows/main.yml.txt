@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - master
+      - beta
+      - private-preview
+      - sdk-release/**
+      - feature/**
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+*
+  pull_request:
+    branches:
+      - master
+      - beta
+      - private-preview
+      - sdk-release/**
+      - feature/**
+
+permissions: {}
+
+jobs:
+  build:
+    name: 'Static Checks'
+    runs-on: 'ubuntu-24.04'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          # Disable automatic dependency caching to reduce cache poisoning risk
+          package-manager-cache: false
+
+      - name: Verify Linting
+        run: just lint-check
+
+      - name: Verify Formatting
+        run: just format-check
+
+  test:
+    name: Test (${{ matrix.node }}, ${{ matrix.os }})
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - 'ubuntu-24.04'
+        node:
+          # should include even numbers >= 20
+          # see: https://docs.stripe.com/sdks/versioning?lang=node#stripe-sdk-language-version-support-policy
+          # https://endoflife.date/nodejs
+
+          # note that starting in Oct 2026, every version will be LTS, so it's not just even numbers anymore
+          # see: https://nodejs.org/en/blog/announcements/evolving-the-nodejs-release-schedule
+          # - '26' # not yet compatible with mocha's yargs dependency
+          - '24'
+          - '22'
+          - '20'
+        include:
+          - os: windows-latest
+            # use any modern-ish version
+            node: '24'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read OpenAPI version
+        id: openapi
+        shell: bash
+        run: echo "version=$(< OPENAPI_VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          # Disable automatic dependency caching to reduce cache poisoning risk
+          package-manager-cache: false
+
+      - name: Print Node.js version
+        run: node -v
+
+      # used for one of the integration tests
+      - name: Setup Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v1.x
+
+      - name: Print Deno version
+        run: deno -V
+
+      - uses: stripe/openapi/actions/stripe-mock@master
+        with:
+          openapi_version: ${{ steps.openapi.outputs.version }}
+
+      - name: Test
+        run: just ci-test
+
+  publish:
+    name: Publish
+    environment: release
+    if: >-
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'push') &&
+      startsWith(github.ref, 'refs/tags/v')
+    needs: [build, test]
+    runs-on: 'ubuntu-24.04'
+    permissions:
+      contents: read
+      id-token: write # Required for OIDC
+    steps:
+      # just is called in `yarn prepack`, which is called during the `publish` operation
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          # Disable automatic dependency caching to reduce cache poisoning risk
+          package-manager-cache: false
+      - name: Publish to NPM
+        env:
+          # needed because setup-node writes a .npmrc file with `registry-url` and
+          # `_authToken=${NODE_AUTH_TOKEN}`. OIDC overwrites this with a real token
+          # before anything is uploaded, but we need to have a value for yarn install
+          # to work.
+          NODE_AUTH_TOKEN: XXXXX-XXXXX-XXXXX-XXXXX
+          # npm hides its HTTP exchange, and the OIDC token exchange with it, below
+          # `verbose`. `notice` is npm's own default, so an ordinary release logs exactly
+          # what it does today, and re-running this job with debug logging enabled shows
+          # where a failed publish gave up.
+          NPM_CONFIG_LOGLEVEL: ${{ runner.debug && 'verbose' || 'notice' }}
+        run: |
+          set -euxo pipefail
+          VERSION=$(cat package.json | jq -r '.version')
+          # use the tag correlating to this release channel
+          NPM_TAG=$(cat package.json | jq -r '.version | if contains("beta") then "public-preview" else if contains("alpha") then "private-preview" else "latest" end end')
+          echo "Publishing $VERSION with $NPM_TAG tag."
+          npm publish --tag $NPM_TAG
+      - uses: stripe/openapi/actions/notify-release@master
+        if: always()
+        with:
+          bot_token: ${{ secrets.SLACK_BOT_TOKEN }}

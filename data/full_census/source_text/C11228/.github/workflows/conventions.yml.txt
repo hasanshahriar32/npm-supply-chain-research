@@ -1,0 +1,77 @@
+name: Conventions
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  lint-and-prune:
+    name: Lint and Prune
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup Node and Install Dependencies
+        uses: ./.github/actions/setup-node-deps
+        with:
+          node-version: '22'
+          platform: 'linux-x64'
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@c65c819552d16ad3c9b72d9dfd5ba5237b9c906b # v3
+        with:
+          version: '23.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upgrade Rust to latest stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: clippy
+
+      - name: Rust Cargo and Build cache
+        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+        with:
+          cache-bin: false
+          workspaces: packages/core-bridge -> target
+          prefix-key: corebridge-buildcache
+          shared-key: linux-x64
+          env-vars: ''
+          save-if: false
+
+      - name: Install nexgen
+        run: cargo install nexgen --version '=0.2.11' --locked --features advanced
+
+      - name: Check generated System Nexus bindings are up to date
+        run: |
+          pnpm --filter @temporalio/workflow run gen:system-nexus
+          if [ -n "$(git status --porcelain -- packages/workflow/src/nexus/system/generated packages/common/src/nexus/notifications/generated)" ]; then
+            git diff -- packages/workflow/src/nexus/system/generated packages/common/src/nexus/notifications/generated
+            echo "::error::System Nexus bindings are out of date. Run 'pnpm --filter @temporalio/workflow run gen:system-nexus' with nexgen 0.2.11 and commit the result."
+            exit 1
+          fi
+
+      # eslint-import-resolver-typescript requires packages to be built
+      - name: Compile all non-rust code
+        run: pnpm --recursive --stream --filter '!@temporalio/core-bridge' --filter '!typescript-sdk' run build
+
+      - name: Check generated payload visitor is up to date
+        run: |
+          pnpm run gen:payload-visitor
+          if ! git diff --exit-code -- packages/proto/src/payload-visitor.generated.ts; then
+            echo "::error::payload-visitor.generated.ts is out of date with the protos. Run 'pnpm run gen:payload-visitor' and commit the result."
+            exit 1
+          fi
+
+      - run: pnpm run lint:check
+      - name: Test release preparation
+        run: pnpm release:test
+      - run: pnpm run lint:prune

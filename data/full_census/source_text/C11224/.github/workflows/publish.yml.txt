@@ -1,0 +1,38 @@
+# Publishes changes from develop to master.
+#
+# * Triggers the CD workflow to publish the package if needed.
+# * Documentation will be published on the official site.
+name: Publish
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    environment: production
+
+    permissions:
+        id-token: write # Required by Akeyless
+        contents: read
+        packages: read
+
+    steps:
+      - name: Import Secrets
+        id: import-secrets
+        uses: LanceMcCarthy/akeyless-action@v5
+        with:
+          access-id: ${{ secrets.GH_AKEYLESS_ACCESS_ID }}
+          static-secrets: '{ "${{ secrets.GH_AKEYLESS_GH_TOKEN_PATH }}": "GH_TOKEN" }'
+          export-secrets-to-environment: false
+
+      - name: Check out master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0 # Fetch all branches
+          token: ${{ steps.import-secrets.outputs.GH_TOKEN }}
+
+      - name: Fast-forward master to develop
+        run: |
+          git merge --ff-only --quiet origin/develop
+          git push origin master

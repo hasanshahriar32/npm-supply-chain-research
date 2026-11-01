@@ -1,0 +1,39 @@
+name: Verify v14
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-matrix:
+    uses: ./.github/workflows/_build-matrix.yaml
+
+  lint-and-test:
+    name: Lint and test (${{ matrix.build.NAME }})
+    needs: build-matrix
+    runs-on: ${{ matrix.build.OS }}
+    strategy:
+      fail-fast: true
+      matrix:
+        build: ${{ fromJson(needs.build-matrix.outputs.build_matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Rust build
+        uses: ./.github/actions/setup-rust-build
+        with:
+          target: ${{ matrix.build.TARGET }}
+      - name: Check cargo
+        run: just check-cargo
+      - name: Lint formatting
+        run: just check-formatting
+      - name: Lint clippy
+        run: just check-clippy
+      - name: Cargo test
+        run: just test

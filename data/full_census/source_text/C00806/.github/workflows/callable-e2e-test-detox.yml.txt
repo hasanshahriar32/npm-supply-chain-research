@@ -1,0 +1,212 @@
+name: E2E Test - Detox
+run-name: e2e-detox.${{ inputs.test_name }}
+
+on:
+  workflow_call:
+    inputs:
+      test_name:
+        required: true
+        type: string
+      working_directory:
+        required: true
+        type: string
+      timeout_minutes:
+        required: true
+        type: number
+      host_signout_page:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  e2e-test:
+    name: E2E-Detox ${{ inputs.test_name }}
+    # Pin to macos-15-large: macos-latest rolled to macOS-26 (2026-07-15) which
+    # removed all Xcode 16.x versions. macos-15 image ships Xcode 16.0–16.4.
+    runs-on: macos-15-large
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: amplify-js
+      - name: Setup node and build the repository
+        uses: ./amplify-js/.github/actions/node-and-build
+      - name: Set Xcode version
+        # Prefer Xcode 16.4; fall back to newest 16.x if the exact version is
+        # missing (e.g. runner image update removed it). Fails loudly if no
+        # Xcode 16.x is available at all.
+        run: |
+          XCODE_PATH="/Applications/Xcode_16.4.app"
+          if [ ! -d "$XCODE_PATH" ]; then
+            echo "::warning::Xcode_16.4.app not found. Available Xcode installations:"
+            ls -d /Applications/Xcode_*.app 2>/dev/null || echo "  (none found)"
+            # Fall back to the newest Xcode 16.x
+            XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n1)
+            if [ -z "$XCODE_PATH" ]; then
+              echo "::error::No Xcode 16.x found in /Applications. Cannot proceed."
+              exit 1
+            fi
+            echo "Falling back to: $XCODE_PATH"
+          fi
+          sudo xcode-select -s "$XCODE_PATH"
+          echo "Active Xcode: $(xcode-select -p)"
+      - name: Ensure iPhone 15 simulator exists
+        # The 'iPhone 15' device name is required by detox config in the samples
+        # repo. The macos-15 image does not ship an 'iPhone 15' device, so create
+        # one on the iOS runtime bundled with the selected Xcode (iOS 18.5 for
+        # Xcode 16.4). The image also preinstalls iOS 26.x runtimes for Xcode 26,
+        # so "newest runtime" is not deterministic: it picked iOS 26.2 under
+        # Xcode 16.4. Fallback order: runtime matching the Xcode simulator SDK,
+        # then newest preinstalled iOS 18.x, then newest iOS runtime (warning).
+        # Passkeys tests handle their own sim (iOS 17.4).
+        if: ${{ !contains(inputs.test_name, 'integ_rn_ios_passkeys') }}
+        timeout-minutes: 5
+        run: |
+          RUNTIMES=$(xcrun simctl list runtimes available | grep -oE 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-[0-9]+-[0-9]+' | sort -t- -k2,2n -k3,3n)
+          SDK_VERSION=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          echo "Xcode simulator SDK: iOS $SDK_VERSION"
+          echo "Available iOS runtimes:"
+          echo "$RUNTIMES"
+          WANTED="com.apple.CoreSimulator.SimRuntime.iOS-$(echo "$SDK_VERSION" | tr '.' '-')"
+          if echo "$RUNTIMES" | grep -qx "$WANTED"; then
+            RUNTIME="$WANTED"
+          else
+            RUNTIME=$(echo "$RUNTIMES" | grep -E 'iOS-18-[0-9]+$' | tail -n1)
+            if [ -z "$RUNTIME" ]; then
+              RUNTIME=$(echo "$RUNTIMES" | tail -n1)
+            fi
+            echo "::warning::No runtime matching iOS $SDK_VERSION. Falling back to: ${RUNTIME:-none}"
+          fi
+          if [ -z "$RUNTIME" ]; then
+            echo "::error::No iOS runtime found. Cannot create simulator."
+            exit 1
+          fi
+          echo "Using runtime: $RUNTIME"
+          EXISTING=$(xcrun simctl list devices available -j | jq -r --arg rt "$RUNTIME" '.devices[$rt] // [] | map(select(.name == "iPhone 15")) | .[0].udid // empty')
+          if [ -n "$EXISTING" ]; then
+            echo "iPhone 15 simulator already available on $RUNTIME: $EXISTING"
+          else
+            xcrun simctl create "iPhone 15" "com.apple.CoreSimulator.SimDeviceType.iPhone-15" "$RUNTIME"
+            echo "iPhone 15 simulator created successfully."
+          fi
+      - name: Ensure iOS 17.4 runtime and create simulator
+        # Passkeys tests run on an iOS 17.4 simulator. The macos-15 image only
+        # preinstalls iOS 18.5/18.6 and 26.x runtimes, so 17.4 (~7 GB) is
+        # downloaded when missing (about 2.5 minutes on recent runs). Skip the
+        # download if the runtime is already present, and cap the step so a slow
+        # download fails fast instead of consuming the job timeout.
+        if: ${{ contains(inputs.test_name, 'integ_rn_ios_passkeys') }}
+        timeout-minutes: 20
+        run: |
+          RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-17-4"
+          if xcrun simctl list runtimes available | grep -q "$RUNTIME"; then
+            echo "iOS 17.4 runtime already installed."
+          else
+            echo "iOS 17.4 runtime not installed. Downloading."
+            xcodebuild -downloadPlatform iOS -buildVersion 17.4
+          fi
+          if ! xcrun simctl list runtimes available | grep -q "$RUNTIME"; then
+            echo "::error::iOS 17.4 runtime is not available after download."
+            exit 1
+          fi
+          xcrun simctl create "iPhone 15" "com.apple.CoreSimulator.SimDeviceType.iPhone-15" "$RUNTIME"
+      - name: Setup samples staging repository
+        uses: ./amplify-js/.github/actions/setup-samples-staging
+        with:
+          GH_TOKEN_STAGING_READ: ${{ secrets.GH_TOKEN_STAGING_READ }}
+      - name: Load Verdaccio with AmplifyJs
+        uses: ./amplify-js/.github/actions/load-verdaccio-with-amplify-js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Yarn Install
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          echo "Current NPM registry: " $(yarn config get registry)
+          $GITHUB_WORKSPACE/amplify-js/scripts/retry-yarn-script.sh -s 'install --frozen-lockfile --non-interactive' -n 3
+        shell: bash
+      - name: Install CocoaPods
+        # Retry to guard against transient network failures (CDN/specs fetch)
+        timeout-minutes: 15
+        run: |
+          for i in 1 2 3; do
+            echo "pod install attempt $i"
+            (cd ios && pod install) && break
+            if [ "$i" -eq 3 ]; then
+              echo "::error::pod install failed after 3 attempts"
+              exit 1
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash
+      - name: Start iOS simulator (background)
+        run: |
+          xcrun simctl boot "iPhone 15" &
+        shell: bash
+      - name: Start Metro Packager (background)
+        run: |
+          yarn start &
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash
+      - name: Configure Detox
+        # Retry brew/npm installs to guard against transient network failures
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          # Install applesimutils with retries
+          brew tap wix/brew
+          # Newer Homebrew (macos-15 image ≥2026-06) requires explicit tap trust
+          brew trust wix/brew || true
+          for i in 1 2 3; do
+            echo "brew install applesimutils attempt $i"
+            brew install applesimutils && break || true
+            if [ "$i" -eq 3 ]; then
+              echo "::error::brew install applesimutils failed after 3 attempts"
+              exit 1
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+          # Install detox-cli with retries
+          for i in 1 2 3; do
+            echo "yarn global add detox-cli attempt $i"
+            yarn global add detox-cli && break || true
+            if [ "$i" -eq 3 ]; then
+              echo "::error::yarn global add detox-cli failed after 3 attempts"
+              exit 1
+            fi
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash
+      - name: Detox Build
+        # Full React Native iOS build; observed 14-22 minutes on macos-15-large.
+        timeout-minutes: 40
+        run: |
+          detox build -c ios.sim.debug
+        env:
+          JEST_JUNIT_OUTPUT_DIR: reports/junit
+          JEST_JUNIT_OUTPUT_NAME: detox-test-results.xml
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash
+      - name: Start the http-server and host the oidc signout page locally (background).
+        if: ${{ inputs.host_signout_page }}
+        run: yarn host:signout
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash
+      - name: Detox run
+        # --forceExit (passed through to Jest): after a failed attempt Jest has
+        # reported "Jest did not exit one second after the test run has
+        # completed" and then hung until the 120-minute job timeout, so the
+        # retry loop never ran again. The step timeout caps all attempts
+        # (4 attempts x ~11 minutes on the slowest suites) so a hang cannot
+        # consume the rest of the job.
+        timeout-minutes: 45
+        run: |
+          $GITHUB_WORKSPACE/amplify-js/scripts/retry-yarn-script.sh -s 'detox test -c ios.sim.debug -u --forceExit' -n 3
+        working-directory: ${{ inputs.working_directory }}
+        shell: bash

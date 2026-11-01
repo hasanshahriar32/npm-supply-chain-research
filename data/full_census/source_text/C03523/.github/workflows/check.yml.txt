@@ -1,0 +1,77 @@
+name: Check
+on: pull_request
+jobs:
+  check5:
+    name: Font Awesome 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: ${{ hashFiles('yarn.lock') }}
+      - run: corepack enable
+      - run: yarn
+      - run: yarn add -D @fortawesome/free-regular-svg-icons@5.15.4 @fortawesome/free-solid-svg-icons@5.15.4
+      - run: yarn format:enforce
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn test:schematics
+      - run: yarn build
+      - run: yarn build:schematics
+      - run: yarn build:demo
+      - run: yarn test:demo
+      - run: yarn test:integration
+      - run: yarn test:integration:ssr
+  check6:
+    name: Font Awesome 6
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: ${{ hashFiles('yarn.lock') }}
+      - run: corepack enable
+      - run: yarn
+      - run: yarn add -D @fortawesome/free-regular-svg-icons@6.7.2 @fortawesome/free-solid-svg-icons@6.7.2
+      - run: yarn format:enforce
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn test:schematics
+      - run: yarn build
+      - run: yarn build:schematics
+      - run: yarn build:demo
+      - run: yarn test:demo
+      - run: yarn test:integration
+      - run: yarn test:integration:ssr
+  check7:
+    name: Font Awesome 7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/cache@v4
+        with:
+          path: .yarn/cache
+          key: ${{ hashFiles('yarn.lock') }}
+      - run: corepack enable
+      - run: yarn
+      - run: yarn format:enforce
+      - run: yarn lint
+      - run: yarn test
+      - run: yarn test:schematics
+      - run: yarn build
+      - run: yarn build:schematics
+      - run: yarn build:demo
+      - run: yarn test:demo
+      - run: yarn test:integration
+      - run: yarn test:integration:ssr

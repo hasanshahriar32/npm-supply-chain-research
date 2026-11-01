@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false # prevent test to stop if one fails
+      matrix:
+        node-version: [10, 12, 14, 16, 18, 19]
+        os: [ubuntu-latest] # Skip macos-latest, windows-latest for now
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2.1.5
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/.pkg-cache/
+          key: ${{  matrix.os }}-${{ matrix.node-version }}
+
+      - name: Install deps
+        run: yarn install
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Build
+        run: yarn build
+
+      - name: Check Patches
+        run: ./scripts/test_patch.sh node${{ matrix.node-version }}

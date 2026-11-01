@@ -1,0 +1,77 @@
+{
+    "name": "apify-shared",
+    "private": true,
+    "type": "module",
+    "description": "Tools and constants shared across Apify projects.",
+    "keywords": [
+        "apify"
+    ],
+    "author": {
+        "name": "Apify",
+        "email": "support@apify.com",
+        "url": "https://apify.com"
+    },
+    "contributors": [
+        "Jan Curn <jan@apify.com>",
+        "Marek Trunkát <marek@apify.com>"
+    ],
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/apify/apify-shared-js"
+    },
+    "bugs": {
+        "url": "https://github.com/apify/apify-shared-js/issues"
+    },
+    "homepage": "https://apify.com",
+    "scripts": {
+        "prepare": "husky",
+        "prepublishOnly": "lerna run copy",
+        "clean": "lerna run clean",
+        "build": "lerna run build",
+        "test": "vitest",
+        "test-cov": "vitest --coverage",
+        "release": "pnpm build && lerna version patch && lerna publish from-package --contents dist",
+        "lint": "oxlint --type-aware",
+        "lint:fix": "oxlint --type-aware --fix",
+        "format": "oxfmt",
+        "format:check": "oxfmt --check"
+    },
+    "commitlint": {
+        "extends": [
+            "@commitlint/config-conventional"
+        ]
+    },
+    "lint-staged": {
+        "*.ts": [
+            "oxfmt --write --no-error-on-unmatched-pattern",
+            "oxlint --type-aware --fix --no-error-on-unmatched-pattern"
+        ]
+    },
+    "devDependencies": {
+        "@apify/oxlint-config": "^0.3.0",
+        "@commitlint/config-conventional": "^21.2.4",
+        "@types/node": "^26.6.6",
+        "@vitest/coverage-v8": "^5.0.5",
+        "ajv": "^8.20.0",
+        "commitlint": "^21.2.4",
+        "husky": "^9.1.7",
+        "lerna": "^10.1.1",
+        "lint-staged": "^17.6.0",
+        "nock": "^14.0.17",
+        "oxfmt": "0.72.0",
+        "oxlint": "1.87.0",
+        "oxlint-tsgolint": "7.0.2003",
+        "typescript": "^7.0.2",
+        "vite": "^8.3.5",
+        "vitest": "^5.0.5"
+    },
+    "packageManager": "pnpm@10.33.4+sha512.1c67b3b359b2d408119ba1ed289f34b8fc3c6873412bec6fd264fbdc82489e510fcbecb9ce9d22dae7f3b76269d8441046014bdca53b9979cd7a561ad631b800",
+    "devEngines": {
+        "packageManager": {
+            "name": "pnpm",
+            "version": "10.33.4",
+            "onFail": "warn"
+        }
+    }
+}

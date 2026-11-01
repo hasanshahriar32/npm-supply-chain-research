@@ -1,0 +1,75 @@
+name: Benchmark Comparison
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: bench-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench-compare:
+    name: 'Benchmark Comparison'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+        id: checkout
+        with:
+          # Full history so the script can git-archive the base branch.
+          fetch-depth: 0
+          # Use the PR head SHA so fork PRs resolve correctly
+          # (github.head_ref is a branch name that only exists on the fork remote).
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: wyvox/action-setup-pnpm@v4
+
+      - name: Run benchmark comparison (parse)
+        env:
+          BENCH_JSON_OUTPUT: ${{ runner.temp }}/bench-results.json
+        run: |
+          set -o pipefail
+          pnpm bench:compare | sed 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/bench-output.txt"
+
+      - name: Run benchmark comparison (project mode)
+        if: always() && steps.checkout.outcome == 'success'
+        env:
+          BENCH_JSON_OUTPUT: ${{ runner.temp }}/project-bench-results.json
+        run: |
+          set -o pipefail
+          pnpm bench:project:compare | sed 's/\x1b\[[0-9;]*m//g' > "$RUNNER_TEMP/project-bench-output.txt"
+
+      - name: Format PR comment
+        if: always() && steps.checkout.outcome == 'success'
+        env:
+          BENCH_JOB_SUCCESS: ${{ job.status == 'success' }}
+        run: |
+          node scripts/format-bench-comment.mjs \
+            --section "Parse" "$RUNNER_TEMP/bench-output.txt" "$RUNNER_TEMP/bench-results.json" \
+            --section "Project mode (type-aware)" "$RUNNER_TEMP/project-bench-output.txt" "$RUNNER_TEMP/project-bench-results.json" \
+            > "$RUNNER_TEMP/bench-comment.md"
+
+      - name: Write job summary
+        if: always() && steps.checkout.outcome == 'success'
+        run: cat "$RUNNER_TEMP/bench-comment.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # This job runs with a read-only token for fork PRs, so it cannot post
+      # the comment itself. It uploads the comment body as an artifact and the
+      # privileged bench-comment.yml workflow (workflow_run) posts it — same
+      # path for fork and same-repo PRs.
+      - name: Upload comment artifact
+        if: always() && steps.checkout.outcome == 'success'
+        run: |
+          mkdir -p "$RUNNER_TEMP/comment-artifact"
+          cp "$RUNNER_TEMP/bench-comment.md" "$RUNNER_TEMP/comment-artifact/bench-comment.md"
+          echo "${{ github.event.pull_request.number }}" > "$RUNNER_TEMP/comment-artifact/pr-number.txt"
+
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.checkout.outcome == 'success'
+        with:
+          name: bench-comment
+          path: ${{ runner.temp }}/comment-artifact/

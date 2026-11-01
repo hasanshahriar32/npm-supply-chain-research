@@ -1,0 +1,31 @@
+name: Setup Node.js versions
+
+on:
+  workflow_call:
+    outputs:
+      node-version:
+        description: 'Common Node.js version'
+        value: ${{ jobs.export.outputs.node-version }}
+      npm-version:
+        description: 'Common NPM version'
+        value: ${{ jobs.export.outputs.npm-version }}
+
+env:
+  NODE_VERSION: 20.19.5
+  NPM_VERSION: 11.12.1
+
+permissions: {}
+
+jobs:
+  export:
+    name: Output version variables
+    runs-on: ubuntu-latest
+    outputs:
+      node-version: ${{ steps.setver.outputs.node_version }}
+      npm-version: ${{ steps.setver.outputs.npm_version }}
+    steps:
+      - id: setver
+        name: Output variables
+        run: |
+          echo "node_version=${NODE_VERSION}" >> $GITHUB_OUTPUT
+          echo "npm_version=${NPM_VERSION}" >> $GITHUB_OUTPUT

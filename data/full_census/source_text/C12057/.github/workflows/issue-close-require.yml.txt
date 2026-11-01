@@ -1,0 +1,26 @@
+name: Issue Close Require
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  close-issues:
+    if: github.repository == 'vitejs/vite-plugin-react'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # to check out the repo for local actions
+      issues: write # to close stale issues
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          ref: main
+
+      - name: need reproduction
+        uses: ./.github/actions/issues-helper
+        with:
+          actions: close-issues
+          token: ${{ secrets.GITHUB_TOKEN }}
+          labels: need reproduction
+          inactive-day: 3

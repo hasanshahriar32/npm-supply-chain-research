@@ -1,0 +1,651 @@
+name: Benchmark
+
+# Browser-based benchmark comparison on GitHub-hosted runners.
+#
+# Job graph:
+#   resolve  — resolves head/base refs, computes the example shard matrix,
+#              creates the PR progress comment for /benchmarks runs.
+#   build    — builds the static website for head and base in parallel and
+#              uploads pruned site artifacts.
+#   benchmark — matrix of shards; each shard runs its example subset against
+#              BOTH the head and base site on the SAME runner VM, so the
+#              relative comparison stays valid despite heterogeneous shared
+#              runner hardware. A separate heap-sampling memory pass then runs
+#              once per side to record allocated MB per iteration.
+#   report   — merges shard results, compares head vs base, posts the PR
+#              comment table and/or Slack notification.
+
+on:
+    issue_comment:
+        types: [created]
+    workflow_dispatch:
+        inputs:
+            compare-base:
+                description: 'Base to compare against: a branch name, or npm:<version> for a published npm version'
+                type: string
+                default: b12.1.1
+                required: true
+            notify:
+                description: 'Notify Slack channel'
+                type: boolean
+                default: true
+                required: true
+    schedule:
+        - cron: '0 0 * * *' # Run daily at midnight UTC
+    push:
+        branches:
+            # Release-branch glob (matches release-review.yml / ci.yml). Combined
+            # with the `github.event.created` guard on `resolve`, this benchmarks
+            # the new release line exactly once when the branch is cut.
+            - 'b[0-9][0-9]?.[0-9][0-9]?.[0-9][0-9]?'
+
+env:
+    # Disable git's post-fetch background gc/maintenance for every git invocation
+    # (injected via git's GIT_CONFIG_* protocol). Otherwise it rewrites .git/shallow
+    # concurrently with the next chained `git fetch --depth 1`, intermittently failing
+    # job setup with "fatal: shallow file has changed since we read it".
+    GIT_CONFIG_COUNT: 2
+    GIT_CONFIG_KEY_0: gc.auto
+    GIT_CONFIG_VALUE_0: '0'
+    GIT_CONFIG_KEY_1: maintenance.auto
+    GIT_CONFIG_VALUE_1: 'false'
+    NX_NO_CLOUD: true
+    NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+    NX_BRANCH: ${{ github.ref }}
+    BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+    # Shards are balanced by per-example cost (tools/benchmark/benchmark-costs.json), so an extra shard
+    # shortens the critical path for little extra runner time: setup runs in parallel.
+    AG_SHARD_COUNT: 6
+    # Per-example timeout, above the slowest healthy pass (a memory pass, slowed by heap sampling).
+    # A hung example is skipped in the shard's later passes, so it costs this once per shard.
+    AG_EXAMPLE_TIMEOUT_MS: 360000
+    # Repeat each side N times per shard. The report job aggregates the runs and gates on
+    # cross-run CV — a single run per side cannot separate a real change from shared-runner CPU
+    # drift (~half the suite has a >10% run-to-run noise floor on hosted VMs).
+    AG_BENCHMARK_RUNS: 3
+    IBM_TELEMETRY_DISABLED: 'true'
+
+permissions:
+    contents: read
+
+jobs:
+    # Check permissions for issue_comment events
+    check-permissions:
+        runs-on: ubuntu-24.04
+        outputs:
+            allowed: ${{ steps.check.outputs.allowed }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Check user permissions
+              id: check
+              uses: ./external/ag-shared/github/actions/check-issue-comment-permissions
+              with:
+                  command: '/benchmarks'
+
+    resolve:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            pull-requests: write
+        needs: check-permissions
+        # Only run if permissions check passed (success) or was skipped (for non-issue_comment events)
+        if: |
+            needs.check-permissions.result == 'success' && (
+                github.event_name == 'workflow_dispatch' ||
+                github.event_name == 'schedule' ||
+                (github.event_name == 'push' && github.event.created) ||
+                (github.event_name == 'issue_comment' && needs.check-permissions.outputs.allowed == 'true')
+            )
+        env:
+            JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        outputs:
+            branch: ${{ steps.get-branch.outputs.branch }}
+            base: ${{ steps.get-branch.outputs.base }}
+            base-label: ${{ steps.get-branch.outputs.base-label }}
+            shards: ${{ steps.shards.outputs.shards }}
+            requested: ${{ steps.shards.outputs.requested }}
+            build-matrix: ${{ steps.build-matrix.outputs.build-matrix }}
+            comment-id: ${{ steps.notify-start.outputs.result }}
+        steps:
+            - name: Notify start
+              id: notify-start
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              continue-on-error: true
+              if: github.event_name == 'issue_comment'
+              with:
+                  result-encoding: string
+                  script: |
+                      const { data: comment } = await github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: `⏱️ ${process.env.JOB_URL}`
+                      })
+                      return comment.id;
+
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - id: 'get-branch'
+              run: |
+                  if [[ "${{ github.event_name }}" == "issue_comment" ]] ; then
+                    # For PR comments, benchmark the PR head against the branch's
+                    # MERGE-BASE (the commit it forked from), not the live base-branch
+                    # tip. Comparing against the tip charges the PR for optimisations
+                    # merged into the base after the fork point, manufacturing
+                    # regressions; the merge-base isolates the PR's own diff.
+                    head_ref=$(gh pr view $PR_NO --repo $REPO --json headRefName --jq '.headRefName')
+                    base_ref=$(gh pr view $PR_NO --repo $REPO --json baseRefName --jq '.baseRefName')
+                    merge_base=$(gh api "repos/$REPO/compare/$base_ref...$head_ref" --jq '.merge_base_commit.sha')
+                    echo "branch=${head_ref}" >> $GITHUB_OUTPUT
+                    echo "base=${merge_base}" >> $GITHUB_OUTPUT
+                    echo "base-label=merge-base ${merge_base:0:10} (${base_ref})" >> $GITHUB_OUTPUT
+                  elif [[ "${{ github.event_name }}" == "schedule" ]] ; then
+                    # Scheduled runs compare against the most recently published npm
+                    # version: the head example set runs against the published UMD
+                    # bundles (no base-ref site build needed).
+                    published=$(npm view ag-charts-community version)
+                    echo "branch=latest" >> $GITHUB_OUTPUT
+                    echo "base=npm:${published}" >> $GITHUB_OUTPUT
+                    echo "base-label=npm:${published}" >> $GITHUB_OUTPUT
+                  elif [[ "${{ github.event_name }}" == "push" ]] ; then
+                    # A release branch was just cut: benchmark the new release line
+                    # (this branch) against the previous release — i.e. whatever is
+                    # currently published as the `latest` npm version. As with the
+                    # scheduled run, the npm base swaps published UMD bundles into the
+                    # head site, so no base-ref site build is needed.
+                    published=$(npm view ag-charts-community version)
+                    echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                    echo "base=npm:${published}" >> $GITHUB_OUTPUT
+                    echo "base-label=npm:${published} (prev release)" >> $GITHUB_OUTPUT
+                  else
+                    # For manual workflow dispatch, use the current branch
+                    echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                    echo "base=${{ inputs.compare-base }}" >> $GITHUB_OUTPUT
+                    echo "base-label=${{ inputs.compare-base }}" >> $GITHUB_OUTPUT
+                  fi
+              env:
+                  REPO: ${{ github.repository }}
+                  PR_NO: ${{ github.event.issue.number }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            # The head ref defines the example set; shards must match the pages
+            # the head site artifact contains.
+            - name: Checkout head ref
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ steps.get-branch.outputs.branch }}
+
+            # A published-npm base (npm:<version>) needs no base site build —
+            # the benchmark shards reuse the head site with the published UMD
+            # bundles swapped in. Pages bake absolute library URLs from
+            # PUBLIC_SITE_URL, so each role is built for the fixed port the
+            # shard jobs will serve it from.
+            - name: Compute build matrix
+              id: build-matrix
+              env:
+                  BASE_REF: ${{ steps.get-branch.outputs.base }}
+              run: |
+                  if [[ "${BASE_REF}" == npm:* ]] ; then
+                    echo 'build-matrix=[{"role":"head","port":4601}]' >> $GITHUB_OUTPUT
+                  else
+                    echo 'build-matrix=[{"role":"head","port":4601},{"role":"base","port":4602}]' >> $GITHUB_OUTPUT
+                  fi
+
+            # A `/benchmarks [name...]` PR comment narrows the run to the named
+            # examples; a bare `/benchmarks` (or any non-comment trigger) shards the
+            # full set. The comment body is read from env — never interpolated into
+            # the script — so untrusted comment text cannot inject shell. An unknown
+            # example name fails benchmark-examples.js, so a typo fails loudly here.
+            - name: Compute shard matrix
+              id: shards
+              env:
+                  COMMENT_BODY: ${{ github.event.comment.body }}
+              run: |
+                  examples=""
+                  if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+                    first_line=${COMMENT_BODY%%$'\n'*}
+                    examples=${first_line#/benchmarks}
+                  fi
+                  shards=$(node ./tools/benchmark/benchmark-examples.js --shards "$AG_SHARD_COUNT" --examples "${examples}")
+                  echo "shards=${shards}" >> $GITHUB_OUTPUT
+                  # Reached only when every name was accepted above, so the output holds known example names.
+                  # The memory pass reads it to tell a named zoom example from a bare `/benchmarks` run.
+                  echo "requested=$(tr -s '[:space:],' ',' <<< "${examples}")" >> $GITHUB_OUTPUT
+                  echo "Shard matrix: ${shards}"
+
+    build:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+        needs: resolve
+        strategy:
+            matrix:
+                # head only, or head + base, depending on the base mode —
+                # see "Compute build matrix" in the resolve job.
+                include: ${{ fromJSON(needs.resolve.outputs.build-matrix) }}
+        env:
+            AG_SKIP_NATIVE_DEP_VERSION_CHECK: 1
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ matrix.role == 'head' && needs.resolve.outputs.branch || needs.resolve.outputs.base }}
+
+            - name: Setup
+              uses: ./.github/actions/setup-nx
+              with:
+                  cache_mode: ${{ matrix.role == 'head' && 'rw' || 'ro' }}
+                  fetch_base: skip
+
+            - name: Build website
+              env:
+                  PUBLIC_SITE_URL: http://localhost:${{ matrix.port }}
+                  PUBLIC_HTTPS_SERVER: 'false'
+              # The benchmark-only build target skips all non-benchmark static
+              # paths and the thumbnail generation. Refs that predate it (older
+              # release-branch bases) fall back to the full site build.
+              run: |
+                  if yarn --silent nx show project ag-charts-website 2>/dev/null | grep -q '"build:benchmarks"'; then
+                    yarn nx build:benchmarks ag-charts-website
+                  else
+                    echo "build:benchmarks target not present on this ref; running full site build"
+                    yarn nx build ag-charts-website
+                  fi
+
+            # Like-for-like vs a published base: serve head from its own locally-packed UMD,
+            # so head and the published base are each a packed-tarball bundle through the same
+            # pipeline. Without this, a locally-built head bundle vs a release-packed published
+            # bundle differ by a build-asymmetry offset that inflates head's apparent cost.
+            # git-ref bases are built from source here too, so no swap is needed for them.
+            - name: Pack local head bundles (npm-base parity)
+              if: matrix.role == 'head' && startsWith(needs.resolve.outputs.base, 'npm:')
+              run: ./tools/benchmark/swap-local-lib.sh dist/packages/ag-charts-website
+
+            # Keep only what the benchmark pages need: the example pages
+            # themselves, the dev-served library bundles, example-runner
+            # boilerplate, and hashed astro assets.
+            - name: Prune and package site
+              run: |
+                  cd dist/packages/ag-charts-website
+                  keep=()
+                  for d in vanilla/benchmarks dev example-runner _astro; do
+                    [[ -d "$d" ]] && keep+=("$d")
+                  done
+                  if [[ ! -d vanilla/benchmarks ]]; then
+                    echo "::error::vanilla/benchmarks missing from build output"
+                    exit 1
+                  fi
+                  tar -czf "${RUNNER_TEMP}/site-${{ matrix.role }}.tar.gz" "${keep[@]}"
+                  ls -lh "${RUNNER_TEMP}/site-${{ matrix.role }}.tar.gz"
+
+            - name: Upload site artifact
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: site-${{ matrix.role }}
+                  path: ${{ runner.temp }}/site-${{ matrix.role }}.tar.gz
+                  retention-days: 3
+
+    benchmark:
+        runs-on: ubuntu-24.04
+        # Hosted runners are ~2x slower than the previous bare-metal runner and we now run each
+        # side AG_BENCHMARK_RUNS times. Leaves headroom for a balanced shard plus one hung example.
+        timeout-minutes: 60
+        needs: [resolve, build]
+        strategy:
+            fail-fast: false
+            matrix:
+                examples: ${{ fromJSON(needs.resolve.outputs.shards) }}
+        env:
+            AG_SKIP_NATIVE_DEP_VERSION_CHECK: 1
+            AG_BENCHMARK_SOFT_FAIL: 'true'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ needs.resolve.outputs.branch }}
+
+            - name: Setup
+              uses: ./.github/actions/setup-nx
+              with:
+                  cache_mode: ro
+                  fetch_base: skip
+
+            # Fails closed: a shard without a browser still fails, after the last attempt. The retries
+            # only cover transient download and TLS errors.
+            - name: Install Playwright Chromium
+              run: |
+                  for delay in 10 30; do
+                    npx playwright install chromium && exit 0
+                    echo "::warning::Playwright Chromium install failed; retrying in ${delay}s"
+                    sleep "${delay}"
+                  done
+                  npx playwright install chromium
+
+            - name: Download site artifacts
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  pattern: site-*
+                  path: ${{ runner.temp }}/sites
+                  # The action only nests each artifact in its own subdirectory when
+                  # more than one matches, and an npm base builds head alone. Flatten
+                  # instead — the two tarball names are already distinct.
+                  merge-multiple: true
+
+            # A published-npm base (npm:<version>) reuses the head site with the
+            # published UMD bundles swapped in. Its pages bake absolute library
+            # URLs for the head port, so it is served on 4601 (head and base run
+            # sequentially, never concurrently).
+            - name: Unpack sites
+              env:
+                  BASE_REF: ${{ needs.resolve.outputs.base }}
+              run: |
+                  mkdir -p "${RUNNER_TEMP}/site-head" "${RUNNER_TEMP}/site-base"
+                  tar -xzf "${RUNNER_TEMP}/sites/site-head.tar.gz" -C "${RUNNER_TEMP}/site-head"
+                  if [[ "${BASE_REF}" == npm:* ]] ; then
+                    tar -xzf "${RUNNER_TEMP}/sites/site-head.tar.gz" -C "${RUNNER_TEMP}/site-base"
+                    ./tools/benchmark/swap-published-lib.sh "${BASE_REF#npm:}" "${RUNNER_TEMP}/site-base"
+                    echo "BASE_PORT=4601" >> $GITHUB_ENV
+                  else
+                    tar -xzf "${RUNNER_TEMP}/sites/site-base.tar.gz" -C "${RUNNER_TEMP}/site-base"
+                    echo "BASE_PORT=4602" >> $GITHUB_ENV
+                  fi
+
+            # Head and base run sequentially on this same VM so the relative comparison cancels
+            # per-runner hardware differences. We interleave head/base across AG_BENCHMARK_RUNS
+            # passes (head,base,head,base,…) so each pair is adjacent in time, and the report job
+            # gates on the cross-run variance of the per-run medians.
+            # An example that times out is dropped from this shard's later passes (head and base, and the
+            # memory pass below): a hang repeats every pass and would otherwise cost the whole timeout
+            # each time. An example that merely errors still runs in every pass.
+            - name: Run benchmarks (interleaved head/base, repeated)
+              env:
+                  SHARD_EXAMPLES: ${{ matrix.examples }}
+              run: |
+                  mkdir -p reports/browser-benchmarks/shards
+                  shard_reports=(reports/browser-benchmarks/shards/*-${{ strategy.job-index }}.r*.json)
+                  run_one() {
+                    local role=$1
+                    local port=$2
+                    local run=$3
+                    local remaining
+                    remaining=$(node ./tools/benchmark/shard-failures.js remaining --examples "${SHARD_EXAMPLES}" ${shard_reports[@]+"${shard_reports[@]}"})
+                    local output="reports/browser-benchmarks/shards/${role}-${{ strategy.job-index }}.r${run}.json"
+                    # An empty --examples would mean "every example", so never invoke the runner without
+                    # any. Still leave a report, so a missing file means only a lost shard.
+                    if [[ -z "${remaining}" ]]; then
+                      echo "::warning::${role} run ${run}: every example in this shard timed out earlier; skipping"
+                      echo '{"examples":{},"summary":{"total":0,"success":0,"error":0,"timeout":0,"totalDurationMs":0}}' > "${output}"
+                      shard_reports+=("${output}")
+                      return 0
+                    fi
+                    ./tools/benchmark/serve-and-run.sh \
+                        --dist "${RUNNER_TEMP}/site-${role}" \
+                        --port "${port}" \
+                        --output "${output}" \
+                        -- --examples "${remaining}" --timeout "${AG_EXAMPLE_TIMEOUT_MS}" || {
+                      if [[ "${AG_BENCHMARK_SOFT_FAIL}" == "true" ]]; then
+                        echo "::warning::${role} run ${run} benchmarks had failures (soft-fail mode)"
+                      else
+                        return 1
+                      fi
+                    }
+                    shard_reports+=("${output}")
+                  }
+                  for run in $(seq 1 "${AG_BENCHMARK_RUNS}"); do
+                    run_one head 4601 "${run}"
+                    run_one base "${BASE_PORT}" "${run}"
+                  done
+
+            # Heap sampling slows the page, so it never runs in the timing passes above. Advisory: a
+            # failure only leaves "—" in the comparison, which judges deltas against sampling noise.
+            # memory-examples.js picks the examples: the zoom family is left out of a bare `/benchmarks`.
+            - name: Run memory pass (heap sampling, once per side)
+              env:
+                  SHARD_EXAMPLES: ${{ matrix.examples }}
+                  EVENT_NAME: ${{ github.event_name }}
+                  REQUESTED_EXAMPLES: ${{ needs.resolve.outputs.requested }}
+              run: |
+                  mkdir -p reports/browser-benchmarks/shards
+                  shard_reports=(reports/browser-benchmarks/shards/*-${{ strategy.job-index }}.r*.json)
+                  candidates=$(node ./tools/benchmark/shard-failures.js remaining --examples "${SHARD_EXAMPLES}" ${shard_reports[@]+"${shard_reports[@]}"})
+                  # An `issue_comment` run uses this file from `latest` but checks out the PR branch, which may
+                  # predate memory-examples.js. The pass is advisory, so fall back to the old family filter.
+                  if ! { [[ -f ./tools/benchmark/memory-examples.js ]] && memory_examples=$(node ./tools/benchmark/memory-examples.js --event "${EVENT_NAME}" --candidates "${candidates}" --requested "${REQUESTED_EXAMPLES}"); }; then
+                    echo "::warning::memory-examples.js is missing or failed; selecting the high-perf and zoom examples"
+                    memory_examples=$(tr ',' '\n' <<< "${candidates}" | grep -E '^(high-perf-|data-selection-zoom-)' | paste -sd, - || true)
+                  fi
+                  if [[ -z "${memory_examples}" ]]; then
+                    echo "No examples in this shard qualify for the memory pass (or all timed out earlier); skipping the memory pass."
+                    exit 0
+                  fi
+                  echo "Memory pass examples: ${memory_examples}"
+                  memory_one() {
+                    local role=$1
+                    local port=$2
+                    local output="reports/browser-benchmarks/shards/${role}-${{ strategy.job-index }}.mem.json"
+                    ./tools/benchmark/serve-and-run.sh \
+                        --dist "${RUNNER_TEMP}/site-${role}" \
+                        --port "${port}" \
+                        --output "${output}" \
+                        -- --examples "${memory_examples}" --timeout "${AG_EXAMPLE_TIMEOUT_MS}" --memory || \
+                      echo "::warning::${role} memory pass had failures; allocation data may be incomplete"
+                    # A hang in the head's memory pass is not repeated on the base side.
+                    memory_examples=$(node ./tools/benchmark/shard-failures.js remaining --examples "${memory_examples}" "${output}")
+                  }
+                  memory_one head 4601
+                  if [[ -n "${memory_examples}" ]]; then
+                    memory_one base "${BASE_PORT}"
+                  fi
+
+            - name: Upload shard results
+              if: always()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: bench-results-${{ strategy.job-index }}
+                  path: reports/browser-benchmarks/shards/*
+                  retention-days: 7
+
+    report:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 15
+        needs: [resolve, benchmark]
+        if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+        permissions:
+            contents: read
+            pull-requests: write
+        env:
+            AG_SKIP_NATIVE_DEP_VERSION_CHECK: 1
+            JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ needs.resolve.outputs.branch }}
+
+            - name: Setup
+              uses: ./.github/actions/setup-nx
+              with:
+                  cache_mode: ro
+                  fetch_base: skip
+
+            - name: Download shard results
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  pattern: bench-results-*
+                  path: reports/browser-benchmarks/shards
+                  merge-multiple: true
+
+            # Merge each run's shards into one head/base report per run, then hand every run to the
+            # comparison so it can median across runs and gate on cross-run CV. A missing shard file
+            # means a lost shard, so per-run shard counts are enforced and >=2 complete runs are
+            # required. Failures are contained per example, not per run: an example that errored or
+            # timed out in any pass is left out of all runs and listed by the comparison.
+            - name: Merge shard results
+              env:
+                  SHARDS: ${{ needs.resolve.outputs.shards }}
+              run: |
+                  shopt -s nullglob
+                  expected=$(echo "$SHARDS" | jq length)
+                  node ./tools/benchmark/shard-failures.js excluded \
+                      --shards-dir reports/browser-benchmarks/shards \
+                      --output reports/browser-benchmarks/excluded.json | while IFS= read -r line; do
+                    echo "::warning::Excluded from the comparison: ${line}"
+                  done
+                  good_runs=0
+                  for run in $(seq 1 "${AG_BENCHMARK_RUNS}"); do
+                    head_shards=(reports/browser-benchmarks/shards/head-*.r${run}.json)
+                    base_shards=(reports/browser-benchmarks/shards/base-*.r${run}.json)
+                    if [[ ${#head_shards[@]} -ne $expected || ${#base_shards[@]} -ne $expected ]]; then
+                      echo "::warning::Run ${run} incomplete (expected ${expected}, head: ${#head_shards[@]}, base: ${#base_shards[@]}); skipping"
+                      continue
+                    fi
+                    node ./tools/benchmark/merge-browser-results.js --exclude reports/browser-benchmarks/excluded.json --output "reports/browser-benchmarks/head.r${run}.json" "${head_shards[@]}"
+                    node ./tools/benchmark/merge-browser-results.js --exclude reports/browser-benchmarks/excluded.json --output "reports/browser-benchmarks/base.r${run}.json" "${base_shards[@]}"
+                    good_runs=$((good_runs + 1))
+                  done
+                  if [[ $good_runs -lt 2 ]]; then
+                    echo "::error::Need >=2 complete runs for cross-run gating, got ${good_runs}"
+                    exit 1
+                  fi
+                  echo "Merged ${good_runs} complete run(s)."
+
+                  # Shards with no covered examples have no memory report; a gap just leaves "—".
+                  for side in head base; do
+                    mem_shards=(reports/browser-benchmarks/shards/${side}-*.mem.json)
+                    if [[ ${#mem_shards[@]} -gt 0 ]]; then
+                      node ./tools/benchmark/merge-browser-results.js --exclude reports/browser-benchmarks/excluded.json --output "reports/browser-benchmarks/${side}.mem.json" "${mem_shards[@]}" || \
+                        echo "::warning::${side} memory reports could not be merged; allocation omitted"
+                    fi
+                  done
+
+            - name: Compare results
+              id: compare
+              run: |
+                  mkdir -p reports
+                  base_args=() compare_args=()
+                  for f in reports/browser-benchmarks/base.r*.json; do base_args+=(--base "$f"); done
+                  for f in reports/browser-benchmarks/head.r*.json; do compare_args+=(--compare "$f"); done
+                  # Allocation columns, when the memory pass produced reports. Reported, never gated.
+                  memory_args=()
+                  if [[ -f reports/browser-benchmarks/base.mem.json ]]; then memory_args+=(--base-memory reports/browser-benchmarks/base.mem.json); fi
+                  if [[ -f reports/browser-benchmarks/head.mem.json ]]; then memory_args+=(--compare-memory reports/browser-benchmarks/head.mem.json); fi
+                  compare() {
+                    node ./tools/benchmark/compare-browser-results.js \
+                        "${base_args[@]}" "${compare_args[@]}" ${memory_args[@]+"${memory_args[@]}"} \
+                        --excluded reports/browser-benchmarks/excluded.json \
+                        --base-label "${{ needs.resolve.outputs.base-label }}" \
+                        --compare-label "${{ needs.resolve.outputs.branch }}" \
+                        --report-only --format "$1"
+                  }
+                  compare table > reports/browser-benchmark.log
+                  compare json > reports/browser-benchmark.json
+                  cat reports/browser-benchmark.log
+                  echo "report<<EOF" >> $GITHUB_OUTPUT
+                  cat reports/browser-benchmark.log >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+
+            - name: Notify Success
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              continue-on-error: true
+              if: success() && github.event_name == 'issue_comment'
+              env:
+                  BROWSER_CONTENT: ${{ steps.compare.outputs.report }}
+              with:
+                  script: |
+                      const body = `✅ ${process.env.JOB_URL}\n\n**Browser Benchmarks**\n\`\`\`\n${process.env.BROWSER_CONTENT}\n\`\`\`\n`;
+                      github.rest.issues.updateComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        comment_id: ${{ needs.resolve.outputs.comment-id }},
+                        body,
+                      })
+
+            - name: Notify Failure
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              continue-on-error: true
+              if: failure() && github.event_name == 'issue_comment'
+              with:
+                  script: |
+                      const body = `❌ ${process.env.JOB_URL}`
+                      github.rest.issues.updateComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        comment_id: ${{ needs.resolve.outputs.comment-id }},
+                        body,
+                      })
+
+            # Slack notifications post via chat.postMessage with the CI bot token
+            # (SLACK_BOT_OAUTH_TOKEN — same token the release-review workflow uses).
+            # Channel is the only per-case variable: release-cut pushes report to
+            # the release-status channel, everything else to the performance channel.
+            - name: Slack Notification (Browser)
+              if: >-
+                  success() && (
+                    github.event_name == 'schedule' ||
+                    (github.event_name == 'push' && github.event.created) ||
+                    (github.event_name == 'workflow_dispatch' && inputs.notify == true)
+                  )
+              continue-on-error: true
+              env:
+                  SLACK_CHANNEL: ${{ github.event_name == 'push' && '#charts_teamcity_status' || '#charts-performance' }}
+                  SLACK_ICON: 'https://avatars.slack-edge.com/2020-11-25/1527503386626_319578f21381f9641cd8_192.png'
+                  SLACK_USERNAME: 'ag-charts CI'
+                  SLACK_BOT_OAUTH_TOKEN: ${{ secrets.SLACK_BOT_OAUTH_TOKEN }}
+              run: |
+                  node ./tools/benchmark/format-browser-slack-message.js > ./reports/browser-benchmark-slack.json
+                  response=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                      -H "Authorization: Bearer ${SLACK_BOT_OAUTH_TOKEN}" \
+                      -H 'Content-type: application/json; charset=utf-8' \
+                      --data @./reports/browser-benchmark-slack.json)
+                  echo "$response"
+                  echo "$response" | grep -q '"ok":true' || { echo "::warning::Slack post failed"; exit 1; }
+
+            - name: Slack Notification (failure)
+              if: >-
+                  failure() && (
+                    github.event_name == 'schedule' ||
+                    (github.event_name == 'push' && github.event.created) ||
+                    (github.event_name == 'workflow_dispatch' && inputs.notify == true)
+                  )
+              continue-on-error: true
+              env:
+                  SLACK_CHANNEL: ${{ github.event_name == 'push' && '#charts_teamcity_status' || '#charts-performance' }}
+                  SLACK_ICON: 'https://avatars.slack-edge.com/2020-11-25/1527503386626_319578f21381f9641cd8_192.png'
+                  SLACK_USERNAME: 'ag-charts CI'
+                  SLACK_BOT_OAUTH_TOKEN: ${{ secrets.SLACK_BOT_OAUTH_TOKEN }}
+              run: |
+                  mkdir -p reports
+                  cat <<EOF > ./reports/benchmark-slack.json
+                  {
+                    "channel": "${SLACK_CHANNEL}",
+                    "username": "${SLACK_USERNAME}",
+                    "icon_url": "${SLACK_ICON}",
+                    "blocks": [
+                      {
+                        "type": "section",
+                        "text": {
+                          "type": "mrkdwn",
+                          "text": "❌ Benchmark failed: [Run #${{ github.run_id }}](${JOB_URL})"
+                        }
+                      }
+                    ]
+                  }
+                  EOF
+                  response=$(curl -sS -X POST https://slack.com/api/chat.postMessage \
+                      -H "Authorization: Bearer ${SLACK_BOT_OAUTH_TOKEN}" \
+                      -H 'Content-type: application/json; charset=utf-8' \
+                      --data @./reports/benchmark-slack.json)
+                  echo "$response"
+                  echo "$response" | grep -q '"ok":true' || { echo "::warning::Slack post failed"; exit 1; }
+
+            - name: Persist benchmark results
+              if: always()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: benchmark-results
+                  path: |
+                      reports/browser-benchmarks/*
+                      reports/browser-benchmark.*

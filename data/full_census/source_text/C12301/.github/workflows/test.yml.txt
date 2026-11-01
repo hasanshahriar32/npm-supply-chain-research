@@ -1,0 +1,125 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new commit supersedes the previous one's jobs, so stop paying for them.
+# Only pull request runs share a group; every other run gets a group of its own
+# (`github.run_id`), because a group holds at most one pending run and a later
+# push would otherwise evict the one waiting — `cancel-in-progress` protects the
+# running run, not the queued one. `main` runs publish the coverage later
+# comparisons are measured against, and losing one would also hide a breakage
+# that is already on the default branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - run: npm ci
+
+      - name: Cache eslint result
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .eslintcache
+          key: lint-eslint-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/eslint.config.mjs') }}
+          restore-keys: lint-eslint-
+
+      - run: npm run lint
+
+      - name: Build types
+        run: npm run build:types
+
+      - name: Check types are up to date
+        run: if [ -n "$(git status types --porcelain)" ]; then echo "Types are out of date. Update them by running 'npm run build:types'"; git status types --porcelain; exit 1; else echo "Types are up to date"; fi
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x, 25.x]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: calculate_architecture
+        with:
+          result-encoding: string
+          script: |
+            if ('${{ matrix.os }}' === 'macos-latest' && ('${{ matrix['node-version'] }}' === '10.x' || '${{ matrix['node-version'] }}' === '12.x' || '${{ matrix['node-version'] }}' === '14.x')) {
+              return "x64"
+            } else {
+              return ''
+            }
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          architecture: ${{ steps.calculate_architecture.outputs.result }}
+          # Legacy Node (10-16) reinstalls deps after dropping/bypassing
+          # package-lock.json, so there's no lockfile for setup-node's npm
+          # cache to key on. Node 10 installs with yarn, so ~/.npm is never
+          # created and the cache-save post step fails the job.
+          # NOTE: 'npm' must be the truthy branch - `<legacy> && '' || 'npm'`
+          # always evaluates to 'npm', because '' is falsy in GitHub
+          # expressions.
+          cache: ${{ (matrix.node-version != '10.x' && matrix.node-version != '12.x' && matrix.node-version != '14.x' && matrix.node-version != '16.x') && 'npm' || '' }}
+          package-manager-cache: ${{ matrix.node-version != '10.x' && matrix.node-version != '12.x' && matrix.node-version != '14.x' && matrix.node-version != '16.x' }}
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          rm -f package-lock.json
+
+          npm config set progress false
+
+          if [ "${{ matrix.node-version }}" = "10.x" ]; then
+            yarn add -D jest@27 --ignore-scripts --ignore-engines
+          elif [ "${{ matrix.node-version }}" = "12.x" ] || [ "${{ matrix.node-version }}" = "14.x" ]; then
+            npm install -g npm@7
+            npm install --save-dev jest@27
+          else
+            npm install --save-dev jest@27
+          fi
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x'
+
+      - name: Install dependencies
+        run: npm ci
+        if: matrix.node-version != '10.x' && matrix.node-version != '12.x' && matrix.node-version != '14.x' && matrix.node-version != '16.x'
+
+      # Node.js 22+ runs the tests with `node:test`; older versions, which
+      # lack a usable `node:test` (e.g. snapshots), run them with Jest.
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        if: matrix.node-version != '10.x' && matrix.node-version != '12.x' && matrix.node-version != '14.x' && matrix.node-version != '16.x' && matrix.node-version != '18.x' && matrix.node-version != '20.x'
+
+      - name: Run tests with coverage (Jest)
+        run: npm run test:legacy:coverage -- --ci
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x' || matrix.node-version == '18.x' || matrix.node-version == '20.x'
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          flags: integration
+          token: ${{ secrets.CODECOV_TOKEN }}

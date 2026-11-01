@@ -1,0 +1,217 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+      - maint/**
+
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' && !startsWith(github.ref_name, 'maint/') && github.event_name == 'push' }}
+
+env:
+  DRY_RUN: ${{ github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'maint/') }}
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: ⚙️ Setup
+        uses: containerbase/internal-tools/setup@2082203142ae62859ac4a86919258077c6460403 # v5.3.12
+        with:
+          save-cache: true
+  test:
+    needs:
+      - setup
+    name: ${{ matrix.node-version == 24 && format('test ({0})', matrix.os) || format('test ({0}, node-{1})', matrix.os, matrix.node-version) }}
+    runs-on: ${{ matrix.os }}
+
+    # tests shouldn't need more time
+    timeout-minutes: 30
+
+    permissions:
+      id-token: write
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version:
+          - 24
+          - 26
+
+    env:
+      coverage: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 24 }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 10 # required for coverage
+          show-progress: false
+          filter: blob:none # we don't need all blobs
+
+      - name: ⚙️ Setup
+        uses: containerbase/internal-tools/setup@2082203142ae62859ac4a86919258077c6460403 # v5.3.12
+        with:
+          checkout: false
+          node-version: ${{ matrix.node-version }}
+          save-cache: true
+
+      - name: Init platform
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+          echo "Node $(node --version)"
+          echo "pnpm $(pnpm --version)"
+
+      - name: Build
+        run: pnpm build
+
+      - name: Unit tests
+        shell: bash
+        run: pnpm vitest --coverage "${coverage}" --logHeapUsage
+
+      - name: Upload coverage
+        if: env.coverage == 'true' && github.event_name != 'merge_group' && !cancelled()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage
+          path: coverage
+
+      - name: Codecov test results
+        if: github.event_name != 'merge_group' && !cancelled()
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          report_type: test_results
+          flags: node${{ matrix.node-version }}-${{ runner.os }}
+
+      - name: Codecov coverage results
+        if: env.coverage == 'true' && github.event_name != 'merge_group'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          flags: node${{ matrix.node-version }}-${{ runner.os }}
+
+  lint:
+    needs:
+      - setup
+    runs-on: ubuntu-latest
+
+    # lint shouldn't need more than 10 min
+    timeout-minutes: 15
+    env:
+      # node and pnpm come from the setup action, so `mise exec` must not
+      # install them again
+      MISE_EXEC_AUTO_INSTALL: 'false'
+
+    steps:
+      - name: ⚙️ Setup
+        uses: containerbase/internal-tools/setup@2082203142ae62859ac4a86919258077c6460403 # v5.3.12
+
+      - name: Init platform
+        run: |
+          echo "Node $(node --version)"
+          echo "pnpm $(pnpm --version)"
+
+      - name: Lint
+        run: |
+          pnpm oxlint --format github
+          pnpm markdown-lint
+          pnpm oxfmt
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Install the workflow linters
+        uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+        with:
+          install_args: jactionlint shellcheck zizmor
+
+      - name: Check workflow files
+        run: mise exec -- jactionlint --color
+
+      - name: Run zizmor
+        run: mise exec -- zizmor --format github .github/
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  release:
+    needs:
+      - lint
+      - test
+    runs-on: ubuntu-latest
+    # release shouldn't need more than 5 min
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+      issues: write
+      id-token: write
+
+    steps:
+      # full checkout for semantic-release, which pushes with its own token
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          show-progress: false
+          filter: blob:none # we don't need all blobs
+
+      - name: ⚙️ Setup
+        uses: containerbase/internal-tools/setup@2082203142ae62859ac4a86919258077c6460403 # v5.3.12
+        with:
+          checkout: false
+
+      - name: semantic-release
+        run: pnpm semantic-release --dry-run "${DRY_RUN}" --ci "${CI_MODE}"
+        env:
+          CI_MODE: ${{ env.DRY_RUN != 'true' }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+  # Catch-all required check
+  success:
+    needs:
+      - setup
+      - lint
+      - test
+      - release
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 1
+
+    if: always()
+    steps:
+      - name: Fail for failed or skipped setup job
+        if: |
+          needs.setup.result == 'failure' ||
+          needs.setup.result == 'skipped'
+        run: exit 1
+
+      - name: Fail for failed or skipped lint job
+        if: |
+          needs.lint.result == 'failure' ||
+          needs.lint.result == 'skipped'
+        run: exit 1
+
+      - name: Fail for failed or skipped lint job
+        if: |
+          needs.test.result == 'failure' ||
+          needs.test.result == 'skipped'
+        run: exit 1
+
+      - name: Fail for failed or skipped release job
+        if: |
+          needs.release.result == 'failure' ||
+          needs.release.result == 'skipped'
+        run: exit 1

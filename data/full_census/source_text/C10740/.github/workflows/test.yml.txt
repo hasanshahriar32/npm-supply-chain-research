@@ -1,0 +1,43 @@
+name: Checks
+
+on:
+  push:
+    branches:
+      - next
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: Check everything!
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Set node version
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: "pnpm"
+      - name: install and compile
+        run: pnpm install --frozen-lockfile
+      - name: build
+        run: pnpm build
+      - name: lint
+        run: pnpm lint
+      - name: format check
+        run: pnpm format:check
+      - name: type check example
+        run: pnpm --filter expo-example check
+      - name: Restore Jest cache
+        uses: actions/cache@v5
+        with:
+          path: /tmp/jest_cache
+          key: jest-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            jest-${{ runner.os }}-
+      - name: test
+        run: pnpm test
+        env:
+          JEST_CACHE_DIRECTORY: /tmp/jest_cache

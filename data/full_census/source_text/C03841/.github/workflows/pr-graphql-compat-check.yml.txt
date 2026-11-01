@@ -1,0 +1,61 @@
+name: Build & Test PR w/ GraphQL Regressions
+on:
+  push:
+    # only on merge to main.
+    # it's rare that this workflow would
+    # show us an error, but when it does it's important!
+    branches: [main]
+    # don't run this regression suite if we don't need to
+    paths-ignore:
+      - '**.md'
+      - 'examples'
+      - '!examples/monaco-graphql-webpack'
+
+# TODO: test matrix?
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        release:
+          # test against the latest 16.x version, which might be newer than what we have
+          - '^16'
+          # test against the oldest version we support
+          - '^16.0.0'
+          # test against the latest alpha
+          - '^17.0.0-alpha'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+      - name: Cache node modules
+        uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: node_modules-${{hashFiles('pnpm-lock.yaml')}}
+          restore-keys: node_modules-
+      - name: Force GraphQL ${{ matrix.release }} solution
+        run: pnpm repo:resolve graphql@${{ matrix.release }}
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Turbo cache
+        uses: ./.github/actions/turbo-cache
+
+      - name: Unit Tests
+        run: pnpm test
+
+      - name: Cypress
+        run: |
+          pnpm --filter graphiql exec cypress install
+          pnpm e2e

@@ -1,0 +1,225 @@
+name: Compiler Compatibility Tests
+
+# Verifies that the compiler inside @analogjs/vite-plugin-angular runs
+# against every Angular major version it claims to support
+# (peerDependencies in packages/vite-plugin-angular/package.json).
+#
+# Why this exists separately from conformance.yml:
+#   - conformance.yml downloads Angular's reference test fixtures at a
+#     specific version, but compiles them using whatever @angular/compiler
+#     is installed in the workspace (currently 21.x). It tests "does our
+#     output match the reference fixtures?" — not "does our compiler run
+#     against this Angular version's API surface?".
+#   - This workflow swaps @angular/compiler (and @angular/compiler-cli)
+#     to the matrix version via pnpm.overrides, then runs the compiler
+#     unit/integration suite. Failures here mean the compiler crashes
+#     against a peer dep version it claims to support.
+#   - The Angular runtime packages the suite boots (core, common,
+#     platform-browser, platform-browser-dynamic, router) are pinned to
+#     the same version. Angular's partial declarations require core and
+#     compiler to match (core 22.1's `ɵɵngDeclareService` calls a
+#     compiler API older compilers don't have), so mixing the workspace's
+#     core with the matrix compiler would fail before our compiler runs.
+#
+# Matrix policy:
+#   - Each numeric slot pins the FLOOR of a supported major (e.g. 20.0.0).
+#     Pinning the floor gives a reproducible, deterministic CI signal —
+#     "the lowest supported version of major N still works." Bumping the
+#     floor when peerDependencies changes is a deliberate choice that
+#     should be paired with a CHANGELOG note.
+#   - The `next` slot installs `@angular/compiler@next` (Angular's prerelease
+#     dist-tag) and is allowed to fail — it gives early warning when the
+#     next major drops a breaking change without blocking the workflow.
+#   - When packages/vite-plugin-angular/package.json bumps the
+#     peerDependencies floor, drop the lowest matrix slot. When a new
+#     Angular major ships, add a new floor slot.
+#
+# Regression-issue policy:
+#   - On `push` to beta, a failure auto-opens (or comments on an existing)
+#     GitHub issue using the bug-report template's section structure. PR
+#     failures show in the PR check and don't open issues, to avoid spam.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [beta]
+    paths:
+      - 'packages/vite-plugin-angular/src/lib/compiler/**'
+      - 'package.json'
+      - '.github/workflows/compiler-compat.yml'
+  push:
+    branches: [beta]
+    paths:
+      - 'packages/vite-plugin-angular/src/lib/compiler/**'
+      - 'package.json'
+      - '.github/workflows/compiler-compat.yml'
+
+env:
+  NODE_OPTIONS: --max-old-space-size=16384
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  compat:
+    runs-on: ubuntu-latest
+    # The `next` slot is allowed to fail — it tracks Angular's prerelease
+    # dist-tag, which may legitimately break the compiler before we ship a
+    # fix. All numeric (floor) slots are required-passing.
+    continue-on-error: ${{ matrix.angular-version == 'next' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Numeric slots cover the supported peerDependencies range, pinned
+        # to the floor of each major as a deterministic CI signal.
+        angular-version: ['20.0.0', '21.0.0', 'next']
+
+    name: Angular ${{ matrix.angular-version }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: .node-version
+      - run: npm install --global corepack@0.31.0
+      - run: corepack enable
+      - run: pnpm --version
+      - uses: actions/setup-node@v3
+        with:
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Pin @angular/compiler, @angular/compiler-cli and the Angular runtime via pnpm overrides
+        # pnpm 11 reads `overrides` from pnpm-workspace.yaml, not from the
+        # root package.json `pnpm` field — so the matrix pin must be injected
+        # there. Replace the entries in the existing `overrides:` block
+        # (appending a fresh block if one isn't present) — the workspace already
+        # pins them, and a repeated key is a YAML duplicate-mapping-key error.
+        run: |
+          node -e "
+          const fs = require('fs');
+          const f = 'pnpm-workspace.yaml';
+          const v = '${{ matrix.angular-version }}';
+          const pinned = ['@angular/compiler', '@angular/compiler-cli', '@angular/core', '@angular/common', '@angular/platform-browser', '@angular/platform-browser-dynamic', '@angular/router'];
+          const lines = fs.readFileSync(f, 'utf-8').split('\n');
+          let i = lines.findIndex(l => l.trim() === 'overrides:');
+          if (i < 0) { lines.push('overrides:'); i = lines.length - 1; }
+          let end = i + 1;
+          while (end < lines.length && (lines[end].trim() === '' || /^\s/.test(lines[end]))) end++;
+          const kept = lines.slice(i + 1, end).filter(
+            l => !pinned.includes(l.split(':')[0].trim().replace(/['\"]/g, '')));
+          lines.splice(i + 1, end - i - 1,
+            ...pinned.map(p => \"  '\" + p + \"': '\" + v + \"'\"),
+            ...kept);
+          fs.writeFileSync(f, lines.join('\n'));
+          console.log(lines.join('\n'));
+          "
+
+      - name: Install with overridden Angular
+        # --no-frozen-lockfile because we just modified pnpm-workspace.yaml above.
+        # --prefer-offline still hits the cache for everything else.
+        # --ignore-scripts skips the root `prepare` package build, which
+        # type-checks every package against the overridden Angular version.
+        run: pnpm install --no-frozen-lockfile --prefer-offline --ignore-scripts
+
+      - name: Verify installed @angular/compiler version
+        run: |
+          INSTALLED=$(node -p "require('@angular/compiler/package.json').version")
+          echo "Installed @angular/compiler: $INSTALLED"
+          # Sanity check: for numeric matrix slots, the major must match.
+          # The `next` (and any future dist-tag) slot is skipped — we just
+          # echo the resolved version for the run log.
+          if [[ '${{ matrix.angular-version }}' =~ ^[0-9] ]]; then
+            MATRIX_MAJOR=$(echo '${{ matrix.angular-version }}' | sed -E 's/[^0-9]*([0-9]+).*/\1/')
+            INSTALLED_MAJOR=$(echo "$INSTALLED" | cut -d. -f1)
+            if [ "$INSTALLED_MAJOR" != "$MATRIX_MAJOR" ]; then
+              echo "::error::Expected @angular/compiler major $MATRIX_MAJOR, got $INSTALLED"
+              exit 1
+            fi
+          fi
+
+      - name: Run compiler test suite
+        # Surfaces compiler-vs-Angular API mismatches via DEBUG output so
+        # silently-caught errors (like the LiteralMapPropertyAssignment
+        # constructor regression on 20.3.x) appear in CI logs.
+        env:
+          DEBUG: 'analog-fast-compile*'
+        # Use the package config directly: the root config loads every
+        # project, some of which import built dist output.
+        run: pnpm exec vitest run --config packages/vite-plugin-angular/vite.config.ts packages/vite-plugin-angular/src/lib/compiler/
+
+      - name: Open or update regression issue (push to beta only)
+        # PRs already surface failures via the check status — auto-opening
+        # issues for PRs would create spam. Only fire on direct beta pushes
+        # so the issue tracker reflects the state of `main`-ish branches.
+        if: failure() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          MATRIX_VERSION='${{ matrix.angular-version }}'
+          TITLE="CI: compiler compatibility regression against @angular/compiler@${MATRIX_VERSION}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COMMIT_URL="${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}"
+
+          # Body mirrors .github/ISSUE_TEMPLATE/01-bug-report.yml section structure
+          # so a maintainer reading the issue gets the same shape they'd get
+          # from a manually-filed report.
+          BODY=$(cat <<EOF
+          > 🤖 Auto-opened by \`.github/workflows/compiler-compat.yml\`. Once the regression is fixed, please close this issue with a reference to the fixing commit.
+
+          ## Please provide the environment you discovered this bug in.
+
+          - **Branch**: \`${{ github.ref_name }}\`
+          - **Commit**: [${{ github.sha }}]($COMMIT_URL)
+          - **Failing workflow run**: $RUN_URL
+          - **Matrix slot**: \`@angular/compiler@${MATRIX_VERSION}\`
+          - **Workspace pin**: see \`package.json\` for the version that the workspace currently builds against
+          - **Reproduction**: \`pnpm install --ignore-scripts\` with the \`overrides:\` block of \`pnpm-workspace.yaml\` setting \`@angular/compiler\`, \`@angular/compiler-cli\` and the Angular runtime packages (core, common, platform-browser, platform-browser-dynamic, router) to \`${MATRIX_VERSION}\`, then \`DEBUG=analog-fast-compile* pnpm exec vitest run --config packages/vite-plugin-angular/vite.config.ts packages/vite-plugin-angular/src/lib/compiler/\`
+
+          ## Which area/package is the issue in?
+
+          \`vite-plugin-angular\`
+
+          ## Description
+
+          The \`packages/vite-plugin-angular/src/lib/compiler/\` test suite failed when run against \`@angular/compiler@${MATRIX_VERSION}\` after passing against the workspace-pinned version. This indicates an API-surface regression — a class export, method signature, or behavior in this Angular version differs from what the workspace pin provides, and the compiler depends on the difference.
+
+          The compatibility matrix exists precisely to catch this class of failure ahead of user reports — see \`packages/vite-plugin-angular/src/lib/compiler/COMPILER.md\` § Compatibility Testing for the design rationale.
+
+          ## Please provide the exception or error you saw
+
+          See the [failing workflow run]($RUN_URL) for full output. The \`Run compiler test suite\` step has \`DEBUG=analog-fast-compile*\` enabled, so silently-caught compiler errors should appear in the log alongside any thrown exceptions.
+
+          ## Other information
+
+          - **First seen**: this commit (auto-detected). If the same matrix slot fails on subsequent commits, this issue will be updated rather than duplicated.
+          - **Triage hint**: \`grep -n "is not a constructor\\|is not a function\\|Cannot read prop" <run-log>\` is usually the fastest way to spot API-surface drift in the DEBUG output.
+          EOF
+          )
+
+          # Dedup: stable title per matrix slot. Look for an OPEN issue with
+          # the exact title; if present, comment on it instead of opening a
+          # new one. Closed issues do not block — if a previously-fixed
+          # regression returns, we open a fresh issue.
+          EXISTING=$(gh issue list \
+            --repo "${{ github.repository }}" \
+            --search "in:title \"$TITLE\"" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            echo "Existing open issue #$EXISTING — adding a comment with the new failing run."
+            gh issue comment "$EXISTING" \
+              --repo "${{ github.repository }}" \
+              --body "New failure detected on commit [${{ github.sha }}]($COMMIT_URL) — [run]($RUN_URL)."
+          else
+            echo "No existing open issue — creating a new one."
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$TITLE" \
+              --label "bug,vite-plugin-angular" \
+              --body "$BODY"
+          fi

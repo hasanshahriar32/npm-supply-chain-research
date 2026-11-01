@@ -1,0 +1,36 @@
+on:
+  schedule:
+    # Timezone is UTC
+    # https://crontab.guru/#0_0_*_*_*
+    # At 00:00 every day.
+    - cron: '0 0 * * *'
+
+  # Allows us to manually trigger a nightly
+  # Since npm prevents duplicate releases we can run this at any time
+  # As long as the commit hash has changed on main a release will be published
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: write
+
+name: release-nightly
+
+jobs:
+  release-nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Node and dependencies
+        uses: mongodb-labs/drivers-github-tools/node/setup@v3
+      - id: build_nightly
+        run: npm run build:nightly
+      - if: ${{ steps.build_nightly.outputs.publish == 'yes' }}
+        name: Dispatch npm-publish workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node ./.github/scripts/dispatch-and-wait.mjs npm-publish.yml \
+            tag=nightly \
+            version="$(node -p "require('./package.json').version")" \
+            ref="${{ github.sha }}"

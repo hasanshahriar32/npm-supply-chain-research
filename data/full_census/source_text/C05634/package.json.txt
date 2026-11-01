@@ -1,0 +1,62 @@
+{
+  "name": "termi-link",
+  "version": "2.0.2",
+  "description": "This library provides terminal links for terminals that support them.",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.details.md"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/king8fisher/termi-link.git"
+  },
+  "scripts": {
+    "build": "pnpm test && tsup",
+    "test": "vitest --run",
+    "wtest": "vitest",
+    "lint": "biome check --error-on-warnings .",
+    "format": "biome check --write .",
+    "prepare": "tsup",
+    "prepublishOnly": "pnpm test && tsup"
+  },
+  "keywords": [
+    "terminal",
+    "link",
+    "hyperlink",
+    "terminal-link",
+    "terminal-hyperlink",
+    "terminal link",
+    "terminal hyperlink"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "Anton Veretennikov (king8fisher)",
+  "license": "MIT",
+  "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.11",
+    "@types/node": "^22.20.1",
+    "@vitest/ui": "^5.0.5",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

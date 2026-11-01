@@ -1,0 +1,85 @@
+{
+	"name": "eslint-config-wikimedia",
+	"version": "0.32.6",
+	"description": "ESLint config following Wikimedia code conventions.",
+	"main": "common.json",
+	"scripts": {
+		"test": "qunit test/test.js && npm run lint",
+		"lint": "eslint . --max-warnings 0",
+		"changelog": "git log HEAD --format=\"* %s (%aN)\" --no-merges --not --tags | sort",
+		"build-invalid": "node test/test.js dump"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wikimedia/eslint-config-wikimedia.git"
+	},
+	"homepage": "https://www.mediawiki.org/wiki/Manual:Coding_conventions/JavaScript",
+	"bugs": "https://github.com/wikimedia/eslint-config-wikimedia/issues",
+	"keywords": [
+		"style guide",
+		"eslint",
+		"eslintconfig",
+		"wikimedia"
+	],
+	"engines": {
+		"node": ">=20 <27"
+	},
+	"files": [
+		"common.json",
+		"client.json",
+		"node.json",
+		"jest.json",
+		"jquery.json",
+		"jsdoc.json",
+		"jsduck.json",
+		"json.json",
+		"mediawiki.json",
+		"mocha.json",
+		"qunit.json",
+		"selenium.json",
+		"server.json",
+		"typescript.js",
+		"yaml.json",
+		"client/",
+		"language/",
+		"mediawiki/",
+		"vue/",
+		"vue3/"
+	],
+	"contributors": [
+		"James D. Forrester <jforrester@wikimedia.org>",
+		"Ed Sanders <ejsanders@gmail.com>",
+		"Timo Tijhof <krinklemail@gmail.com>",
+		"Oleg Gaidarenko <markelog@gmail.com>"
+	],
+	"license": "MIT",
+	"peerDependencies": {
+		"eslint": "^8.57.0"
+	},
+	"dependencies": {
+		"@stylistic/eslint-plugin": "^3.1.0",
+		"@typescript-eslint/eslint-plugin": "8.54.0",
+		"@typescript-eslint/parser": "8.54.0",
+		"browserslist-config-wikimedia": "^0.9.0",
+		"eslint-plugin-compat": "^6.1.0",
+		"eslint-plugin-es-x": "^8.7.0",
+		"eslint-plugin-jest": "^29.12.2",
+		"eslint-plugin-jsdoc": "^62.9.0",
+		"eslint-plugin-json-es": "^1.6.0",
+		"eslint-plugin-mediawiki": "^0.8.3",
+		"eslint-plugin-mocha": "^10.5.0",
+		"eslint-plugin-n": "^17.24.0",
+		"eslint-plugin-no-jquery": "^6.0.1",
+		"eslint-plugin-qunit": "^8.2.6",
+		"eslint-plugin-security": "^4.0.0",
+		"eslint-plugin-unicorn": "^56.0.1",
+		"eslint-plugin-vue": "^9.33.0",
+		"eslint-plugin-wdio": "9.23.0",
+		"eslint-plugin-yml": "^1.19.0"
+	},
+	"devDependencies": {
+		"escape-string-regexp": "^4.0.0",
+		"fs-readdir-recursive": "^1.1.0",
+		"qunit": "^2.26.0"
+	}
+}

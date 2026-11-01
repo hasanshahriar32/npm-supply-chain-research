@@ -1,0 +1,71 @@
+{
+  "name": "dependency-tree",
+  "version": "12.0.1",
+  "description": "Get the dependency tree of a module",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "files": [
+    "bin/cli.js",
+    "lib/*.js",
+    "types/",
+    "index.js"
+  ],
+  "bin": {
+    "dependency-tree": "bin/cli.js"
+  },
+  "scripts": {
+    "generate:types": "tsc --allowJs --declaration --emitDeclarationOnly --declarationDir types index.js",
+    "check:types": "npm run generate:types && git diff HEAD --exit-code types/index.d.ts",
+    "lint": "xo",
+    "fix": "xo --fix",
+    "vitest": "vitest",
+    "test": "npm run lint && npm run check:types && vitest run",
+    "test:ci": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dependents/node-dependency-tree.git"
+  },
+  "keywords": [
+    "dependency",
+    "tree",
+    "graph",
+    "module",
+    "ast",
+    "requirejs",
+    "AMD",
+    "commonjs",
+    "es6",
+    "sass",
+    "stylus",
+    "less",
+    "typescript"
+  ],
+  "author": "Joel Kemp <joel@mrjoelkemp.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dependents/node-dependency-tree/issues"
+  },
+  "homepage": "https://github.com/dependents/node-dependency-tree",
+  "engines": {
+    "node": ">=20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "@discoveryjs/json-ext": "^1.1.0",
+    "commander": "^14.0.3",
+    "filing-cabinet": "^6.0.0",
+    "precinct": "^13.0.1",
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "debug": "^4.4.3",
+    "vitest": "^4.1.10",
+    "xo": "^2.0.2"
+  }
+}

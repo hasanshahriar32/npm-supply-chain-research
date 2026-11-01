@@ -1,0 +1,100 @@
+name: Sass
+
+on:
+  pull_request:
+
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'support/**'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sass-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  dart-sass:
+    name: Dart Sass v1.79.0
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          cache: npm
+          node-version: 18 # Node.js 18 is the oldest supported by Dart Sass v1.79.0
+
+      - name: Install package
+        run: |
+          npm install -g sass@v1.79.0
+          sass --version
+
+      - name: Run command
+        run: |
+          mkdir -p .tmp
+          time sass packages/govuk-frontend/src/govuk/index.scss > .tmp/index.css
+
+      # Check output for uncompiled Sass
+      - name: Check output
+        run: |
+          ! grep "\$govuk-" .tmp/index.css
+
+      - name: Save compiled Sass
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: Dart Sass v1.79.0 output
+          path: .tmp/index.css
+          if-no-files-found: ignore
+
+  dart-sass-latest:
+    name: Dart Sass v1 (latest)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          cache: npm
+          node-version-file: .nvmrc # Node.js project version must support Dart Sass v1
+
+      - name: Install package
+        run: |
+          npm install -g sass@v1
+          sass --version
+
+        # Treat GOV.UK Frontend as a dependency by importing it via load paths,
+        # allowing us to mimic the way we recommend our users silence deprecation
+        # warnings using the `quiet-deps` flag.
+        #
+        # Run the command through a shell to ensure `time` measures the time
+        # taken by the entire pipeline, as we are now piping input into `sass`.
+      - name: Run command
+        run: |
+          mkdir -p .tmp
+          time sh -c 'echo "@import "\""govuk/index"\"";" | sass --stdin --quiet-deps --load-path=packages/govuk-frontend/src > .tmp/index.css'
+
+      # Check output for uncompiled Sass
+      - name: Check output
+        run: |
+          ! grep "\$govuk-" .tmp/index.css
+
+      - name: Save compiled Sass
+        uses: actions/upload-artifact@v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: Dart Sass v1 (latest) output
+          path: .tmp/index.css
+          if-no-files-found: ignore

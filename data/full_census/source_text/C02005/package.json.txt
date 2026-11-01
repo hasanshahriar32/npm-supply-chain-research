@@ -1,0 +1,71 @@
+{
+  "name": "@cto.af/wtf8",
+  "version": "1.0.0",
+  "decription": "Encode and decode WTF8 like TextEncoder and TextDecoder",
+  "main": "lib/index.js",
+  "files": [
+    "lib/*"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./decode": {
+      "default": "./lib/decode.js"
+    },
+    "./encode": {
+      "default": "./lib/encode.js"
+    },
+    "./decodeStream": {
+      "default": "./lib/decodeStream.js"
+    },
+    "./encodeStream": {
+      "default": "./lib/encodeStream.js"
+    }
+  },
+  "keywords": [
+    "utf8",
+    "wtf8",
+    "unicode",
+    "encode",
+    "decode",
+    "stream"
+  ],
+  "author": "Joe Hildebrand <joe-github@cursive.net>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cto-af/wtf8.git"
+  },
+  "homepage": "https://github.com/cto-af/wtf8#readme",
+  "bugs": {
+    "url": "https://github.com/cto-af/wtf8/issues"
+  },
+  "scripts": {
+    "clean": "rm -rf coverage docs lib",
+    "lint": "eslint .",
+    "pretest": "tsc --inlineSourceMap",
+    "test": "c8 node --test",
+    "posttest": "tsc",
+    "docs": "typedoc",
+    "ts": "tsc",
+    "build": "npm run test && npm run lint && npm run docs && npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@cto.af/eslint-config": "^7.0.3",
+    "@eslint/markdown": "^8.0.3",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "eslint-plugin-jsdoc": "^65.3.12",
+    "eslint": "^10.13.0",
+    "nodemark": "^0.3.0",
+    "superc8": "^12.7.0",
+    "typedoc": "^0.28.20",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.71.2"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

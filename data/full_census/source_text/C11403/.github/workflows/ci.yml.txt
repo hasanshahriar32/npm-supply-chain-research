@@ -1,0 +1,238 @@
+# Actions are pinned to full commit SHAs; see .github/dependabot.yml for why and how they are updated.
+on:
+  push:
+    branches: [master]
+    tags-ignore: ['**']
+    paths-ignore:
+      - 'packages/dashboard/**'
+  pull_request:
+    branches: [master]
+    paths-ignore:
+      - 'packages/dashboard/**'
+
+name: CI
+
+jobs:
+  # Runs the full suite against Postgres in two modes via one matrix:
+  #   - standard:    npm run cover (with coverage, uploaded to Coveralls as the only flag)
+  #   - distributed: npm run test:distributed (DISTRIBUTED=true)
+  # distributedDatabaseMode is a pure runtime fetch-strategy toggle, so every test (existing and new)
+  # is automatically exercised against the distributed code paths in the distributed leg - fast and
+  # reliable, without CockroachDB's slow DDL. The distributed leg is behavioral only: its line
+  # coverage is already produced by the standard leg, where distributedDatabaseTest/perJobResultsTest
+  # pin __test__distributed per-instance. Its value is catching features that regress under the
+  # distributed fetch path (retry/policies/flows/dead-letter/...), which coverage % can't see.
+  # fail-fast is off so one mode's failure doesn't mask the other's result.
+  test:
+    runs-on: ubuntu-latest
+    container: node:24
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: standard
+            command: npm run cover
+          - mode: distributed
+            command: npm run test:distributed
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Install
+      run: npm install
+
+    - name: Test (${{ matrix.mode }})
+      run: ${{ matrix.command }}
+      env:
+        POSTGRES_HOST: postgres
+
+    # Only the standard leg produces coverage; the distributed leg uploads nothing.
+    - name: Coveralls
+      if: ${{ matrix.mode == 'standard' }}
+      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2
+      with:
+        flag-name: standard
+        parallel: true
+
+  # Runs the full suite against embedded PGlite (in-process WASM PostgreSQL). No service container is
+  # needed — the database runs inside the test process. Connection-model-specific tests (custom pg
+  # connections, pool internals, multi-master, distributed mode) are skipped via itPglite/describePglite.
+  test-pglite:
+    runs-on: ubuntu-latest
+    container: node:24
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Install
+      run: npm install
+
+    - name: Test (pglite)
+      run: npm run test:pglite
+
+  # Runs the fromBunSql conformance suite against a real Postgres under the Bun runtime. Bun's SQL
+  # client only exists inside that runtime, so vitest cannot reach it: test/bunAdapterTest.ts pins
+  # the adapter's rewriting against a fake client on every leg, and this job proves the rewriting is
+  # the right one by driving install, workers, cron and maintenance through the real driver.
+  test-bun:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres
+        # The vitest legs provision the test database themselves in global setup
+        # (testHelper.init -> tryCreateDb); bun test has no such hook, so the service
+        # creates it up front, matching POSTGRES_DB in docker-compose.yaml.
+        env:
+          POSTGRES_DB: pgboss
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+    - name: Install
+      run: bun install
+
+    - name: Test (bun)
+      run: bun run test:bun
+      env:
+        POSTGRES_HOST: localhost
+
+  # docs/index.md is generated from README.md by scripts/sync-readme.js, so a README edit
+  # that skips the regenerate step silently leaves the docs home page stale. The check needs
+  # no dependencies (the script uses only node builtins) and no database, so it runs as its
+  # own job for fast, clearly-named feedback instead of riding along in a test leg.
+  docs-readme-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Check docs/index.md is in sync with README.md
+      run: npm run docs:readme -- --check
+
+  # Every anchor link in docs/, and every pgboss.io link in src/, against the heading ids VitePress
+  # generates. A heading rename or a GitHub-style slug otherwise breaks a link silently. Node
+  # builtins only, like the README check.
+  docs-anchors:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Check doc anchors resolve
+      run: npm run docs:anchors
+
+  # Fast feedback on every push/PR against a real CockroachDB cluster: the distributed-mode
+  # invariants the rest of the suite can't express, and the migrations. Migrations are here rather
+  # than left to a pre-release run because CockroachDB refuses schema the other backends accept
+  # (partitioning, covering indexes, a column written in the transaction that added it) and records
+  # dependencies they don't, so a migration can be green everywhere else and unrunnable here.
+  #
+  # One cluster per suite, not one cluster running both. Concurrent DDL contends on the descriptor
+  # table whatever schema it targets, so the two files together fail with RETRY_SERIALIZABLE in
+  # whichever one loses the race, and serializing them costs more wall clock (~11m) than two runners
+  # taking ~5m each. fail-fast is off so one suite's failure doesn't mask the other's result.
+  test-cockroachdb:
+    runs-on: ubuntu-latest
+    name: test-cockroachdb (${{ matrix.suite }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: distributed
+            script: test:cockroachdb
+          - suite: migrations
+            script: test:cockroachdb:migrations
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+
+    - name: Pull CockroachDB image
+      # Every compose service shares this one image, so warming the local cache here keeps
+      # `up -d` off the registry entirely. Docker Hub resets the connection often enough
+      # that a single unattended pull makes the whole job flaky.
+      run: |
+        for attempt in 1 2 3; do
+          docker pull cockroachdb/cockroach:latest && exit 0
+          echo "pull attempt $attempt failed, retrying in $(( attempt * 10 ))s"
+          sleep $(( attempt * 10 ))
+        done
+        echo "could not pull cockroachdb/cockroach after 3 attempts"
+        exit 1
+
+    - name: Start CockroachDB cluster
+      run: |
+        docker compose -f docker-compose.cockroach.yaml up -d
+        # `up --wait` can't be used here: the one-shot init/setup containers exit by design, which
+        # newer compose reports as a failed service. Block on the setup container instead - it
+        # creates the pgboss database once the cluster is initialized.
+        docker wait pgboss-cockroach-cockroachdb-setup-1 || true
+        docker compose -f docker-compose.cockroach.yaml exec -T cockroachdb-1 cockroach sql --insecure -e "SHOW DATABASES" | grep -q pgboss
+
+    - name: Install
+      run: npm ci
+
+    - name: Test ${{ matrix.suite }}
+      run: npm run ${{ matrix.script }}
+
+  coverage:
+    needs: [test]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2
+      with:
+        parallel-finished: true
+        carryforward: "standard"

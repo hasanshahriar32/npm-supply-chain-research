@@ -1,0 +1,67 @@
+concurrency:
+  cancel-in-progress: false
+  group: Release
+
+jobs:
+  release:
+    if: "startsWith(github.event.head_commit.message, 'chore: release v')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - id: regex-match
+        uses: kaisugi/action-regex-match@v1.0.2
+        with:
+          flags: "su"
+          regex: '^chore: release v(\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?)(?: \(#\d+\))?(?:\n|$)'
+          text: ${{ github.event.head_commit.message }}
+
+      - id: release_version
+        if: steps.regex-match.outputs.match != ''
+        run: echo "release_version=${{ steps.regex-match.outputs.group1 }}" >> "$GITHUB_OUTPUT"
+
+      - if: steps.release_version.outputs.release_version != ''
+        uses: ./.github/actions/prepare
+
+      - if: steps.release_version.outputs.release_version != ''
+        name: Build
+        run: pnpm run build
+
+      - env:
+          GITHUB_TOKEN: ${{ github.token }}
+        if: steps.release_version.outputs.release_version != ''
+        name: Release
+        run: pnpm dlx release-it --npm.allowSameVersion -i ${{ steps.release_version.outputs.release_version }}
+
+      - if: steps.release_version.outputs.release_version != ''
+        name: Generate Docs
+        run: pnpm run docs
+
+      - if: steps.release_version.outputs.release_version != ''
+        name: Create a pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./docs/generated
+
+      - id: deployment
+        if: steps.release_version.outputs.release_version != ''
+        name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v5
+        with:
+          token: ${{ github.token }}
+
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  pages: write
+  pull-requests: write

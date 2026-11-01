@@ -1,0 +1,83 @@
+{
+  "name": "jwt-decode",
+  "version": "4.0.0",
+  "description": "Decode JWT tokens, mostly useful for browser applications.",
+  "type": "module",
+  "main": "build/cjs/index.js",
+  "module": "build/esm/index.js",
+  "types": "build/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./build/esm/index.d.ts",
+        "default": "./build/esm/index.js"
+      },
+      "require": {
+        "types": "./build/cjs/index.d.ts",
+        "default": "./build/cjs/index.js"
+      }
+    }
+  },
+  "keywords": [
+    "jwt",
+    "browser"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/auth0/jwt-decode.git"
+  },
+  "url": "https://github.com/auth0/jwt-decode/issues",
+  "homepage": "https://github.com/auth0/jwt-decode#readme",
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run build:watch\" \"npm run dev:server\"",
+    "dev:server": "browser-sync start --config bs-config.json",
+    "prebuild": "shx rm -rf ./build && shx mkdir -p ./build/cjs && shx echo '{\"type\": \"commonjs\"}'> build/cjs/package.json",
+    "build": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
+    "build:watch": "npm run build -- --watch",
+    "lint": "eslint .",
+    "lint:package": "publint",
+    "format:check": "prettier . --check",
+    "test": "npm run test:node && npm run test:browser",
+    "test:node": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage",
+    "test:browser": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --coverage --testEnvironment=jsdom",
+    "prepack": "npm run build",
+    "prepare": "husky"
+  },
+  "author": "Jose F. Romaniello <jfromaniello@gmail.com>",
+  "contributors": [
+    "Sam Bellen <sam.bellen@auth0.com>"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "browser-sync": "^3.0.2",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.6.2",
+    "jiti": "^2.5.1",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
+    "publint": "^0.3.12",
+    "shx": "^0.4.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6",
+    "typescript-eslint": "^8.43.0"
+  },
+  "files": [
+    "build"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "lint-staged": {
+    "!(*.ts)": "prettier --write --ignore-unknown",
+    "*.ts": [
+      "eslint --cache  --fix",
+      "prettier --write"
+    ]
+  }
+}

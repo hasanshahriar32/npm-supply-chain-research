@@ -1,0 +1,37 @@
+name: autofix.ci  # needed to securely identify the workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3
+        with:
+          cache: true
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Prepare build environment
+        run: pnpm dev:prepare
+
+      - name: Lint (code)
+        run: pnpm lint:fix
+
+      - name: Knip
+        run: pnpm test:knip --fix
+
+      - name: Check engine ranges, peer dependency ranges and installed versions
+        run: pnpm test:engines --fix
+
+      - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8 # 7a166d7532b277f34e16238930461bf77f9d7ed8

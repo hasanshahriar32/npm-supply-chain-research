@@ -1,0 +1,435 @@
+name: CI
+env:
+  DEBUG: napi:*
+  APP_NAME: simple-git
+  MACOSX_DEPLOYMENT_TARGET: '10.13'
+  CARGO_INCREMENTAL: '1'
+"on":
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - "**"
+    # The deploy job now lives in this workflow, so a website-docs-only push
+    # (e.g. website/pages/docs/index.md) must still start the run — a blanket
+    # `paths-ignore: **/*.md` would skip the whole workflow before the deploy
+    # gate could match `website/**`. Use a positive `paths` filter instead:
+    # everything triggers except root docs/markdown, but `website/**` is
+    # re-included last so website markdown wins over the markdown exclusion.
+    # (Order matters: last matching pattern decides inclusion per file.)
+    paths:
+      - "**"
+      - "!**/*.md"
+      - "!LICENSE"
+      - "!**/*.gitignore"
+      - "!.editorconfig"
+      - "!docs/**"
+      - "website/**"
+  pull_request: null
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        run: cargo clippy
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build: yarn build --target x86_64-apple-darwin
+          - host: windows-latest
+            build: yarn build --target x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-msvc
+          - host: windows-latest
+            build: yarn build --target i686-pc-windows-msvc
+            target: i686-pc-windows-msvc
+          - host: ubuntu-24.04-arm
+            target: x86_64-unknown-linux-gnu
+            build: TARGET_CC=clang yarn build --target x86_64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build: yarn build --target x86_64-unknown-linux-musl -x
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: yarn build --target aarch64-apple-darwin
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: TARGET_CC=clang yarn build --target aarch64-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: armv7-unknown-linux-gnueabihf
+            build: yarn build --target armv7-unknown-linux-gnueabihf --use-napi-cross
+          - host: ubuntu-latest
+            target: aarch64-linux-android
+            build: yarn build --target aarch64-linux-android
+          - host: ubuntu-latest
+            target: armv7-linux-androideabi
+            build: yarn build --target armv7-linux-androideabi
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build: yarn build --target aarch64-unknown-linux-musl -x
+          - host: ubuntu-latest
+            target: s390x-unknown-linux-gnu
+            build: |
+              export CC=clang
+              export TARGET_CC=clang
+              export CFLAGS="-fuse-ld=lld"
+              yarn build --target s390x-unknown-linux-gnu --use-napi-cross
+          - host: ubuntu-latest
+            target: powerpc64le-unknown-linux-gnu
+            build: |
+              export CC=clang
+              export TARGET_CC=clang
+              export CFLAGS="-fuse-ld=lld"
+              yarn build --target powerpc64le-unknown-linux-gnu --use-napi-cross
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build: yarn build --target aarch64-pc-windows-msvc
+    name: stable - ${{ matrix.settings.target }} - node@22
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: yarn
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2
+        if: ${{ contains(matrix.settings.target, 'gnu') }}
+        with:
+          version: "19"
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.settings.target }}
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.napi-rs
+            .cargo-cache
+            target/
+          key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
+      - uses: mlugg/setup-zig@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        with:
+          version: 0.14.1
+      - name: Install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
+      - name: Setup toolchain
+        run: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.setup }}
+        shell: bash
+      - name: Install dependencies
+        run: yarn install
+      - name: Build
+        run: ${{ matrix.settings.build }}
+        shell: bash
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: ${{ env.APP_NAME }}.*.node
+          if-no-files-found: error
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    name: Build FreeBSD
+    steps:
+      - uses: actions/checkout@v7
+      - name: Start FreeBSD VM
+        uses: cross-platform-actions/action@v1.7.0
+        with:
+          operating_system: freebsd
+          version: '14.3'
+          memory: 8G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS'
+          shell: bash
+      - name: Build
+        id: build
+        shell: cpa.sh {0}
+        env:
+          DEBUG: napi:*
+          RUSTUP_IO_THREADS: 1
+        run: |
+          sudo pkg install -y -f curl node libnghttp2 npm cmake-core perl5
+          sudo npm install -g yarn --ignore-scripts
+          curl https://sh.rustup.rs -sSf --output rustup.sh
+          sh rustup.sh -y --profile minimal --default-toolchain stable
+          source "$HOME/.cargo/env"
+          echo "~~~~ rustc --version ~~~~"
+          rustc --version
+          echo "~~~~ node -v ~~~~"
+          node -v
+          echo "~~~~ yarn --version ~~~~"
+          yarn --version
+          pwd
+          ls -lah
+          whoami
+          env
+          freebsd-version
+          yarn install
+          yarn build
+          rm -rf node_modules
+          rm -rf target
+          rm -rf .yarn/cache
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-freebsd
+          path: ${{ env.APP_NAME }}.*.node
+          if-no-files-found: error
+
+  test-macOS-windows-binding:
+    name: Test bindings on ${{ matrix.settings.target }} - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: "x86_64-apple-darwin"
+            architecture: "x64"
+          - host: macos-latest
+            target: "aarch64-apple-darwin"
+            architecture: "arm64"
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            architecture: "x64"
+        node:
+          - "22"
+          - "24"
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          architecture: ${{ matrix.settings.architecture }}
+      - name: Install dependencies
+        run: yarn install --mode=skip-build --immutable
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: .
+      - name: List packages
+        run: ls -R .
+        shell: bash
+      - name: Test bindings
+        run: yarn test
+  test-linux-x64-gnu-binding:
+    name: Test bindings on Linux-x64-gnu - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - "22"
+          - "24"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --mode=skip-build --immutable
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: .
+      - name: List packages
+        run: ls -R .
+        shell: bash
+      - name: Test bindings
+        run: yarn test
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    needs:
+      - lint
+      - build-freebsd
+      - test-macOS-windows-binding
+      - test-linux-x64-gnu-binding
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install
+      - name: create npm dirs
+        run: yarn napi create-npm-dirs
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+      - name: Move artifacts
+        run: yarn artifacts
+      - name: List packages
+        run: ls -R ./npm
+        shell: bash
+      - name: Publish
+        run: |
+          npm install -g npm
+          if git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+$";
+          then
+            npm publish --access public
+          elif git log -1 --pretty=%B | grep "^[0-9]\+\.[0-9]\+\.[0-9]\+";
+          then
+            npm publish --tag next --access public
+          else
+            echo "Not a release, skipping publish"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- Website (Void): PR build/e2e gate + main deploy -----------------------
+  # `changes` detects website-affecting paths for BOTH pull requests and pushes
+  # to main (GitHub cannot path-filter a single job of a multi-job workflow, so
+  # the former on.paths filter lives here). `website` builds + e2e-smokes the
+  # site whenever those paths change — a pre-merge gate on PRs, so a
+  # Vite/TS/markdown break fails here instead of only at deploy time. `deploy`
+  # runs only on push to main, independently of the native build/test jobs above
+  # (no `needs` on them) so a Rust CI failure never blocks a website deploy.
+  changes:
+    name: Detect website changes
+    runs-on: ubuntu-latest
+    outputs:
+      website: ${{ steps.filter.outputs.website }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            website:
+              - 'website/**'
+              - 'yarn.lock'
+              - 'package.json'
+              - '.yarnrc.yml'
+              - '.yarn/releases/**'
+
+  website:
+    name: Website build & e2e
+    needs: changes
+    if: needs.changes.outputs.website == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: yarn
+      - run: corepack enable
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Build website (void:prepare + vite build)
+        run: |
+          yarn workspace @napi-rs/simple-git-website void:prepare
+          yarn workspace @napi-rs/simple-git-website build
+      - name: Install Playwright chromium
+        run: yarn workspace @napi-rs/simple-git-website exec playwright install --with-deps chromium
+      # test:e2e is self-contained — playwright.config.ts boots a fresh `yarn dev`
+      # SSR server (reuseExistingServer is false under CI) and smokes / , /docs
+      # and /docs/api.
+      - name: e2e smoke
+        run: yarn workspace @napi-rs/simple-git-website test:e2e
+        env:
+          CI: '1'
+
+  deploy:
+    name: Deploy to Void
+    # Depend on `website` as well as `changes`: the build + Playwright smoke must
+    # pass BEFORE we publish. With `needs: changes` alone, deploy ran in parallel
+    # with the website job and could push a broken site to production before e2e
+    # finished. When website changed, the website job always runs, so this needs
+    # is satisfiable; when it didn't, the `if` below skips deploy regardless.
+    needs:
+      - changes
+      - website
+    # Deploy only on a push to main (never on pull_request); the `changes` gate
+    # now also fires for PRs, so this event/ref guard keeps deploy main-only.
+    if: needs.changes.outputs.website == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # id-token: write lets `void deploy` mint a GitHub OIDC token and exchange
+    # it (audience "void") for a short-lived, project-scoped deploy token — no
+    # long-lived VOID_TOKEN secret. Scoped to this job so the native jobs keep
+    # their default token permissions.
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      # Override with a VOID_API_URL repository variable to target staging.
+      VOID_API_URL: ${{ vars.VOID_API_URL || 'https://api.void.cloud' }}
+      VOID_PROJECT: simple-git
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      # Activate the repo-pinned yarn@4.17.0 (packageManager field) before any
+      # yarn call, so install uses Berry, not the runner's global classic yarn.
+      - run: corepack enable
+      # Install at the repo ROOT — yarn workspaces monorepo, so the lockfile and
+      # workspace graph live at the root, not in website/.
+      - run: yarn install --immutable
+      # `void deploy` (>= 0.10.2) detects GitHub Actions, mints the OIDC token,
+      # exchanges it for a deploy token, and deploys — no curl/jq, no secret.
+      - name: Deploy
+        working-directory: website
+        run: yarn void deploy --project "$VOID_PROJECT"

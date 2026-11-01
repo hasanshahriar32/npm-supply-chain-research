@@ -1,0 +1,287 @@
+name: Run E2E Regression Test Suites
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        default: production
+      use_pr_head_sha:
+        type: boolean
+        default: false
+      build_source_id:
+        type: string
+        required: false
+      sanity_test_suite_url:
+        type: string
+        required: false
+      trigger_source:
+        type: string
+        required: true
+        description: 'Description of what/who triggered the workflow chain'
+      monorepo_release_version:
+        type: string
+        required: false
+      release_ticket_id:
+        type: string
+        required: false
+    secrets:
+      RELEASE_PRIVATE_KEY:
+        description: GitHub App private key for token generation
+        required: true
+      SLACK_BOT_TOKEN:
+        description: Slack Bot Token for posting to release threads
+        required: false
+    outputs:
+      sanity_run_id:
+        description: Downstream sanity suite run id
+        value: ${{ jobs.trigger-and-wait-sanity-test-suite.outputs.sanity-run-id }}
+      sanity_run_url:
+        description: Downstream sanity suite run URL
+        value: ${{ jobs.trigger-and-wait-sanity-test-suite.outputs.sanity-run-url }}
+      e2e_run_id:
+        description: Downstream full E2E suite run id
+        value: ${{ jobs.trigger-and-wait-e2e-test-suite.outputs.e2e-run-id }}
+      e2e_run_url:
+        description: Downstream full E2E suite run URL
+        value: ${{ jobs.trigger-and-wait-e2e-test-suite.outputs.e2e-run-url }}
+
+# Bounds = slowest observed run (sanity ~20 min, full ~55 min, queue included)
+# + the suites' 60 min BrowserStack-idle wait (max_time) + ~10 min margin.
+env:
+  MAX_WAIT_TIME_FOR_SANITY_TESTS: 5400  # 90 minutes
+  CHECK_INTERVAL_FOR_SANITY_TESTS: 60   # 1 minute
+  MAX_WAIT_TIME_FOR_E2E_TESTS: 7800     # 2 hours 10 minutes
+  CHECK_INTERVAL_FOR_E2E_TESTS: 60      # 1 minute
+  TARGET_REPO: rudderlabs/rudder-client-side-test
+
+permissions:
+  contents: read
+
+jobs:
+  extract-monorepo-version:
+    name: Extract Monorepo Version
+    runs-on: arc-amd64
+
+    outputs:
+      version: ${{ steps.determine_version.outputs.current_version }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Determine checkout SHA
+        id: getSHA
+        run: |
+          if ${{ inputs.use_pr_head_sha }}; then
+            sha=${{ github.event.pull_request.head.sha }}
+          else
+            sha=${{ github.sha }}
+          fi
+          echo "Checkout SHA: $sha"
+          echo "SHA=$sha" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.getSHA.outputs.SHA }}
+
+      - name: Determine the Monorepo version
+        id: determine_version
+        run: |
+          current_version=$(jq -r .version package.json)
+          echo "current_version=$current_version" >> $GITHUB_OUTPUT
+
+  trigger-and-wait-sanity-test-suite:
+    name: Run Sanity E2E Regression Tests
+    runs-on: arc-amd64
+    needs: extract-monorepo-version
+    permissions:
+      contents: read # to checkout repository code
+    outputs:
+      sanity-status: ${{ steps.run_sanity_tests.outputs.status }}
+      sanity-conclusion: ${{ steps.run_sanity_tests.outputs.conclusion }}
+      sanity-run-id: ${{ steps.run_sanity_tests.outputs.run_id }}
+      sanity-run-url: ${{ steps.run_sanity_tests.outputs.run_url }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          permission-actions: write # to trigger workflows in target repository
+          repositories: rudder-client-side-test # to access cross-repo test repository
+
+      - name: Checkout (for composite action)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare sanity test inputs
+        id: prepare_inputs
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          MONOREPO_VERSION: ${{ needs.extract-monorepo-version.outputs.version }}
+          INPUT_SANITY_TEST_SUITE_URL: ${{ inputs.sanity_test_suite_url }}
+          INPUT_BUILD_SOURCE_ID: ${{ inputs.build_source_id }}
+        run: |
+          # Create JSON object with all inputs for the sanity test workflow (compact format)
+          inputs_json=$(jq -nc \
+            --arg environment "$INPUT_ENVIRONMENT" \
+            --arg monorepo_version "$MONOREPO_VERSION" \
+            --arg sanity_test_suite_url "$INPUT_SANITY_TEST_SUITE_URL" \
+            --arg build_source_id "$INPUT_BUILD_SOURCE_ID" \
+            '{environment: $environment, monorepo_version: $monorepo_version, sanity_test_suite_url: $sanity_test_suite_url, build_source_id: $build_source_id}')
+          
+          echo "inputs_json=$inputs_json" >> $GITHUB_OUTPUT
+
+      - name: Run sanity test suite
+        id: run_sanity_tests
+        uses: ./.github/actions/workflow-utils
+        with:
+          github_token: ${{ steps.generate-token.outputs.token }}
+          target_repo: ${{ env.TARGET_REPO }}
+          workflow_file: sdk-team-js-sanity-suite.yaml
+          workflow_ref: main
+          workflow_name: Sanity E2E Regression Tests
+          workflow_inputs: ${{ steps.prepare_inputs.outputs.inputs_json }}
+          max_wait_time: ${{ env.MAX_WAIT_TIME_FOR_SANITY_TESTS }}
+          check_interval: ${{ env.CHECK_INTERVAL_FOR_SANITY_TESTS }}
+          outputs_artifact_name: job-outputs
+          correlation_id_input: _workflow_correlation_id
+
+      - name: Extract sanity test results
+        id: extract-sanity-results
+        continue-on-error: true
+        if: always() && steps.run_sanity_tests.outputs.has_outputs == 'true'
+        run: |
+          # Extract all fields from job outputs
+          slack_message_url=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.slack_message_url // ""')
+          test_passed=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.test_status.passed // ""')
+          test_total=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.test_status.total // ""')
+          test_percentage=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.test_status.percentage // ""')
+          test_success=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.test_status.success // ""')
+          test_summary=$(echo '${{ steps.run_sanity_tests.outputs.job_outputs }}' | jq -r '.test_status.summary // ""')
+
+          echo "slack_message_url=$slack_message_url" >> $GITHUB_OUTPUT
+          echo "test_passed=$test_passed" >> $GITHUB_OUTPUT
+          echo "test_total=$test_total" >> $GITHUB_OUTPUT
+          echo "test_percentage=$test_percentage" >> $GITHUB_OUTPUT
+          echo "test_success=$test_success" >> $GITHUB_OUTPUT
+          echo "test_summary=$test_summary" >> $GITHUB_OUTPUT
+
+      - name: Post sanity test results to release thread
+        continue-on-error: true
+        if: ${{ !cancelled() && always() && inputs.monorepo_release_version != '' && inputs.release_ticket_id != '' && steps.extract-sanity-results.outputs.slack_message_url != '' }}
+        uses: ./.github/actions/release-thread-integration
+        with:
+          monorepo_release_version: ${{ inputs.monorepo_release_version }}
+          release_ticket_id: ${{ inputs.release_ticket_id }}
+          slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          title: ${{ format('{0} Sanity E2E Regression Tests completed', steps.extract-sanity-results.outputs.test_success == 'true' && ':white_check_mark:' || ':x:') }}
+          link_text: 'View test results'
+          slack_message_url: ${{ steps.extract-sanity-results.outputs.slack_message_url }}
+          custom_message: ${{ steps.extract-sanity-results.outputs.test_success == 'true' && 'All tests passed successfully. Proceed to the next step.' || 'There are some test failures. Please review them and proceed to the next step.' }}
+
+  trigger-and-wait-e2e-test-suite:
+    name: Run Full E2E Regression Tests
+    runs-on: arc-amd64
+    needs: [extract-monorepo-version, trigger-and-wait-sanity-test-suite]
+    # Only run if sanity tests passed
+    if: needs.trigger-and-wait-sanity-test-suite.outputs.sanity-conclusion == 'success'
+    permissions:
+      contents: read # to checkout repository code
+    outputs:
+      e2e-run-id: ${{ steps.run_e2e_tests.outputs.run_id }}
+      e2e-run-url: ${{ steps.run_e2e_tests.outputs.run_url }}
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          permission-actions: write # to trigger workflows in target repository
+          repositories: rudder-client-side-test # to access cross-repo test repository
+
+      - name: Checkout (for composite action)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Prepare E2E test inputs
+        id: prepare_inputs
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          MONOREPO_VERSION: ${{ needs.extract-monorepo-version.outputs.version }}
+          INPUT_SANITY_TEST_SUITE_URL: ${{ inputs.sanity_test_suite_url }}
+          INPUT_BUILD_SOURCE_ID: ${{ inputs.build_source_id }}
+        run: |
+          # Create JSON object with all inputs for the E2E test workflow (compact format)
+          inputs_json=$(jq -nc \
+            --arg environment "$INPUT_ENVIRONMENT" \
+            --arg monorepo_version "$MONOREPO_VERSION" \
+            --arg sanity_test_suite_url "$INPUT_SANITY_TEST_SUITE_URL" \
+            --arg build_source_id "$INPUT_BUILD_SOURCE_ID" \
+            '{environment: $environment, monorepo_version: $monorepo_version, sanity_test_suite_url: $sanity_test_suite_url, build_source_id: $build_source_id}')
+          
+          echo "inputs_json=$inputs_json" >> $GITHUB_OUTPUT
+
+      - name: Run E2E test suite
+        id: run_e2e_tests
+        uses: ./.github/actions/workflow-utils
+        with:
+          github_token: ${{ steps.generate-token.outputs.token }}
+          target_repo: ${{ env.TARGET_REPO }}
+          workflow_file: sdk-team-js-regression.yaml
+          workflow_ref: main
+          workflow_name: Full E2E Regression Tests
+          workflow_inputs: ${{ steps.prepare_inputs.outputs.inputs_json }}
+          max_wait_time: ${{ env.MAX_WAIT_TIME_FOR_E2E_TESTS }}
+          check_interval: ${{ env.CHECK_INTERVAL_FOR_E2E_TESTS }}
+          outputs_artifact_name: job-outputs
+          correlation_id_input: _workflow_correlation_id
+
+      - name: Extract E2E test results
+        id: extract-e2e-results
+        continue-on-error: true
+        if: always() && steps.run_e2e_tests.outputs.has_outputs == 'true'
+        run: |
+          # Extract all fields from job outputs
+          slack_message_url=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.slack_message_url // ""')
+          test_passed=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.test_status.passed // ""')
+          test_total=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.test_status.total // ""')
+          test_percentage=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.test_status.percentage // ""')
+          test_success=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.test_status.success // ""')
+          test_summary=$(echo '${{ steps.run_e2e_tests.outputs.job_outputs }}' | jq -r '.test_status.summary // ""')
+
+          echo "slack_message_url=$slack_message_url" >> $GITHUB_OUTPUT
+          echo "test_passed=$test_passed" >> $GITHUB_OUTPUT
+          echo "test_total=$test_total" >> $GITHUB_OUTPUT
+          echo "test_percentage=$test_percentage" >> $GITHUB_OUTPUT
+          echo "test_success=$test_success" >> $GITHUB_OUTPUT
+          echo "test_summary=$test_summary" >> $GITHUB_OUTPUT
+
+      - name: Post E2E test results to release thread
+        continue-on-error: true
+        if: ${{ !cancelled() && always() && inputs.monorepo_release_version != '' && inputs.release_ticket_id != '' && steps.extract-e2e-results.outputs.slack_message_url != '' }}
+        uses: ./.github/actions/release-thread-integration
+        with:
+          monorepo_release_version: ${{ inputs.monorepo_release_version }}
+          release_ticket_id: ${{ inputs.release_ticket_id }}
+          slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          title: ${{ format('{0} Full E2E Regression Tests completed', steps.extract-e2e-results.outputs.test_success == 'true' && ':white_check_mark:' || ':x:') }}
+          link_text: 'View test results'
+          slack_message_url: ${{ steps.extract-e2e-results.outputs.slack_message_url }}
+          custom_message: ${{ steps.extract-e2e-results.outputs.test_success == 'true' && 'All tests passed successfully. Proceed to the next step.' || 'There are some test failures. Please review them and proceed to the next step.' }}

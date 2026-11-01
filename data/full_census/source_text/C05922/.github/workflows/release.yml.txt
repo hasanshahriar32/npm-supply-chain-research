@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    # Do not run on tags
+    tags-ignore:
+      - '*'
+
+permissions:
+  contents: write
+  issues: read
+  packages: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  npm:
+    uses: ./.github/workflows/npm.yml
+
+  Changesets:
+    needs: npm
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.changesets.outputs.published == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+
+      - name: Configure Git user
+        run: |
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config tag.forceSignAnnotated true
+
+      - name: Changesets
+        id: changesets
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # https://github.com/changesets/action/releases/tag/v2.1.2
+        with:
+          commit-message: 'chore(changeset): release' # this is not used because of the custom version script
+          create-github-releases: true
+          publish-script: npm run tag
+          pr-title: '🦋 Changeset release'
+          version-script: npm run version
+        env:
+          HUSKY: '0' # disabled because pre-push hook checks for changesets which have now been removed
+
+  Publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: Changesets
+    if: needs.Changesets.outputs.publish == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm # TODO: remove after Node.js bundles at least 11.15.0
+      - run: npm stage publish

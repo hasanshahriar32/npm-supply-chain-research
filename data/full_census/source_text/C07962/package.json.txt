@@ -1,0 +1,97 @@
+{
+  "name": "@peculiar/x509",
+  "version": "3.1.0",
+  "description": "@peculiar/x509 is an easy to use TypeScript/Javascript library based on @peculiar/asn1-schema that makes generating X.509 Certificates and Certificate Requests as well as validating certificate chains easy",
+  "keywords": [
+    "certificate",
+    "cms",
+    "csr",
+    "ec",
+    "pkcs10",
+    "pkcs7",
+    "rsa",
+    "x509"
+  ],
+  "homepage": "https://github.com/PeculiarVentures/x509#readme",
+  "bugs": {
+    "url": "https://github.com/PeculiarVentures/x509/issues"
+  },
+  "license": "MIT",
+  "author": "Peculiar Ventures LLC",
+  "contributors": [
+    "Miroshin Stepan<microshine@mail.ru>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PeculiarVentures/x509"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": "./build/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "build/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "build": "tsdown",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "dependencies": {
+    "@peculiar/asn1-cms": "^3.0.0",
+    "@peculiar/asn1-csr": "^3.0.0",
+    "@peculiar/asn1-ecc": "^3.0.0",
+    "@peculiar/asn1-pkcs9": "^3.0.0",
+    "@peculiar/asn1-rsa": "^3.0.0",
+    "@peculiar/asn1-x509": "^3.0.0",
+    "@peculiar/asn1-x509-post-quantum": "^3.0.0",
+    "@peculiar/utils": "^4.1.0",
+    "tsyringe": "^4.10.0"
+  },
+  "peerDependencies": {
+    "@peculiar/asn1-schema": "^3.0.0"
+  },
+  "devDependencies": {
+    "@abraham/reflection": "^0.13.0",
+    "@arethetypeswrong/core": "^0.18.5",
+    "@peculiar/asn1-schema": "^3.0.0",
+    "@peculiar/webcrypto": "^2.0.0",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "asn1js": "^4.0.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "tsdown": "^0.23.2",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": ">=10",
+      "onFail": "error"
+    }
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "allowScripts": {
+    "fsevents@2.3.3": true
+  }
+}

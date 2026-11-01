@@ -1,0 +1,46 @@
+{
+    "name": "minimal-polyfills",
+    "version": "2.2.3",
+    "description": "An ultra light-weight, nonexhaustive, polyfills library",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/garronej/minimal_polyfills.git"
+    },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": "./dist/index.js",
+        "./*": "./dist/*.js"
+    },
+    "scripts": {
+        "test:node": "node ./dist/test",
+        "test:deno": "deno run ./deno_dist/test/index.ts",
+        "test": "npm run test:node && npm run test:deno",
+        "build": "tsc && denoify",
+        "enable_short_import_path": "npm run build && npx denoify_enable_short_npm_import_path"
+    },
+    "author": "Joseph Garrone",
+    "license": "MIT",
+    "keywords": [
+        "polyfills",
+        "light-weight",
+        "nonexhaustive",
+        "Map",
+        "Set",
+        "WeakMap",
+        "typescript",
+        "Array.prototype.find",
+        "Array.prototype.from",
+        "Array.prototype.isView",
+        "String.prototype.startsWith"
+    ],
+    "dependencies": {},
+    "devDependencies": {
+        "typescript": "^3.9.7",
+        "denoify": "^0.6.3"
+    },
+    "files": [
+        "/src/*.ts",
+        "/dist/*.{d.ts,js,js.map}"
+    ]
+}

@@ -1,0 +1,27 @@
+name: Node.js Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Upgrade NPM for OIDC support
+        run: npm i -g npm@latest
+      - name: Install Dependencies
+        run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Publishing to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --provenance --access public

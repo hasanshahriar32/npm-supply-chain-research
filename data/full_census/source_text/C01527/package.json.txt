@@ -1,0 +1,80 @@
+{
+  "name": "panda",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "The repository of css panda",
+  "scripts": {
+    "prepare": "husky && pnpm build:fast",
+    "dev": "pnpm --parallel --filter=./packages/** dev",
+    "build:playground": "pnpm --filter 'playground...' build",
+    "build:fast": "pnpm -r --parallel --filter=./packages/** build:fast",
+    "build": "pnpm --filter @pandacss/compiler-wasm build && pnpm -r --filter=./packages/** --filter=!@pandacss/compiler-wasm build",
+    "bench:rust-spike": "pnpm --filter=./bench baseline",
+    "bench:types": "pnpm --filter=./bench generated-types-perf",
+    "rust:check": "cargo check --workspace --locked",
+    "rust:test": "cargo nextest run --workspace --locked && pnpm rust:test:doc",
+    "rust:test:cargo": "cargo test --workspace --locked",
+    "rust:test:doc": "cargo test --workspace --doc --locked",
+    "rust:fmt": "cargo fmt --all --check",
+    "rust:clippy": "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "check": "pnpm build && pnpm typecheck && pnpm lint && pnpm test run",
+    "clean": "pnpm -r --parallel exec rimraf dist .turbo *.log",
+    "reset": "pnpm -r --parallel exec rimraf node_modules && rimraf node_modules",
+    "test": "vitest",
+    "test:compiler": "pnpm --filter @pandacss/compiler test:native",
+    "codegen": "pnpm --filter=./sandbox/codegen",
+    "test:codegen": "pnpm codegen codegen && pnpm codegen test && pnpm codegen typecheck",
+    "test-watch": "vitest --watch -u",
+    "lint": "eslint packages",
+    "prettier": "prettier --check packages",
+    "prettier-fix": "prettier --write packages",
+    "typecheck": "tsc --noEmit",
+    "release": "pnpm release:prepare && pnpm release:verify && changeset publish",
+    "release:prepare": "pnpm --filter @pandacss/compiler exec napi pre-publish --npm-dir npm --no-gh-release",
+    "release:verify": "node scripts/verify-release-artifacts.mjs",
+    "release-dev": "changeset version --snapshot dev && changeset publish --tag dev",
+    "check-docs-links": "tsx website/scripts/check-docs-links.ts"
+  },
+  "keywords": [],
+  "author": "Segun Adebayo <joseshegs@gmail.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.3",
+    "@projectwallace/format-css": "^3.0.0",
+    "concurrently": "9.2.4",
+    "cross-env": "10.1.0",
+    "happy-dom": "20.14.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "rimraf": "5.0.10",
+    "tsup": "8.5.1",
+    "tsx": "4.20.6",
+    "typescript": "6.0.3",
+    "vite-tsconfig-paths": "5.1.4",
+    "vitest": "4.1.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/eslint": "9.6.1",
+    "@types/node": "24.10.15",
+    "@typescript-eslint/eslint-plugin": "8.69.0",
+    "@typescript-eslint/parser": "8.69.0",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "^17.0.0",
+    "prettier": "3.2.5",
+    "typescript-eslint": "8.69.0",
+    "vite-plugin-virtual": "0.5.0"
+  },
+  "lint-staged": {
+    "packages/**/*.{ts,tsx,js,mjs,cjs,json,md,mdx,css,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "packageManager": "pnpm@12.14.0"
+}

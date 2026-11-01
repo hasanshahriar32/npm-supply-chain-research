@@ -1,0 +1,86 @@
+{
+  "name": "swc-node",
+  "version": "0.0.0",
+  "description": "Faster swc nodejs binding",
+  "keywords": [
+    "swc",
+    "babel",
+    "esbuild",
+    "rust",
+    "n-api",
+    "napi",
+    "node-rs",
+    "uglify",
+    "terser",
+    "webpack",
+    "ts-node",
+    "typescript",
+    "tsc"
+  ],
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "repository": "git@github.com:swc/swc-node.git",
+  "author": "LongYinan <github@lyn.one>",
+  "license": "MIT",
+  "scripts": {
+    "bench": "node -r @swc-node/register ./bench/index.ts",
+    "build": "tsc -b tsconfig.json",
+    "format": "prettier --config ./package.json . -w",
+    "lint": "oxlint .",
+    "test": "ava",
+    "test:jest": "jest --config jest.config.js",
+    "test:module": "cross-env SWC_NODE_PROJECT=packages/integrate-module/tsconfig.json node --enable-source-maps --conditions=dev --import=@swc-node/register/esm-register packages/integrate-module/src/index.ts",
+    "test:next": "cross-env SWC_NODE_ESM_LOADER=@swc-node/register/esm-register-next ava",
+    "test:module:next": "cross-env SWC_NODE_ESM_LOADER=@swc-node/register/esm-register-next SWC_NODE_PROJECT=packages/integrate-module/tsconfig.json node --enable-source-maps --conditions=dev --import=@swc-node/register/esm-register-next packages/integrate-module/src/index.ts",
+    "postinstall": "husky"
+  },
+  "devDependencies": {
+    "@babel/core": "^8.0.0",
+    "@babel/plugin-transform-typescript": "^8.0.0",
+    "@babel/preset-env": "^8.0.0",
+    "@babel/preset-typescript": "^8.0.0",
+    "@swc-node/core": "workspace:*",
+    "@swc-node/jest": "workspace:*",
+    "@swc-node/register": "workspace:*",
+    "@types/babel__core": "^7.20.5",
+    "@types/benchmark": "^2.1.5",
+    "@types/lodash": "^4.17.20",
+    "@types/node": "^24.3.0",
+    "@types/sinon": "^22.0.0",
+    "ava": "^8.0.0",
+    "benchmark": "^2.1.4",
+    "colorette": "^2.0.20",
+    "cross-env": "^10.0.0",
+    "esbuild": "^0.28.0",
+    "husky": "^9.1.7",
+    "jest": "^30.0.5",
+    "lerna": "10.1.1",
+    "lint-staged": "^17.0.0",
+    "lodash": "^4.17.21",
+    "oxlint": "^1.12.0",
+    "prettier": "^3.6.2",
+    "react": "^19.1.1",
+    "rxjs": "^7.8.2",
+    "sinon": "^22.0.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.2"
+  },
+  "lint-staged": {
+    "*.@(js|ts|tsx|mts)": [
+      "oxlint --fix"
+    ],
+    "*.@(js|ts|tsx|mts|yml|yaml|md|json)": [
+      "prettier --write"
+    ]
+  },
+  "prettier": {
+    "printWidth": 120,
+    "semi": false,
+    "trailingComma": "all",
+    "singleQuote": true,
+    "arrowParens": "always"
+  },
+  "packageManager": "pnpm@11.28.10"
+}

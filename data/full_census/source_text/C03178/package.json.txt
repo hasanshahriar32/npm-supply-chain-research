@@ -1,0 +1,36 @@
+{
+  "repository": "github:facebookincubator/infima",
+  "author": "Yangshun Tay",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "website"
+  ],
+  "private": true,
+  "scripts": {
+    "format": "prettier --config .prettierrc --write --ignore-unknown \"**/*\"",
+    "format:check": "prettier --config .prettierrc --check --ignore-unknown \"**/*\"",
+    "lint": "stylelint \"**/*.pcss\"",
+    "lint:fix": "stylelint \"**/*.pcss\" --fix",
+    "start": "cd packages/core && npm start",
+    "build": "yarn workspace infima build",
+    "build:en": "yarn workspace infima build --locale en",
+    "website:start": "yarn workspace infima-website start",
+    "website:build": "yarn workspace infima-website build",
+    "website:serve": "yarn workspace infima-website serve",
+    "website:deploy": "yarn workspace infima-website deploy",
+    "website:clear": "yarn workspace infima-website clear",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "stylelint": "^16.3.1",
+    "stylelint-copyright": "^3.2.0",
+    "stylelint-declaration-block-no-ignored-properties": "^2.8.0",
+    "stylelint-high-performance-animation": "^1.10.0",
+    "stylelint-order": "^6.0.4"
+  },
+  "packageManager": "yarn@1.22.22"
+}

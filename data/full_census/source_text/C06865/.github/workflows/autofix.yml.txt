@@ -1,0 +1,19 @@
+name: autofix.ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: npm install -g corepack@0.31.0 # todo: delete if https://github.com/nodejs/corepack/issues/612 is resolved
+      - run: corepack enable
+      - run: pnpm install
+      - run: pnpm run lint --fix
+      - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8

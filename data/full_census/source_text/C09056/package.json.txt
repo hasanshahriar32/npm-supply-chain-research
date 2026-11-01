@@ -1,0 +1,83 @@
+{
+  "name": "cborg",
+  "version": "6.2.1",
+  "description": "Fast CBOR with a focus on strictness",
+  "main": "cborg.js",
+  "type": "module",
+  "bin": {
+    "cborg": "lib/bin.js"
+  },
+  "scripts": {
+    "lint": "standard *.js lib/*.js test/*.js",
+    "build": "npm run build:types",
+    "build:types": "tsc --build",
+    "prepublishOnly": "npm run build",
+    "test:node": "mocha test/test-*.js",
+    "test:node-bin": "mocha test/node-test-bin.js",
+    "test:browser": "polendina --cleanup test/test-*.js",
+    "test": "npm run lint && npm run build && npm run test:node && npm run test:node-bin && npm run test:browser",
+    "test:ci": "npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:rvagg/cborg.git"
+  },
+  "keywords": [
+    "cbor"
+  ],
+  "author": "Rod <rod@vagg.org> (http://r.va.gg/)",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^26.0.1",
+    "chai": "^6.2.2",
+    "ipld-garbage": "^5.0.0",
+    "mocha": "^12.0.2",
+    "polendina": "^3.2.20",
+    "standard": "^17.1.2",
+    "typescript": "^7.0.2"
+  },
+  "exports": {
+    ".": {
+      "import": "./cborg.js",
+      "types": "./types/cborg.d.ts"
+    },
+    "./length": {
+      "import": "./lib/length.js",
+      "types": "./types/lib/length.d.ts"
+    },
+    "./taglib": {
+      "import": "./lib/taglib.js",
+      "types": "./types/lib/taglib.d.ts"
+    },
+    "./json": {
+      "import": "./lib/json/json.js",
+      "types": "./types/lib/json/json.d.ts"
+    },
+    "./extended": {
+      "import": "./lib/extended/extended.js",
+      "types": "./types/lib/extended/extended.d.ts"
+    },
+    "./interface": {
+      "types": "./types/interface.d.ts"
+    }
+  },
+  "types": "cborg.d.ts",
+  "typesVersions": {
+    "*": {
+      "json": [
+        "types/lib/json/json.d.ts"
+      ],
+      "length": [
+        "types/lib/length.d.ts"
+      ],
+      "*": [
+        "types/*"
+      ],
+      "types/*": [
+        "types/*"
+      ]
+    }
+  }
+}

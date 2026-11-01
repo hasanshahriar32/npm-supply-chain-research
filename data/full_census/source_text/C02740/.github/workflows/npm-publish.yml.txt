@@ -1,0 +1,144 @@
+name: Publish Package to npm
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Git branch to build and publish"
+        required: true
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+
+# kill in-progress action if another one is triggered (only for unstable publishes)
+concurrency:
+  group: ${{ github.event_name == 'push' && 'publish-unstable' || format('publish-release-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+jobs:
+  # don't publish unstable if source code has not changed
+  paths-filter:
+    name: Detect files changed
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      src: "${{ steps.changes.outputs.src }}"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter/@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        id: changes
+        with:
+          filters: |
+            src:
+              - 'src/**'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'index.d.ts'
+              - 'index.js'
+
+  unstable:
+    name: Run tests and publish unstable
+    needs: paths-filter
+    if: github.event_name == 'push' && needs.paths-filter.outputs.src == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      id-token: write
+    steps:
+      # pause for 30 minutes to avoid publishing more than 2x per hour
+      - name: Debounce 30 minutes
+        uses: zachary95/github-actions-debounce@ab7363483e2837992b8aa6be891763da00ac14f9 # v0.1.0
+        with:
+          wait: 1800
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.x"
+      - name: Install dependencies
+        run: |
+          npm install -g npm
+          npm install
+      - name: Run tests
+        env:
+          _TAPJS_PROCESSINFO_EXCLUDE_: ".*"
+        run: npm test
+      # if tests pass, publish unstable
+      - name: publish unstable build
+        run: |
+          # set unstable version value
+          unstable_tag="unstable.$(date --utc +%Y%m%d%H%M%S)"
+          latest=$(npm view @elastic/elasticsearch dist-tags.latest)
+          next=$(npx -y 'semver@^7.7.0' -i minor "$latest")
+          unstable_version="$next-$unstable_tag"
+
+          # overwrite package.json with unstable version value
+          mv package.json package.json.bak
+          jq --arg v "$unstable_version" '.version = $v' package.json.bak > package.json
+          rm package.json.bak
+
+          # publish to npm
+          npm publish --provenance --access public --tag "unstable"
+
+  build:
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Derive branch from release tag
+        id: branch
+        if: github.event_name == 'release'
+        run: |
+          # tag_name is e.g. "v9.5.0" or "9.5.0"
+          version="${{ github.event.release.tag_name }}"
+          version="${version#v}"
+          major=$(echo "$version" | cut -d '.' -f1)
+          minor=$(echo "$version" | cut -d '.' -f2)
+          echo "name=$major.$minor" >> "$GITHUB_OUTPUT"
+      - name: Set branch from workflow input
+        id: branch_dispatch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "name=${{ github.event.inputs.branch }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.branch || steps.branch.outputs.name }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24.x"
+      - run: npm install -g npm
+      - run: npm install
+      - name: Run tests
+        env:
+          _TAPJS_PROCESSINFO_EXCLUDE_: ".*"
+        run: npm test
+      - name: npm publish
+        run: |
+          version=$(jq -r .version package.json)
+          tag_meta=$(echo "$version" | cut -s -d '-' -f2)
+          # if no meta info on the version (e.g. a '-alpha.1' prefix), publish as a stable release
+          if [[ -z "$tag_meta" ]]; then
+            # get latest version on npm
+            latest=$(npm view @elastic/elasticsearch dist-tags.latest)
+
+            # if $version is higher than the most recently published version, publish as-is
+            if [[ $(yes | npx semver "$version" "$latest" | tail -n1) == "$version" ]]; then
+              npm publish --provenance --access public
+            else
+              # otherwise, publish with "previous" tag
+              npm publish --provenance --access public --tag "previous"
+            fi
+          else
+            # publish as a non-stable release using the meta name (e.g. 'alpha') as the tag
+            tag=$(echo "$tag_meta" | cut -d '.' -f1)
+            npm publish --provenance --access public --tag "$tag"
+          fi

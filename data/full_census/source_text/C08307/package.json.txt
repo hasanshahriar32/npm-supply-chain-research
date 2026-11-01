@@ -1,0 +1,69 @@
+{
+  "name": "angular-estree-parser",
+  "version": "15.5.0",
+  "description": "A parser that converts Angular source code into an ESTree-compatible form",
+  "keywords": [],
+  "repository": "https://github.com/prettier/angular-estree-parser",
+  "homepage": "https://github.com/prettier/angular-estree-parser#readme",
+  "author": {
+    "name": "Ika",
+    "email": "ikatyang@gmail.com",
+    "url": "https://github.com/ikatyang"
+  },
+  "exports": "./dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "yarn run build",
+    "test": "vitest",
+    "test-coverage": "vitest --coverage",
+    "lint": "run-p \"lint:*\"",
+    "lint:eslint": "eslint",
+    "lint:prettier": "prettier --check .",
+    "lint:types": "tsc --noEmit",
+    "fix": "run-s \"fix:*\"",
+    "fix:eslint": "yarn lint:eslint --fix",
+    "fix:prettier": "yarn lint:prettier --write",
+    "build": "tsdown --unbundle",
+    "release": "release-it"
+  },
+  "devDependencies": {
+    "@angular/compiler": "22.2.0",
+    "@babel/code-frame": "8.0.6",
+    "@babel/parser": "8.0.7",
+    "@babel/types": "8.0.6",
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "eslint-plugin-unicorn": "72.0.0",
+    "globals": "17.13.0",
+    "jest-snapshot-serializer-raw": "2.0.0",
+    "lines-and-columns": "2.0.4",
+    "npm-run-all2": "9.0.4",
+    "prettier": "3.9.6",
+    "release-it": "21.1.1",
+    "tsdown": "0.23.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vite": "8.3.3",
+    "vitest": "5.0.5"
+  },
+  "peerDependencies": {
+    "@angular/compiler": ">=21"
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "packageManager": "yarn@4.18.1"
+}

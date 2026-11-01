@@ -1,0 +1,127 @@
+{
+    "name": "ngx-mask",
+    "version": "22.2.5",
+    "description": "Input masking for modern Angular — Reactive, template-driven and Signal Forms, zoneless and SSR ready. Dates, numbers, separators, custom patterns.",
+    "license": "MIT",
+    "engines": {
+        "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+    },
+    "angular-cli": {},
+    "keywords": [
+        "ng2-mask",
+        "ngx-mask",
+        "ng2",
+        "angular-mask",
+        "mask",
+        "angular",
+        "angular2",
+        "angular2-mask",
+        "ng2mask"
+    ],
+    "private": true,
+    "size-limit": [
+        {
+            "name": "ngx-mask fesm",
+            "path": "dist/ngx-mask-lib/fesm2022/ngx-mask.mjs",
+            "gzip": true,
+            "limit": "27.5 kB"
+        }
+    ],
+    "scripts": {
+        "ng": "ng",
+        "build": "ng build --base-href /ngx-mask/  --configuration production",
+        "build:lib": "ng build --configuration production ngx-mask-lib && bun scripts/postbuild-lib.mjs",
+        "size": "size-limit",
+        "ci": "bun run lint && bun run build:lib && bun run size && bun run test:all && bun run build",
+        "lint:scss": "stylelint \"**/*.scss\"",
+        "lint:scss:fix": "stylelint \"**/*.scss\" --fix",
+        "lint": "ng lint && bun run lint:scss",
+        "lint:fix": "ng lint --fix && bun run lint:scss:fix",
+        "precommit-msg": "echo 'Please wait while we do our pre-commit checks...' && exit 0",
+        "prettier": "prettier './src/**/*.ts' './projects/**/*.ts' --write",
+        "start": "ng serve",
+        "test": "ng test --watch=false",
+        "test:all": "bun run test:app && bun run test:lib && bun run test:browser",
+        "test:app": "ng test ngx-mask",
+        "test:lib": "ng test ngx-mask-lib",
+        "test:browser": "ng test ngx-mask-lib --configuration browser --watch=false",
+        "type-coverage": "type-coverage",
+        "prepare": "simple-git-hooks"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/NepipenkoIgor/ngx-mask.git"
+    },
+    "dependencies": {
+        "@angular/common": "22.2.3",
+        "@angular/compiler": "22.2.3",
+        "@angular/core": "22.2.3",
+        "@angular/forms": "22.2.3",
+        "@angular/platform-browser": "22.2.3",
+        "@angular/router": "22.2.3",
+        "highlight.js": "11.12.0",
+        "ngx-highlightjs": "14.0.1"
+    },
+    "devDependencies": {
+        "@angular-eslint/builder": "22.6.0",
+        "@angular/build": "22.2.3",
+        "@angular/cli": "22.2.3",
+        "@angular/compiler-cli": "22.2.3",
+        "@angular/language-service": "22.2.3",
+        "@commitlint/cli": "21.2.3",
+        "@commitlint/config-conventional": "21.2.3",
+        "@eslint/js": "10.0.1",
+        "@eslint/json": "2.1.1",
+        "@size-limit/file": "14.2.0",
+        "@tailwindcss/postcss": "4.3.3",
+        "@types/node": "26.6.5",
+        "@vitest/browser-playwright": "5.0.5",
+        "angular-eslint": "22.6.0",
+        "baseline-browser-mapping": "2.11.29",
+        "browserslist": "4.29.3",
+        "caniuse-lite": "1.0.30001816",
+        "eslint": "10.12.0",
+        "globals": "17.13.0",
+        "jsdom": "30.1.3",
+        "lint-staged": "17.6.0",
+        "ng-packagr": "22.2.4",
+        "playwright": "1.64.1",
+        "postcss": "8.5.30",
+        "postcss-scss": "4.0.9",
+        "prettier": "3.9.10",
+        "simple-git-hooks": "2.14.0",
+        "size-limit": "14.2.0",
+        "stylelint": "17.16.0",
+        "stylelint-config-recommended-scss": "17.0.1",
+        "stylelint-prettier": "5.0.3",
+        "stylelint-scss": "7.3.0",
+        "tailwindcss": "4.3.3",
+        "type-coverage": "2.30.4",
+        "typescript": "6.0.3",
+        "typescript-eslint": "8.71.2",
+        "vitest": "5.0.5"
+    },
+    "simple-git-hooks": {
+        "pre-commit": "bunx lint-staged",
+        "commit-msg": "bunx commitlint --edit $1"
+    },
+    "typeCoverage": {
+        "atLeast": 91,
+        "ignoreObject": true,
+        "ignoreAsAssertion": true,
+        "ignoreTypeAssertion;": true,
+        "strict": true,
+        "suppressError": true,
+        "reportSemanticError": true,
+        "ignoreCatch": true,
+        "ignoreFiles": [
+            "server/**/*.ts",
+            "server.ts"
+        ]
+    },
+    "overrides": {
+        "browserslist": "4.29.3",
+        "caniuse-lite": "1.0.30001816",
+        "source-map-js": "1.2.2"
+    }
+}

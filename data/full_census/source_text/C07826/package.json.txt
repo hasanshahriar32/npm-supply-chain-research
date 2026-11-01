@@ -1,0 +1,76 @@
+{
+  "name": "oxc-resolver",
+  "version": "11.24.2",
+  "description": "Oxc Resolver Node API",
+  "homepage": "https://oxc.rs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oxc-project/oxc-resolver.git"
+  },
+  "funding": {
+    "url": "https://github.com/sponsors/Boshen"
+  },
+  "files": [
+    "browser.js",
+    "index.d.ts",
+    "index.js",
+    "webcontainer-fallback.js"
+  ],
+  "main": "index.js",
+  "browser": "browser.js",
+  "types": "index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "prepare": "vp config",
+    "fmt": "vp fmt",
+    "test": "vp test run -r ./napi",
+    "build:debug": "node napi/build.mjs",
+    "build": "vp run build:debug --features allocator --release",
+    "postbuild:debug": "node napi/patch.mjs"
+  },
+  "devDependencies": {
+    "@emnapi/core": "2.0.0-alpha.6",
+    "@emnapi/runtime": "2.0.0-alpha.6",
+    "@napi-rs/cli": "^3.8.6",
+    "@napi-rs/wasm-runtime": "^1.2.0",
+    "@types/node": "^25.0.8",
+    "emnapi": "2.0.0-alpha.6",
+    "typescript": "^7.0.0",
+    "vite-plus": "catalog:"
+  },
+  "napi": {
+    "binaryName": "resolver",
+    "packageName": "@oxc-resolver/binding",
+    "targets": [
+      "aarch64-apple-darwin",
+      "aarch64-linux-android",
+      "aarch64-pc-windows-msvc",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-unknown-linux-musl",
+      "aarch64-unknown-linux-ohos",
+      "armv7-linux-androideabi",
+      "armv7-unknown-linux-gnueabihf",
+      "armv7-unknown-linux-musleabihf",
+      "powerpc64le-unknown-linux-gnu",
+      "riscv64gc-unknown-linux-gnu",
+      "riscv64gc-unknown-linux-musl",
+      "s390x-unknown-linux-gnu",
+      "wasm32-wasip1-threads",
+      "x86_64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-freebsd",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl"
+    ],
+    "wasm": {
+      "browser": {
+        "fs": true
+      }
+    }
+  },
+  "packageManager": "pnpm@11.24.0"
+}

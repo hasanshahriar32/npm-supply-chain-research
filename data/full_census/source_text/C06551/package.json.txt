@@ -1,0 +1,191 @@
+{
+	"name": "pdf-parse",
+	"version": "3.0.0-beta.0",
+	"type": "module",
+	"main": "dist/pdf-parse.cjs",
+	"module": "dist/pdf-parse.js",
+	"types": "dist/pdf-parse.d.cts",
+	"exports": {
+		".": {
+			"browser": {
+				"types": "./dist/pdf-parse.d.ts",
+				"default": "./dist/pdf-parse.js"
+			},
+			"import": {
+				"types": "./dist/pdf-parse.d.ts",
+				"default": "./dist/pdf-parse.js"
+			},
+			"require": {
+				"types": "./dist/pdf-parse.d.cts",
+				"default": "./dist/pdf-parse.cjs"
+			},
+			"default": {
+				"types": "./dist/pdf-parse.d.cts",
+				"default": "./dist/pdf-parse.cjs"
+			}
+		},
+		"./worker": {
+			"import": {
+				"types": "./dist/worker.d.ts",
+				"default": "./dist/worker.js"
+			},
+			"require": {
+				"types": "./dist/worker.d.cts",
+				"default": "./dist/worker.cjs"
+			},
+			"default": {
+				"types": "./dist/worker.d.cts",
+				"default": "./dist/worker.cjs"
+			}
+		},
+		"./node": {
+			"import": {
+				"types": "./dist/node.d.ts",
+				"default": "./dist/node.js"
+			},
+			"require": {
+				"types": "./dist/node.d.cts",
+				"default": "./dist/node.cjs"
+			},
+			"default": {
+				"types": "./dist/node.d.cts",
+				"default": "./dist/node.cjs"
+			}
+		},
+		"./pro": {
+			"browser": {
+				"types": "./dist/pdf-parse-pro.d.ts",
+				"default": "./dist/pdf-parse-pro.js"
+			},
+			"import": {
+				"types": "./dist/pdf-parse-pro.d.ts",
+				"default": "./dist/pdf-parse-pro.js"
+			},
+			"require": {
+				"types": "./dist/pdf-parse-pro.d.cts",
+				"default": "./dist/pdf-parse-pro.cjs"
+			},
+			"default": {
+				"types": "./dist/pdf-parse-pro.d.cts",
+				"default": "./dist/pdf-parse-pro.cjs"
+			}
+		}
+	},
+	"bin": {
+		"pdf-parse": "bin/cli.mjs"
+	},
+	"description": "Pure TypeScript, cross-platform module for extracting text, images, and tabular data from PDFs. Run directly in your browser or in Node!",
+	"homepage": "https://mehmet-kozan.github.io/pdf-parse/",
+	"bugs": {
+		"url": "https://github.com/mehmet-kozan/pdf-parse/issues"
+	},
+	"keywords": [
+		"pdf",
+		"pdf-parser",
+		"pdf-parse",
+		"pdf.js",
+		"pdfjs",
+		"pdfjs-dist",
+		"pdf2text",
+		"pdf2json",
+		"pdf2image",
+		"pdf2pic",
+		"pdf-to-text",
+		"pdf-to-image",
+		"pdf-viewer",
+		"pdf-table",
+		"pdf-tools",
+		"pdf-utils",
+		"pdf-screenshot",
+		"pdf-thumbnail"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mehmet-kozan/pdf-parse.git"
+	},
+	"license": "Apache-2.0",
+	"author": "Mehmet Kozan",
+	"files": [
+		"dist/**/*.js",
+		"dist/**/*.d.ts",
+		"dist/**/*.cjs",
+		"dist/**/*.d.cts",
+		"dist/**/*.mjs",
+		"bin/"
+	],
+	"scripts": {
+		"prebuild": "npm run clean",
+		"build": "npm run build:pdf-parse && npm run build:pdf-parse-pro && npm run build:worker && npm run build:node",
+		"postbuild": "node scripts/post-build.mjs",
+
+		"build:pdf-parse": "vite build && rolldown -c",
+		"build:pdf-parse-pro": "vite build -c vite.config.pro.ts && rolldown -c rolldown.config.pro.ts",
+		"build:worker": "vite build -c vite.config.worker.ts && rolldown -c rolldown.config.worker.ts",
+		"build:node": "npm run build:node:cjs && npm run build:node:esm && rolldown -c rolldown.config.node.ts",
+		"build:node:cjs": "esbuild src/node/index.ts --bundle --platform=node --format=cjs --target=node18 --outfile=dist/node.cjs --sourcemap",
+		"build:node:esm": "esbuild src/node/index.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/node.js --sourcemap",
+
+		"clean": "npm run clean:build && npm run clean:report && npm run clean:test && npm run clean:test:i",
+		"clean:build": "rimraf dist temp bin/worker/worker_source.js bin/worker/worker_source.cjs",
+		"clean:report": "rimraf reports/test reports/coverage reports/benchmark reports/api reports/demo/dist-web ",
+		"clean:test": "rimraf --glob tests/**/*.txt tests/**/imgs tests/**/*_images temp",
+		"clean:test:i": "rimraf --glob *.tgz tests/**/node_modules tests/**/package-lock.json tests/**/dist",
+
+		"test": "vitest run --reporter=default",
+		"test:p": "vitest run --config vitest.config.package.ts",
+		"test:i": "node scripts/integration.test.mjs",
+		"test:u": "node scripts/unsupported.test.mjs",
+		"test:e": "node scripts/example.test.mjs",
+		"test:cli": "node --test-reporter=dot --test bin/*.test.mjs",
+		"test:all": "npm run build && npm run test && npm run test:p && npm run test:i && npm run test:u && npm run test:e && npm run test:cli",
+		"test:ui": "vitest --ui --coverage",
+		"test:watch": "vitest",
+
+		"coverage": "vitest run --coverage",
+		"bench": "npm run bench:install && vitest bench --run",
+		"bench:install": "npm install --no-save pdf2json@latest",
+		"report": "npm run report:build && vite preview --outDir reports",
+		"report:build": "npm run build && npm run coverage && npm run bench && npm run typedoc:build",
+		"typedoc:build": "typedoc --options configs/typedoc.mjs --out reports/typedoc",
+		"lint": "biome lint .",
+		"format": "biome format --write .",
+		"format:all": "biome check --write .",
+		"format:check": "biome check .",
+		"prepare": "npm run build",
+		"pack": "npm update --save && npm outdated && npm pack --dry-run"
+	},
+	"optionalDependencies": {
+		"@napi-rs/canvas": "0.1.89"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.14",
+		"@types/node": "^25.2.0",
+		"@vitest/coverage-v8": "^4.0.18",
+		"@vitest/ui": "^4.0.18",
+		"pdfjs-dist": "5.4.624",
+		"rimraf": "^6.1.2",
+		"rolldown": "^1.0.0-rc.3",
+		"rolldown-plugin-dts": "^0.21.9",
+		"tsx": "^4.21.0",
+		"typedoc": "^0.28.16",
+		"typescript": "^5.9.3",
+		"vite": "^7.3.1",
+		"vitest": "^4.0.18"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"engines": {
+		"node": ">=20.16.0 <21 || >=22.3.0"
+	},
+	"browser": {
+		"@napi-rs/canvas": false
+	},
+	"jsdelivr": "./dist/pdf-parse.js",
+	"unpkg": "./dist/pdf-parse.cjs",
+	"funding": {
+		"type": "github",
+		"url": "https://github.com/sponsors/mehmet-kozan"
+	}
+}

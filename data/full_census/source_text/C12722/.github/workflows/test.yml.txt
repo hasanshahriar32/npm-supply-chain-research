@@ -1,0 +1,36 @@
+name: Run tests
+
+on:
+    push:
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        strategy:
+            matrix:
+                node: [20.x, 22.x, 24.x, latest]
+                os: [ubuntu-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v7
+            - name: Use Node.js ${{ matrix.node }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node }}
+                  cache: npm
+            - run: npm ci
+            - run: npm run lint
+            - run: npm run format:check
+            - run: npm test
+            # pkg snapshots a CommonJS module graph, and Node 22+ hides an ESM-only dependency
+            # behind require(esm). Rerun the suite with that switched off so one fails here.
+            - name: Run tests with require(esm) disabled
+              if: matrix.node != '20.x'
+              run: npm run test:cjs

@@ -1,0 +1,59 @@
+{
+  "name": "babel-dead-code-elimination",
+  "version": "2.0.0",
+  "description": "Composable primitives for dead code elimination in Babel",
+  "keywords": [
+    "babel",
+    "dead",
+    "code",
+    "elimination"
+  ],
+  "repository": "pcattori/babel-dead-code-elimination",
+  "author": "pcattori",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "build": "tsdown",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "changeset": "changeset"
+  },
+  "packageManager": "pnpm@10.2.1",
+  "devDependencies": {
+    "@babel/generator": "^7.23.6",
+    "@changesets/cli": "^2.27.2",
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__generator": "^7.6.8",
+    "@types/babel__traverse": "^7.20.5",
+    "@types/node": "^20.10.6",
+    "dedent": "^1.5.3",
+    "prettier": "^3.3.2",
+    "tsdown": "^0.22.14",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/parser": "^7.23.6",
+    "@babel/traverse": "^7.23.7",
+    "@babel/types": "^7.23.6"
+  },
+  "prettier": {
+    "semi": false
+  },
+  "files": [
+    "dist"
+  ]
+}

@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  download-libddwaf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install --ignore-scripts
+      - run: node scripts/setup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: libddwaf
+          path: libddwaf/**/*
+
+  build:
+    needs: download-libddwaf
+    uses: Datadog/action-prebuildify/.github/workflows/build.yml@main
+    with:
+      artifact-name: libddwaf
+      cache: true
+      napi: true
+      package-manager: 'npm'
+      postbuild: 'node scripts/postbuild'
+      skip: 'linux-arm,linux-ia32'
+      target-name: 'appsec'
+      min-node-version: 18
+
+  static-checks:
+    strategy:
+      matrix:
+        run:
+          - lint
+          - licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - run: npm ci --ignore-scripts
+      - run: npm run ${{ matrix.run }}
+
+  cpp-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+      - run: pip install cpplint
+      - run: cpplint --linelength=120 --recursive ./src

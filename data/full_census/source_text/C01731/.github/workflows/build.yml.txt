@@ -1,0 +1,76 @@
+name: build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    timeout-minutes: 15
+    env:
+      CI: true
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.34.1
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      - name: types
+        run: pnpm check:types
+      - name: build
+        run: pnpm build
+      - name: test
+        id: test
+        if: ${{ always() }}
+        run: pnpm test
+      - name: Import with CJS
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test-cjs.cjs
+      - name: Import with ESM
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test-esm.mjs
+      - name: Import with both CJS and ESM
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test.js
+      - name: Import synchronously with CJS
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test-cjs-sync.cjs
+      - name: Import synchronously with ESM
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test-esm-sync.mjs
+      - name: Import synchronously with both CJS and ESM
+        if: ${{ always() }}
+        run: node smoke-tests/smoke-test-sync.js
+      - name: lint
+        if: ${{ always() }}
+        run: pnpm lint
+      - name: style
+        if: ${{ always() }}
+        run: pnpm format:check
+
+  codecov: # Send only a single coverage report per run
+    needs: build
+    timeout-minutes: 15
+    env:
+      CI: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+      - run: pnpm i --frozen-lockfile
+      - name: test
+        run: pnpm test:coverage
+      - name: codecov
+        uses: codecov/codecov-action@v7
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

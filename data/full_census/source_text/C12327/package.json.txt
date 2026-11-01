@@ -1,0 +1,114 @@
+{
+	"name": "browserslist-generator",
+	"version": "3.0.0",
+	"description": "A library that makes generating and validating Browserslists a breeze!",
+	"files": [
+		"dist/**/*.*"
+	],
+	"funding": {
+		"type": "github",
+		"url": "https://github.com/wessberg/browserslist-generator?sponsor=1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/wessberg/browserslist-generator.git"
+	},
+	"bugs": {
+		"url": "https://github.com/wessberg/browserslist-generator/issues"
+	},
+	"scripts": {
+		"generate:sandhog": "sandhog all --yes",
+		"generate:changelog": "standard-changelog --first-release",
+		"generate:all": "pnpm run generate:sandhog && pnpm run generate:changelog",
+		"clean:dist": "rimraf dist",
+		"clean": "pnpm run clean:dist",
+		"lint": "tsc --noEmit && eslint \"src/**/*.ts\" --color",
+		"lint:fix": "eslint \"src/**/*.ts\" --color --fix",
+		"prettier": "prettier --write \"{src,test,documentation}/**/*.{js,ts,json,html,xml,css,md}\"",
+		"test": "node --import tsx --test \"./test/**/*.test.ts\"",
+		"prebuild": "pnpm run clean:dist",
+		"build": "tsup \"src/index.ts\" --sourcemap --dts --format cjs,esm",
+		"preversion": "pnpm run lint && pnpm run build",
+		"version": "pnpm run generate:all && git add .",
+		"release": "np --no-cleanup --no-yarn",
+		"update:check": "pnpx npm-check-updates --dep dev,prod",
+		"update:commit": "pnpx npm-check-updates -u --dep dev,prod && pnpm update && pnpm install"
+	},
+	"keywords": [
+		"browserslist",
+		"caniuse",
+		"generate",
+		"support",
+		"babel-preset-env",
+		"util"
+	],
+	"contributors": [
+		{
+			"name": "Frederik Wessberg",
+			"email": "frederikwessberg@hotmail.com",
+			"url": "https://github.com/wessberg",
+			"imageUrl": "https://avatars2.githubusercontent.com/u/20454213?s=460&v=4",
+			"role": "Lead Developer",
+			"twitter": "FredWessberg",
+			"github": "wessberg"
+		}
+	],
+	"license": "MIT",
+	"devDependencies": {
+		"@eslint/js": "^9.11.1",
+		"@types/caniuse-lite": "1.0.5",
+		"@types/node": "22.6.1",
+		"@wessberg/prettier-config": "1.0.0",
+		"@wessberg/ts-config": "^5.0.2",
+		"eslint": "^9.11.1",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-jsdoc": "^50.2.4",
+		"eslint-plugin-prettier": "^5.2.1",
+		"typescript-eslint": "^8.7.0",
+		"helpertypes": "^0.0.19",
+		"husky": "^9.1.6",
+		"lint-staged": "^15.2.10",
+		"np": "10.0.7",
+		"npm-check-updates": "^17.1.3",
+		"pnpm": "^9.11.0",
+		"prettier": "^3.3.3",
+		"rimraf": "^6.0.1",
+		"sandhog": "^2.0.2",
+		"standard-changelog": "^6.0.0",
+		"tslib": "^2.7.0",
+		"tsup": "^8.3.0",
+		"tsx": "^4.19.1",
+		"typescript": "^5.6.2",
+		"useragent-generator": "1.1.1-amkt-22079-finish.0"
+	},
+	"dependencies": {
+		"@mdn/browser-compat-data": "^5.6.2",
+		"@types/object-path": "^0.11.4",
+		"@types/semver": "^7.5.8",
+		"@types/ua-parser-js": "^0.7.39",
+		"browserslist": "^4.23.3",
+		"caniuse-lite": "^1.0.30001663",
+		"isbot": "^5.1.17",
+		"object-path": "^0.11.8",
+		"semver": "^7.6.3",
+		"ua-parser-js": "^1.0.39"
+	},
+	"exports": {
+		"import": "./dist/index.js",
+		"require": "./dist/index.cjs"
+	},
+	"type": "module",
+	"types": "./dist/index.d.ts",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"engines": {
+		"node": ">=18.20.0",
+		"npm": ">=7.0.0",
+		"yarn": ">=1.13",
+		"pnpm": ">=3.2.0"
+	},
+	"lint-staged": {
+		"*": "prettier --ignore-unknown --write"
+	},
+	"prettier": "@wessberg/prettier-config"
+}

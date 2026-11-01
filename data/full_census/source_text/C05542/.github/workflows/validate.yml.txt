@@ -1,0 +1,135 @@
+name: 🚀 Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: 🔨 Build and Validate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [lts/-1, lts/*, latest]
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔨 Build
+        run: npm run build
+
+      - name: 💾 Cache build output
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            dist/
+          key: build-${{ matrix.node-version }}-${{ github.sha }}
+
+      - name: 🔍 Type check
+        run: npm run typecheck
+
+      - name: 🧹 Lint
+        run: npm run lint
+
+      - name: 🧪 Test
+        run: npm run test:coverage
+
+      - name: 📊 Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  e2e:
+    name: 🌐 E2E Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [lts/*]
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v5
+
+      - name: 🟢 Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔨 Build
+        run: npm run build
+
+      # ensure we don't implicitly rely on dev dependencies
+      - name: 📦 Prune dependencies
+        run: npm prune --omit=dev
+
+      - name: 🧪 Run cross-env e2e tests
+        run: node e2e/test-cross-env.js
+
+      - name: 🐚 Run cross-env-shell e2e tests
+        run: node e2e/test-cross-env-shell.js
+
+      - name: 🔧 Run default value syntax e2e tests
+        run: node e2e/test-default-values.js
+
+  release:
+    name: 🚀 Release
+    needs: [build, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      id-token: write # to enable use of OIDC for npm provenance
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+    if:
+      ${{ github.repository == 'kentcdodds/cross-env' &&
+      contains('refs/heads/main,refs/heads/beta,refs/heads/next,refs/heads/alpha',
+      github.ref) && github.event_name == 'push' }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v5
+
+      - name: 🔄 Restore build output
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            dist/
+          key: build-lts/*-${{ github.sha }}
+          fail-on-cache-miss: false
+
+      - name: 🚀 Release
+        uses: cycjimmy/semantic-release-action@v5.0.2
+        with:
+          semantic_version: 25
+          branches: |
+            [
+              '+([0-9])?(.{+([0-9]),x}).x',
+              'main',
+              'next',
+              'next-major',
+              {name: 'beta', prerelease: true},
+              {name: 'alpha', prerelease: true}
+            ]
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

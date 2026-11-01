@@ -1,0 +1,697 @@
+name: build-artifacts
+
+# Builds release-shipped binaries on GitHub runners and commits them back to
+# the PR branch. Comment `/build` on a PR — normally the Changesets "Version
+# Packages" PR — and this replaces the local rebuild that
+# release-artifacts-check.yml otherwise asks the maintainer to do by hand.
+#
+# Selective: scripts/release/changed-artifacts.js decides which artifact
+# families (core / ssim / interpret / milo / codec-png / wasm) changed since each family's last
+# published release tag — version-only churn doesn't count — and only those
+# get compiled. Each of the three wheel sets is rebuilt when its family's
+# sources changed or its version bumped without a matching wheel set. The same
+# script drives release-artifacts-check.yml, so what /build produces is exactly
+# what the merge gate requires.
+#
+# Toolchains mirror `pnpm build:rust && pnpm build:rust:ssim &&
+# pnpm build:rust:interpret && pnpm build:wasm && pnpm build:python:all` (and
+# its :ssim / :interpret siblings) by calling the exact same scripts with
+# `--target`:
+#   macOS targets    cargo, natively / rustup-cross from an arm64 runner
+#   Linux targets    `cross` docker images — BLAZEDIFF_FORCE_CROSS keeps the
+#                    x64 build off the runner's own (much newer) glibc
+#   Windows targets  plain cargo on a Windows runner, which already has MSVC,
+#                    the Windows SDK and the ARM64 cross tools. This is the one
+#                    place CI does *not* mirror a Mac, where the same scripts
+#                    route through cargo-xwin (see needs_xwin() in
+#                    crates/scripts/_targets.sh): xwin downloads the ~1 GB MSVC
+#                    CRT on every cold run — 12m44s in practice — and links with
+#                    clang-cl rather than the MSVC toolchain users actually have.
+#   wheels           maturin: zig for Linux, native MSVC for Windows
+#
+# Push uses CHANGESETS_PAT, not GITHUB_TOKEN: a GITHUB_TOKEN push triggers no
+# downstream workflows, and the whole point is to re-run release-artifacts-check
+# on the new commit.
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: build-artifacts-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  resolve:
+    name: Resolve PR
+    if: |
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/build') &&
+      github.event.comment.user.login == 'teimurjan'
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.pr.outputs.ref }}
+      sha: ${{ steps.pr.outputs.sha }}
+      core: ${{ steps.families.outputs.core }}
+      ssim: ${{ steps.families.outputs.ssim }}
+      interpret: ${{ steps.families.outputs.interpret }}
+      wasm: ${{ steps.families.outputs.wasm }}
+      wasm_interpret: ${{ steps.families.outputs.wasm_interpret }}
+      milo: ${{ steps.families.outputs.milo }}
+      wasm_milo: ${{ steps.families.outputs.wasm_milo }}
+      codec_png: ${{ steps.families.outputs.codec_png }}
+      wasm_codec_png: ${{ steps.families.outputs.wasm_codec_png }}
+      core_version: ${{ steps.version.outputs.core_version }}
+      ssim_version: ${{ steps.version.outputs.ssim_version }}
+      interpret_version: ${{ steps.version.outputs.interpret_version }}
+      wheels_core: ${{ steps.version.outputs.wheels_core }}
+      wheels_ssim: ${{ steps.version.outputs.wheels_ssim }}
+      wheels_interpret: ${{ steps.version.outputs.wheels_interpret }}
+      wheels_any: ${{ steps.version.outputs.wheels_any }}
+      label: ${{ steps.version.outputs.label }}
+    steps:
+      - name: Resolve PR head
+        uses: actions/github-script@v7
+        id: pr
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            // The artifacts get pushed back onto the head branch, which is only
+            // possible while it lives in this repo.
+            const head = pr.head.repo?.full_name;
+            if (head !== `${context.repo.owner}/${context.repo.repo}`) {
+              core.setFailed(`/build cannot push to a fork (head is ${head}).`);
+              return;
+            }
+            core.setOutput('ref', pr.head.ref);
+            core.setOutput('sha', pr.head.sha);
+            core.setOutput('base', pr.base.sha);
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes',
+            });
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+          # The family resolution diffs each family against its last release
+          # tag; the base ref anchors which versions count as released.
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Which artifact families changed since their last published release —
+      # version-only churn from `changeset version` doesn't count.
+      - name: Resolve changed artifact families
+        id: families
+        run: |
+          set -euo pipefail
+          node scripts/release/changed-artifacts.js "${{ steps.pr.outputs.base }}" | tee -a "$GITHUB_OUTPUT"
+
+      # Each wheel set carries its own crate's version in the filename, and the
+      # wheel builds assert against it. Families version independently, so
+      # there is no single release version; `label` names what this run
+      # actually ships, per family.
+      - name: Read target versions
+        id: version
+        run: |
+          set -euo pipefail
+          crate_version() {
+            local v; v=$(sed -nE 's/^version *= *"([^"]+)".*/\1/p' "crates/$1/Cargo.toml" | head -1)
+            [[ -n "$v" ]] || { echo "::error::could not read version from crates/$1/Cargo.toml"; exit 1; }
+            echo "$v"
+          }
+
+          # A wheel set needs rebuilding when its family's sources changed *or*
+          # its version bumped without it (a TS-only release for that family).
+          # If neither, the committed wheels are already the right ones.
+          wheels_needed() {
+            local crate="$1" version="$2" changed="$3"
+            local prefix="${crate//-/_}"
+            if [[ "$changed" == "true" ]] \
+              || ! ls "crates/$crate/wheels/$prefix-$version-"*.whl > /dev/null 2>&1; then
+              echo true
+            else
+              echo "$crate wheels for v$version already committed — skipping" >&2
+              echo false
+            fi
+          }
+
+          CORE_VER=$(crate_version blazediff)
+          SSIM_VER=$(crate_version blazediff-ssim)
+          INTERPRET_VER=$(crate_version blazediff-interpret)
+          WHEELS_CORE=$(wheels_needed blazediff "$CORE_VER" '${{ steps.families.outputs.core }}')
+          WHEELS_SSIM=$(wheels_needed blazediff-ssim "$SSIM_VER" '${{ steps.families.outputs.ssim }}')
+          WHEELS_INTERPRET=$(wheels_needed blazediff-interpret "$INTERPRET_VER" '${{ steps.families.outputs.interpret }}')
+
+          {
+            echo "core_version=$CORE_VER"
+            echo "ssim_version=$SSIM_VER"
+            echo "interpret_version=$INTERPRET_VER"
+            echo "wheels_core=$WHEELS_CORE"
+            echo "wheels_ssim=$WHEELS_SSIM"
+            echo "wheels_interpret=$WHEELS_INTERPRET"
+          } >> "$GITHUB_OUTPUT"
+
+          # One flag for the steps that only care whether maturin and zig are
+          # needed at all.
+          if [[ "$WHEELS_CORE$WHEELS_SSIM$WHEELS_INTERPRET" == *true* ]]; then
+            echo "wheels_any=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "wheels_any=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          pkg_version() { node -p "require('./$1/package.json').version"; }
+          parts=()
+          if [[ "${{ steps.families.outputs.core }}" == "true" ]]; then
+            parts+=("core v$(pkg_version packages/core-native/core-native)")
+          fi
+          if [[ "${{ steps.families.outputs.ssim }}" == "true" ]]; then
+            parts+=("ssim v$(pkg_version packages/ssim-native/ssim-native)")
+          fi
+          if [[ "${{ steps.families.outputs.interpret }}" == "true" ]]; then
+            parts+=("interpret v$(pkg_version packages/interpret-native/interpret-native)")
+          fi
+          if [[ "${{ steps.families.outputs.wasm }}" == "true" ]]; then
+            parts+=("wasm v$(pkg_version packages/core-wasm)")
+          fi
+          if [[ "${{ steps.families.outputs.wasm_interpret }}" == "true" ]]; then
+            parts+=("interpret-wasm v$(pkg_version packages/interpret-wasm)")
+          fi
+          if [[ "${{ steps.families.outputs.milo }}" == "true" ]]; then
+            parts+=("milo v$(pkg_version packages/milo-native/milo-native)")
+          fi
+          if [[ "${{ steps.families.outputs.wasm_milo }}" == "true" ]]; then
+            parts+=("milo-wasm v$(pkg_version packages/milo-wasm)")
+          fi
+          if [[ "${{ steps.families.outputs.codec_png }}" == "true" ]]; then
+            parts+=("codec-png v$(pkg_version packages/codec-png-native/codec-png-native)")
+          fi
+          if [[ "${{ steps.families.outputs.wasm_codec_png }}" == "true" ]]; then
+            parts+=("codec-png-wasm v$(pkg_version packages/codec-png-wasm)")
+          fi
+          if [[ "$WHEELS_CORE" == "true" ]]; then
+            parts+=("blazediff wheels v$CORE_VER")
+          fi
+          if [[ "$WHEELS_SSIM" == "true" ]]; then
+            parts+=("blazediff-ssim wheels v$SSIM_VER")
+          fi
+          if [[ "$WHEELS_INTERPRET" == "true" ]]; then
+            parts+=("blazediff-interpret wheels v$INTERPRET_VER")
+          fi
+          if [[ ${#parts[@]} -eq 0 ]]; then
+            LABEL="nothing — no artifact sources changed"
+          else
+            LABEL=$(printf '%s, ' "${parts[@]}")
+            LABEL=${LABEL%, }
+          fi
+          echo "label=$LABEL" >> "$GITHUB_OUTPUT"
+          echo "Building: $LABEL (${{ steps.pr.outputs.sha }})"
+
+  build:
+    name: ${{ matrix.target }}
+    needs: resolve
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      # One broken target shouldn't throw away five good ones — the commit job
+      # needs the full set anyway, but the logs are worth having.
+      fail-fast: false
+      matrix:
+        include:
+          - { target: aarch64-apple-darwin, os: macos-latest, kind: macos, pkg: darwin-arm64, cli: blazediff }
+          - { target: x86_64-apple-darwin, os: macos-latest, kind: macos, pkg: darwin-x64, cli: blazediff }
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-latest, kind: linux, pkg: linux-arm64, cli: blazediff }
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-latest, kind: linux, pkg: linux-x64, cli: blazediff }
+          - { target: aarch64-pc-windows-msvc, os: windows-2025, kind: windows, pkg: win32-arm64, cli: blazediff.exe }
+          - { target: x86_64-pc-windows-msvc, os: windows-2025, kind: windows, pkg: win32-x64, cli: blazediff.exe }
+    env:
+      # See force_cross() in crates/scripts/_targets.sh — no effect off Linux.
+      BLAZEDIFF_FORCE_CROSS: "1"
+      # cargo-binstall resolves prebuilt artifacts through the GitHub API;
+      # unauthenticated calls rate-limit (403) and drop it into a
+      # compile-from-source fallback that upstream yanks can break.
+      GITHUB_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        # The build scripts are bash, and the Windows targets now build on a
+        # Windows runner; `bash` resolves to the image's git-bash there.
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          # Vendored libspng / libjpeg-turbo / miniz.
+          submodules: recursive
+          # Everything here is rebuilt from source; only the commit job needs
+          # the tracked binaries, and it only needs their pointers.
+          lfs: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: cargo-bins/cargo-binstall@main
+
+      # Pinned to the versions the artifacts are built with locally, so a
+      # /build and a maintainer's `pnpm build:rust` stay comparable. Only the
+      # wheel build needs maturin. The compile fallback is disabled: a source
+      # build of maturin trips over yanked transitive deps, and a fast retry
+      # of /build beats minutes of doomed compilation.
+      #
+      # The floor is 1.14.1, the first release to bundle cargo-zigbuild 0.23 —
+      # see the version check in crates/scripts/build-maturin.sh for why.
+      - name: Install maturin
+        if: needs.resolve.outputs.wheels_any == 'true'
+        run: cargo binstall -y --disable-strategies compile maturin@1.15.0
+
+      # cross only backs the linux CLI/.node builds; wheels link with zig.
+      - name: Install cross
+        if: >-
+          matrix.kind == 'linux' &&
+          (needs.resolve.outputs.core == 'true' ||
+           needs.resolve.outputs.ssim == 'true' ||
+           needs.resolve.outputs.interpret == 'true' ||
+           needs.resolve.outputs.milo == 'true' ||
+           needs.resolve.outputs.codec_png == 'true')
+        run: cargo binstall -y --disable-strategies compile cross@0.2.5
+
+      # maturin cross-links the Linux wheels with zig (build-maturin.sh), which
+      # is what gets them the manylinux_2_17 tag. ziglang is the same
+      # distribution homebrew's zig is, just installed without a package manager.
+      - name: Install zig
+        if: matrix.kind == 'linux' && needs.resolve.outputs.wheels_any == 'true'
+        run: |
+          set -euo pipefail
+          python3 -m venv "$HOME/.zig-venv"
+          "$HOME/.zig-venv/bin/pip" install --quiet ziglang==0.16.0
+          printf '#!/usr/bin/env bash\nexec "%s/.zig-venv/bin/python" -m ziglang "$@"\n' "$HOME" \
+            | sudo tee /usr/local/bin/zig > /dev/null
+          sudo chmod +x /usr/local/bin/zig
+          zig version
+
+      - name: Build CLI binary
+        if: needs.resolve.outputs.core == 'true'
+        run: crates/blazediff/scripts/build-all.sh --target ${{ matrix.target }}
+
+      - name: Build core .node
+        if: needs.resolve.outputs.core == 'true'
+        run: crates/blazediff/scripts/build-napi.sh --target ${{ matrix.target }}
+
+      - name: Build ssim .node
+        if: needs.resolve.outputs.ssim == 'true'
+        run: crates/blazediff-ssim/scripts/build-napi.sh --target ${{ matrix.target }}
+
+      - name: Build interpret .node
+        if: needs.resolve.outputs.interpret == 'true'
+        run: crates/blazediff-interpret/scripts/build-napi.sh --target ${{ matrix.target }}
+
+      - name: Build milo .node
+        if: needs.resolve.outputs.milo == 'true'
+        run: crates/blazediff-milo/scripts/build-napi.sh --target ${{ matrix.target }}
+
+      - name: Build codec-png .node
+        if: needs.resolve.outputs.codec_png == 'true'
+        run: crates/blazediff-png/scripts/build-napi.sh --target ${{ matrix.target }}
+
+      # zig links against a bare glibc sysroot with no zlib, and picking up the
+      # runner's libz would undo the manylinux tag. The vendored miniz is what
+      # the macOS-hosted build already ships in these wheels; build.rs only
+      # auto-selects it when the *host* isn't Linux, and it reads the override
+      # with `is_ok()` — so it must stay *unset* everywhere else. Every wheel
+      # here decodes images through blazediff-shared, so all three need it.
+      - name: Build Python wheels
+        if: needs.resolve.outputs.wheels_any == 'true'
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.kind }}" == "linux" ]]; then
+            export BLAZEDIFF_FORCE_MINIZ=1
+          fi
+          if [[ "${{ needs.resolve.outputs.wheels_core }}" == "true" ]]; then
+            crates/blazediff/scripts/build-maturin.sh \
+              --target ${{ matrix.target }} \
+              --version ${{ needs.resolve.outputs.core_version }}
+          fi
+          if [[ "${{ needs.resolve.outputs.wheels_ssim }}" == "true" ]]; then
+            crates/blazediff-ssim/scripts/build-maturin.sh \
+              --target ${{ matrix.target }} \
+              --version ${{ needs.resolve.outputs.ssim_version }}
+          fi
+          if [[ "${{ needs.resolve.outputs.wheels_interpret }}" == "true" ]]; then
+            crates/blazediff-interpret/scripts/build-maturin.sh \
+              --target ${{ matrix.target }} \
+              --version ${{ needs.resolve.outputs.interpret_version }}
+          fi
+
+      # The build scripts warn-and-continue on some paths; make sure this job
+      # never uploads a stale checkout file (an LFS pointer) as a fresh binary.
+      - name: Verify artifacts
+        run: |
+          set -euo pipefail
+          files=()
+          if [[ "${{ needs.resolve.outputs.wheels_core }}" == "true" ]]; then
+            files+=(crates/blazediff/wheels/*.whl)
+          fi
+          if [[ "${{ needs.resolve.outputs.wheels_ssim }}" == "true" ]]; then
+            files+=(crates/blazediff-ssim/wheels/*.whl)
+          fi
+          if [[ "${{ needs.resolve.outputs.wheels_interpret }}" == "true" ]]; then
+            files+=(crates/blazediff-interpret/wheels/*.whl)
+          fi
+          if [[ "${{ needs.resolve.outputs.core }}" == "true" ]]; then
+            files+=(
+              "packages/core-native/core-native-${{ matrix.pkg }}/${{ matrix.cli }}"
+              "packages/core-native/core-native-${{ matrix.pkg }}/blazediff.node"
+            )
+          fi
+          if [[ "${{ needs.resolve.outputs.ssim }}" == "true" ]]; then
+            files+=("packages/ssim-native/ssim-native-${{ matrix.pkg }}/blazediff_ssim.node")
+          fi
+          if [[ "${{ needs.resolve.outputs.interpret }}" == "true" ]]; then
+            files+=("packages/interpret-native/interpret-native-${{ matrix.pkg }}/blazediff_interpret.node")
+          fi
+          if [[ "${{ needs.resolve.outputs.milo }}" == "true" ]]; then
+            files+=("packages/milo-native/milo-native-${{ matrix.pkg }}/blazediff_milo.node")
+          fi
+          if [[ "${{ needs.resolve.outputs.codec_png }}" == "true" ]]; then
+            files+=("packages/codec-png-native/codec-png-native-${{ matrix.pkg }}/blazediff_png.node")
+          fi
+          for f in "${files[@]}"; do
+            if [[ ! -s "$f" ]]; then
+              echo "::error::$f missing or empty after build"
+              exit 1
+            fi
+            if head -c 40 "$f" | grep -q 'git-lfs'; then
+              echo "::error::$f is still a Git LFS pointer — nothing was built into it"
+              exit 1
+            fi
+            ls -lh "$f"
+          done
+
+      # The checkout leaves LFS pointer files at every artifact path
+      # (lfs: false). For families this run didn't build, those pointers must
+      # not reach the upload: the commit job would harmlessly re-commit them,
+      # but restore-artifacts.js would plant them into a real checkout.
+      - name: Prune unbuilt families
+        run: |
+          set -euo pipefail
+          if [[ "${{ needs.resolve.outputs.core }}" != "true" ]]; then
+            rm -f "packages/core-native/core-native-${{ matrix.pkg }}/${{ matrix.cli }}" \
+                  "packages/core-native/core-native-${{ matrix.pkg }}/blazediff.node"
+          fi
+          if [[ "${{ needs.resolve.outputs.ssim }}" != "true" ]]; then
+            rm -f "packages/ssim-native/ssim-native-${{ matrix.pkg }}/blazediff_ssim.node"
+          fi
+          if [[ "${{ needs.resolve.outputs.interpret }}" != "true" ]]; then
+            rm -f "packages/interpret-native/interpret-native-${{ matrix.pkg }}/blazediff_interpret.node"
+          fi
+          if [[ "${{ needs.resolve.outputs.milo }}" != "true" ]]; then
+            rm -f "packages/milo-native/milo-native-${{ matrix.pkg }}/blazediff_milo.node"
+          fi
+          if [[ "${{ needs.resolve.outputs.codec_png }}" != "true" ]]; then
+            rm -f "packages/codec-png-native/codec-png-native-${{ matrix.pkg }}/blazediff_png.node"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: target-${{ matrix.target }}
+          if-no-files-found: error
+          # Long enough for scripts/release/restore-artifacts.js to be useful.
+          # The Changesets PR is force-pushed from scratch whenever main moves,
+          # taking the artifact commit with it; restoring from here beats a 90
+          # minute rebuild, but only while the upload still exists. ~18 MB/run.
+          retention-days: 14
+          # Scoped to this target's package dirs: the other five still hold the
+          # checked-out pointer files, and uploading those would let them
+          # overwrite a sibling job's real binary on merge. Spanning packages/
+          # and crates/ also keeps the repo root as the archive root, which is
+          # what lets the commit job unpack straight into the checkout.
+          path: |
+            packages/core-native/core-native-${{ matrix.pkg }}/${{ matrix.cli }}
+            packages/core-native/core-native-${{ matrix.pkg }}/blazediff.node
+            packages/ssim-native/ssim-native-${{ matrix.pkg }}/blazediff_ssim.node
+            packages/interpret-native/interpret-native-${{ matrix.pkg }}/blazediff_interpret.node
+            packages/milo-native/milo-native-${{ matrix.pkg }}/blazediff_milo.node
+            packages/codec-png-native/codec-png-native-${{ matrix.pkg }}/blazediff_png.node
+            crates/blazediff/wheels/*.whl
+            crates/blazediff-ssim/wheels/*.whl
+            crates/blazediff-interpret/wheels/*.whl
+
+  # The wasm packages build the same way — same target, same toolchain, same
+  # post-processing — so they share one job definition and differ only in which
+  # crate shim runs. Each leg is gated on its own family, so an interpret-only
+  # change doesn't rebuild the core module.
+  wasm:
+    name: wasm32-unknown-unknown (${{ matrix.artifact }})
+    needs: resolve
+    if: >-
+      needs.resolve.outputs.wasm == 'true' ||
+      needs.resolve.outputs.wasm_interpret == 'true' ||
+      needs.resolve.outputs.wasm_milo == 'true' ||
+      needs.resolve.outputs.wasm_codec_png == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: wasm
+            family: wasm
+            crate: blazediff
+            pkg: core-wasm
+          - artifact: interpret-wasm
+            family: wasm_interpret
+            crate: blazediff-interpret
+            pkg: interpret-wasm
+          - artifact: milo-wasm
+            family: wasm_milo
+            crate: blazediff-milo
+            pkg: milo-wasm
+          - artifact: codec-png-wasm
+            family: wasm_codec_png
+            crate: blazediff-png
+            pkg: codec-png-wasm
+    steps:
+      - uses: actions/checkout@v5
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          # No submodules: the wasm build runs --no-default-features --features
+          # wasm, so blazediff-shared's build.rs returns before touching the
+          # vendored C. Same reasoning as benchmark-wasm.yml.
+          lfs: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: cargo-bins/cargo-binstall@main
+        if: needs.resolve.outputs[matrix.family] == 'true'
+
+      # Must match the wasm-bindgen pin in the crate's Cargo.toml and the
+      # default in crates/scripts/build-wasm.sh; the CLI errors out on a
+      # mismatch.
+      - name: Install wasm-bindgen-cli
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        run: cargo binstall -y wasm-bindgen-cli@0.2.100
+
+      # build-wasm.sh silently skips wasm-opt when it is absent, which would
+      # commit an unoptimized module.
+      - name: Install binaryen (wasm-opt)
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y binaryen
+          wasm-opt --version
+
+      - name: Build wasm
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        run: crates/${{ matrix.crate }}/scripts/build-wasm.sh
+
+      # Single directory, so the archive root is that directory — the commit job
+      # downloads it straight back into packages/<pkg>/wasm/.
+      - uses: actions/upload-artifact@v4
+        if: needs.resolve.outputs[matrix.family] == 'true'
+        with:
+          name: ${{ matrix.artifact }}
+          if-no-files-found: error
+          # Matches the target uploads; restore needs the whole set or none.
+          retention-days: 14
+          path: packages/${{ matrix.pkg }}/wasm/
+
+  commit:
+    name: Commit to PR
+    needs: [resolve, build, wasm]
+    # wasm is skipped when its sources didn't change; that must not skip the
+    # commit of everything else.
+    if: >-
+      always() &&
+      needs.resolve.result == 'success' &&
+      needs.build.result == 'success' &&
+      (needs.wasm.result == 'success' || needs.wasm.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
+          token: ${{ secrets.CHANGESETS_PAT }}
+          # Pointers are all this job needs: the artifacts it doesn't overwrite
+          # it doesn't touch, so smudging ~30 MB of LFS blobs buys nothing.
+          lfs: false
+
+      # The matrix built from resolve.sha; refuse to attach those artifacts to a
+      # branch that has moved on since.
+      - name: Verify branch is unchanged
+        run: |
+          set -euo pipefail
+          HEAD_SHA=$(git rev-parse HEAD)
+          if [[ "$HEAD_SHA" != "${{ needs.resolve.outputs.sha }}" ]]; then
+            echo "::error::${{ needs.resolve.outputs.ref }} moved to $HEAD_SHA since /build started (built ${{ needs.resolve.outputs.sha }}). Comment /build again."
+            exit 1
+          fi
+
+      # Each wheels dir is a single-version set (publish-pypi.yml enforces it),
+      # so the previous release's have to go before this release's land.
+      - name: Drop previous wheels
+        run: |
+          rm -f crates/blazediff/wheels/*.whl \
+                crates/blazediff-ssim/wheels/*.whl \
+                crates/blazediff-interpret/wheels/*.whl
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: target-*
+          path: .
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        if: needs.resolve.outputs.wasm == 'true'
+        with:
+          name: wasm
+          path: packages/core-wasm/wasm
+
+      - uses: actions/download-artifact@v4
+        if: needs.resolve.outputs.wasm_interpret == 'true'
+        with:
+          name: interpret-wasm
+          path: packages/interpret-wasm/wasm
+
+      - uses: actions/download-artifact@v4
+        if: needs.resolve.outputs.wasm_milo == 'true'
+        with:
+          name: milo-wasm
+          path: packages/milo-wasm/wasm
+
+      - uses: actions/download-artifact@v4
+        if: needs.resolve.outputs.wasm_codec_png == 'true'
+        with:
+          name: codec-png-wasm
+          path: packages/codec-png-wasm/wasm
+
+      - name: Stage artifacts
+        run: |
+          set -euo pipefail
+
+          # upload-artifact drops the executable bit; restore it from what git
+          # already records rather than guessing which paths need it.
+          git ls-files -s packages crates/*/wheels \
+            | awk '$1 == "100755" { print $4 }' \
+            | xargs -r chmod +x
+
+          # Guards a version bump that only landed in half the manifests: each
+          # wheel name encodes the version its own family is cut at, with the
+          # crate name PEP 427-escaped.
+          shopt -s nullglob
+          check_wheels() {
+            local crate="$1" version="$2" prefix="${1//-/_}"
+            for whl in "crates/$crate/wheels"/*.whl; do
+              case "$(basename "$whl")" in
+                "${prefix}-${version}-"*) ;;
+                *) echo "::error::$whl is not a v${version} ${prefix} wheel"; exit 1 ;;
+              esac
+            done
+          }
+          check_wheels blazediff '${{ needs.resolve.outputs.core_version }}'
+          check_wheels blazediff-ssim '${{ needs.resolve.outputs.ssim_version }}'
+          check_wheels blazediff-interpret '${{ needs.resolve.outputs.interpret_version }}'
+
+      - name: Commit and push
+        id: push
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Binaries are LFS-tracked; the clean filter has to be wired up in
+          # this clone before `git add` sees them.
+          git lfs install --local
+
+          git add -A packages \
+            crates/blazediff/wheels \
+            crates/blazediff-ssim/wheels \
+            crates/blazediff-interpret/wheels
+          if git diff --cached --quiet; then
+            echo "Artifacts already up to date — nothing to commit."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --cached --stat
+          git commit -m "build: artifacts for ${{ needs.resolve.outputs.label }}"
+          git push origin "HEAD:${{ needs.resolve.outputs.ref }}"
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report success
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const committed = '${{ steps.push.outputs.committed }}' === 'true';
+            const label = '${{ needs.resolve.outputs.label }}';
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket',
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: committed
+                ? `Built and committed release artifacts — ${label} — across all six platforms. Families whose sources didn't change were skipped.`
+                : `Release artifacts (${label}) were already up to date; nothing to commit.`,
+            });
+
+  report-failure:
+    name: Report failure
+    needs: [resolve, build, wasm, commit]
+    if: failure() && needs.resolve.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'confused',
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `\`/build\` failed — nothing was committed. [Logs](${run}).`,
+            });

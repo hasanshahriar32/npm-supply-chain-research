@@ -1,0 +1,15 @@
+name: publish
+on:
+  push:
+    tags:
+      - "v*"
+jobs:
+  tests:
+    uses: brickhouse-tech/.github/.github/workflows/tests.yml@main
+    with:
+      build: true
+  publish:
+    needs: [tests]
+    uses: brickhouse-tech/.github/.github/workflows/publish.yml@main
+    with:
+      build: true

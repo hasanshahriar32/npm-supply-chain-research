@@ -1,0 +1,41 @@
+name: 'Experimental Releases'
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  experimental:
+    name: 'Experimental Release'
+    if: github.repository == 'pmndrs/react-spring'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@d07a454dad7609a92316b57b23c9ccfd4f59af66 # 0.13.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+
+      - uses: ./.github/actions/setup
+        with:
+          turbo-cache: 'true'
+
+      - name: Build
+        run: pnpm build-ci
+
+      - run: ./scripts/version-and-publish.sh
+        env:
+          VERSION: '${{ github.sha }}'
+          DIST_TAG: experimental

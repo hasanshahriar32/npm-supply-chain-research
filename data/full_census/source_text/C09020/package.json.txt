@@ -1,0 +1,74 @@
+{
+  "name": "eslint-rspack-plugin",
+  "version": "5.0.1",
+  "description": "A ESLint plugin for Rspack",
+  "keywords": [
+    "eslint",
+    "lint",
+    "linter",
+    "plugin",
+    "rspack"
+  ],
+  "homepage": "https://github.com/rstackjs/eslint-rspack-plugin",
+  "bugs": {
+    "url": "https://github.com/rstackjs/eslint-rspack-plugin/issues"
+  },
+  "repository": "https://github.com/rstackjs/eslint-rspack-plugin",
+  "license": "MIT",
+  "author": "Ricardo Gobbo de Souza <ricardogobbosouza@yahoo.com.br>",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rs lib",
+    "bump": "pnpm version -m \"release: v%s\"",
+    "check": "rs check --type-check",
+    "dev": "rs lib -w",
+    "fix": "rs lint --fix && rs fmt",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "prepare": "rs hooks",
+    "test": "rs test"
+  },
+  "dependencies": {
+    "micromatch": "^4.0.8",
+    "normalize-path": "^3.0.0",
+    "tinyglobby": "^0.2.17"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@rspack/core": "^2.2.9",
+    "@rstackjs/test-utils": "^1.0.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/micromatch": "^4.0.10",
+    "@types/node": "^24.19.2",
+    "@types/normalize-path": "^3.0.2",
+    "chokidar": "^5.0.0",
+    "eslint": "^9.39.5",
+    "fs-extra": "^11.4.1",
+    "globals": "^17.13.0",
+    "rstack": "^0.8.3",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@rspack/core": "^1.0.8 || ^2.0.0",
+    "eslint": "^9.0.0 || ^10.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@rspack/core": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@11.28.5",
+  "engines": {
+    "node": ">= 20.19.0"
+  }
+}

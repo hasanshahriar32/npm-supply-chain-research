@@ -1,0 +1,44 @@
+name: CI
+on: [push, pull_request]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: ["18", "20", "22"]
+        name: Node ${{ matrix.node }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Set up Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node }}
+            - name: Install pnpm
+              run: npm install -g pnpm@10
+            - name: Install
+              run: pnpm install
+            - name: Build
+              run: pnpm build
+            - name: Test
+              run: pnpm test
+            - name: Lint
+              run: pnpm lint
+    build-windows:
+        runs-on: windows-latest
+        name: Node LTS Windows
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Set up Node
+              uses: actions/setup-node@v4
+            - name: Install pnpm
+              run: npm install -g pnpm@10
+            - name: Install
+              run: pnpm install
+            - name: Build
+              run: pnpm build
+            - name: Test
+              run: pnpm test
+            - name: Lint
+              run: pnpm lint

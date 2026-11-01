@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "*"
+  push:
+    branches:
+      - "main"
+      - "hotfix-*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - name: "Fetch & Unpack Allure Commandline from Maven Central"
+        run: ./fetch-source.sh
+      - run: npm pack
+      - id: get_version
+        run: echo version=$(npm pkg get version) >> $GITHUB_OUTPUT
+      - run: mv allure-commandline-${{ fromJSON(steps.get_version.outputs.version) }}.tgz package.tgz
+      - name: Upload allure-commandline artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-commandline
+          path: package.tgz
+      - name: Upload test data
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-data
+          path: test-data
+
+
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [ 18, 20, 22, 24 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        results: [ 'directory with space', simple ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+      - uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-package: 'jre'
+          java-version: 8
+      - name: Download allure-commandline artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: allure-commandline
+      - name: Download test-data artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: test-data
+      - name: Print bundled allure-commandline version
+        run: npx --yes package.tgz --version
+      - name: Generate Allure Report
+        run: npx --yes package.tgz generate "${{ matrix.results }}"
+      - name: Fail the job if the report has no results
+        if: ${{ hashFiles('allure-report/data/test-cases/') == '' }}
+        run: exit 1

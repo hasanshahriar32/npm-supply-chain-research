@@ -1,0 +1,84 @@
+{
+  "name": "graphql-code-generator",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.24.0+sha512.bd27e345e976dcb0be0b7a1228217b049a817e21b1f355c90dbe7dc46671895a8bc1e6d06c24554505ea93ea0b45f489a27ec1bfbc8de6a9659fca0f16fa0000",
+  "engines": {
+    "node": ">= 16.0.0"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist/ .bob/ tsconfig.tsbuildinfo",
+    "build": "bob build",
+    "postbuild": "pnpm fix-bins && pnpm inject-cli-version",
+    "clean": "rimraf node_modules/",
+    "dev-test:generate": "pnpm --filter=\"dev-test*\" generate",
+    "dev-test:generate:cjs": "pnpm --filter=\"dev-test*\" generate:cjs",
+    "dev-test:generate:esm": "pnpm --filter=\"dev-test*\" generate:esm",
+    "dev-test:watch": "pnpm --filter=\"dev-test*\" watch",
+    "dev-test:watch:cjs": "pnpm --filter=\"dev-test*\" watch:cjs",
+    "dev-test:watch:esm": "pnpm --filter=\"dev-test*\" watch:esm",
+    "examples:build": "pnpm --filter=\"example-*\" build",
+    "examples:codegen": "pnpm --filter=\"example-*\" codegen",
+    "examples:test:end2end": "pnpm --filter=\"example-*\" --workspace-concurrency=1 test:end2end",
+    "fix-bins": "node scripts/fix-bin.js",
+    "inject-cli-version": "node scripts/inject-cli-version.mjs",
+    "postinstall": "husky install",
+    "lint": "eslint --cache .",
+    "lint:ci": "eslint --cache --output-file eslint_report.json --format json .",
+    "prettier": "prettier --cache --write --list-different .",
+    "prettier:check": "prettier --cache --check .",
+    "rebuild": "bob build --incremental",
+    "prerelease": "pnpm build",
+    "release": "changeset publish",
+    "test": "vitest",
+    "types:check": "tsc -p tsconfig.build.json --noEmit && tsc -p tsconfig.spec.json --noEmit"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.6",
+    "@babel/preset-env": "7.29.5",
+    "@babel/preset-typescript": "7.28.5",
+    "@changesets/changelog-github": "0.7.0",
+    "@changesets/cli": "2.31.0",
+    "@eslint/eslintrc": "3.3.5",
+    "@eslint/js": "10.0.1",
+    "@ianvs/prettier-plugin-sort-imports": "4.7.1",
+    "@theguild/eslint-config": "0.13.4",
+    "@theguild/prettier-config": "3.0.1",
+    "@types/node": "24.12.4",
+    "bob-the-bundler": "7.0.1",
+    "dotenv": "17.4.2",
+    "eslint": "10.4.0",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-tailwindcss": "npm:@hasparus/eslint-plugin-tailwindcss@3.17.5",
+    "eslint-plugin-unicorn": "64.0.0",
+    "fast-glob": "3.3.3",
+    "fs-extra": "11.3.5",
+    "graphql": "17.0.2",
+    "husky": "9.1.7",
+    "jest-diff": "30.4.1",
+    "js-yaml": "5.4.1",
+    "lint-staged": "17.0.4",
+    "prettier": "3.8.3",
+    "prettier-plugin-pkg": "0.22.1",
+    "prettier-plugin-sh": "0.18.1",
+    "prettier-plugin-svelte": "3.5.2",
+    "prettier-plugin-tailwindcss": "0.8.0",
+    "rimraf": "6.1.3",
+    "tslib": "2.8.1",
+    "typescript": "6.0.3",
+    "vitest": "4.1.6",
+    "wrangler": "4.92.0"
+  },
+  "lint-staged": {
+    "packages/**/src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ],
+    "**/*.{js,jsx,cjs,mjs,ts,tsx,graphql,gql,yml,yaml,json,md}": [
+      "prettier --write"
+    ],
+    "**/__generated__/**": [],
+    "pnpm-lock.yaml": [
+      "pnpm dedupe"
+    ]
+  }
+}

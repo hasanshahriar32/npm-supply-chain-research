@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: typecheck | lint | test
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: vercel
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        id: pnpm-setup
+        with:
+          version: 9.4.0
+          run_install: false
+
+      - name: Install Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        id: pnpm-install
+        run: pnpm install --frozen-lockfile
+
+      - name: Pull Vercel Environment Variables for nextjs-app example
+        env:
+          VERCEL_TOKEN_E2E: ${{ secrets.VERCEL_TOKEN_E2E }}
+        run: |
+          pnpm install -g vercel
+          echo "Fetching env for nextjs-app/docs..."
+          vercel link --cwd examples/nextjs-app/docs --scope microfrontends-vtest314 --project nextjs-app-docs --yes --token $VERCEL_TOKEN_E2E
+          cd examples/nextjs-app/docs
+          vercel env pull .env --token $VERCEL_TOKEN_E2E
+          cd ../../../
+          echo "Fetching env for appjs-app/marketing..."
+          vercel link --cwd examples/nextjs-app/marketing --scope microfrontends-vtest314 --project nextjs-app-marketing --yes --token $VERCEL_TOKEN_E2E
+          cd examples/nextjs-app/marketing
+          vercel env pull .env --token $VERCEL_TOKEN_E2E
+          cd ../../../
+
+      - name: Run CI
+        run: pnpm turbo typecheck lint test test:local-proxy-turbo-integration --continue

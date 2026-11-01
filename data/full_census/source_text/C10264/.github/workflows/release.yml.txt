@@ -1,0 +1,44 @@
+name: release-please
+
+on:
+  push:
+    branches: [main, next]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      paths_released: ${{ steps.release-pl.outputs.paths_released }}
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release-pl
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ github.ref_name == 'next' && 'release-please-config-next.json' || 'release-please-config.json' }}
+          manifest-file: ${{ github.ref_name == 'next' && '.release-please-manifest-next.json' || '.release-please-manifest.json' }}
+  publish:
+    runs-on: ubuntu-latest
+    needs: release
+    if: ${{ needs.release.outputs.paths_released && needs.release.outputs.paths_released != '[]' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - uses: ./.github/actions/setup-deps
+      - name: Publish packages
+        env:
+          RELEASE_DIST_TAG: ${{ github.ref_name == 'next' && 'next' || 'latest' }}
+          RELEASE_PUBLISH_BRANCH: ${{ github.ref_name }}
+        run: |
+          pnpm run --dir packages/casl-ability build
+          for p in $(echo '${{ needs.release.outputs.paths_released }}' | jq -r '.[]'); do
+            pnpm -r --filter "./$p" release
+          done

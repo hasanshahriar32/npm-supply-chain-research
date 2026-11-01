@@ -1,0 +1,172 @@
+name: Native Tests
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ready-to-merge-gate:
+    name: Ready-to-merge gate
+    uses: ./.github/workflows/ready-to-merge-workflow.yml
+    with:
+      is-pr: ${{ github.event_name == 'pull_request' }}
+      labels: ${{ toJson(github.event.pull_request.labels) }}
+
+  diff_check:
+    needs: [ready-to-merge-gate]
+    uses: ./.github/workflows/skip-ci.yml
+
+  detect-changes:
+    needs: [ready-to-merge-gate]
+    uses: ./.github/workflows/detect-changes.yml
+    with:
+      caller_event_name: ${{ github.event_name }}
+      caller_ref: ${{ github.ref }}
+
+  test-ios:
+    name: ios
+    runs-on: ["bitrise_pool_name:tahoe"]
+    needs: [diff_check, detect-changes]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' && needs.detect-changes.outputs.needs_ios == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable Corepack
+        run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+
+      - name: Setup asdf Node.js (Bitrise)
+        run: |
+          asdf global nodejs system
+          corepack enable
+
+      - name: Install SDK JS Dependencies
+        run: yarn install
+
+      - uses: actions/cache@v6
+        name: Cache Ruby (Bitrise)
+        with:
+          path: ~/.asdf/installs/ruby
+          key: asdf-ruby-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.ruby-version') }}
+
+      - name: Install Ruby (Bitrise)
+        run: |
+          asdf install ruby 3.3.0
+          asdf local ruby 3.3.0
+
+      - name: Install CocoaPods
+        run: gem install cocoapods
+
+      - name: Install App Pods
+        working-directory: packages/core/RNSentryCocoaTester
+        run: pod install
+
+      - name: List Available Simulators
+        run: xcrun simctl list devices available iPhone
+
+      - name: Run iOS Tests
+        working-directory: packages/core/RNSentryCocoaTester
+        env:
+          SCHEME: RNSentryCocoaTester
+          CONFIGURATION: Release
+          # Fix for Xcode 26+ with MetalToolchain: use default Xcode toolchain to avoid
+          # missing Swift compatibility libraries (swiftCompatibility56, etc.)
+          # See: https://github.com/actions/runner-images/issues/13135
+          TOOLCHAINS: com.apple.dt.toolchain.XcodeDefault
+        run: |
+          # Find first available iPhone simulator from latest iOS runtime
+          DEVICE_ID=$(xcrun simctl list devices available iPhone -j | jq -r '
+            .devices |
+            to_entries |
+            map(select(.key | startswith("com.apple.CoreSimulator.SimRuntime.iOS-"))) |
+            sort_by(.key) |
+            reverse |
+            .[0].value[] |
+            select(.isAvailable == true) |
+            .udid
+          ' | head -1)
+          if [ -z "$DEVICE_ID" ]; then
+            echo "No iPhone simulators available"
+            exit 1
+          fi
+          echo "Using simulator: $DEVICE_ID"
+
+          env NSUnbufferedIO=YES \
+            xcodebuild -workspace *.xcworkspace \
+            -scheme $SCHEME -configuration $CONFIGURATION \
+            -destination "id=$DEVICE_ID" \
+            -quiet \
+            test
+
+  test-android:
+    name: android
+    runs-on: ubuntu-24.04
+    needs: [diff_check, detect-changes]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' && needs.detect-changes.outputs.needs_android == 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/disk-cleanup
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Run unit tests
+        working-directory: packages/core/RNSentryAndroidTester
+        run: ./gradlew testDebugUnitTest
+
+      - name: Verify SDK compiles without sentry-android-replay
+        working-directory: packages/core/RNSentryAndroidTester
+        run: ./gradlew :RNSentry:compileDebugJavaWithJavac --init-script exclude-replay.init.gradle
+
+      - name: Setup KVM
+        shell: bash
+        run: |
+          # check if virtualization is supported...
+          sudo apt install -y --no-install-recommends cpu-checker coreutils && echo "CPUs=$(nproc --all)" && kvm-ok
+          # allow access to KVM to run the emulator
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run connected tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d #pin@v2.38.0
+        with:
+          working-directory: packages/core/RNSentryAndroidTester
+          api-level: 30
+          force-avd-creation: false
+          disable-animations: true
+          disable-spellchecker: true
+          target: "aosp_atd"
+          channel: canary # Necessary for ATDs
+          emulator-options: >
+            -no-window
+            -no-snapshot-save
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+            -timezone US/Pacific
+          script: |
+            ./gradlew uninstallDebug uninstallDebugAndroidTest
+            ./gradlew connectedCheck

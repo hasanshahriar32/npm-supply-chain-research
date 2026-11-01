@@ -1,0 +1,157 @@
+name: Nightly upstream tests
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ${{ vars.RUNNER_NORMAL || 'ubuntu-latest' }}
+    timeout-minutes: ${{ vars.TIMEOUT_MINUTES_EXTENDED && fromJSON(vars.TIMEOUT_MINUTES_EXTENDED) || 30 }}
+
+    strategy:
+      matrix:
+        test-name: ["nextjs"]
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          fetch-tags: false
+          filter: "blob:none"
+          show-progress: false
+
+      - name: Setup
+        id: config
+        uses: $/.github/actions/init
+        with:
+          cache-enabled: true
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          turbo-team: ${{ vars.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          playwright-enabled: true
+
+      - name: Build packages
+        run: pnpm turbo build $TURBO_ARGS --only
+
+      - name: Publish to local registry
+        run: pkglab pub --force
+
+      - name: Install @clerk/clerk-js in os temp
+        working-directory: ${{runner.temp}}
+        run: |
+          mkdir clerk-js && cd clerk-js
+          pnpm init
+          pkglab add @clerk/clerk-js
+
+      - name: Install @clerk/ui in os temp
+        working-directory: ${{runner.temp}}
+        run: |
+          mkdir clerk-ui && cd clerk-ui
+          pnpm init
+          pkglab add @clerk/ui
+
+      - name: Configure test run cleanup
+        run: echo "INTEGRATION_TEST_RUN_KEY=${RUN_ID}-${RUN_ATTEMPT}-nightly-${TEST_NAME}" >> "$GITHUB_ENV"
+        env:
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          TEST_NAME: ${{ matrix.test-name }}
+
+      - name: Run Integration Tests
+        id: integration_tests
+        continue-on-error: true
+        run: |
+          # Capture the output and exit code
+          OUTPUT_FILE="${{runner.temp}}/test-output.log"
+          # Only run Typedoc tests for one matrix version
+          if [ "${{ matrix.test-name }}" == "nextjs" ]; then
+            E2E_DEBUG=1 E2E_APP_ID=quickstart.next.appRouter pnpm test:integration:base --grep @quickstart 2>&1 | tee "$OUTPUT_FILE"
+          else
+            E2E_DEBUG=1 pnpm turbo test:integration:${{ matrix.test-name }} $TURBO_ARGS --only 2>&1 | tee "$OUTPUT_FILE"
+          fi
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+        env:
+          CLERK_E2E_OAUTH_PROVIDER_CLIENT_SECRET: ${{ secrets.CLERK_E2E_OAUTH_PROVIDER_CLIENT_SECRET }}
+          CLERK_PLATFORM_API_KEY: ${{ secrets.CLERK_PLATFORM_API_KEY }}
+          E2E_APP_CLERK_JS_DIR: ${{runner.temp}}
+          E2E_APP_CLERK_UI_DIR: ${{runner.temp}}
+          # Don't set E2E_CLERK_JS_VERSION - let it use '*' (via linkPackage)
+          # which resolves via pkglab add in the integration test setup
+          E2E_NEXTJS_VERSION: "canary"
+          E2E_NPM_FORCE: "true"
+          E2E_REACT_DOM_VERSION: "19.2.3"
+          E2E_REACT_VERSION: "19.2.3"
+          INTEGRATION_INSTANCE_KEYS: ${{ secrets.INTEGRATION_INSTANCE_KEYS }}
+
+      # Print error logs for immediate visibility in CI
+      - name: Print App Error Logs
+        if: steps.integration_tests.outputs.exit_code != '0'
+        run: |
+          echo "=== Integration Test Failed ==="
+          echo ""
+          # Integration tests use os.tmpdir() which is /tmp on Linux
+          if [ -d /tmp/.temp_integration ]; then
+            echo "=== App Error Logs (.err.log files) ==="
+            find /tmp/.temp_integration -name "*.err.log" -type f 2>/dev/null | while read f; do
+              echo ""
+              echo "--- $f ---"
+              tail -100 "$f" 2>/dev/null || echo "(empty or not readable)"
+            done
+            echo ""
+            echo "=== App Stdout Logs (last 50 lines each) ==="
+            find /tmp/.temp_integration -name "e2e.*.log" -type f 2>/dev/null | while read f; do
+              echo ""
+              echo "--- $f ---"
+              tail -50 "$f" 2>/dev/null || echo "(empty or not readable)"
+            done
+          else
+            echo "=== No app logs found (directory /tmp/.temp_integration does not exist) ==="
+          fi
+
+      # Upload test artifacts if tests failed
+      - name: Upload Test Artifacts
+        if: steps.integration_tests.outputs.exit_code != '0'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: test-artifacts-${{ matrix.test-name }}
+          path: |
+            ${{runner.temp}}/test-output.log
+            /tmp/.temp_integration/
+            test-results/
+          retention-days: 7
+
+      - name: Delete integration-test resources
+        if: ${{ always() && steps.integration_tests.outcome != 'skipped' }}
+        timeout-minutes: 4
+        run: pnpm test:integration:cleanup
+        env:
+          CLERK_PLATFORM_API_KEY: ${{ secrets.CLERK_PLATFORM_API_KEY }}
+          INTEGRATION_INSTANCE_KEYS: ${{ secrets.INTEGRATION_INSTANCE_KEYS }}
+
+      - name: Report Status
+        if: always()
+        uses: ravsamhq/notify-slack-action@1.10.0
+        with:
+          status: ${{ steps.integration_tests.outputs.exit_code == '0' && 'success' || 'failure' }}
+          notify_when: "failure"
+          notification_title: "Integration Test Failure - ${{ matrix.test-name }}"
+          message_format: |
+            *Job:* ${{ github.workflow }} (${{ matrix.test-name }})
+            *Status:* ${{ steps.integration_tests.outputs.exit_code == '0' && 'Success' || 'Failed' }}
+            *Commit:* ${{ github.sha }}
+            *PR:* ${{ github.event.pull_request.html_url }}
+            *Artifacts:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_SDK_E2E_ALERTS_WEBHOOK_URL }}
+
+      # Fail the workflow if tests failed
+      - name: Check Test Status
+        if: steps.integration_tests.outputs.exit_code != '0'
+        run: exit 1

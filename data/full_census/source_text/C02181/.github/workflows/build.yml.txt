@@ -1,0 +1,54 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  asan:
+    strategy:
+      matrix:
+        version: [18, 20, 22, 24, 25, 26]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.version }}
+      - run: npm install
+      - run: npm run test:js-asan
+
+  valgrind:
+    strategy:
+      matrix:
+        version: [18, 20, 22, 24, 25, 26]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.version }}
+      - run: sudo apt-get update && sudo apt-get install valgrind
+      - run: npm install
+      - run: npm run test:js-valgrind
+
+  build:
+    uses: Datadog/action-prebuildify/.github/workflows/build.yml@main
+    with:
+      target-name: 'dd_pprof' # target name in binding.gyp
+      package-manager: 'npm' # npm or yarn
+      cache: true # enable caching of dependencies based on lockfile
+      min-node-version: 18
+      skip: 'linux-arm,linux-ia32' # skip building for these platforms
+      node-gyp-build-major: 4
+
+  build-successful:
+    if: always()
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Determine if everything is passing
+      run: exit 1
+      if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}

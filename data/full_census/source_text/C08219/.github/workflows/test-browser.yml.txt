@@ -1,0 +1,65 @@
+name: Browser tests
+
+on:
+  # Build on pushes branches that have a PR (including drafts)
+  pull_request:
+  # Build on commits pushed to branches without a PR if it's in the allowlist
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    timeout-minutes: 60
+    name: Browser tests (${{ matrix.browser }})
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    # The image ships every browser with its system libraries, so no job
+    # installs browsers or apt packages. Its tag must match the resolved
+    # `playwright` version, or the browser executables are missing and the
+    # tests fail on launch. Renovate bumps the two together.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      # Run as the runner's user, as Playwright's CI guide does.
+      options: --user 1001
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    strategy:
+      # we want to know if a test fails on a specific node version
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        browser: [chromium, firefox, webkit]
+        node: [lts/*]
+        experimental: [false]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install project dependencies
+        run: pnpm install
+
+      - name: Test
+        id: test
+        run: |
+          node -v
+          pnpm -v
+          pnpm test:browser:${{ matrix.browser }} --concurrency=2 -- --browser.trace=retain-on-failure
+
+      # Vitest writes each failed test's Playwright trace to a `__traces__`
+      # folder next to its test file. Open one at https://trace.playwright.dev.
+      - name: Upload Playwright traces
+        if: failure() && steps.test.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-traces-${{ matrix.browser }}
+          path: |
+            packages/**/__traces__/
+            !**/node_modules/**
+          if-no-files-found: ignore
+          retention-days: 7

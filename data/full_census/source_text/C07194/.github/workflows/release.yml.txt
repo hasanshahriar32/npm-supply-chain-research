@@ -1,0 +1,199 @@
+name: Create Release
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build package but don't tag or publish.
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build_x86_x64:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        node: [ 22, 24, 26 ]
+        arch: [ x86, x64 ]
+        exclude:
+          # Ubuntu does not ship x86 builds.
+          - { os: ubuntu-latest, arch: x86 }
+          - { os: windows-latest, arch: x86, node: 24 }
+          - { os: windows-latest, arch: x86, node: 26 }
+    runs-on: ${{ matrix.os }}
+    name: "${{ matrix.os }} / Node ${{ matrix.node }} ${{ matrix.arch }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Use node ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.arch }}
+          check-latest: true
+      - uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/node_modules
+          key: "${{ matrix.os }}-${{ matrix.arch }}-node-${{ matrix.node }}-${{ hashFiles('./package.json') }}"
+      - name: Install
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: "${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.node }}"
+          path: prebuilds
+
+  build_macos_arm:
+    strategy:
+      matrix:
+        os: [ macos-14 ]
+        node: [ 22, 24, 26 ]
+        arch: [ arm64 ]
+    runs-on: ${{ matrix.os }}
+    name: "${{ matrix.os }} / Node ${{ matrix.node }} ${{ matrix.arch }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/node_modules
+          key: "${{ matrix.os }}-${{ matrix.arch }}-node-${{ matrix.node }}-${{ hashFiles('./package.json') }}"
+      - name: Use node ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.arch }}
+          check-latest: true
+      - name: Install
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: "${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.node }}"
+          path: prebuilds
+
+  build_linux_arm:
+    strategy:
+      matrix:
+        node: [ 22, 24, 26 ]
+    runs-on: ubuntu-24.04-arm 
+    name: Linux / Node ${{ matrix.node }} arm64
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Use node ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+      - uses: actions/cache@v6
+        with:
+          path: ${{ github.workspace }}/node_modules
+          key: "linux-arm64-node-${{ matrix.node }}-${{ hashFiles('./package.json') }}"
+      - name: Install
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: "linux-arm64-${{ matrix.node }}"
+          path: prebuilds
+
+  package:
+    needs: [ build_x86_x64, build_macos_arm, build_linux_arm ]
+    runs-on: ubuntu-latest
+    name: Create package
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          check-latest: true
+      - run: |
+          mkdir prebuilds
+          rm -f .gitignore
+      - uses: actions/download-artifact@v8
+        with:
+          path: ${{ github.workspace }}/prebuilds
+          merge-multiple: true
+      - run: echo -e "PKG_VERSION=$(jq -r .version < package.json)" >> "$GITHUB_ENV"
+      - run: npm pack
+      - uses: actions/upload-artifact@v7
+        with:
+          name: npm-module
+          path: newrelic-fn-inspect-${{ env.PKG_VERSION }}.tgz
+
+  # Our typical flow looks like:
+  # 1. prepare-release workflow
+  # 2. create-release workflow
+  #
+  # We can't do that (easily) because access to artifacts from other workflows
+  # are difficult to access (requires a personal access token). See
+  # https://github.com/actions/download-artifact#download-artifacts-from-other-workflow-runs-or-repositories
+  #
+  # Given that, we need to replicate all of our create-release steps inline
+  # here.
+  tag_release:
+    if: ${{ inputs.dry_run == false }}
+    needs: [ package ]
+    runs-on: ubuntu-latest
+    name: Tag Release
+    steps:
+      - uses: actions/checkout@v7
+      # We need access to the prep scripts in the node-newrelic repo.
+      - uses: actions/checkout@v7
+        with:
+          repository: newrelic/node-newrelic
+          path: agent-repo
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          check-latest: true
+      - run: |
+          # Install agent-repo dependencies.
+          npm install --prefix agent-repo
+      - name: Configure GitHub Credentials
+        run: |
+          git config user.name ${GITHUB_ACTOR}
+          git config user.email gh-actions-${GITHUB_ACTOR}@github.com
+      - name: Create Release Tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node ./agent-repo/bin/create-release-tag.js --branch ${{ github.ref }} --repo ${{ github.repository }} --workflows prepare-release.yml
+      - name: Get Created Tag
+        id: get_tag
+        run: echo "latest_tag=$(git describe --tags --abbrev=0)" >> ${GITHUB_OUTPUT}
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node ./agent-repo/bin/create-github-release.js --tag ${{ steps.get_tag.outputs.latest_tag }} --repo ${{ github.repository }} --changelog CHANGELOG.md
+
+  publish:
+    if: ${{ inputs.dry_run == false }}
+    needs: [ tag_release ]
+    runs-on: ubuntu-latest
+    name: Publish Package
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*' 
+          registry-url: 'https://registry.npmjs.org'
+          check-latest: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: npm-module
+      - run: echo -e "PKG_NAME=$(ls -1A *.tgz | head -n 1)" >> "$GITHUB_ENV"
+      - run: npm publish --access=public ${PKG_NAME}
+

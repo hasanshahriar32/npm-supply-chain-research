@@ -1,0 +1,28 @@
+name: Publish Packages
+on:
+  push:
+    branches: ['main']
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.11.0
+      - uses: pnpm/action-setup@v6
+      - name: Install Depdendencies
+        run: pnpm install
+      - name: Build and run tests for pnpm-sync-lib
+        run: pnpm --filter pnpm-sync-lib run build && pnpm --filter pnpm-sync-lib run test
+      - name: Build and run tests for pnpm-sync
+        run: pnpm --filter pnpm-sync run build && pnpm --filter pnpm-sync run test
+      - name: Publish to NPM
+        env:
+          NPM_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          npm config set "//registry.npmjs.org/:_authToken" "${NPM_AUTH_TOKEN}"
+          pnpm --filter pnpm-sync-lib publish --no-git-checks
+          pnpm --filter pnpm-sync publish --no-git-checks

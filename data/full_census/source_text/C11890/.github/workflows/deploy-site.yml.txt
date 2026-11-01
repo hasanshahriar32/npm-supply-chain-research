@@ -1,0 +1,47 @@
+name: Deploy site
+
+on: push
+permissions: {}
+
+jobs:
+  deploy-site:
+    name: Deploy site
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'vanilla-extract-css'
+    env:
+      CI: true
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build packages
+        run: pnpm run build
+
+      - name: Build site
+        run: pnpm --filter "./site" build
+
+      - name: Draft deploy site to Netlify
+        run: pnpm --filter "./site" deploy:branch
+        if: github.ref != 'refs/heads/master'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+
+      - name: Deploy site to Netlify
+        run: pnpm --filter "./site" deploy:prod
+        if: github.ref == 'refs/heads/master'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}

@@ -1,0 +1,30 @@
+name: NewOldBenchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      compare_version:
+        default: latest
+        description: Versions to compare
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+      - name: Setup
+        run: npm run setup
+      - name: Install Packages
+        run: npm install -f
+      - name: Install target
+        run: npm install -f toml-eslint-parser@${{ github.event.inputs.compare_version }}
+        if: ${{ github.event.inputs.compare_version != null }}
+      - name: Build
+        run: npm run build
+      - name: Benchmark
+        run: npm run benchmark

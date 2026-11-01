@@ -1,0 +1,41 @@
+name: test
+on:
+  push:
+    branches:
+    - 'main'
+    - 'master'
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents:
+    read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      # Test node 14/16/18/20/22 on ubuntu
+      # Test node 20 on macos/windows
+      # Enable annotations only for node 20 + ubuntu
+      matrix:
+        os: [ubuntu-latest]
+        node: [16, 18, 20, 22]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: npm ci
+        run: npm ci
+
+      - name: test
+        run: npm run test

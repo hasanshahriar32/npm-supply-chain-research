@@ -1,0 +1,58 @@
+{
+  "name": "deep-eql",
+  "version": "0.0.0-development",
+  "description": "Improved deep equality testing for Node.js and the browser.",
+  "keywords": [
+    "chai util",
+    "deep equal",
+    "object equal",
+    "testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chaijs/deep-eql.git"
+  },
+  "license": "MIT",
+  "author": "Jake Luer <jake@alogicalparadox.com>",
+  "contributors": [
+    "Keith Cirkel (https://github.com/keithamus)",
+    "dougluce (https://github.com/dougluce)",
+    "Lorenz Leutgeb (https://github.com/flowlo)"
+  ],
+  "type": "module",
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "deep-eql.js"
+  ],
+  "scripts": {
+    "bench": "node bench",
+    "lint": "eslint .",
+    "semantic-release": "semantic-release pre && semantic-release post",
+    "pretest": "npm run lint",
+    "test": "npm run test:node && npm run test:browser",
+    "test:browser": "web-test-runner",
+    "test:node": "istanbul cover mocha",
+    "upload-coverage": "lcov-result-merger 'coverage/**/lcov.info' | coveralls; exit 0",
+    "watch": "web-test-runner --watch"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@js-temporal/polyfill": "^0.5.1",
+    "@web/test-runner": "^1.0.0",
+    "benchmark": "^2.1.0",
+    "coveralls": "^3.1.1",
+    "eslint": "^10.12.0",
+    "eslint-config-strict": "^14.0.1",
+    "globals": "^17.13.0",
+    "istanbul": "^0.4.2",
+    "kewlr": "^0.4.1",
+    "lcov-result-merger": "^6.0.0",
+    "lodash.isequal": "^4.4.0",
+    "mocha": "^12.0.3",
+    "simple-assert": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=6"
+  }
+}

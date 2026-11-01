@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3
+        with:
+          cache: true
+      - run: pnpm test:engines
+      - run: pnpm dev:prepare
+      - run: pnpm test:knip
+  ci:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3
+        with:
+          runtime: node@24.21.0
+          cache: true
+      - run: pnpm dev:prepare
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:types
+      - run: pnpm build
+      - run: pnpm run dev:build
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        if: matrix.os == 'ubuntu-latest'

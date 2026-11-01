@@ -1,0 +1,47 @@
+{
+  "name": "multipasta",
+  "version": "0.2.9",
+  "description": "",
+  "type": "module",
+  "packageManager": "pnpm@8.10.0",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tim-smart/multipasta.git"
+  },
+  "keywords": [],
+  "author": "Tim Smart <hello@timsmart.co>",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm build-esm && pnpm build-cjs && pnpm build-annotate && build-utils pack-v2",
+    "build-esm": "tsc -b tsconfig.build.json",
+    "build-cjs": "babel build/esm --plugins @babel/transform-export-namespace-from --plugins @babel/transform-modules-commonjs --out-dir build/cjs --source-maps",
+    "build-annotate": "babel build --plugins annotate-pure-calls --out-dir build --source-maps",
+    "clean": "rimraf build dist coverage .tsbuildinfo",
+    "test": "vitest",
+    "check": "tsc -b tsconfig.json",
+    "update-version": "changeset version && pnpm install --no-frozen-lockfile"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.0",
+    "@babel/core": "^7.28.0",
+    "@babel/plugin-transform-export-namespace-from": "^7.27.1",
+    "@babel/plugin-transform-modules-commonjs": "^7.27.1",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.5",
+    "@effect/build-utils": "^0.3.1",
+    "@effect/language-service": "^0.27.0",
+    "@types/node": "^24.0.14",
+    "@vitest/browser": "^3.2.4",
+    "babel-plugin-annotate-pure-calls": "^0.5.0",
+    "playwright": "^1.54.1",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

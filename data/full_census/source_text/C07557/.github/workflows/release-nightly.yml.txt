@@ -1,0 +1,42 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# Remove default permissions of GITHUB_TOKEN for security
+# https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+permissions: {}
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'nuxt' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          registry-url: "https://registry.npmjs.org/"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Prepare build environment
+        run: pnpm dev:prepare
+
+      - name: 📦 release pkg.pr.new
+        run: pnpm pkg-pr-new publish --compact --pnpm '.' './stubs/vitest-environment-nuxt'
+
+      - name: 📦 release nightly
+        if: github.event_name == 'push'
+        run: pnpm changelogen --canary nightly --publish

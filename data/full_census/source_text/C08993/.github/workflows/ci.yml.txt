@@ -1,0 +1,416 @@
+name: CI
+
+# Runs on every pull request and on pushes to the long-lived branches. The e2e
+# suites stay in e2e-mobile.yml on manual dispatch: they need an emulator or a
+# simulator and take far longer than a build.
+on:
+  pull_request:
+    # labeled and unlabeled as well, so adding the `port` label runs the untouched job.
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches:
+      - master
+      - develop
+      - 'feature/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # npm test needs Node 22 or newer for its built-in test runner features.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      # Includes the codegen schema test, which fails if a native method
+      # signature in codegenSpecs/ changes.
+      - run: npm test
+
+  # The native port must not change the Windows module, the codegen spec or the
+  # JavaScript API. Runs only on pull requests labelled `port`.
+  untouched:
+    name: Port leaves Windows, codegen and the JS package alone
+    if: github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'port')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: node .github/scripts/check-port-untouched.js "origin/${{ github.base_ref }}"
+
+  android:
+    name: Android build and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/ReactNativeBlobUtil/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # The example app depends on the library through file:../../, so this
+      # builds the checked-out sources, not a published release.
+      - run: npm ci
+        working-directory: examples/ReactNativeBlobUtil
+
+      # The generated test CA is a build input: Android bundles it as res/raw/test_ca.
+      - run: npm run e2e:certs
+
+      # Through bash: gradlew is checked in without the executable bit, so running
+      # it directly fails with "Permission denied" on Linux.
+      - run: bash ./gradlew assembleDebug --no-daemon
+        working-directory: examples/ReactNativeBlobUtil/android
+
+      # Exercise the same runner contributors use, including its Bash wrapper.
+      - run: npm run test:android -- --no-daemon
+
+  ios:
+    name: iOS build (${{ matrix.linkage }})
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        linkage: [static-libraries, static-frameworks, dynamic-frameworks]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/ReactNativeBlobUtil/package-lock.json
+
+      - run: npm ci
+
+      - run: npm ci
+        working-directory: examples/ReactNativeBlobUtil
+
+      # The generated test CA is a build input: iOS bundles it as test_ca.pem.
+      - run: npm run e2e:certs
+
+      # The Podfile switches to frameworks only when USE_FRAMEWORKS is set at all,
+      # so the static-library leg must not set it, not even to an empty string.
+      - name: pod install (static libraries)
+        if: matrix.linkage == 'static-libraries'
+        run: pod install
+        working-directory: examples/ReactNativeBlobUtil/ios
+
+      - name: pod install (static frameworks)
+        if: matrix.linkage == 'static-frameworks'
+        run: pod install
+        working-directory: examples/ReactNativeBlobUtil/ios
+        env:
+          USE_FRAMEWORKS: static
+
+      - name: pod install (dynamic frameworks)
+        if: matrix.linkage == 'dynamic-frameworks'
+        run: pod install
+        working-directory: examples/ReactNativeBlobUtil/ios
+        env:
+          USE_FRAMEWORKS: dynamic
+
+      - name: xcodebuild
+        working-directory: examples/ReactNativeBlobUtil/ios
+        run: >
+          xcodebuild
+          -workspace ReactNativeBlobUtilE2E.xcworkspace
+          -scheme ReactNativeBlobUtilE2E
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+      # The XCTest target runs hosted in the example app on a simulator. Its header
+      # search paths are proven under both static linkages; dynamic frameworks only
+      # build. The runner image's simulator names change with Xcode releases, so the
+      # first available iPhone is used instead of a fixed name, picked the same way
+      # e2e-mobile.yml picks its fallback device.
+      - name: Unit tests
+        if: matrix.linkage != 'dynamic-frameworks'
+        run: |
+          simulator=$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*/\1/p' | head -n 1 | xargs)
+          echo "Simulator: $simulator"
+          IOS_SIMULATOR_NAME="$simulator" npm run test:ios
+
+  # A throwaway app from the newest React Native template, linked to the checkout
+  # the way the example app is. This is the check that keeps apps on releases newer
+  # than react-native-windows supports working.
+  latest-android:
+    name: Newest RN, Android (${{ matrix.kotlin }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # template: the template's gradle.properties as generated, which opts out of
+        # AGP 9's built-in Kotlin. built-in: an app that turned it on, where AGP
+        # provides Kotlin and the library must not apply kotlin-android itself.
+        kotlin: [template, built-in]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-native-blob-util
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Create an app from the newest template
+        run: >
+          npx --yes @react-native-community/cli@latest init LatestApp
+          --version latest
+          --pm npm
+          --skip-git-init
+          --install-pods false
+
+      # Linked, not packed: the package leaves out tests/, and the JVM tests read
+      # their fixtures from there.
+      - name: Link the library from the checkout
+        run: npm install ../react-native-blob-util
+        working-directory: LatestApp
+
+      - name: Enable AGP 9 built-in Kotlin
+        if: matrix.kotlin == 'built-in'
+        working-directory: LatestApp/android
+        run: |
+          sed -i 's/^android.builtInKotlin=.*/android.builtInKotlin=true/' gradle.properties
+          grep -q '^android.builtInKotlin=true' gradle.properties || echo 'android.builtInKotlin=true' >> gradle.properties
+          # With built-in Kotlin the app must stop applying the Kotlin plugin too.
+          sed -i '/org.jetbrains.kotlin.android/d' app/build.gradle
+          cat gradle.properties
+
+      - name: Show the versions under test
+        working-directory: LatestApp
+        run: |
+          node -p "'react-native ' + require('react-native/package.json').version"
+          grep -E '^(agp|kotlin) ' node_modules/react-native/gradle/libs.versions.toml
+
+      - name: Build
+        run: bash ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon
+        working-directory: LatestApp/android
+
+      - name: Unit tests
+        run: bash ./gradlew :react-native-blob-util:testDebugUnitTest --no-daemon
+        working-directory: LatestApp/android
+
+  latest-ios:
+    name: Newest RN, iOS
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-native-blob-util
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Create an app from the newest template
+        run: >
+          npx --yes @react-native-community/cli@latest init LatestApp
+          --version latest
+          --pm npm
+          --skip-git-init
+          --install-pods false
+
+      - name: Link the library from the checkout
+        run: npm install ../react-native-blob-util
+        working-directory: LatestApp
+
+      - run: pod install
+        working-directory: LatestApp/ios
+
+      - name: xcodebuild
+        working-directory: LatestApp/ios
+        run: >
+          xcodebuild
+          -workspace LatestApp.xcworkspace
+          -scheme LatestApp
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+  # The same throwaway app, autolinked through Swift Package Manager instead of
+  # CocoaPods. React Native >= 0.87 can link native modules with SwiftPM, and its
+  # autolinker refuses a library whose sources look like mixed Swift and
+  # Objective-C unless the library ships its own Package.swift - which this one
+  # does, with three single-language targets. Nothing in the CocoaPods legs
+  # exercises that manifest, so a source file added without updating it, or a
+  # React import creeping into the Objective-C leaf, would only surface here.
+  #
+  # Packed rather than linked, so the manifest also has to be in the published
+  # file list: a Package.swift missing from package.json `files` fails this job.
+  latest-ios-spm:
+    name: Newest RN, iOS (SwiftPM autolinking)
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-native-blob-util
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Pack the library
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+        working-directory: react-native-blob-util
+
+      - name: Create an app from the newest template
+        run: >
+          npx --yes @react-native-community/cli@latest init SpmApp
+          --version latest
+          --pm npm
+          --skip-git-init
+          --install-pods false
+
+      - name: Install the packed library
+        run: npm install "$RUNNER_TEMP"/react-native-blob-util-*.tgz
+        working-directory: SpmApp
+
+      # --deintegrate because the template ships a Podfile and the generator
+      # refuses to convert a CocoaPods-integrated project without it. This also
+      # downloads React Native's prebuilt xcframeworks, which is most of the time
+      # the job takes.
+      - name: Enable SwiftPM autolinking
+        run: npx react-native spm add --yes --deintegrate
+        working-directory: SpmApp
+
+      # The library has to come through as self-managed. Were it not, the
+      # autolinker would have failed the step above with its mixed-language
+      # error, but assert it rather than infer it from a green build.
+      - name: Check the library autolinked from its own manifest
+        working-directory: SpmApp
+        run: |
+          test -L ios/build/generated/autolinking/libs/ReactNativeBlobUtil
+          grep -q 'libs/ReactNativeBlobUtil' ios/build/generated/autolinking/Package.swift
+
+      # An .xcodeproj, not a workspace: SwiftPM setup removes the CocoaPods one.
+      - name: xcodebuild
+        working-directory: SpmApp/ios
+        run: >
+          xcodebuild
+          -project SpmApp.xcodeproj
+          -scheme SpmApp
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+  # An Expo app that adds a custom CA through the library's config plugin, then
+  # builds Android and checks that prebuild put the certificate where the native
+  # code looks for it on both platforms.
+  expo-prebuild:
+    name: Expo prebuild with withCustomCACerts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: react-native-blob-util
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pack the library
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+        working-directory: react-native-blob-util
+
+      - name: Create an Expo app
+        run: npx --yes create-expo-app@latest ExpoApp --template blank --yes
+
+      - name: Install the packed library
+        run: npm install "$RUNNER_TEMP"/react-native-blob-util-*.tgz
+        working-directory: ExpoApp
+
+      - name: Add a certificate and the config plugin
+        working-directory: ExpoApp
+        run: |
+          mkdir -p certs
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=rnbu-expo-prebuild" -keyout "$RUNNER_TEMP/ca.key" -out certs/test_ca.pem
+          node -e "
+            const fs = require('fs');
+            const app = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            app.expo.plugins = [...(app.expo.plugins || []), ['react-native-blob-util', {customCACerts: [{name: 'test_ca', path: './certs/test_ca.pem'}]}]];
+            app.expo.android = {...app.expo.android, package: 'com.rnbu.expoprebuild'};
+            app.expo.ios = {...app.expo.ios, bundleIdentifier: 'com.rnbu.expoprebuild'};
+            fs.writeFileSync('app.json', JSON.stringify(app, null, 2));
+          "
+
+      - name: Prebuild
+        run: npx expo prebuild --platform all --no-install --clean
+        working-directory: ExpoApp
+
+      # Android gets the certificate as DER under the bare resource name; iOS keeps
+      # the PEM and lists it as a bundle resource.
+      - name: Check the certificate landed in both native projects
+        working-directory: ExpoApp
+        run: |
+          test -s android/app/src/main/res/raw/test_ca
+          test -f ios/certs/test_ca.pem
+          grep -q 'test_ca.pem' ios/*.xcodeproj/project.pbxproj
+
+      - name: Build Android
+        run: bash ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon
+        working-directory: ExpoApp/android

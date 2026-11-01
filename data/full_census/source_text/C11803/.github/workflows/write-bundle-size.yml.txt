@@ -1,0 +1,61 @@
+name: Update Bundle Stats
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.x
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run bundle size test
+        run: pnpm test:bundle-size
+
+      - name: Run Vue bundle size test
+        run: pnpm test:vue-bundle-size
+
+      - name: Run React bundle size test
+        run: pnpm test:react-bundle-size
+
+      - name: Run Schema.org bundle size test
+        run: pnpm test:schema-org-bundle-size
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Update stats
+        run: bun bench/bundle/update.ts
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add bench/bundle/last.json
+          if git diff --staged --quiet; then
+            echo "No bundle stat changes to commit."
+          else
+            git commit -m "chore: update bundle stats [skip ci]"
+            git push
+          fi

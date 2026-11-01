@@ -1,0 +1,61 @@
+name: Version Sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run once a week at 00:05 UTC on Friday.
+    - cron: 5 0 * * 5
+
+jobs:
+  fetch-latest-versions:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: lts/*
+        env:
+          SKIP_YARN_COREPACK_CHECK: 1
+
+      - name: "Update the package manager versions"
+        run: |
+          LATEST_BERRY_VERSION=$(curl https://repo.yarnpkg.com/tags | jq -r '.latest.stable')
+
+          LATEST_NPM=$(curl https://registry.npmjs.org/npm | jq '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_PNPM=$(curl https://registry.npmjs.org/pnpm | jq '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_YARN=$(curl https://registry.npmjs.org/yarn | jq '.["dist-tags"].latest + "+sha1." + .versions[.["dist-tags"].latest].dist.shasum')
+          LATEST_BERRY=$(jq -n '$version + "+sha224." + $checksum' --arg version "$LATEST_BERRY_VERSION" --arg checksum "$(curl https://repo.yarnpkg.com/"$LATEST_BERRY_VERSION"/packages/yarnpkg-cli/bin/yarn.js | openssl dgst -sha224 | cut -d' ' -f2)")
+
+          git --no-pager show HEAD:config.json | jq '. * '"{
+            definitions: {
+              npm: {
+                default: $LATEST_NPM,
+              },
+              pnpm: {
+                default: $LATEST_PNPM,
+              },
+              yarn: {
+                default: $LATEST_YARN,
+                transparent: {
+                  default: $LATEST_BERRY,
+                },
+              },
+            },
+          }" > config.json
+
+      - uses: gr2m/create-or-update-pull-request-action@b65137ca591da0b9f43bad7b24df13050ea45d1b # v1.10.1
+        # Creates a PR or update the Action's existing PR, or
+        # no-op if the base branch is already up-to-date.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          body: This is an automated update of package manager versions
+          branch: actions/tools-update-config.json
+          commit-message: "feat: update package manager versions"
+          title: "feat: update package manager versions"

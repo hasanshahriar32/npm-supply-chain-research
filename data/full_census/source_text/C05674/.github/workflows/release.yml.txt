@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+permissions: {}
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    environment: release
+    permissions:
+      contents: write # to create release (changesets/action)
+      pull-requests: write # to create pull request (changesets/action)
+      id-token: write #  required for provenance and oidc publish
+    # prevents this action from running on forks
+    if: github.repository == 'koajs/koa-body'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@24
+          cache: true
+
+      - name: Update npm
+        # npm version npm 11.5.1 or later needed for Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Create Release Pull Request or Publish to npm
+        uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        with:
+          publish-script: pnpm release
+        env:
+          NPM_CONFIG_PROVENANCE: true

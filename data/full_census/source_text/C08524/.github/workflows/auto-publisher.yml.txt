@@ -1,0 +1,25 @@
+name: Auto Publisher
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 16
+          registry-url: https://registry.npmjs.com/
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - run: npm run setup
+      - run: |
+          npm config set //registry.npmjs.com/:_authToken=$NODE_AUTH_TOKEN
+          npm run check-and-publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}

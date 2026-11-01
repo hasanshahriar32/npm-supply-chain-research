@@ -1,0 +1,45 @@
+name: test-ruby
+
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+      - renovate/**
+    paths:
+      - ruby/**
+      - .github/**
+      - Makefile
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ruby/**
+      - .github/**
+      - Makefile
+
+jobs:
+  test-ruby:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        ruby: ['3.3', '3.4']
+        include:
+          - os: macos-latest
+            ruby: '3.4'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/prepare
+      - uses: ruby/setup-ruby@de492cf36cbab201753d720ce4f4e336cd688c94 # v1.336.0
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+          working-directory: ruby
+      - run: bundle exec rake
+        working-directory: ruby

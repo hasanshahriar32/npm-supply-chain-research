@@ -1,0 +1,56 @@
+{
+  "name": "geobuf",
+  "version": "4.0.0",
+  "description": "Compact binary encoding for geographic data",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "geobuf2json": "bin/geobuf2json.js",
+    "json2geobuf": "bin/json2geobuf.js",
+    "shp2geobuf": "bin/shp2geobuf.js"
+  },
+  "scripts": {
+    "pretest": "eslint *.js test/*.js bin/*.js",
+    "test": "node --test",
+    "build": "rolldown -c",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:mapbox/geobuf.git"
+  },
+  "files": [
+    "encode.js",
+    "decode.js",
+    "index.js",
+    "dist",
+    "bin",
+    "geobuf.proto"
+  ],
+  "keywords": [
+    "geographic",
+    "data",
+    "buffer",
+    "protobuf",
+    "format",
+    "compression",
+    "geojson",
+    "topojson"
+  ],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mapbox/geobuf/issues"
+  },
+  "homepage": "https://github.com/mapbox/geobuf",
+  "devDependencies": {
+    "@mapbox/geojson-fixtures": "^2.0.0",
+    "benchmark": "~2.1.4",
+    "eslint": "^10.2.1",
+    "eslint-config-mourner": "^4.1.0",
+    "rolldown": "^1.0.0-rc.17"
+  },
+  "dependencies": {
+    "pbf": "^4.0.1",
+    "shapefile": "~0.6.6"
+  }
+}

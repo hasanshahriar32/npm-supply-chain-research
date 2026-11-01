@@ -1,0 +1,159 @@
+name: webpack-dev-middleware
+
+on:
+  push:
+    branches:
+      - main
+      - next
+      - hot-middleware
+  pull_request:
+    branches:
+      - main
+      - next
+      - hot-middleware
+
+# A new commit supersedes the previous one's jobs, so stop paying for them: the
+# matrix below fans out across three operating systems and four Node.js
+# versions. Only pull request runs share a group; every other run gets a group
+# of its own (`github.run_id`), because a group holds at most one pending run
+# and a later push would otherwise evict the one waiting — `cancel-in-progress`
+# protects the running run, not the queued one. The branches this also builds
+# on push (`main`, `next`, `hot-middleware`) publish coverage, and losing one of
+# those runs would also hide a breakage that is already on the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint - ${{ matrix.os }} - Node v${{ matrix.node-version }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [lts/*]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build types
+        run: npm run build:types
+
+      - name: Check types
+        run: if [ -n "$(git status types --porcelain)" ]; then echo "Missing types. Update types by running 'npm run build:types'"; exit 1; else echo "All types are valid"; fi
+
+  test:
+    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20.x, 22.x, 24.x, 25.x]
+        webpack-version: [latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests for webpack version ${{ matrix.webpack-version }}
+        run: npm run test:coverage -- --ci
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.node-version }}-${{ strategy.job-index }}
+          path: coverage/lcov.info
+
+  client:
+    name: Client - ubuntu-latest - Node lts/*
+
+    # The browser suite drives a real Chromium, so it reports the same thing on
+    # every OS and node version. One job runs it, off the matrix.
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run browser e2e tests
+        # E2E_COVERAGE instruments the hot client as webpack bundles it, so the
+        # browser reports what these tests exercised in `client-src`; the flags
+        # measure `src` in this process.
+        run: npm run test:e2e -- --ci --collectCoverageFrom="src/**/*.js" --coverage --coverageDirectory=coverage-e2e
+        env:
+          E2E_COVERAGE: "1"
+
+      - name: Collect hot client coverage from the browser
+        run: npm run coverage:client
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-client
+          path: |
+            coverage-e2e/lcov.info
+            coverage-client/lcov.info
+
+  upload-coverage:
+    name: Upload coverage to codecov
+    needs: [test, client]
+    # Without this, one red job skips the upload and codecov gets nothing for
+    # the run — exactly when the report is worth reading.
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: coverage-*
+          path: coverage
+
+      - name: Submit coverage data to codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: coverage

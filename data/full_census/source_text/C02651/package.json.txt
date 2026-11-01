@@ -1,0 +1,74 @@
+{
+  "name": "langium-workspaces",
+  "private": true,
+  "engineStrict": true,
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26",
+    "npm": ">=11.6.0"
+  },
+  "scripts": {
+    "clean": "shx rm -rf packages/*/lib packages/*/*.tsbuildinfo packages/*/out packages/*/app packages/*/coverage packages/*/test/generator-tests examples/*/*.tsbuildinfo",
+    "build": "tsc -b tsconfig.build.json && npm run build --workspace=langium-vscode --workspace=examples/domainmodel --workspace=examples/arithmetics --workspace=examples/statemachine --workspace=examples/requirements",
+    "watch": "concurrently -n tsc,vscode,domainmodel,arithmetics,requirements,statemachine -c blue,yellow,green,green,green,green \"npm run watch:tsc\" \"npm run watch --workspace=langium-vscode\" \"npm run watch --workspace=examples/domainmodel\" \"npm run watch --workspace=examples/arithmetics\" \"npm run watch --workspace=examples/statemachine\" \"npm run watch --workspace=examples/requirements\"",
+    "watch:tsc": "tsc -b tsconfig.build.json -w",
+    "build:clean": "npm run clean && npm run build",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "validate-exports": "npm run validate-exports --workspace=langium",
+    "version:dependencies": "tsx ./scripts/update-version.ts && npm install",
+    "publish:updated": "tsx ./scripts/publish-updated-packages.ts",
+    "langium:generate": "npm run langium:generate --workspace=langium --workspace=examples/domainmodel --workspace=examples/arithmetics --workspace=examples/statemachine --workspace=examples/requirements",
+    "dev-build": "npm run dev-clean && npm install && npm link ./packages/langium && npm link ./packages/langium-cli && npm link ./packages/generator-langium",
+    "dev-clean": "shx rm -rf packages/**/node_modules && npm uninstall -g langium-workspaces langium-cli generator-langium langium && npm unlink langium-workspaces langium-cli generator-langium langium",
+    "reset:repo": "git clean -f -X -d"
+  },
+  "devDependencies": {
+    "@eslint/js": "~10.0.1",
+    "@stylistic/eslint-plugin": "~5.10.0",
+    "@types/node": "~22.20.5",
+    "@types/semver": "~7.8.0",
+    "@types/vscode": "~1.120.0",
+    "@typescript-eslint/eslint-plugin": "~8.70.0",
+    "@typescript-eslint/parser": "~8.70.0",
+    "@vitest/coverage-v8": "~4.1.12",
+    "@vitest/ui": "~4.1.12",
+    "@vscode/vsce": "~3.9.2",
+    "concurrently": "~10.0.6",
+    "editorconfig": "~3.0.2",
+    "esbuild": "0.28.2",
+    "eslint": "~10.11.0",
+    "eslint-plugin-unused-imports": "~4.4.1",
+    "globals": "~17.12.0",
+    "ovsx": "^1.2.0",
+    "semver": "~7.8.5",
+    "shx": "~0.4.0",
+    "tsx": "~4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "~4.1.12"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4"
+  },
+  "workspaces": [
+    "packages/langium",
+    "packages/langium-railroad",
+    "packages/langium-cli",
+    "packages/langium-sprotty",
+    "packages/langium-vscode",
+    "packages/generator-langium",
+    "examples/arithmetics",
+    "examples/domainmodel",
+    "examples/requirements",
+    "examples/statemachine"
+  ],
+  "allowScripts": {
+    "@vscode/vsce-sign@2.0.9": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true,
+    "keytar@7.9.0": true
+  }
+}

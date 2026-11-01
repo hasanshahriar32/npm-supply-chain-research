@@ -1,0 +1,98 @@
+{
+	"name": "any-observable",
+	"version": "0.6.0",
+	"description": "Support any Observable library and polyfill",
+	"license": "MIT",
+	"repository": "sindresorhus/any-observable",
+	"funding": "https://github.com/sponsors/sindresorhus",
+	"author": {
+		"name": "Sindre Sorhus",
+		"email": "sindresorhus@gmail.com",
+		"url": "https://sindresorhus.com"
+	},
+	"type": "module",
+	"exports": {
+		".": "./index.js",
+		"./implementation": "./implementation.js",
+		"./loader": "./loader.js",
+		"./optional": "./optional.js",
+		"./register": {
+			"browser": "./register-shim.js",
+			"default": "./register.js"
+		},
+		"./register-shim": "./register-shim.js",
+		"./register/*": "./register/*.js"
+	},
+	"sideEffects": true,
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"test": "xo && ava"
+	},
+	"files": [
+		"index.js",
+		"implementation.js",
+		"loader.js",
+		"optional.js",
+		"register.js",
+		"register-shim.js",
+		"register"
+	],
+	"keywords": [
+		"observable",
+		"observables",
+		"support",
+		"polyfill",
+		"any",
+		"rxjs"
+	],
+	"devDependencies": {
+		"arrify": "^3.0.0",
+		"ava": "^6.4.1",
+		"browserify": "^17.0.1",
+		"execa": "^9.6.1",
+		"karma": "^6.4.4",
+		"karma-browserify": "^8.1.0",
+		"karma-chrome-launcher": "^3.2.0",
+		"karma-mocha": "^2.0.1",
+		"mocha": "^11.7.5",
+		"rxjs": "^7.8.2",
+		"watchify": "^4.0.0",
+		"xo": "^1.2.3",
+		"zen-observable": "^0.10.0"
+	},
+	"peerDependenciesMeta": {
+		"rxjs": {
+			"optional": true
+		},
+		"zen-observable": {
+			"optional": true
+		}
+	},
+	"browser": {
+		"./register.js": "./register-shim.js"
+	},
+	"xo": [
+		{
+			"files": "browser/tests/**",
+			"languageOptions": {
+				"globals": {
+					"it": "readonly"
+				}
+			},
+			"rules": {
+				"unicorn/prefer-node-protocol": "off",
+				"import/no-unassigned-import": "off",
+				"import/order": "off",
+				"import-x/no-unassigned-import": "off",
+				"import-x/order": "off"
+			}
+		}
+	],
+	"ava": {
+		"files": [
+			"test/**/*.js"
+		]
+	}
+}

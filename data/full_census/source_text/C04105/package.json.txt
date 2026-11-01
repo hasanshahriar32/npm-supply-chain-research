@@ -1,0 +1,72 @@
+{
+  "name": "feature-policy",
+  "author": "Evan Hahn <me@evanhahn.com> (https://evanhahn.com)",
+  "description": "Middleware to set the Feature-Policy HTTP header",
+  "version": "0.6.0",
+  "license": "MIT",
+  "keywords": [
+    "helmet",
+    "security",
+    "express",
+    "connect",
+    "feature-policy"
+  ],
+  "homepage": "https://github.com/helmetjs/feature-policy",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/helmetjs/feature-policy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/helmetjs/feature-policy/issues",
+    "email": "me@evanhahn.com"
+  },
+  "scripts": {
+    "pretest": "npm run lint",
+    "prepublishOnly": "npm run build",
+    "lint": "npm run lint:eslint && npm run lint:prettier",
+    "lint:eslint": "eslint \"**/*.ts\"",
+    "lint:prettier": "prettier --check .",
+    "format": "prettier --write .",
+    "build": "tsup",
+    "test": "tsx test.ts"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.cts",
+  "files": [
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md",
+    "dist"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/connect": "^3.4.38",
+    "@types/dashify": "^1.0.3",
+    "@types/node": "^26.6.5",
+    "@types/supertest": "^7.2.1",
+    "connect": "^3.7.0",
+    "dashify": "^2.0.0",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "supertest": "^7.3.1",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2"
+  }
+}

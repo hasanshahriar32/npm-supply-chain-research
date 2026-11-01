@@ -1,0 +1,77 @@
+name: Clean up Prettier, Size-limit, and Api-Extractor
+
+on:
+  pull_request:
+  pull_request_review:
+    types: [submitted, edited]
+
+permissions: {}
+
+jobs:
+  add_cleanup_label:
+    # https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#running-a-workflow-when-a-pull-request-is-approved
+    permissions:
+      contents: read
+      pull-requests: write
+    if: |
+      github.repository == 'apollographql/apollo-client' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.review.state == 'APPROVED' &&
+      github.event.review.author_association == 'MEMBER' &&
+      contains(github.event.pull_request.labels.*.name, 'auto-cleanup') == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - name: add label
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const script = (await import('${{ github.workspace }}/.github/workflows/cleanup-checks.mjs')).setup({context,core,github,exec,glob,io})
+            await script.add_cleanup_label()
+
+  cleanup:
+    permissions:
+      contents: write
+    if: |
+      github.repository == 'apollographql/apollo-client' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'auto-cleanup')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          # git-auto-commit-action requires persist-credentials set to true
+          # https://github.com/stefanzweifel/git-auto-commit-action#action-does-not-push-commit-to-repository-authentication-issue
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24.x"
+
+      - run: npm ci
+
+      - name: Run Api-Extractor
+        run: npm run extract-api
+        env:
+          CI: "false"
+
+      - name: Run prettier
+        run: npm run format
+
+      - name: Run build
+        run: npm run build
+
+      - name: Update size-limit
+        run: npm run update-size-limits
+
+      - name: Commit changes back
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9 # v7
+        with:
+          commit_message: "Clean up Prettier, Size-limit, and Api-Extractor"
+          push_options: ""
+          skip_dirty_check: false

@@ -1,0 +1,74 @@
+name: CI
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: lts/*
+            - name: Install Packages
+              run: npm ci
+            - name: Build
+              run: npm run build
+            - name: Lint
+              run: npm run lint
+            - name: Type Check
+              run: npm run typecheck
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: [20.x, 22.x, 24.x]
+                eslint: [9]
+        steps:
+            - uses: actions/checkout@v7
+            - name: Use Node.js ${{ matrix.node }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node }}
+            - name: Install Packages
+              run: npm ci
+            - name: Install ESLint ${{ matrix.eslint }}
+              run: npm i -D eslint@${{ matrix.eslint }}
+            - name: Test
+              run: npm test
+    test-and-coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+            - name: Install Packages
+              run: npm ci
+            - name: Build
+              run: npm run build
+            - name: Test
+              run: npm run test:c8
+            - name: Coveralls GitHub Action
+              uses: coverallsapp/github-action@v2
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+    update:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: lts/*
+            - name: Install Packages
+              run: npm ci
+            - name: Build
+              run: npm run build
+            - name: Update
+              run: npm run update
+            - name: Check changes
+              run: |
+                  git add --all && \
+                  git diff-index --cached HEAD --stat --exit-code

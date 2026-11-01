@@ -1,0 +1,62 @@
+{
+  "name": "ember-estree",
+  "version": "0.9.0",
+  "description": "ESTree generator for gjs and gts file used by ember",
+  "keywords": [
+    "AST",
+    "codemod",
+    "ember",
+    "estree",
+    "glimmer",
+    "traversal",
+    "walker"
+  ],
+  "license": "MIT",
+  "author": "NullVoxPopuli",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:NullVoxPopuli/ember-estree.git"
+  },
+  "files": [
+    "src"
+  ],
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "scripts": {
+    "bench": "node --expose-gc tests/parser.bench.mjs",
+    "bench:compare": "node scripts/bench-compare.mjs",
+    "bench:summary": "./scripts/local-bench-summary.sh",
+    "docs:nodes": "node scripts/generate-ast-node-reference.mjs",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint && pnpm format:check && publint",
+    "lint:fix": "oxlint --fix && oxfmt",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@glimmer/env": "^0.1.7",
+    "@glimmer/syntax": ">= 0.95.0",
+    "content-tag": "^4.2.0",
+    "oxc-parser": "^0.130.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "^24.0.0",
+    "@typescript-eslint/parser": "^8.59.3",
+    "mitata": "^1.0.34",
+    "oxfmt": "^0.49.0",
+    "oxlint": "^1.64.0",
+    "publint": "^0.3.20",
+    "release-plan": "^0.18.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6",
+    "zimmerframe": "^1.1.4"
+  },
+  "packageManager": "pnpm@11.1.0"
+}

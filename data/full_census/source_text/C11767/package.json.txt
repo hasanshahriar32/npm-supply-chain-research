@@ -1,0 +1,51 @@
+{
+  "name": "fontaine-monorepo",
+  "preview": true,
+  "type": "module",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0",
+      "onFail": "download"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.15.0",
+      "onFail": "download"
+    }
+  },
+  "description": "Automatic font fallback based on font metrics",
+  "author": {
+    "name": "Daniel Roe",
+    "email": "daniel@roe.dev",
+    "url": "https://github.com/danielroe"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm --filter fontaine --filter fontless build",
+    "lint": "eslint .",
+    "test:unit": "pnpm -r test:unit",
+    "test:types": "pnpm -r test:types",
+    "test:knip": "knip",
+    "test:versions": "installed-check -d --ignore=vite --workspace-ignore='packages/fontless/examples/*' --workspace-ignore='packages/fontless/docs'",
+    "postinstall": "simple-git-hooks install && pnpm build"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "9.5.1",
+    "eslint": "10.13.0",
+    "installed-check": "11.0.0",
+    "knip": "6.43.0",
+    "lint-staged": "17.6.0",
+    "pkg-pr-new": "0.0.92",
+    "simple-git-hooks": "2.14.0",
+    "typescript": "6.0.3"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,cjs,json,.*rc}": [
+      "pnpm eslint --fix"
+    ]
+  }
+}

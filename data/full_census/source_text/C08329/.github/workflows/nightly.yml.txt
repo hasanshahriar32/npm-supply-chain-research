@@ -1,0 +1,46 @@
+name: Nightly Job
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    name: Node ${{ matrix.node-version }}
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Update submodules
+        run: |
+          git submodule update --init --remote --merge
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git commit -a -m "chore: update submodule references for Prime UI Libraries" || echo "No changes to commit"
+          git push
+
+      - name: Install dependencies
+        run: |
+          pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: |
+          pnpm run build

@@ -1,0 +1,82 @@
+name: Build Example APK
+
+# Release APK (all ABIs) as a downloadable artifact. On pull requests, only
+# when the release build can change (ci.yml covers a debug arm64 build). Keep
+# `paths` in sync with the shared/example/android filters in ci.yml.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - 'example/android/**'
+      - 'example/src/**'
+      - 'example/App.tsx'
+      - 'example/*.js'
+      - 'example/*.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig*.json'
+      - 'babel.config.*'
+      - '.npmrc'
+      - 'react-native.config.cjs'
+      - '.github/workflows/build-apk.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-example-apk:
+    name: Build Example APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      # Read-only: ci.yml's build-android writes this cache from master.
+      - name: Restore Gradle cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'example/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Install dependencies  # `prepare` builds the library
+        run: npm ci --legacy-peer-deps
+
+      - name: Install example dependencies
+        working-directory: example
+        run: npm ci --legacy-peer-deps
+
+      - name: Build release APK
+        working-directory: example/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace -PnewArchEnabled=true
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: example-apk
+          path: example/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30

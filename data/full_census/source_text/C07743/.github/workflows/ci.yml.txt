@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.23.4", "24.22.1"]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          cache: true
+      - name: Install native test codecs
+        run: sudo apt-get update -qq && sudo apt-get install -y imagemagick ffmpeg
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test:coverage
+      - run: pnpm build
+      - run: |
+          git diff --exit-code -- dist
+          test -z "$(git ls-files --others -- dist)"
+      - run: pnpm docs:check
+      - run: pnpm pack --pack-destination /tmp/rastermill-pack
+      - run: pnpm package:smoke

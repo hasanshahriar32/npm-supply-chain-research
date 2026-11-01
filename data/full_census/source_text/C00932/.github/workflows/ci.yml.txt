@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x, 24.x]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ matrix.node-version }}
+    # bun installs dependencies and runs the scripts and tests. The node version
+    # above is still what the CLI tests shell out to, so the matrix keeps
+    # exercising the built package on each supported node.
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+    - name: Run tests
+      run: bun run test
+      env:
+        CI: true
+
+  # Bun is not a supported runtime for the published package, but plenty of
+  # users run json2ts under it, so build the package and run the CLI under bun
+  # rather than node to catch breakage early. (The test suite itself already
+  # runs under bun in the build job.)
+  bun:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+    - name: Build
+      run: bun run build:server
+    - name: Run the built CLI under bun
+      run: bun dist/src/cli.js test/resources/Schema.yaml
+
+  # package.json claims node >=22.19.0 (the first release that can `require()`
+  # the ES-module-only $ref parser and its HTTP client), but the test suite runs
+  # under bun, and the build matrix above on whatever 22.x is current. Build on a
+  # current node, then exercise the built package on exactly the version the
+  # package claims as its floor.
+  engines:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.19.0]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js 24.x to build
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24.x
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+    - name: Build
+      run: bun run build:server
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Smoke-test the built package
+      run: node test/smoke.cjs
+
+  # Fuzz smoke: push a fixed seed range of generated schemas through the built
+  # package (test/fuzz/README.md), so a crash, hang or invalid-output regression
+  # turns CI red instead of waiting for a manual fuzz run. Findings master still
+  # has are listed in test/fuzz/known-findings.json, each with its issue.
+  fuzz:
+    runs-on: ubuntu-latest
+    # A green run takes ~80 s. Each seed that genuinely hangs costs up to 75 s more
+    # (60 s in the parallel pass shared four ways, then 60 s re-run alone), so this
+    # leaves room for about a dozen before the job is cut off mid-report.
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24.x
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+    - name: Build
+      run: bun run build:server
+    - name: Fuzz seeds 1..500
+      run: bun run fuzz:ci
+    - name: Upload the fuzz report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: fuzz-report
+        path: fuzz-report.json
+        if-no-files-found: ignore
+
+  # What the generated code looks like beyond the fixtures. First, compile a corpus
+  # of large real-world schemas under several option sets and run the TypeScript
+  # compiler over every result (test/corpus/README.md). Then score the generated
+  # types against the official JSON-Schema-Test-Suite, group by group, and compare
+  # with the checked-in baseline (test/conformance/README.md): the job fails on any
+  # difference, and the log says whether it is a regression to fix or an improvement
+  # to record with `node test/conformance/run.js --update`. About 40 s of checks;
+  # Linux only, since neither depends on the platform.
+  output:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24.x
+    - name: Use Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version-file: .bun-version
+    - name: Install dependencies
+      run: bun install --frozen-lockfile
+    - name: Build
+      run: bun run build:server
+    - name: Compile and type-check the real-world corpus
+      run: bun run corpus
+    - name: Spec conformance against the baseline
+      # also when the corpus step failed, so one run reports both
+      if: ${{ !cancelled() }}
+      run: bun run conformance --report conformance-report.json
+    - name: Upload the conformance report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: conformance-report
+        path: conformance-report.json
+        if-no-files-found: ignore
+
+  # Aggregate check. Branch protection requires this one job instead of each
+  # matrix job by name, so the matrix can change without editing the required
+  # status checks.
+  ci-ok:
+    if: always()
+    needs: [build, bun, engines, fuzz, output]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fail if any matrix job, the fuzz smoke or the output checks did not succeed
+      # Checking for success (rather than for failure/cancellation) also catches
+      # `skipped`, which would otherwise satisfy branch protection with no tests run.
+      run: '[ "${{ needs.build.result }}" = "success" ] && [ "${{ needs.fuzz.result }}" = "success" ] && [ "${{ needs.output.result }}" = "success" ]'

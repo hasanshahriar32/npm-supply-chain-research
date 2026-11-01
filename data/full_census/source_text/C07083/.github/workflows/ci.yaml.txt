@@ -1,0 +1,645 @@
+name: CI
+env:
+  DEBUG: 'napi:*'
+  MACOSX_DEPLOYMENT_TARGET: '10.13'
+  CARGO_UNSTABLE_TARGET_APPLIES_TO_HOST: true
+  CARGO_TARGET_APPLIES_TO_HOST: false
+
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+    tags-ignore:
+      - '**'
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: x86_64-unknown-linux-gnu
+          components: rustfmt, clippy
+
+      - name: 'Install dependencies'
+        run: yarn install --mode=skip-build
+
+      - name: ESLint
+        run: yarn lint
+
+      - name: TypeCheck
+        run: yarn build:ts
+
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        run: cargo clippy --locked
+  bench:
+    name: Bench
+    runs-on: ${{ matrix.settings.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - target: 'x86_64-unknown-linux-gnu'
+            host: ubuntu-latest
+          - target: 'aarch64-apple-darwin'
+            host: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Cache cargo registry
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.napi-rs
+            target
+          key: bench-cargo-registry-${{ matrix.settings.target }}
+
+      - name: Install
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Setup macos
+        if: ${{ matrix.settings.host == 'macos-latest' }}
+        run: brew install python-setuptools
+
+      - name: 'Install dependencies'
+        run: yarn install
+
+      - name: build
+        run: yarn build -- --locked
+
+      - name: Bench
+        run: yarn workspaces foreach -A -j 1 --no-private run bench
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: 'x86_64-apple-darwin'
+            build: yarn build --target x86_64-apple-darwin -- --locked
+          - host: windows-latest
+            build: yarn build -- --locked
+            target: 'x86_64-pc-windows-msvc'
+          - host: windows-latest
+            build: yarn build --target i686-pc-windows-msvc -- --locked
+            target: 'i686-pc-windows-msvc'
+          - host: ubuntu-latest
+            target: 'x86_64-unknown-linux-gnu'
+            build: TARGET_CC=clang yarn build --target x86_64-unknown-linux-gnu --use-napi-cross -- --locked
+          - host: ubuntu-latest
+            target: 'x86_64-unknown-linux-musl'
+            build: yarn build --target x86_64-unknown-linux-musl -x -- --locked
+          - host: macos-latest
+            target: 'aarch64-apple-darwin'
+            build: yarn build --target aarch64-apple-darwin -- --locked
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build: TARGET_CC=clang yarn build --target aarch64-unknown-linux-gnu --use-napi-cross -- --locked
+          - host: ubuntu-latest
+            target: 'armv7-unknown-linux-gnueabihf'
+            build: TARGET_CC=clang yarn build --target armv7-unknown-linux-gnueabihf --use-napi-cross -- --locked
+          - host: ubuntu-latest
+            target: aarch64-linux-android
+            build: yarn build --target aarch64-linux-android -- --locked
+          - host: ubuntu-latest
+            architecture: x64
+            target: armv7-linux-androideabi
+            build: yarn build --target armv7-linux-androideabi -- --locked
+          - host: ubuntu-latest
+            target: 'aarch64-unknown-linux-musl'
+            downloadTarget: 'aarch64-unknown-linux-musl'
+            build: yarn build --target aarch64-unknown-linux-musl -x -- --locked
+          - host: windows-latest
+            target: 'aarch64-pc-windows-msvc'
+            build: yarn build --target aarch64-pc-windows-msvc -- --locked
+          - host: ubuntu-latest
+            target: 'wasm32-wasip1-threads'
+            build: |
+              wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-29/wasi-sdk-29.0-x86_64-linux.tar.gz
+              tar -xvf wasi-sdk-29.0-x86_64-linux.tar.gz
+              export WASI_SDK_PATH="$(pwd)/wasi-sdk-29.0-x86_64-linux"
+              yarn workspaces foreach -A --no-private -j 1 --exclude "@node-rs/deno-lint" run build --target wasm32-wasip1-threads -- --locked
+
+    name: stable - ${{ matrix.settings.target }} - node@24
+    runs-on: ${{ matrix.settings.host }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install
+        uses: ./.github/actions/setup-rust
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.napi-rs
+            target
+          key: ${{ matrix.settings.target }}-cargo-registry
+
+      - uses: mlugg/setup-zig@v2
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        with:
+          version: 0.15.2
+
+      - name: Setup node x86
+        if: matrix.settings.target == 'i686-pc-windows-msvc'
+        run: yarn config set supportedArchitectures.cpu "ia32"
+        shell: bash
+
+      - name: 'Install dependencies'
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Setup node x86
+        uses: actions/setup-node@v7
+        if: matrix.settings.target == 'i686-pc-windows-msvc'
+        with:
+          node-version: 22
+          architecture: x86
+
+      - name: 'Build'
+        run: ${{ matrix.settings.build }}
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.settings.target != 'wasm32-wasip1-threads' }}
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: packages/*/*.node
+          if-no-files-found: error
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        if: ${{ matrix.settings.target == 'wasm32-wasip1-threads' }}
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: packages/*/*.wasm
+          if-no-files-found: error
+
+  build-freebsd:
+    runs-on: ubuntu-latest
+    name: Build FreeBSD
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        id: build
+        uses: cross-platform-actions/action@v1.7.0
+        env:
+          DEBUG: 'napi:*'
+          RUSTUP_HOME: /home/runner/rustup
+          CARGO_HOME: /home/runner/cargo
+          RUSTUP_IO_THREADS: 1
+        with:
+          operating_system: freebsd
+          version: '14.3'
+          memory: 8G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS'
+          shell: bash
+          run: |
+            env | sort
+            sudo pkg install -y -f curl node libnghttp2 npm cmake-core
+            sudo npm install -g yarn --ignore-scripts
+            curl https://sh.rustup.rs -sSf --output rustup.sh
+            export RUST_TOOLCHAIN_VERSION="$(grep 'channel' rust-toolchain.toml | head -1 | awk -F '"' '{print $2}')"
+            sh rustup.sh -y --default-toolchain "${RUST_TOOLCHAIN_VERSION}"
+            source "$HOME/.cargo/env"
+            echo "~~~~ rustc --version ~~~~"
+            rustc --version
+            echo "~~~~ node -v ~~~~"
+            node -v
+            echo "~~~~ yarn --version ~~~~"
+            yarn --version
+            pwd
+            ls -lah
+            whoami
+            env
+            freebsd-version
+            yarn install --immutable --mode=skip-build
+            yarn build -- --locked
+            strip -x packages/*/*.node
+            rm -rf node_modules
+            rm -rf target
+            rm -rf .yarn
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bindings-freebsd-amd64
+          path: packages/*/*.node
+          if-no-files-found: error
+
+  test-macOS-windows-binding:
+    name: Test bindings on ${{ matrix.settings.target }} - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: 'x86_64-apple-darwin'
+            architecture: x64
+          - host: macos-latest
+            target: 'aarch64-apple-darwin'
+            architecture: arm64
+          - host: windows-latest
+            target: 'x86_64-pc-windows-msvc'
+            architecture: x64
+        node: ['22', '24']
+    runs-on: ${{ matrix.settings.host }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          architecture: ${{ matrix.settings.architecture }}
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-${{ matrix.settings.target }}
+          path: packages
+
+      - name: Test bindings
+        run: yarn workspaces foreach -A -j 1 run test
+
+  test-bcrypt-supported-node:
+    name: Test bcrypt on supported Node ${{ matrix.node }}
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['10', '12']
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node for test dependencies
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: Install test dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Download native bindings
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: packages
+
+      # Avoid the modern development toolchain when testing the published API.
+      - name: Test bcrypt public API and stored hashes
+        run: node packages/bcrypt/__tests__/supported-node.cjs
+
+      - name: Test locally imported cancellation polyfill
+        run: node packages/bcrypt/__tests__/polyfill-cancellation.cjs
+
+  test-linux-x64-gnu-binding:
+    name: Test bindings on Linux-x64-gnu - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-x86_64-unknown-linux-gnu
+          path: packages
+
+      - name: List packages
+        run: ls -R packages
+        shell: bash
+
+      - name: Test bindings
+        uses: tj-actions/docker-run@v2
+        with:
+          image: node:${{ matrix.node }}-slim
+          name: test-linux-x64-gnu-${{ matrix.node }}
+          options: -v ${{ github.workspace }}:/build -w /build
+          args: node .yarn/releases/yarn-4.18.1.cjs test -s
+
+  test-linux-x64-musl-binding:
+    name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+
+      - name: Install dependencies
+        run: |
+          yarn config set supportedArchitectures.libc "musl"
+          yarn install --immutable --mode=skip-build
+
+      - name: Build TypeScript
+        run: yarn build:ts
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-x86_64-unknown-linux-musl
+          path: packages
+
+      - name: List packages
+        run: ls -R packages
+        shell: bash
+
+      - name: Test bindings
+        uses: tj-actions/docker-run@v2
+        with:
+          image: node:${{ matrix.node }}-alpine
+          name: test-linux-x64-musl-${{ matrix.node }}
+          options: -v ${{ github.workspace }}:/build -w /build
+          args: |
+            node .yarn/releases/yarn-4.18.1.cjs test -s
+
+  test-linux-aarch64-gnu-binding:
+    name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    runs-on: ubuntu-26.04-arm
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-aarch64-unknown-linux-gnu
+          path: packages
+
+      - name: Install dependencies
+        run: |
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "glibc"
+          yarn install --immutable --mode=skip-build
+
+      - name: List packages
+        run: ls -R packages
+        shell: bash
+
+      - name: Setup and run tests
+        uses: tj-actions/docker-run@v2
+        with:
+          image: node:${{ matrix.node }}-slim
+          name: test-linux-aarch64-gnu-${{ matrix.node }}
+          options: --platform linux/arm64 -v ${{ github.workspace }}:/build -w /build
+          args: sh -c "set -e && node .yarn/releases/yarn-4.18.1.cjs test -s && ls -la"
+
+  test-linux-aarch64-musl-binding:
+    name: Test bindings on aarch64-unknown-linux-musl - node@${{ matrix.node }}
+    needs:
+      - build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    runs-on: ubuntu-26.04-arm
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "musl"
+          yarn install --immutable --mode=skip-build
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-aarch64-unknown-linux-musl
+          path: packages
+
+      - name: List packages
+        run: ls -R packages
+        shell: bash
+
+      - name: Setup and run tests
+        uses: tj-actions/docker-run@v2
+        with:
+          image: node:${{ matrix.node }}-alpine
+          name: test-linux-aarch64-musl-${{ matrix.node }}
+          options: --platform linux/arm64 -v ${{ github.workspace }}:/build -w /build
+          args: sh -c "set -e && node .yarn/releases/yarn-4.18.1.cjs test -s"
+
+  test-linux-arm-gnueabihf-binding:
+    name: Test bindings on armv7-unknown-linux-gnueabihf - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22']
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          yarn config set supportedArchitectures.cpu "arm"
+          yarn install --immutable --mode=skip-build
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-armv7-unknown-linux-gnueabihf
+          path: packages
+
+      - name: List packages
+        run: ls -R ./packages
+        shell: bash
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm
+      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      - name: Setup and run tests
+        uses: tj-actions/docker-run@v2
+        with:
+          image: node:${{ matrix.node }}-bullseye-slim
+          name: test-linux-arm-gnueabihf-${{ matrix.node }}
+          options: --platform linux/arm/v7 -v ${{ github.workspace }}:/build -w /build
+          args: sh -c "set -e && node .yarn/releases/yarn-4.18.1.cjs test -s && ls -la"
+
+  test-wasi-nodejs:
+    name: Test bindings on wasi - node@${{ matrix.node }}
+    needs:
+      - build
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+      - name: 'Install dependencies'
+        run: yarn install --immutable --mode=skip-build
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: bindings-wasm32-wasip1-threads
+          path: packages
+      - name: List packages
+        run: ls -R .
+      - name: Test
+        run: |
+          yarn test -s
+        env:
+          NAPI_RS_FORCE_WASI: 'true'
+
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    needs:
+      - lint
+      - bench
+      - build-freebsd
+      - test-linux-x64-gnu-binding
+      - test-linux-x64-musl-binding
+      - test-linux-aarch64-gnu-binding
+      - test-linux-aarch64-musl-binding
+      - test-linux-arm-gnueabihf-binding
+      - test-macOS-windows-binding
+      - test-bcrypt-supported-node
+      - test-wasi-nodejs
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: yarn
+
+      - name: 'Install dependencies'
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: ls -R artifacts
+        shell: bash
+
+      - name: create-npm-dirs
+        run: yarn workspaces foreach -A -j 1 run napi create-npm-dirs
+
+      - name: Move artifacts
+        run: yarn artifacts
+
+      - name: Build TypeScript
+        run: yarn build:ts
+
+      - name: List packages
+        run: ls -R packages
+        shell: bash
+
+      - name: Lerna publish
+        if: "startsWith(github.event.head_commit.message, 'chore(release): publish')"
+        run: |
+          npm config set provenance true
+          find ./packages/ -type d -maxdepth 1 -exec cp LICENSE {} \;
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+          yarn lerna publish from-package --no-verify-access --yes
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

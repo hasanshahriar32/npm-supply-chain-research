@@ -1,0 +1,68 @@
+{
+  "name": "reassure-root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Performance testing companion for React and React Native",
+  "keywords": [
+    "android",
+    "ios",
+    "react-native"
+  ],
+  "homepage": "https://github.com/callstack/reassure#readme",
+  "bugs": {
+    "url": "https://github.com/callstack/reassure/issues"
+  },
+  "license": "MIT",
+  "author": "Maciej Jastrzębski <mdjastrzebski@gmail.com> (https://github.com/mdjastrzebski)",
+  "contributors": [
+    "Jakub Bujko <jakub.bujko@callstack.com> (https://github.com/Xiltyn)",
+    "Tomasz Krzyżowski <tomasz.krzyzowski@callstack.com> (https://github.com/TMaszko)",
+    "Michał Pierzchała <thymikee@gmail.com> (https://github.com/thymikee)"
+  ],
+  "repository": "https://github.com/callstack/reassure",
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "test-apps/native"
+    ]
+  },
+  "scripts": {
+    "test": "turbo run test",
+    "test:test-app": "cd ./test-apps/native && yarn test",
+    "typecheck": "tsc --noEmit",
+    "typecheck:test-app": "yarn --cwd ./test-apps/native typecheck",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "eslint \"**/*.{ts,tsx}\"",
+    "lint:deps": "yarn check-dependency-version-consistency .",
+    "clean": "turbo run clean",
+    "build": "turbo run build",
+    "validate": "yarn lint && yarn lint:deps && yarn typecheck && yarn test",
+    "changeset": "changeset",
+    "version": "changeset version && yarn install",
+    "publish": "yarn build && changeset publish",
+    "danger:local": "danger local -b main"
+  },
+  "devDependencies": {
+    "@callstack/eslint-config": "^15.0.0",
+    "@changesets/cli": "^2.31.1",
+    "@eslint/compat": "^2.1.1",
+    "@eslint/js": "^10.0.1",
+    "babel-jest": "^30.5.2",
+    "check-dependency-version-consistency": "^6.0.0",
+    "danger": "^13.0.10",
+    "eslint": "^10.13.0",
+    "eslint-plugin-oxfmt": "^0.10.0",
+    "oxfmt": "^0.54.0",
+    "reassure": "workspace:^",
+    "turbo": "^2.11.9",
+    "typescript": "^6.0.3"
+  },
+  "resolutions": {
+    "@eslint/compat": "^2.1.1",
+    "jest-environment-node": "30.5.2",
+    "jest-mock": "30.5.2",
+    "react-is": "19.1.1"
+  },
+  "packageManager": "yarn@4.11.0"
+}

@@ -1,0 +1,28 @@
+name: Bundle Stats
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version: 24.22.1
+      - run: pnpm install --frozen-lockfile
+      - uses: rexxars/bundle-stats@c8bb783559da734cbb251f66731ee5227ba41059 # v2

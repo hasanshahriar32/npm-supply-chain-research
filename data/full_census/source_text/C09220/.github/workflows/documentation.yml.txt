@@ -1,0 +1,48 @@
+name: documentation
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  grammar-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # for reviewdog/vale
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Determine Changed Files
+        id: changed-files
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          ALL_FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files.[] | select(.additions > 0) | .path')
+          CHANGED_FILES="${ALL_FILES//$'\n'/,}"
+
+          echo "[DEBUG] Following files have been changed: $CHANGED_FILES"
+          echo "changed-files=$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+      - name: Vale
+        # vale fails if the PR is too large, e.g. when updating API docs
+        if: ${{ github.event.pull_request.changed_files < 100 && steps.changed-files.outputs.changed-files != '' }}
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        uses: vale-cli/vale-action@518a9136acc6e6668ce7c00d367051e0941e87ff # v3.0.0
+        with:
+          # version of 'vale' to use
+          # see https://github.com/vale-cli/vale for all releases
+          version: 3.25.1
+          # changed files. computed in the step above
+          files: ${{ steps.changed-files.outputs.changed-files }}
+          # the separator for the file list. we are using a comma (see step above)
+          separator: ','
+          # post inline suggestions from vale's language server as PR review comments
+          reporter: github-pr-review
+          # let review dog fail if there are errors
+          fail_on_error: true

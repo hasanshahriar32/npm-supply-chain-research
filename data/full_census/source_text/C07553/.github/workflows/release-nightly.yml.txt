@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.number || github.ref }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  release-pkg-pr-new:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          cache: true
+
+      - name: Prepare build environment
+        run: pnpm dev:prepare
+
+      - run: pnpm build
+
+      - name: publish nightly release
+        run: pnpm pkg-pr-new publish --compact --pnpm
+
+  release-nightly:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'nuxt' && github.event_name == 'push' }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          registry-url: "https://registry.npmjs.org/"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Prepare build environment
+        run: pnpm dev:prepare
+
+      - name: nightly release
+        run: pnpm changelogen --canary nightly --publish

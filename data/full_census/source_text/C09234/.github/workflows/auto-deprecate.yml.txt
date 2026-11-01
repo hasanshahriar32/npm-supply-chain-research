@@ -1,0 +1,14 @@
+name: NPM Auto Deprecate
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  auto-deprecate:
+    name: NPM Auto Deprecate
+    uses: sapphiredev/.github/.github/workflows/reusable-yarn-job.yml@main
+    with:
+      script-name: npm-deprecate
+    secrets:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

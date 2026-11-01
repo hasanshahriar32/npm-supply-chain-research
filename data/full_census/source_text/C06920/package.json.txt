@@ -1,0 +1,52 @@
+{
+  "name": "postcss-message-helpers",
+  "version": "2.0.0",
+  "description": "PostCSS helpers to throw or output GNU style messages",
+  "keywords": [
+    "css",
+    "postcss",
+    "postcss-plugins",
+    "messages",
+    "error",
+    "warning"
+  ],
+  "author": "Maxime Thirouin",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MoOx/postcss-message-helpers.git"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "LICENSE",
+    "index.js"
+  ],
+  "devDependencies": {
+    "eslint": "^6.0.1",
+    "husky": "^3.0.0",
+    "postcss": "^8.4.13",
+    "prettier": "^1.18.2",
+    "pretty-quick": "^1.11.1",
+    "tape": "^5.5.3"
+  },
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,json,css,md}\"",
+    "lint": "eslint .",
+    "tests": "tape test",
+    "test": "yarn lint && yarn tests"
+  },
+  "prettier": {
+    "proseWrap": "always"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    },
+    "extends": "eslint:recommended"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pretty-quick --staged"
+    }
+  }
+}

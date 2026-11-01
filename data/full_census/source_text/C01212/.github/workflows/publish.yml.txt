@@ -1,0 +1,126 @@
+name: Publish
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        type: choice
+        description: Version type
+        default: minor
+        options:
+        - major
+        - minor
+        - patch
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    outputs:
+      release: ${{ steps.changes.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'refs/heads/main' }}
+          fetch-depth: 0
+      - name: Check for releasable changes since last release
+        id: changes
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "release=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          last_tag=$(git describe --tags --abbrev=0)
+          changed=$(git diff --name-only "$last_tag" HEAD -- . \
+            ':!*.md' ':!docs/**' ':!test/**' ':!.github/**' ':!.vscode/**' \
+            ':!.editorconfig' ':!.gitignore' ':!.tool-versions' ':!LICENSE')
+          if [ -n "$changed" ]; then
+            echo "Releasable changes since $last_tag:"
+            echo "$changed"
+            echo "release=true" >> $GITHUB_OUTPUT
+          else
+            echo "No releasable changes since $last_tag; skipping release."
+            echo "release=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || 'refs/heads/main' }}
+      - name: Setup git repo
+        run: |
+          git config user.name $GITHUB_ACTOR
+          git config user.email gh-actions-${GITHUB_ACTOR}@github.com
+          git remote add gh-origin https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install
+      - name: Version
+        run: |
+          npm version ${{ github.event.inputs.version_type || 'minor' }} --force -m "Version %s"
+      - name: Publish to npm
+        run: npm publish --provenance
+      - name: Push release commit and tag to GitHub
+        id: push
+        run: |
+          git push gh-origin HEAD:main --tags
+          echo "tag-name=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: npm-logs
+          path: ~/.npm/_logs
+      - name: Package release assets
+        run: |
+          zip assets.zip i18n.js i18n.d.ts
+          zip -gr assets.zip dist/ locales/
+      - name: Create a Release
+        id: create-release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.push.outputs.tag-name }}
+          generate_release_notes: true
+          files: assets.zip
+      - name: Comment on PRs with link to release they are included in
+        uses: actions/github-script@v9
+        env:
+          RELEASE_ID: ${{ steps.create-release.outputs.id }}
+        with:
+          script: |
+            const releaseId = process.env.RELEASE_ID;
+            console.log(`Fetching release_id: ${releaseId} ...`);
+            const getReleaseResponse = await github.rest.repos.getRelease({
+              release_id: process.env.RELEASE_ID,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            const release = getReleaseResponse.data;
+
+            const prNumbersInRelease = new Set(Array.from(release.body.matchAll(/\/pull\/(\d+)/g)).map(p=>p[1]));
+
+            for(let prNumber of prNumbersInRelease) {
+              console.log(`Adding comment on PR #${prNumber} ...`);
+              await github.rest.issues.createComment({
+                issue_number: prNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `The changes in this PR were just released in [${release.name}](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/${release.tag_name}) 🎉.`
+              })
+            }

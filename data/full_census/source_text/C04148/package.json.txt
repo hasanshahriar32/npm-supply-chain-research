@@ -1,0 +1,71 @@
+{
+  "name": "nofilter",
+  "version": "7.0.0",
+  "description": "Read and write a growable buffer as a stream",
+  "main": "lib/index.js",
+  "type": "module",
+  "types": "types/index.d.ts",
+  "files": [
+    "lib/*",
+    "types/*"
+  ],
+  "scripts": {
+    "clean": "rm -rf coverage doc types **/.DS_Store",
+    "lint": "eslint .",
+    "test": "c8 mocha test/*.js",
+    "docs": "typedoc",
+    "types": "tsc",
+    "build": "npm run types && npm run docs && npm run lint && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hildjj/nofilter.git"
+  },
+  "keywords": [
+    "buffer",
+    "stream",
+    "duplex",
+    "transform",
+    "#nofilter",
+    "no-filter",
+    "concat"
+  ],
+  "author": {
+    "name": "Joe Hildebrand",
+    "email": "joe-github@cursive.net"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hildjj/nofilter/issues"
+  },
+  "contributors": [
+    {
+      "name": "Jimmy Wärting",
+      "email": "jimmy@warting.se",
+      "url": "https://jimmy.warting.se"
+    }
+  ],
+  "homepage": "https://github.com/hildjj/nofilter#readme",
+  "devDependencies": {
+    "@cto.af/eslint-config": "7.0.3",
+    "@eslint/markdown": "^8.0.3",
+    "@types/node": "^26.6.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "chai": "^6.3.0",
+    "chai-as-promised": "^8.0.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-chai-friendly": "^1.2.1",
+    "eslint-plugin-jsdoc": "^65.4.0",
+    "eslint-plugin-mocha": "^12.0.2",
+    "mocha": "^12.0.3",
+    "p-event": "^8.0.1",
+    "superc8": "^12.7.0",
+    "typedoc": "^0.28.20",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.72.0"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

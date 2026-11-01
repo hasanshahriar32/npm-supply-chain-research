@@ -1,0 +1,137 @@
+name: E2E
+on: [pull_request]
+
+env:
+  CACHE_DIST_KEY: dist-${{ github.ref }}-${{ github.sha }}
+  CYPRESS_CACHE_FOLDER: ./node_modules/cache-cypress
+  UNIVERSAL_SERVER: http://localhost:4000
+  STATIC_SERVER: http://localhost:8080
+
+jobs:
+  build-demo:
+    name: Build demo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 10
+
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - run: npx tsc --project projects/demo-integrations/tsconfig.json
+
+      - name: Mark demo-app directory for persist in cache
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        with:
+          path: dist/demo
+          key: ${{ env.CACHE_DIST_KEY }}
+
+      - name: Build demo
+        # --optimization false to keep `window.ng` inside Cypress tests
+        run: npm run build -- --optimization false
+
+  e2e-kit:
+    needs: [build-demo]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [date, date-range, date-time, number, time]
+    name: Kit / ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-cypress@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+
+      - name: Download demo build from cache
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        with:
+          path: dist/demo
+          key: ${{ env.CACHE_DIST_KEY }}
+
+      - name: Serving SSR server
+        run: |
+          npm run serve:ssr -- --ci & sleep 5
+          curl -X GET -I -f "${{ env.UNIVERSAL_SERVER }}"
+
+      - name: Run Cypress tests
+        run:
+          npx nx e2e demo-integrations --spec="**/kit/${{ matrix.project }}/**/*.cy.ts" --baseUrl=${{
+          env.UNIVERSAL_SERVER}}
+
+  e2e-recipes:
+    needs: [build-demo]
+    runs-on: ubuntu-latest
+    name: Recipes
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-cypress@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+
+      - name: Download demo build from cache
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        with:
+          path: dist/demo
+          key: ${{ env.CACHE_DIST_KEY }}
+
+      - name: Serving SSR server
+        run: |
+          npm run serve:ssr -- --ci & sleep 5
+          curl -X GET -I -f "${{ env.UNIVERSAL_SERVER }}"
+
+      - name: Run Cypress tests
+        run: npx nx e2e demo-integrations --spec="**/recipes/**/*.cy.ts" --baseUrl=${{ env.UNIVERSAL_SERVER}}
+
+  e2e-others:
+    needs: [build-demo]
+    runs-on: ubuntu-latest
+    name: Others
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-cypress@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+
+      - name: Download demo build from cache
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6
+        with:
+          path: dist/demo
+          key: ${{ env.CACHE_DIST_KEY }}
+
+      - name: Serving SSR server
+        run: |
+          npm run serve:ssr -- --ci & sleep 5
+          curl -X GET -I -f "${{ env.UNIVERSAL_SERVER }}"
+
+      - name: Run Cypress tests
+        # Replace with npm run cy:run -- --spec "**/!(kit|recipes)/*.cy.ts" --config baseUrl="${{ env.UNIVERSAL_SERVER }}"
+        # After this issue fix: https://github.com/cypress-io/cypress/issues/22407
+        run:
+          npx nx e2e demo-integrations --spec="**/(angular|react|ssr|addons|others)/**/*.cy.ts" --baseUrl=${{
+          env.UNIVERSAL_SERVER}}
+
+  component-testing:
+    runs-on: ubuntu-latest
+    name: Component Testing
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-cypress@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+
+      - name: Run Cypress tests
+        run:
+          npx nx component-test demo-integrations --browser=chrome && npx nx ct-react demo-integrations --browser=chrome
+
+  result:
+    needs: [build-demo, e2e-kit, e2e-recipes, e2e-others, component-testing]
+    runs-on: ubuntu-latest
+    name: E2E result
+    steps:
+      - run: echo "Success"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

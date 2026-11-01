@@ -1,0 +1,57 @@
+{
+	"name": "@csstools/postcss-plugins",
+	"private": true,
+	"version": "1.0.0",
+	"description": "",
+	"license": "MIT-0",
+	"workspaces": [
+		"packages/color-helpers",
+		"packages/css-tokenizer",
+		"packages/css-parser-algorithms",
+		"packages/css-calc",
+		"packages/css-color-parser",
+		"packages/cascade-layer-name-parser",
+		"packages/media-query-list-parser",
+		"packages/*",
+		"plugins/postcss-progressive-custom-properties",
+		"plugins/postcss-debug-logger",
+		"plugins/*",
+		"plugin-packs/*",
+		"cli/*",
+		"experimental/*",
+		"plugins-stylelint/*"
+	],
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@microsoft/api-documenter": "^7.30.15",
+		"@microsoft/api-extractor": "^7.58.5",
+		"@rollup/plugin-commonjs": "^29.0.3",
+		"@rollup/plugin-node-resolve": "^16.0.3",
+		"@rollup/plugin-terser": "^1.0.0",
+		"@rollup/plugin-typescript": "^12.3.0",
+		"@stryker-mutator/core": "^10.0.0",
+		"@stylistic/eslint-plugin": "^5.8.0",
+		"@types/node": "^26.6.5",
+		"eslint": "^10.13.0",
+		"globals": "^17.13.0",
+		"knip": "^6.42.0",
+		"rollup": "^4.64.10",
+		"tslib": "^2.8.0",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.71.2"
+	},
+	"scripts": {
+		"everything": "npm run lint && npm run knip && npm run build && npm run docs && npm run test",
+		"build": "npm run build --workspaces --if-present",
+		"docs": "npm run docs --workspaces --if-present",
+		"lint": "npm run lint --workspaces --if-present && eslint ./ && bash .github/bin/detect-executable-files/detect-executable-files.sh && node .github/bin/license/check-license.mjs",
+		"new-plugin": "node ./.github/bin/new-plugin.mjs",
+		"release-plan": "node .github/bin/release-plan/release-plan.mjs",
+		"release-plan:dry-run": "node .github/bin/release-plan/release-plan.mjs --dry-run",
+		"test": "npm run test --workspaces --if-present",
+		"knip": "knip"
+	},
+	"volta": {
+		"node": "26.1.0"
+	}
+}

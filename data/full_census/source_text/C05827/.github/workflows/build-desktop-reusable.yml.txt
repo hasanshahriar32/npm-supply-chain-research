@@ -1,0 +1,153 @@
+name: "[Desktop] - Build - Called"
+
+on:
+  workflow_call:
+    inputs:
+      linux-only:
+        description: "Build Linux only, skipping the Windows and macOS matrix entries."
+        type: boolean
+        required: false
+        default: false
+      skip-artifact-upload:
+        description: "Skip uploading the built app. Set at the merge gate, where nothing consumes it."
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      AWS_ACCOUNT_ID_PROD:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_BRANCH:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_DEVELOP:
+        required: true
+      AWS_CACHE_REGION:
+        required: true
+      AWS_CACHE_ROLE_NAME:
+        required: true
+      CARD_BAANX_API_URL:
+        required: false
+      CARD_BAANX_CLIENT_KEY:
+        required: false
+      CARD_BAANX_HOSTED_UI:
+        required: false
+      CARD_OAUTH_REDIRECT_URI:
+        required: false
+      NX_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: |
+          If you run this manually, and want to run on a PR, the correct ref should be refs/pull/{PR_NUMBER}/merge to
+          have the "normal" scenario involving checking out a merge commit between your branch and the base branch.
+          If you want to run only on a branch or specific commit, you can use either the sha or the branch name instead (prefer the first verion for PRs).
+        type: string
+        required: false
+      login:
+        description: The GitHub username that triggered the workflow
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-desktop-app:
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        config: >-
+          ${{ fromJSON(inputs.linux-only
+          && '[{"name":"Linux","os":"ledger-wallet-4cpu-aws-public-cached","image":"linux-x86_64.AppImage","output-name":"linux"}]'
+          || '[{"name":"Linux","os":"ledger-wallet-4cpu-aws-public-cached","image":"linux-x86_64.AppImage","output-name":"linux"},{"name":"Windows","os":"windows-2022","dotnet":true,"image":"win-x64.exe","output-name":"win"},{"name":"macOS","os":"macos-14","image":"mac.dmg","output-name":"mac"}]') }}
+    name: "${{ matrix.config.name }} Build"
+    runs-on: ${{ matrix.config.os }}
+    timeout-minutes: 20
+    outputs:
+      linux: ${{ steps.status.outputs.Linux }}
+      win: ${{ steps.status.outputs.Windows }}
+      mac: ${{ steps.status.outputs.macOS }}
+
+    env:
+      NODE_OPTIONS: "--max-old-space-size=7168"
+      NX_POWERPACK_CACHE_MODE: ${{ matrix.config.name == 'Windows' && 'read-only' || '' }}
+    steps:
+      - name: Check out with LF line endings (Windows)
+        if: ${{ matrix.config.name == 'Windows' }}
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+
+      - name: Setup git user
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-git-user@develop
+
+      - name: Setup the caches
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-caches@develop
+        id: setup-caches
+        with:
+          use-mise: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-develop-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_DEVELOP }}
+          cache-branch-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_BRANCH }}
+          nx-key: ${{ secrets.NX_KEY }}
+          accountId: ${{ secrets.AWS_ACCOUNT_ID_PROD }}
+          roleName: ${{ secrets.AWS_CACHE_ROLE_NAME }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
+      - name: JFrog npm auth
+        uses: LedgerHQ/ledger-live/tools/actions/composites/jfrog-npm-auth@develop
+        if: ${{ matrix.config.name == 'Linux' }}
+        with:
+          registry: ${{ vars.ARTIFACTORY_URL }}
+
+      - name: Build desktop
+        id: build-desktop
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-build-desktop@develop
+        with:
+          os: ${{ matrix.config.output-name }}
+
+      - name: Build the app
+        id: build-app
+        env:
+          CARD_BAANX_API_URL: ${{ secrets.CARD_BAANX_API_URL }}
+          CARD_BAANX_CLIENT_KEY: ${{ secrets.CARD_BAANX_CLIENT_KEY }}
+          CARD_BAANX_HOSTED_UI: ${{ secrets.CARD_BAANX_HOSTED_UI }}
+          CARD_OAUTH_REDIRECT_URI: ${{ secrets.CARD_OAUTH_REDIRECT_URI }}
+        run: pnpm exec nx run ledger-live-desktop:build
+
+      - name: Upload ${{ matrix.config.name }} app
+        if: ${{ !inputs.skip-artifact-upload }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.build-desktop.outputs.version }}-${{ matrix.config.image }}
+          path: ${{ github.workspace }}/apps/ledger-live-desktop/dist/ledger-live-desktop-${{ steps.build-desktop.outputs.version }}-${{ matrix.config.image }}
+
+      - name: Validate electron-builder.yml
+        if: ${{ matrix.config.name == 'Linux' && !cancelled() }}
+        working-directory: apps/ledger-live-desktop
+        run: npx electron-builder --linux --dir --config electron-builder.yml -c.directories.output=${{ runner.temp }}/eb-configcheck --publish never
+
+      - name: Validate electron-builder-nightly.yml
+        if: ${{ matrix.config.name == 'Linux' && !cancelled() }}
+        working-directory: apps/ledger-live-desktop
+        run: npx electron-builder --linux --dir --config electron-builder-nightly.yml -c.directories.output=${{ runner.temp }}/eb-configcheck --publish never
+
+      - name: Validate electron-builder-pre.yml
+        if: ${{ matrix.config.name == 'Linux' && !cancelled() }}
+        working-directory: apps/ledger-live-desktop
+        run: npx electron-builder --linux --dir --config electron-builder-pre.yml -c.directories.output=${{ runner.temp }}/eb-configcheck --publish never
+
+      - name: Push status
+        id: status
+        shell: bash
+        if: ${{ !cancelled() }}
+        run: echo "${{ matrix.config.name }}=${{ steps.build-app.outcome }}" >> $GITHUB_OUTPUT

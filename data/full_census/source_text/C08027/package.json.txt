@@ -1,0 +1,35 @@
+{
+  "name": "teamcity-service-messages",
+  "version": "0.2.0",
+  "description": "Generate TeamCity service messages.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && tsc -p tests/tsconfig.json && mocha tests",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "teamcity"
+  ],
+  "author": "Aaron Forsander",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pifantastic/teamcity-service-messages.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^11.7.6",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "diff": "^8.0.4",
+    "serialize-javascript": "^7.1.0"
+  }
+}

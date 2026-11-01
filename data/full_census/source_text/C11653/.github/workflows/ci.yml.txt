@@ -1,0 +1,42 @@
+name: CI
+on:
+  push:
+    paths:
+      - '.github/workflows/ci.yml'
+      - 'packages/typedoc-plugin-markdown/**'
+      - '!packages/typedoc-plugin-markdown/README.md'
+      - '!packages/typedoc-plugin-markdown/CHANGELOG.md'
+      - '!packages/typedoc-plugin-markdown/package.json'
+    branches:
+      - main
+      - release
+      - beta
+  pull_request:
+    paths:
+      - 'packages/typedoc-plugin-markdown/**'
+      - '!packages/typedoc-plugin-markdown/README.md'
+      - '!packages/typedoc-plugin-markdown/CHANGELOG.md'
+      - '!packages/typedoc-plugin-markdown/package.json'
+permissions:
+  contents: read
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18']
+    name: Node ${{ matrix.node }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - name: Install
+        run: HUSKY=0 npm ci
+      - name: Build
+        run: npm run build-all

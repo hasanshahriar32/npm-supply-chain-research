@@ -1,0 +1,63 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      publishTag:
+        description: "npm publish --tag <tag>"
+        required: true
+        default: "latest"
+        type: choice
+        options:
+          - latest
+          - next
+          - test
+      bump:
+        description: "Changelogen bump flag"
+        required: true
+        default: "--bump"
+        type: choice
+        options:
+          - --bump
+          - --prerelease
+          - --canary
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup git
+        run: |
+          # https://github.com/actions/checkout?tab=readme-ov-file#push-a-commit-using-the-built-in-token
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: "**/yarn.lock"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install Packages
+        run: yarn install
+
+      - name: Bump Version
+        run: yarn changelogen --release --push ${{ github.event.inputs.bump }}
+
+      - name: Publish to NPM
+        run: npm publish --provenance --tag ${{ github.event.inputs.publishTag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

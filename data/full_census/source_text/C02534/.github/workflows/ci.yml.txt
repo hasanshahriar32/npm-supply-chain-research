@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    env:
+      CI: true
+      LINT: ${{ matrix.node-version == '22.x' && true || false }}
+      COVERAGE: ${{ matrix.node-version == '22.x' && true || false }}
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: corepack enable
+      - run: yarn install
+      - run: yarn build
+      - run: yarn test
+      - run: yarn lint:ci
+        if: ${{ env.LINT == 'true' }}
+
+      # Coverage.
+      - name: Run coverage
+        if: ${{ env.COVERAGE == 'true' }}
+        run: |
+          yarn coverage
+          yarn coverage:report
+      - name: Report coverage
+        if: ${{ env.COVERAGE == 'true' }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/coverage.lcov
+          fail_ci_if_error: true

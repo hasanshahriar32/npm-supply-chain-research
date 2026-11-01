@@ -1,0 +1,65 @@
+{
+  "name": "genkit",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "setup": "npm-run-all pnpm-install-js pnpm-install-genkit-tools build link-genkit-cli",
+    "format": "(prettier . --write) && (tsx scripts/copyright.ts)",
+    "local-telemetry": "tsx scripts/local-telemetry.ts",
+    "format:check": "(prettier . --check) && (tsx scripts/copyright.ts --check)",
+    "build": "pnpm build:js && pnpm build:genkit-tools",
+    "build:js": "cd js && pnpm i && pnpm build",
+    "build:genkit-tools": "cd genkit-tools && pnpm i && pnpm build",
+    "build:js-samples": "cd samples && pnpm i && pnpm run build:all-samples",
+    "link-genkit-cli": "cd genkit-tools/cli && npm link",
+    "pnpm-install-js": "cd js && pnpm i",
+    "pnpm-install-genkit-tools": "cd genkit-tools && pnpm i",
+    "pack:all": "rm -r dist || true && mkdir dist && pnpm run pack:tools && pnpm run pack:js && pnpm dist:zip",
+    "pack:tools": "cd genkit-tools && pnpm pack:all",
+    "pack:js": "cd js && pnpm pack:all",
+    "dist:zip": "cd dist && zip genkit-dist.zip *.tgz",
+    "test:all": "npm-run-all test:js test:genkit-tools",
+    "test:js": "cd js && pnpm i && pnpm test:all",
+    "test:genkit-tools": "pnpm test:genkit-tools-cli && pnpm test:genkit-tools-common && pnpm test:genkit-tools-telemetry-server",
+    "test:genkit-tools-cli": "cd genkit-tools/cli && pnpm i && pnpm test",
+    "test:genkit-tools-common": "cd genkit-tools/common && pnpm i && pnpm test",
+    "test:genkit-tools-telemetry-server": "cd genkit-tools/telemetry-server && pnpm i && pnpm test",
+    "test:e2e-local": "pnpm build && pnpm pack:all && cd tests && pnpm install && pnpm test",
+    "test:e2e": "cd tests && pnpm install && pnpm test",
+    "postinstall": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "20.5.3",
+    "@commitlint/config-conventional": "20.5.3",
+    "@types/node": "22.10.5",
+    "inquirer": "^8.2.6",
+    "lint-staged": "^17.5.0",
+    "npm-run-all": "^4.1.5",
+    "only-allow": "^1.2.1",
+    "prettier": "^3.5.3",
+    "prettier-plugin-css-order": "2.0.1",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "rimraf": "^6.0.1",
+    "simple-git-hooks": "^2.14.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "cross-spawn": "^7.0.5",
+      "genkit": "link:js/genkit"
+    },
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "simple-git-hooks",
+      "spawn-sync"
+    ]
+  },
+  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a",
+  "dependencies": {
+    "genkit": "link:js/genkit"
+  }
+}

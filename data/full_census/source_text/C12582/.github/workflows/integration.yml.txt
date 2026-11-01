@@ -1,0 +1,87 @@
+name: Integration Build
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || (github.ref == 'refs/heads/main' && github.sha) || github.ref }}
+  cancel-in-progress: true
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Skip husky git hooks installation in the yeoman-test checkout.
+      HUSKY: 0
+
+    steps:
+      - name: Checkout yeoman-test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: yeoman/yeoman-test
+          path: yeoman-test
+
+      - name: Checkout yeoman-generator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: yeoman-generator
+
+      - name: Checkout yeoman-environment
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: yeoman/environment
+          path: yeoman-environment
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      # Every package is installed from a tarball packed out of its checkout, so the generator under test is
+      # the checked out commit (works for pull requests from forks, unlike installing `owner/repo#ref`) and the
+      # siblings are their current main branches.
+      - name: Build and pack
+        id: build
+        run: |
+          for package in yeoman-generator yeoman-environment yeoman-test; do
+            echo "::group::$package"
+            (cd "$package" && npm ci && npm pack)
+            echo "::endgroup::"
+          done
+          echo "generator=$(ls "$GITHUB_WORKSPACE"/yeoman-generator/yeoman-generator-*.tgz)" >> "$GITHUB_OUTPUT"
+          echo "environment=$(ls "$GITHUB_WORKSPACE"/yeoman-environment/yeoman-environment-*.tgz)" >> "$GITHUB_OUTPUT"
+          echo "test=$(ls "$GITHUB_WORKSPACE"/yeoman-test/yeoman-test-*.tgz)" >> "$GITHUB_OUTPUT"
+
+      - name: Run yeoman-generator tests
+        if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
+        working-directory: yeoman-generator
+        run: |
+          npm install --no-save "${{ steps.build.outputs.test }}" "${{ steps.build.outputs.environment }}"
+          npm test
+
+      # The sibling suites run with `--ignore-scripts` to skip their `pretest` lint and type check, which
+      # belong to their own CI. Here only the runtime behavior against this generator matters.
+      - name: Run yeoman-test tests
+        if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
+        working-directory: yeoman-test
+        run: |
+          npm install --no-save "${{ steps.build.outputs.generator }}" "${{ steps.build.outputs.environment }}"
+          npm test --ignore-scripts
+
+      # The environment matrix pins yeoman-generator bundles, only the `yeoman-generator-latest` entry is
+      # swapped for the generator under test.
+      - name: Run yeoman-environment tests
+        if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
+        working-directory: yeoman-environment
+        run: |
+          npm pkg set --workspace test/generators "dependencies.yeoman-generator-latest=file:${{ steps.build.outputs.generator }}"
+          npm install "${{ steps.build.outputs.test }}"
+          npm test --ignore-scripts

@@ -1,0 +1,621 @@
+name: Core packages tests
+# Reusable workflow - called by ci.yml (PRs) and publish.yml (master)
+
+on:
+  workflow_call:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Detect which packages are affected — gates downstream infra-heavy jobs
+  # ─────────────────────────────────────────────────────────────────────────────
+  check-affected:
+    name: Detect Affected Packages
+    runs-on: ubuntu-latest
+    outputs:
+      auth: ${{ steps.affected.outputs.auth }}
+      storage: ${{ steps.affected.outputs.storage }}
+      postgrest: ${{ steps.affected.outputs.postgrest }}
+      functions: ${{ steps.affected.outputs.functions }}
+      realtime: ${{ steps.affected.outputs.realtime }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+      - name: Detect affected packages
+        id: affected
+        run: |
+          if ! AFFECTED=$(pnpm nx show projects --affected 2>&1); then
+            echo "❌ Failed to detect affected projects:"
+            echo "$AFFECTED"
+            exit 1
+          fi
+          echo "Affected projects: $AFFECTED"
+          echo "auth=$(echo "$AFFECTED"   | grep -q 'auth-js'      && echo 1 || echo 0)" >> $GITHUB_OUTPUT
+          echo "storage=$(echo "$AFFECTED" | grep -q 'storage-js'   && echo 1 || echo 0)" >> $GITHUB_OUTPUT
+          echo "postgrest=$(echo "$AFFECTED" | grep -q 'postgrest-js' && echo 1 || echo 0)" >> $GITHUB_OUTPUT
+          echo "functions=$(echo "$AFFECTED" | grep -q 'functions-js' && echo 1 || echo 0)" >> $GITHUB_OUTPUT
+          echo "realtime=$(echo "$AFFECTED"  | grep -q 'realtime-js'  && echo 1 || echo 0)" >> $GITHUB_OUTPUT
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Build all affected packages + common type checks (always runs)
+  # ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build and Common Checks
+    runs-on: ubuntu-latest
+    needs: check-affected
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Audit production dependencies
+        run: pnpm audit --audit-level=high --prod --registry https://registry.npmjs.org
+      - uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+      - name: Check common types are in sync
+        run: pnpm run codegen:check
+      - name: Build affected packages
+        run: pnpm nx affected --target=build
+      - name: Generate docs json for affected packages
+        run: pnpm nx affected --target=docs:json
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Fast tests: functions-js and realtime-js (no Docker, runs in parallel)
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-fast:
+    name: Test functions-js and realtime-js
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.functions != '0' || needs.check-affected.outputs.realtime != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+      - name: Run test:ci for affected packages
+        run: pnpm nx affected --target=test:ci
+        timeout-minutes: 15
+      - name: Upload coverage for functions-js
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./packages/core/functions-js/coverage/lcov.info
+          parallel: true
+          flag-name: functions-js
+          fail-on-error: false
+        continue-on-error: true
+      - name: Upload coverage for realtime-js
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./packages/core/realtime-js/coverage/lcov.info
+          parallel: true
+          flag-name: realtime-js
+          fail-on-error: false
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # auth-js CLI tests — runs in parallel with test-storage, Docker image caching
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-auth-cli:
+    name: Test auth-js (Supabase CLI)
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.auth != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Supabase Docker images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: docker-cache
+        with:
+          path: /tmp/supabase-docker-images
+          key: supabase-docker-auth-${{ hashFiles('package.json', 'packages/core/auth-js/test/supabase/**') }}
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for f in /tmp/supabase-docker-images/*.tar.zst; do
+            [ -f "$f" ] && zstd -d --stdout "$f" | docker image load
+          done
+      - name: Generate RSA signing keys for auth-js tests
+        run: node packages/core/auth-js/test/generate-signing-keys.js
+      - name: Run auth-js tests with Supabase CLI
+        run: pnpm nx test:auth auth-js
+        timeout-minutes: 10
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true' && !cancelled()
+        run: |
+          mkdir -p /tmp/supabase-docker-images
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v '<none>' \
+            | grep -E 'supabase|postgrest|gotrue|storage-api|imgproxy|kong|inbucket|deno' \
+            | while read img; do
+                name=$(echo "$img" | tr '/:' '_')
+                docker image save "$img" | zstd -T0 -3 -o "/tmp/supabase-docker-images/${name}.tar.zst"
+              done
+      - name: Upload coverage for auth-js
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./packages/core/auth-js/coverage/lcov.info
+          parallel: true
+          flag-name: auth-js
+          fail-on-error: false
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # storage-js tests — runs in parallel with test-auth-cli, Docker image caching
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-storage:
+    name: Test storage-js
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.storage != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Supabase Docker images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: docker-cache
+        with:
+          path: /tmp/supabase-docker-images
+          key: supabase-docker-storage-${{ hashFiles('package.json', 'packages/core/storage-js/test/supabase/**') }}
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for f in /tmp/supabase-docker-images/*.tar.zst; do
+            [ -f "$f" ] && zstd -d --stdout "$f" | docker image load
+          done
+      - name: Run storage-js tests
+        run: pnpm nx test:storage storage-js
+        timeout-minutes: 15
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true' && !cancelled()
+        run: |
+          mkdir -p /tmp/supabase-docker-images
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v '<none>' \
+            | grep -E 'supabase|postgrest|gotrue|storage-api|imgproxy|kong|inbucket|deno' \
+            | while read img; do
+                name=$(echo "$img" | tr '/:' '_')
+                docker image save "$img" | zstd -T0 -3 -o "/tmp/supabase-docker-images/${name}.tar.zst"
+              done
+      - name: Upload coverage for storage-js
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./packages/core/storage-js/coverage/lcov.info
+          parallel: true
+          flag-name: storage-js
+          fail-on-error: false
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # auth-js Docker tests — full coverage, separate job (gated on affected)
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-auth-js-docker:
+    name: Test auth-js (Docker - Full Coverage)
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.auth != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Supabase Docker images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: docker-cache
+        with:
+          path: /tmp/supabase-docker-images
+          key: supabase-docker-auth-infra-${{ hashFiles('package.json', 'packages/core/auth-js/infra/**') }}
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for f in /tmp/supabase-docker-images/*.tar.zst; do
+            [ -f "$f" ] && zstd -d --stdout "$f" | docker image load
+          done
+      - name: Generate RSA signing keys for auth-js Docker tests
+        run: node packages/core/auth-js/test/generate-signing-keys.js
+      - name: Run auth-js Docker tests
+        run: pnpm nx test:docker auth-js
+        timeout-minutes: 10
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true' && !cancelled()
+        run: |
+          mkdir -p /tmp/supabase-docker-images
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v '<none>' \
+            | grep -E 'supabase|postgrest|gotrue|storage-api|imgproxy|kong|inbucket|deno' \
+            | while read img; do
+                name=$(echo "$img" | tr '/:' '_')
+                docker image save "$img" | zstd -T0 -3 -o "/tmp/supabase-docker-images/${name}.tar.zst"
+              done
+      # Note: Docker test coverage is not uploaded to Coveralls
+      # The regular auth-js tests provide comprehensive coverage reporting
+      # Docker tests verify integration scenarios but don't need separate coverage tracking
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # postgrest-js tests + codegen check (merged, gated on affected, Docker cached)
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-postgrest-js:
+    name: Test postgrest-js
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.postgrest != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Supabase Docker images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: docker-cache
+        with:
+          path: /tmp/supabase-docker-images
+          key: supabase-docker-postgrest-${{ hashFiles('package.json', 'packages/core/postgrest-js/test/**') }}
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for f in /tmp/supabase-docker-images/*.tar.zst; do
+            [ -f "$f" ] && zstd -d --stdout "$f" | docker image load
+          done
+      - name: Run postgrest-js integration tests
+        run: pnpm nx test:ci:postgrest postgrest-js
+        timeout-minutes: 10
+      - name: Run postgrest-js type tests
+        run: pnpm nx test:types:ci postgrest-js
+        timeout-minutes: 15
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true' && !cancelled()
+        run: |
+          mkdir -p /tmp/supabase-docker-images
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v '<none>' \
+            | grep -E 'supabase|postgrest|gotrue|storage-api|imgproxy|kong|inbucket|deno' \
+            | while read img; do
+                name=$(echo "$img" | tr '/:' '_')
+                docker image save "$img" | zstd -T0 -3 -o "/tmp/supabase-docker-images/${name}.tar.zst"
+              done
+      - name: Check if database schema or Supabase CLI version changed
+        id: check_codegen
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # This is a pre-merge gate, so it only has a meaningful base to diff against on
+          # pull_request runs. publish.yml calls this same reusable workflow from a push to master
+          # (and from workflow_dispatch), where github.base_ref is empty and HEAD is already the
+          # branch tip. Skip explicitly there rather than relying on the diff coming back empty:
+          # the pull request that produced the commit already ran this check.
+          if [ -z "$BASE_REF" ]; then
+            echo "Not a pull request run (no base ref), so there is nothing to diff against."
+            echo "The codegen check already ran on the pull request for this commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Fail closed. If the base cannot be fetched or diffed we must not fall through to
+          # "nothing changed" and skip the gate: a silently skipped codegen check is exactly how
+          # the drift this step guards against went unnoticed for months.
+          if ! git fetch origin "$BASE_REF"; then
+            echo "::error::Could not fetch origin/${BASE_REF}, so we cannot tell whether the generated types need checking."
+            exit 1
+          fi
+          if ! CHANGED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD"); then
+            echo "::error::Could not diff against origin/${BASE_REF}, refusing to skip the codegen check."
+            exit 1
+          fi
+          # types.generated.ts depends on the test schema AND on the pinned Supabase CLI version,
+          # which selects the postgres-meta image that does the introspection. Watch both, or a
+          # CLI bump silently changes the generated output with nothing to catch it.
+          if printf '%s\n' "$CHANGED_FILES" \
+            | grep -qE '^packages/core/postgrest-js/test/supabase/|^package\.json$'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Verify generated types are in sync
+        if: steps.check_codegen.outputs.changed == 'true'
+        run: pnpm run codegen:check:postgrest
+        timeout-minutes: 5
+      - name: Skip codegen check
+        if: steps.check_codegen.outputs.changed != 'true'
+        run: echo "⏭️  Skipping codegen check — no test schema or Supabase CLI version changes detected"
+      - name: Upload coverage for postgrest-js
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./packages/core/postgrest-js/coverage/lcov.info
+          parallel: true
+          flag-name: postgrest-js
+          fail-on-error: false
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PostgREST v12 backward compatibility tests
+  # TODO (@mandarini): Remove this job when v3 ships (mid 2026)
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-postgrest-js-v12:
+    name: Test postgrest-js v12 compat
+    runs-on: ubuntu-latest
+    needs: [check-affected, build]
+    if: needs.check-affected.outputs.postgrest != '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: tree:0
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Configure Dependency Firewall registry
+        shell: bash
+        env:
+          DF_FIREWALL_TOKEN: ${{ secrets.DF_FIREWALL_TOKEN }}
+        run: |
+          # The firewall token is withheld from fork-triggered PR runs, so only route
+          # through the firewall when the token is present. Forks fall back to the
+          # default public npm registry (install still uses --frozen-lockfile).
+          if [ -n "$DF_FIREWALL_TOKEN" ]; then
+            pnpm config set //firewall.depthfirst.com/npm/:_authToken "$DF_FIREWALL_TOKEN"
+            pnpm config set registry https://firewall.depthfirst.com/npm/
+          else
+            echo "No DF_FIREWALL_TOKEN (likely a fork PR); using the default public npm registry."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache Supabase Docker images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: docker-cache
+        with:
+          path: /tmp/supabase-docker-images
+          key: supabase-docker-postgrest-v12-${{ hashFiles('package.json', 'packages/core/postgrest-js/test/v12/**') }}
+      - name: Load cached Docker images
+        if: steps.docker-cache.outputs.cache-hit == 'true'
+        run: |
+          for f in /tmp/supabase-docker-images/*.tar.zst; do
+            [ -f "$f" ] && zstd -d --stdout "$f" | docker image load
+          done
+      - name: Run v12 compat tests
+        run: pnpm nx test:ci:v12 postgrest-js
+        timeout-minutes: 5
+      - name: Save Docker images to cache
+        if: steps.docker-cache.outputs.cache-hit != 'true' && !cancelled()
+        run: |
+          mkdir -p /tmp/supabase-docker-images
+          docker images --format '{{.Repository}}:{{.Tag}}' \
+            | grep -v '<none>' \
+            | grep -E 'supabase|postgrest|gotrue|storage-api|imgproxy|kong|inbucket|deno' \
+            | while read img; do
+                name=$(echo "$img" | tr '/:' '_')
+                docker image save "$img" | zstd -T0 -3 -o "/tmp/supabase-docker-images/${name}.tar.zst"
+              done
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Finalize Coveralls parallel build — must run after all coverage uploads
+  # ─────────────────────────────────────────────────────────────────────────────
+  coverage-report:
+    name: Finalize Coverage Report
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test-fast, test-auth-cli, test-storage, test-postgrest-js]
+    steps:
+      - uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Summary — required status check; passes when all jobs succeed or are skipped
+  # ─────────────────────────────────────────────────────────────────────────────
+  all-core-tests-pass:
+    name: All Core Package Tests Pass
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      [
+        check-affected,
+        build,
+        test-fast,
+        test-auth-cli,
+        test-storage,
+        test-auth-js-docker,
+        test-postgrest-js,
+        test-postgrest-js-v12,
+      ]
+    steps:
+      - name: Summary
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "❌ Some tests failed or were cancelled"
+            exit 1
+          fi
+          echo "✅ All core package tests passed successfully!"

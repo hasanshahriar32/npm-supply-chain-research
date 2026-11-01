@@ -1,0 +1,52 @@
+name: 'Dependency Review'
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # Allow only Apache-2.0 compatible licenses (Apache Category A)
+          # Based on https://www.apache.org/legal/resolved.html
+          # Common licenses in JavaScript/TypeScript npm ecosystem
+          allow-licenses: >-
+            Apache-2.0, MIT, ISC, BSD-2-Clause, BSD-3-Clause, 0BSD,
+            BlueOak-1.0.0, Unlicense, CC0-1.0,
+            CC-BY-4.0,
+            Artistic-2.0
+          # Per-package license exceptions:
+          # - argparse: PSF-2.0, dev-only via js-yaml; Apache Category A
+          #   https://www.apache.org/legal/resolved.html#category-a
+          # - grafana/shared-workflows: AGPL-3.0, internal Grafana action
+          # - @ltd/j-toml: LGPL-3.0, dev-only transitive dep via lerna -> nx >=22.6.0
+          # - lightningcss: MPL-2.0, transitive dep via vite 8 (was optional peer in vite 7)
+          allow-dependencies-licenses: >-
+            pkg:githubactions/grafana/shared-workflows/actions/lint-pr-title,
+            pkg:githubactions/grafana/shared-workflows/actions/create-github-app-token,
+            pkg:npm/@ltd/j-toml,
+            pkg:npm/argparse,
+            pkg:npm/lightningcss,
+            pkg:npm/lightningcss-android-arm64,
+            pkg:npm/lightningcss-darwin-arm64,
+            pkg:npm/lightningcss-darwin-x64,
+            pkg:npm/lightningcss-freebsd-x64,
+            pkg:npm/lightningcss-linux-arm-gnueabihf,
+            pkg:npm/lightningcss-linux-arm64-gnu,
+            pkg:npm/lightningcss-linux-arm64-musl,
+            pkg:npm/lightningcss-linux-x64-gnu,
+            pkg:npm/lightningcss-linux-x64-musl,
+            pkg:npm/lightningcss-win32-arm64-msvc,
+            pkg:npm/lightningcss-win32-x64-msvc

@@ -1,0 +1,67 @@
+name: Main CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      distTag:
+        description: "Dist tag to publish"
+        required: true
+        default: "latest"
+  pull_request:
+  push:
+    branches:
+      - "master"
+
+jobs:
+  build_and_testing:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      BUNDLESIZE_GITHUB_TOKEN: ${{ secrets.BUNDLESIZE_GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v2-beta
+        with:
+          always-auth: true
+          node-version: 12
+      - name: Creates local .npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+      - name: Cache .pnpm-store
+        uses: actions/cache@v1
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-node${{ matrix.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install pnpm
+        run: curl -f https://get.pnpm.io/v6.16.js | node - add --global pnpm@6
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build & Testing
+        run: |
+          pnpm lint
+          pnpm build
+          pnpm test
+          pnpm bundle-size
+
+      - name: Release
+        if: ${{github.event.inputs.distTag == 'latest' || github.event.inputs.distTag == 'next'}}
+        run: |
+          git config --global user.email "sergiomorenoalbert@gmail.com"
+          git config --global user.name "CI"
+          pnpm release && pnpm publish-storybook
+
+      - name: Release Docs
+        if: ${{github.event.inputs.distTag == 'latest' || github.event.inputs.distTag == 'next'}}
+        uses: JamesIves/github-pages-deploy-action@3.5.9
+        with:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: example/storybook-static

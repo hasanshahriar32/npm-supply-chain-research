@@ -1,0 +1,25 @@
+name: Node.js Package
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          check-latest: true
+          registry-url: https://registry.npmjs.org/
+      - run: npm ci
+      - name: "Fetch & Unpack Allure Commandline from Maven Central"
+        run: ./fetch-source.sh
+      - run: npm run test
+      - run: npm publish

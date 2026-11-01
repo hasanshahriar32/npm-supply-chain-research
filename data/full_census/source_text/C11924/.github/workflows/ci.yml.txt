@@ -1,0 +1,122 @@
+name: 'CI'
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+# Superseded PR runs are pointless; master runs must finish, since Release
+# triggers on their completion.
+concurrency:
+  group: '${{ github.workflow }}-${{ github.ref }}'
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: 'Check'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: 'Setup Vite+'
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          node-version: 'lts'
+          cache: true
+          # installed explicitly below, to keep the lockfile immutable
+          run-install: false
+
+      - name: 'Install dependencies'
+        run: vp install --frozen-lockfile
+
+      # format, lint and type check in a single pass
+      - name: 'Check'
+        run: vp check
+
+  build:
+    name: 'Build'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: 'Setup Vite+'
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          node-version: 'lts'
+          cache: true
+          run-install: false
+
+      - name: 'Install dependencies'
+        run: vp install --frozen-lockfile
+
+      - name: 'Build'
+        run: vp run build
+
+  test:
+    name: 'Test (Node ${{ matrix.node-version }})'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['lts', 'latest']
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: 'Setup Vite+'
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: true
+          run-install: false
+
+      - name: 'Install dependencies'
+        run: vp install --frozen-lockfile
+
+      - name: 'Test'
+        run:
+          vp test --run --coverage --reporter='github-actions' --reporter='junit'
+          --outputFile='./coverage/test-report.junit.xml' --reporter=default
+
+      - name: 'Upload coverage to Codecov'
+        if: ${{ matrix.node-version == 'lts' }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/clover.xml
+          disable_search: true
+          fail_ci_if_error: true
+
+      - name: 'Upload test results to Codecov'
+        if: ${{ !cancelled() && matrix.node-version == 'lts' }}
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: 'test_results'
+          files: coverage/test-report.junit.xml
+          fail_ci_if_error: true
+
+  dependabot-merge:
+    name: 'Dependabot automerge'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    needs: ['test', 'build', 'check']
+    if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+    steps:
+      - uses: fastify/github-action-merge-dependabot@73ec4cbb5e56df5591eae286972d5b2201ffe90f # v3.15.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

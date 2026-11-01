@@ -1,0 +1,36 @@
+name: Execute Necessary Tests
+
+# This workflow gets triggered on push events to any branch and on pull request events.
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  # The 'Test' job
+  Test:
+    # This job runs on the latest version of Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Checkout the repository
+      - uses: actions/checkout@v2
+
+      # Step 2: Setup Node.js environment with version 16
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      # Step 3: Install npm dependencies
+      - run: npm install
+
+      # Step 4: Run linting
+      - run: npm run lint
+
+      # Step 5: Run type checking
+      - run: npm run typecheck
+
+      # Step 6: Run tests
+      - run: npm run test

@@ -1,0 +1,77 @@
+name: Test
+on:
+  - push
+  - pull_request
+
+jobs:
+  Linux:
+    name: Test on Linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22.23.2, 24.19.0, 26.7.0]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+      - name: Install
+        run: npm install --force # https://github.com/npm/cli/issues/6138
+      - name: Build
+        run: zig build
+      - name: Test
+        run: npm test
+
+  Windows:
+    name: Test on Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        node: [22.23.2, 24.19.0, 26.7.0]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+      - name: Install
+        run: npm install --force
+      - name: Build
+        run: zig build
+      - name: Test
+        run: npm test
+
+  macOS:
+    name: Test on macOS
+    runs-on: macos-15
+    strategy:
+      matrix:
+        node: [22.23.2, 24.19.0, 26.7.0]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+      - name: Install
+        run: npm install --force
+      - name: Build
+        run: zig build
+      - name: Test
+        run: npm test
+
+  Lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.7.0
+      - uses: actions/checkout@v4
+      - name: Install
+        run: npm install --force
+      - name: Lint
+        run: npm run lint
+      - name: Lint Types
+        run: npm run tsd

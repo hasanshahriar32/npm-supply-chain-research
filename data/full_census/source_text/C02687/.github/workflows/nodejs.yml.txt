@@ -1,0 +1,17 @@
+name: CI for 3.x
+
+on:
+  push:
+    branches: [ 3.x ]
+  pull_request:
+    branches: [ 3.x ]
+
+jobs:
+  Job:
+    name: Node.js
+    uses: node-modules/github-actions/.github/workflows/node-test.yml@master
+    with:
+      os: 'ubuntu-latest, macos-latest'
+      version: '14, 16, 18, 20, 22'
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

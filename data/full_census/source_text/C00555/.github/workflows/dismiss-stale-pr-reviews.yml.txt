@@ -1,0 +1,20 @@
+name: Dismiss Stale PR Reviews
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  dismiss-stale-approvals:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dismiss Stale PR Reviews
+        if: ${{ !contains('OWNER,MEMBER,COLLABORATOR', github.event.pull_request.author_association) }}
+        uses: withgraphite/dismiss-stale-approvals@23da77dd04e4549404329f3078a3d978e4db13c2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

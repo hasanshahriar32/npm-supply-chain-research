@@ -1,0 +1,58 @@
+name: Publish to NPM
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'NPM tag to publish under'
+        required: true
+        type: choice
+        default: 'latest'
+        options:
+          - latest
+          - beta
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+env:
+  NPM_PUBLISH_TAG: ${{ inputs.tag || (github.event.release.prerelease && 'beta' || 'latest') }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: NPM Registry
+      url: https://www.npmjs.com/package/prisma-json-types-generator
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6.1.0
+
+      - name: Setup node and restore cached dependencies
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org/'
+          cache: 'pnpm'
+
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      # Uses OIDC authentication
+      - name: Publish to NPM @ ${{ env.NPM_PUBLISH_TAG }}
+        run: pnpm publish --access public --no-git-checks --tag ${{ env.NPM_PUBLISH_TAG }}

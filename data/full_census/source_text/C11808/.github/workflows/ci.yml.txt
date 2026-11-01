@@ -1,0 +1,35 @@
+name: ci
+
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: npm i -g --force corepack && corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: lts/*, cache: pnpm }
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm test:types
+      - run: pnpm vitest --coverage
+      - run: pnpm lint
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        with: { token: "${{ secrets.CODECOV_TOKEN }}" }
+  publish:
+    runs-on: ubuntu-latest
+    permissions: { id-token: write, contents: read }
+    needs: tests
+    if: contains('refs/heads/main', github.ref) && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { fetch-depth: 0 }
+      - run: npm i -fg corepack && corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with: { node-version: lts/*, cache: "pnpm" }
+      - run: pnpm install
+      - run: pnpm changelogen --bump --canary nightly
+      - run: npm i -g npm@latest && npm publish --tag latest

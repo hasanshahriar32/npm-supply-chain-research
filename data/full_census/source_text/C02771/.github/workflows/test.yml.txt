@@ -1,0 +1,78 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 22 * * 3'
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        node-version:
+          - '22.23.4'
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+    runs-on: "${{ matrix.os }}"
+    env:
+      GYP_MSVS_VERSION: '2022'
+    steps:
+      - run: git config --global core.autocrlf input
+      - name: Enable Long Paths (Windows)
+        if : ${{ matrix.os == 'windows-latest' }}
+        run: |
+          New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+      - name: Setup distutils (Windows)
+        if : ${{ matrix.os == 'windows-latest' }}
+        run: pip3 install setuptools
+      - name: Setup distutils (macOS)
+        if : ${{ matrix.os == 'macos-latest' }}
+        run: pip3 install --break-system-packages --user setuptools
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "${{ matrix.node-version }}"
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Lint
+        run: yarn run lint
+      - name: Test & Report Coverage
+        env:
+          DEBUG: electron-rebuild
+        run: yarn run coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          files: ./coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  required-ci:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "One or more required jobs did not succeed:"
+          echo "  test: $TEST_RESULT"
+          exit 1
+      - name: We are done
+        run: echo "Hello World"

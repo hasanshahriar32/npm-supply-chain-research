@@ -1,0 +1,83 @@
+name: release-npm-packages
+
+on:
+  # Fire when a pull request targeting main is closed. The `if` below
+  # ensures we only publish when it was actually merged AND it is the
+  # changesets release PR (see create-release-pr.yml).
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  release:
+    name: Release TypeScript packages to NPM
+    # Only publish when the changesets "Version NPM packages" PR is merged
+    # into main.
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'changeset-release/main' &&
+      github.event.pull_request.user.login == 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      # On a merged pull_request event the default checkout is a stale merge
+      # ref, so explicitly check out the updated main branch to publish it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: "yarn"
+      - name: Install dependencies
+        run: yarn install
+      - name: Configure AWS Credentials
+        id: credentials
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        with:
+          aws-region: us-west-2
+          role-to-assume: ${{ secrets.JS_TEAM_ROLE_TO_ASSUME }}
+          role-session-name: SmithyTypeScriptGitHubRelease
+          audience: sts.amazonaws.com
+      # Builds dist-cjs/dist-es/dist-types (plus downleveled ts3.4 types) in
+      # each package directory, which is what changesets publishes from.
+      - name: Build Release Artifacts
+        id: build
+        run: yarn build:release
+      - name: Release
+        id: release
+        uses: changesets/action@22ccf9aa43179fe9e27dc62e575971d28cce197c # v2.0.0
+        if: steps.build.outcome == 'success'
+        # Provenance must be opted into explicitly. npm CLI attaches it
+        # automatically under trusted publishing, but changesets picks the
+        # publish tool from the repo's package manager, and `yarn npm publish`
+        # skips provenance silently unless asked. Both vars are set so the
+        # attestation is generated whichever tool changesets selects: Yarn
+        # reads YARN_NPM_PUBLISH_PROVENANCE, npm/pnpm read NPM_CONFIG_PROVENANCE.
+        env:
+          YARN_NPM_PUBLISH_PROVENANCE: "true"
+          NPM_CONFIG_PROVENANCE: "true"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          publish-script: yarn release
+      # Hand off to npm-package-existence.yml, which records the versions just
+      # published so the next release PR's check can skip the registry for them.
+      # It must list this event type; see the rationale for the hand-off there.
+      #
+      # Nothing to record if the publish did not happen, and best-effort because
+      # failing here would fire the notification below for a release that
+      # succeeded, while the record is only an optimization.
+      - name: Refresh record of published packages
+        if: steps.release.outcome == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # $GITHUB_REPOSITORY, not a ${{ }} expansion, to keep interpolation out of the shell command.
+        run: gh api "repos/$GITHUB_REPOSITORY/dispatches" -f event_type=npm-release-published
+      - name: Failure Nofitication
+        if: ${{ failure() }}
+        run: aws cloudwatch put-metric-data --namespace SmithyTypeScriptPublish --metric-name NpmPackagePublishFailure --value 1

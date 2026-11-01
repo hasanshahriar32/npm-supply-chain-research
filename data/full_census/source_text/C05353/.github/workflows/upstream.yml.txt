@@ -1,0 +1,42 @@
+name: upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "33 3 * * 3"  # weekly
+
+permissions:
+  contents: read
+  issues: write  # to create issues if the upstream check fails
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['latest']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run upstream
+      - name: Handle error
+        if: ${{ failure() }}
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const nodeVersion = process.version;
+            const issueTitle = `Upstream check failed`;
+            const issueBody = `Node ${nodeVersion} has made changes to the functions this module depends on. Please review the new function changes, determine if this module requires changes because of them, and update the function hashes. Add a comment below with your findings.`;
+
+            const issue = await github.rest.issues.create({
+              owner,
+              repo,
+              title: issueTitle,
+              body: issueBody,
+            });

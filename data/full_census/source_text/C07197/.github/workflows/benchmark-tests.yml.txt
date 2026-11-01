@@ -1,0 +1,49 @@
+name: Benchmark Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  # Enable versioned runner quiet mode to make CI output easier to read:
+  OUTPUT_MODE: quiet
+
+jobs:
+  benchmarks:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x, 24.x, 26.x]
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        check-latest: true
+    # This step can be removed when we drop support for Node 22
+    - name: Upgrade npm
+      if: matrix.node-version == '22.x'
+      run: npm install -g npm@11
+    - name: Install Dependencies
+      run: npm install
+    - name: Run Benchmark Tests
+      env:
+        NEW_RELIC_LICENSE_KEY: ${{ secrets.TEST_LICENSE }}
+      run: node ./bin/run-bench.js --filename=${{ github.base_ref || 'main' }}_${{ matrix.node-version }}
+    - name: Verify Benchmark Output
+      run: ls benchmark_results
+    - name: Archive Benchmark Test
+      uses: actions/upload-artifact@v7
+      with:
+        name: benchmark-tests-${{ github.base_ref || 'main' }}-${{ matrix.node-version }}
+        path: ./benchmark_results
+

@@ -1,0 +1,37 @@
+name: CI
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - node: 24
+            eslint: 10
+          - node: 22
+            eslint: 9
+          - node: 20
+            eslint: 8
+
+    name: node@${{ matrix.node }} and eslint@${{ matrix.eslint }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm install eslint@${{ matrix.eslint }}
+      - run: npm test
+
+  format:
+    runs-on: ubuntu-latest
+    name: Check Formatting
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run prettier

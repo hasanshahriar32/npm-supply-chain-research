@@ -1,0 +1,36 @@
+name: Unit Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  unit-test-eslint9:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@v1
+        with:
+          node-version: 'lts/*'
+
+      - name: Install ESLint 9
+        run: pnpm install eslint@9
+
+      - name: Unit Test
+        run: pnpm run test
+
+  unit-test:
+    uses: sxzz/workflows/.github/workflows/unit-test.yml@v1
+    with:
+      node-versions: 20, "lts/*"
+      build-for-lint: true
+
+  coverage:
+    uses: sxzz/workflows/.github/workflows/coverage.yml@v1
+    needs: unit-test
+    permissions:
+      id-token: write

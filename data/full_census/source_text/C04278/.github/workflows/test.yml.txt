@@ -1,0 +1,57 @@
+name: Test
+
+on:
+    push:
+        branches:
+            - main
+            - next
+        paths:
+            - packages/**
+            - tests/**
+    pull_request:
+        paths:
+            - packages/**
+            - tests/**
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+    cancel-in-progress: true
+
+jobs:
+    Test-Utils:
+        runs-on: macos-latest
+        name: Test Utils
+        steps:
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v5
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - run: pnpm test:utils
+
+    Test:
+        name: Test - Chromium
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v5
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Install Playwright browser
+              run: pnpm exec playwright install chromium
+
+            - name: Build packages
+              run: pnpm build:packages
+
+            - name: Run browser tests
+              run: pnpm test:browser:chromium

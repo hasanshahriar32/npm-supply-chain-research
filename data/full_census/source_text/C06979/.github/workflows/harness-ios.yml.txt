@@ -1,0 +1,126 @@
+name: Harness iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      device_model:
+        description: "iOS Simulator device model"
+        required: false
+        default: "iPhone 17 Pro"
+        type: string
+      ios_version:
+        description: "iOS version"
+        required: false
+        default: "26.5"
+        type: string
+      xcode_version:
+        description: "Xcode version"
+        required: false
+        default: "26.6.0"
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/harness-ios.yml"
+      - "example/ios/**"
+      - "**/nitrogen/generated/shared/**"
+      - "**/nitrogen/generated/ios/**"
+      - "packages/react-native-mmkv/cpp/**"
+      - "packages/react-native-mmkv/ios/**"
+      - "**/Podfile.lock"
+      - "**/*.podspec"
+      - "**/react-native.config.js"
+      - "**/nitro.json"
+      - "example/__tests__/**"
+      - "example/rn-harness.config.mjs"
+  pull_request:
+    paths:
+      - ".github/workflows/harness-ios.yml"
+      - "example/ios/**"
+      - "**/nitrogen/generated/shared/**"
+      - "**/nitrogen/generated/ios/**"
+      - "packages/react-native-mmkv/cpp/**"
+      - "packages/react-native-mmkv/ios/**"
+      - "**/Podfile.lock"
+      - "**/*.podspec"
+      - "**/react-native.config.js"
+      - "**/nitro.json"
+      - "example/__tests__/**"
+      - "example/rn-harness.config.mjs"
+
+env:
+  # Device configuration - can be overridden by workflow_dispatch inputs
+  DEVICE_MODEL: ${{ github.event.inputs.device_model || 'iPhone 17 Pro' }}
+  IOS_VERSION: ${{ github.event.inputs.ios_version || '26.5' }}
+  XCODE_VERSION: ${{ github.event.inputs.xcode_version || '26.6.0' }}
+  USE_CCACHE: 1
+  DEVELOPER_DIR: /Applications/Xcode_${{ github.event.inputs.xcode_version || '26.6.0' }}.app/Contents/Developer
+
+jobs:
+  harness_ios_new:
+    name: Harness iOS (new architecture)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install npm dependencies (bun)
+        run: bun install
+
+      - name: Restore ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+
+      - name: Setup Ruby (bundle)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.9
+          bundler-cache: true
+          working-directory: example
+
+      - name: Select Xcode ${{ env.XCODE_VERSION }}
+        run: sudo xcode-select -s "/Applications/Xcode_${{ env.XCODE_VERSION }}.app/Contents/Developer"
+
+      - name: Restore Pods cache
+        uses: actions/cache@v6
+        with:
+          path: example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock', '**/Gemfile.lock') }}
+
+      - name: Install Pods
+        working-directory: example
+        run: bun pods
+
+      - name: Build iOS app
+        working-directory: example/ios
+        run: "set -o pipefail && xcodebuild \
+          CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ \
+          -derivedDataPath build -UseModernBuildSystem=YES \
+          -workspace MmkvExample.xcworkspace \
+          -scheme MmkvExample \
+          -sdk iphonesimulator \
+          -configuration Debug \
+          -destination 'generic/platform=iOS Simulator' \
+          build \
+          CODE_SIGNING_ALLOWED=NO"
+
+      - name: Setup iOS Simulator
+        uses: futureware-tech/simulator-action@v5
+        with:
+          model: ${{ env.DEVICE_MODEL }}
+          os: iOS
+          os_version: ${{ env.IOS_VERSION }}
+          wait_for_boot: true
+          erase_before_boot: false
+
+      - name: Install app
+        run: |
+          xcrun simctl install booted example/ios/build/Build/Products/Debug-iphonesimulator/MmkvExample.app
+
+      - name: Run Harness E2E tests
+        working-directory: example
+        env:
+          HARNESS_IOS_DEVICE: ${{ env.DEVICE_MODEL }}
+          HARNESS_IOS_VERSION: ${{ env.IOS_VERSION }}
+        run: |
+          bun run test:harness --harnessRunner ios

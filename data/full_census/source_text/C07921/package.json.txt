@@ -1,0 +1,96 @@
+{
+  "name": "micro-eth-signer",
+  "version": "0.20.1",
+  "description": "Minimal privacy-focused Ethereum library",
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "*.js.map",
+    "*.d.ts.map",
+    "abi",
+    "clearsig",
+    "core",
+    "net",
+    "src",
+    "!_type_test.*"
+  ],
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "micro-packed": "0.11.1"
+  },
+  "devDependencies": {
+    "@paulmillr/jsbt": "0.7.2",
+    "bismar": "0.1.9",
+    "@paulmillr/trusted-setups": "~0.3.0",
+    "@types/node": "25.9.0",
+    "micro-ftch": "1.2.0",
+    "prettier": "3.9.6",
+    "snappyjs": "0.7.0",
+    "typescript": "7.0.2",
+    "yaml": "2.9.0"
+  },
+  "scripts": {
+    "benchmark": "node benchmark/microeth.ts",
+    "benchmark:thirdparty": "cd benchmark/thirdparty; npm ci; node *.ts",
+    "benchmark:size": "bismar -bsm",
+    "build": "tsc",
+    "build:clean": "rm -f *.{js,d.ts,js.map,d.ts.map}; rm -rf {abi,clearsig,core,net}",
+    "build:clearsig": "node test/misc/build-clearsig.ts test/vectors/clear-signing",
+    "check": "jsbt-check",
+    "format": "prettier --write src",
+    "test": "node test/index.ts",
+    "test:ssz-progressive": "node test/ssz-progressive.test.ts"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./core/rlp.js": "./core/rlp.js",
+    "./net.js": "./net.js",
+    "./net/clearsig.js": "./net/clearsig.js",
+    "./net/enrich.js": "./net/enrich.js",
+    "./net/history.js": "./net/history.js",
+    "./net/quoter.js": "./net/quoter.js",
+    "./net/resolver.js": "./net/resolver.js",
+    "./net/tokens.js": "./net/tokens.js",
+    "./net/trace.js": "./net/trace.js",
+    "./net/uniswap.js": "./net/uniswap.js",
+    "./utils.js": "./utils.js",
+    "./abi.js": "./abi/index.js",
+    "./clearsig.js": "./clearsig.js",
+    "./clearsig/repo.js": "./clearsig/repo.js",
+    "./clearsig/repo-full.js": "./clearsig/repo-full.js",
+    "./keystore.js": "./keystore.js",
+    "./kzg.js": "./kzg.js",
+    "./ssz.js": "./ssz.js"
+  },
+  "engines": {
+    "node": ">= 20.19.0"
+  },
+  "keywords": [
+    "ethereum",
+    "eth",
+    "create",
+    "sign",
+    "validate",
+    "transaction",
+    "address",
+    "tx",
+    "web3",
+    "ethers",
+    "micro",
+    "nano",
+    "signer"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulmillr/micro-eth-signer.git"
+  },
+  "type": "module",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "sideEffects": false,
+  "author": "Paul Miller (https://paulmillr.com)",
+  "license": "MIT"
+}

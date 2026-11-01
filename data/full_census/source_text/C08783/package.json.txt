@@ -1,0 +1,74 @@
+{
+  "author": "Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+  "bugs": "https://github.com/remarkjs/remark-math/issues",
+  "contributors": [
+    "Daniel Perez Alvarez <unindented@gmail.com>",
+    "John Jeng <j3@sagemath.com>",
+    "Junyoung Choi <fluke8259@gmail.com> (https://rokt33r.github.io)",
+    "Marc-Antoine Ouimet <ouimetmarcantoine@gmail.com>",
+    "Rongjian Zhang <pd4d10@gmail.com>",
+    "Taniguchi Masaya <mew@cat.ovh>",
+    "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+    "Victor Felder <victor@draft.li>",
+    "Xiaoru Li <dev@xiaoru.li>"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "c8": "^10.0.0",
+    "prettier": "^3.0.0",
+    "rehype-parse": "^9.0.0",
+    "rehype-stringify": "^10.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-preset-wooorm": "^11.0.0",
+    "remark-rehype": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "type-coverage": "^2.0.0",
+    "typescript": "^5.0.0",
+    "unified": "^11.0.0",
+    "unist-util-remove-position": "^5.0.0",
+    "xo": "^0.60.0"
+  },
+  "name": "remark-math",
+  "prettier": {
+    "bracketSpacing": false,
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "useTabs": false
+  },
+  "private": true,
+  "remarkConfig": {
+    "plugins": [
+      "remark-preset-wooorm"
+    ]
+  },
+  "repository": "https://github.com/remarkjs/remark-math",
+  "scripts": {
+    "build": "tsc --build --clean && tsc --build && type-coverage",
+    "format": "remark --frail --output --quiet -- . && prettier --log-level warn --write -- . && xo --fix",
+    "test-api": "npm run test-api --workspaces",
+    "test-coverage": "c8 --100 --reporter lcov -- npm run test-api",
+    "test": "npm run build && npm run format && npm run test-coverage"
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "ignoreFiles#": "needed `any`s for `mathjax` types",
+    "ignoreFiles": [
+      "packages/rehype-mathjax/lib/create-plugin.d.ts",
+      "packages/rehype-mathjax/lib/create-renderer.d.ts",
+      "packages/rehype-mathjax/lib/create-renderer.js"
+    ],
+    "strict": true
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/rehype-katex/",
+    "packages/rehype-mathjax/",
+    "packages/remark-math/"
+  ],
+  "xo": {
+    "prettier": true
+  }
+}

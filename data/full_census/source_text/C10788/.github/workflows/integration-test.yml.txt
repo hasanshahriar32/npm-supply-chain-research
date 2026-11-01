@@ -1,0 +1,319 @@
+name: ' ⚙️ Integration Tests'
+on:
+  pull_request:
+    paths:
+      - 'packages/**/package.json'
+      - 'packages/**/*-lock.yaml'
+      - 'packages/**/*.ts'
+      - 'integration-tests/**'
+      - '!integration-tests/perf/**'
+      - 'package.json'
+      - '*-lock.yaml'
+      - '.github/workflows/integration-test.yml'
+      - '.github/actions/build-for-integrations/**'
+      - '.github/actions/setup-pnpm/**'
+      - '!packages/cspell-tools/**'
+      - '!packages/cspell-tools-alias/**'
+      - '!packages/hunspell-reader/**'
+      - '!website/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/**/package.json'
+      - 'packages/**/*-lock.yaml'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.mts'
+      - 'integration-tests/**'
+      - '!integration-tests/perf/**'
+      - 'package.json'
+      - '*-lock.yaml'
+      - '.github/workflows/integration-test.yml'
+      - '.github/actions/build-for-integrations/**'
+      - '.github/actions/setup-pnpm/**'
+      - '!packages/cspell-tools/**'
+      - '!packages/cspell-tools-alias/**'
+      - '!packages/hunspell-reader/**'
+      - '!website/**'
+  # Run on demand
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Optional Branch or hash
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  RUNS_ON: ubuntu-latest
+  NODE_VERSION: '24.x'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    env:
+      REF_BRANCH: ${{ github.event.inputs.ref || github.ref }}
+    outputs:
+      ref: ${{ env.REF_BRANCH }}
+      runs_on: ${{ env.RUNS_ON }}
+      node_version: ${{ env.NODE_VERSION }}
+      repos: ${{ steps.load-integrations.outputs.repos }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.REF_BRANCH }}
+
+      - name: Start Prepare
+        uses: ./.github/actions/summary
+        with:
+          text: |
+            # Prepare Integration
+
+            - ref: "${{ env.REF_BRANCH }}"
+            - runs_on: "${{ env.RUNS_ON }}"
+            - node_version: ${{ env.NODE_VERSION }}
+
+      - name: load-integrations
+        id: load-integrations
+        uses: ./.github/actions/list-integration-repos
+
+      - name: Refs
+        uses: ./.github/actions/summary
+        with:
+          text: |
+            ## Integrations
+            ```json
+            ${{ steps.load-integrations.outputs.repos }}
+            ```
+
+      - name: Pre-build and cache
+        uses: ./.github/actions/build-for-integrations
+        with:
+          show-summary: true
+          node-version: ${{ env.NODE_VERSION }}
+          use-setup: true
+          save-cache: true
+
+  integration-tests:
+    needs:
+      - prepare
+    runs-on: ${{ matrix.os }}
+    outputs:
+      repos: ${{ matrix.repo }}
+
+    env:
+      REF_BRANCH: ${{ needs.prepare.outputs.ref }}
+
+    strategy:
+      # the integration tests are independent, so we want to run them all.
+      fail-fast: false
+      # max-parallel: 8
+      matrix:
+        node-version:
+          - ${{ needs.prepare.outputs.node_version }}
+
+        os:
+          - ${{ needs.prepare.outputs.runs_on }}
+
+        # List of repositories to check.
+        # Use `repo-list.sh` in `integration-tests` to generate.
+        repo: ${{ fromJSON(needs.prepare.outputs.repos) }}
+        # repo:
+        #   - prettier/prettier
+        #   - typescript-eslint/typescript-eslint
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Normalize Repo Name
+        id: step-normalize-repo-name
+        env:
+          REPO: ${{ matrix.repo }}
+          REPLACE: '/'
+          REPLACE_WITH: '__'
+        run: |
+          echo "REPO_NAME=${REPO//${REPLACE}/${REPLACE_WITH}}" >> $GITHUB_OUTPUT
+
+      - id: repo-hash
+        uses: streetsidesoftware/actions/public/output@v1
+        with:
+          value: >-
+            ${{ hashFiles(
+              '.github/workflows/integration-test.yml',
+              '.github/actions/build-for-integrations/**',
+              'integration-tests/tsconfig.json',
+              'integration-tests/config/repositories/${{matrix.repo}}/**',
+              'integration-tests/snapshots/${{ matrix.repo }}/*',
+              'integration-tests/repositories/*',
+              'integration-tests/src/**/*.ts',
+              'integration-tests/src/**/*.mts',
+              'integration-tests/tsconfig.json',
+              'packages/*/src/**/*.ts',
+              'packages/*/src/**/*.mts',
+              'packages/*/tsconfig.json',
+              'packages/*/*.ts',
+              'packages/*/*.mts',
+              'tools/perf-chart/**',
+              '*-lock.yaml'
+            ) }}
+
+      - name: Repo Info
+        id: step-repo-info
+        env:
+          REPO: ${{ matrix.repo }}
+        run: |
+          echo "repo-info=$(jq -c --arg repo "$REPO" '.repositories[] | select(.path == $repo)' integration-tests/config/config.json)" >> $GITHUB_OUTPUT
+
+      - uses: ./.github/actions/echo
+        with:
+          value: |
+            step.repo-hash: "${{ steps.repo-hash.outputs.value }}"
+            env.repo-info: ${{ steps.step-repo-info.outputs.repo-info }}
+            $repo-hash
+
+      - name: Cache Integration Run
+        id: step-cache-run
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: integration-run--${{ env.REF_BRANCH }}-${{ steps.repo-hash.outputs.value }}-${{ fromJSON(steps.step-repo-info.outputs.repo-info).commit }}-1
+          # Store the patch files to update the integration perf data
+          path: |
+            integration-tests/perf/perf-run-*.csv
+
+      - uses: ./.github/actions/echo
+        with:
+          value: |
+            Run Cache: ${{ steps.step-cache-run.outputs.cache-hit == 'true' && 'Hit' || 'Miss' }}
+
+      - name: Use Cache Build
+        id: step-cache-build
+        if: ${{ steps.step-cache-run.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/build-for-integrations
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache Integration Test Repository Files
+        if: ${{ steps.step-cache-run.outputs.cache-hit != 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: int-repo-temp-files-${{ matrix.repo }}-${{ fromJSON(steps.step-repo-info.outputs.repo-info).commit }}
+          path: |
+            integration-tests/repositories/temp/${{ matrix.repo }}
+
+      - name: Run Integration Tests
+        if: ${{ steps.step-cache-run.outputs.cache-hit != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ matrix.repo }}
+        run: >
+          cd integration-tests
+          && pnpm run integration-tests -- "$REPO"
+
+      # Also on a cache hit: a cancelled run may have cached rows it never appended.
+      - name: store perf run
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-repo-${{ steps.step-normalize-repo-name.outputs.REPO_NAME }}
+          path: integration-tests/perf/perf-run-*.csv
+          retention-days: 1
+
+  integration-tests-summary:
+    permissions:
+      contents: write
+      pull-requests: write
+    needs:
+      - integration-tests
+      - prepare
+    runs-on: ubuntu-latest
+    # We do not want to fail the build if the user does not have permissions to comment on the PR.
+    continue-on-error: true
+    steps:
+      # On main, use the latest commit, so the rows are appended to the latest perf data.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name == 'main' && 'main' || needs.prepare.outputs.ref }}
+
+      - name: Install Using Cached Build
+        uses: ./.github/actions/build-for-integrations
+        with:
+          node-version: ${{ needs.prepare.outputs.node_version }}
+
+      - name: Create the temp directory
+        run: |
+          mkdir -p temp/perf
+
+      - name: restore repos perf
+        uses: actions/download-artifact@v8
+        with:
+          pattern: perf-*
+          merge-multiple: true
+          path: temp/perf
+
+      - name: show downloaded
+        run: ls -alF temp/perf
+
+      - name: append the runs
+        run: |
+          touch temp/perf/perf-run-empty.csv
+          # Keep the rows of an open perf data PR; updating the PR replaces its branch.
+          if git fetch --no-tags --depth=1 origin update-perf-main; then
+            git show FETCH_HEAD:integration-tests/perf/perf.csv > temp/perf/perf-run-pending.csv
+          fi
+          # Skip rows already in perf.csv; cached runs upload their rows again.
+          cat temp/perf/perf-run-*.csv | sort | awk 'NR == FNR { seen[$0] = 1; next } !seen[$0]++' integration-tests/perf/perf.csv - > temp/perf-new-rows.csv
+          cat temp/perf-new-rows.csv >> integration-tests/perf/perf.csv
+          ./tools/perf-chart/bin.ts ./integration-tests/perf/perf.csv -o perf-report.md --daily-csv ./static/daily-stats.csv
+
+      - name: Gen Report
+        id: report
+        run: |
+          echo 'report<<@@REPORT@@' >> $GITHUB_OUTPUT
+          ./tools/perf-chart/bin.ts ./integration-tests/perf/perf.csv >> $GITHUB_OUTPUT
+          echo '@@REPORT@@' >> $GITHUB_OUTPUT
+
+      - name: PR Body
+        id: pr-body
+        uses: streetsidesoftware/actions/public/pr-body@v1
+        with:
+          title: 'Update Integration Test Performance Data'
+          message: |
+            ## Integration Tests Summary
+
+            - ref: "${{ needs.prepare.outputs.ref }}"
+            - runs_on: "${{ needs.prepare.outputs.runs_on }}"
+            - node_version: ${{ needs.prepare.outputs.node_version }}
+            - branch: ${{ github.ref_name }}
+
+            ${{ steps.report.outputs.report }}
+
+      - name: Show PR in Summary
+        uses: streetsidesoftware/actions/public/summary@v1
+        with:
+          text: |
+            ${{ steps.pr-body.outputs.body }}
+
+      - name: Add comment to PR
+        continue-on-error: true
+        uses: mshick/add-pr-comment@v3
+        with:
+          message: ${{ steps.report.outputs.report }}
+
+      - name: Create PR
+        if: github.ref_name == 'main'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: 'chore: ${{ steps.pr-body.outputs.title }}'
+          branch: update-perf-main
+          base: main
+          title: 'chore: ${{ steps.pr-body.outputs.title }}'
+          body: ${{ steps.pr-body.outputs.body }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sign-commits: true # Sign commits made by the action

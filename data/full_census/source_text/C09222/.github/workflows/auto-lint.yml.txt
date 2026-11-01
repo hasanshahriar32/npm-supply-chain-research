@@ -1,0 +1,41 @@
+name: auto-lint-fix
+
+on:
+  pull_request: ~
+
+permissions: {}
+
+jobs:
+  linting:
+    permissions:
+      contents: read
+    if: github.event.pull_request.user.type != 'Bot' && github.repository == github.event.pull_request.head.repo.full_name
+    runs-on: ubuntu-latest
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.SAP_CLOUD_SDK_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SAP_CLOUD_SDK_BOT_PRIVATE_KEY }}
+          owner: SAP
+          repositories: cloud-sdk-js
+          permission-contents: write
+      - uses: $/.github/actions/setup
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+      - name: Run Lint
+        run: pnpm run lint:fix
+      - name: Commit Changes if needed
+        env:
+          BOT_EMAIL: ${{ vars.SAP_CLOUD_SDK_BOT_EMAIL }}
+          BOT_NAME: ${{ vars.SAP_CLOUD_SDK_BOT_NAME }}
+        run: |
+          diff=`git diff`
+          if [ ! -z "$diff" ]; then
+            git config --global user.email "$BOT_EMAIL"
+            git config --global user.name "$BOT_NAME"
+            git commit -m "Changes from lint:fix" -a
+            git push
+          fi

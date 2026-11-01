@@ -1,0 +1,40 @@
+name: Update docs
+
+# Manual job to re-compile MDoc documentation, commit and push the changes
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Fetch all commits, used by sbt-dynver plugin to determine version
+          fetch-depth: 0
+        # Fetch all tags
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.STRYKER_MUTATOR_CLIENT_ID }}
+          private-key: ${{ secrets.STRYKER_MUTATOR_NPA_KEY }}
+      - uses: ./.github/setup
+      - name: Compile docs
+        run: sbt "docs/mdoc"
+
+      - name: Get GitHub App User ID
+        id: get-user-id
+        run: echo "user-id=$(gh api "/users/${{ steps.generate-token.outputs.app-slug }}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+      - run: |
+          git config --global user.name '${{ steps.generate-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ steps.get-user-id.outputs.user-id }}+${{ steps.generate-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+      - name: Commit
+        run: |
+          git pull --rebase --autostash
+          git add .
+          git commit -m "docs: update docs"
+          git push

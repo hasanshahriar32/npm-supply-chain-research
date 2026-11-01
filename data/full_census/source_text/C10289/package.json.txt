@@ -1,0 +1,66 @@
+{
+  "name": "statoscope",
+  "private": true,
+  "description": "Toolkit for analyzing the stats of the bundles",
+  "license": "MIT",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "husky install",
+    "postinstall": "npm run bootstrap",
+    "test": "lerna run test",
+    "test:ci": "lerna run test -- --ci --coverage",
+    "lint": "lerna run lint",
+    "lint:fix": "lerna run lint:fix",
+    "build": "lerna run build",
+    "all": "NODE_ENV=production lerna run build,test,lint",
+    "prepublishOnly": "NODE_ENV=production lerna run build"
+  },
+  "repository": "https://github.com/statoscope/statoscope",
+  "author": {
+    "name": "Serget Melyukov",
+    "url": "https://twitter.com/smelukov"
+  },
+  "bugs": {
+    "url": "https://github.com/statoscope/statoscope/issues"
+  },
+  "lint-staged": {
+    "*.[jt]s": [
+      "eslint --cache --fix"
+    ]
+  },
+  "homepage": "https://github.com/statoscope/statoscope",
+  "devDependencies": {
+    "@babel/core": "^7.23.0",
+    "@babel/preset-env": "^7.22.20",
+    "@babel/preset-typescript": "^7.23.0",
+    "@commitlint/cli": "^17.7.2",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@nx/jest": "^16.10.0",
+    "@nx/js": "^16.10.0",
+    "@nx/linter": "^16.10.0",
+    "@types/jest": "^29.5.5",
+    "@types/node": "^18.0.0",
+    "@types/ws": "8.5.4",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
+    "@typescript-eslint/parser": "^6.7.4",
+    "commitlint": "^17.7.2",
+    "eslint": "^8.51.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.28.1",
+    "eslint-plugin-jest": "^27.4.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "husky": "^8.0.3",
+    "jest": "^29.7.0",
+    "lerna": "^7.3.0",
+    "lint-staged": "^14.0.1",
+    "nx": "^16.10.0",
+    "nx-cloud": "^16.4.0",
+    "prettier": "^3.0.3",
+    "prettier-2": "npm:prettier@^2",
+    "typescript": "^5.2.2",
+    "yargs": "^17.7.2"
+  }
+}

@@ -1,0 +1,62 @@
+name: collect-coverage
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+on:
+  schedule:
+    - cron: 0 0 * * 0
+  workflow_dispatch:
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      affectedPackages: ${{ steps.get-affected-packages.outputs.packages }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Get affected packages
+        id: get-affected-packages
+        run: echo "packages=$(pnpm exec foundation-get-affected-projects test:coverage)" >> $GITHUB_OUTPUT
+
+  test-coverage-package:
+    name: Test with coverage
+    environment: CI
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ needs.build.outputs.affectedPackages != '[]' }}
+    strategy:
+      matrix:
+        package: ${{fromJSON(needs.build.outputs.affectedPackages)}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Launch Unit Tests and generate coverage report
+        run: pnpm run test:coverage --filter ${{ matrix.package }}
+
+      - name: Upload coverage to Codecov (branch)
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          flags: ${{ matrix.package }}
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-coverage:
+    name: Test with coverage
+    needs:
+      - test-coverage-package
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Done!"'

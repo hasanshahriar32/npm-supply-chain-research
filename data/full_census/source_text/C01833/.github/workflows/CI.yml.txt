@@ -1,0 +1,150 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "**"
+      # Merge-queue commits are validated via the merge_group event below;
+      # without this exclusion every queue build would run twice.
+      - "!gh-readonly-queue/**"
+  pull_request:
+    types: [opened, synchronize]
+
+  # Runs the required checks on the exact merge result the merge queue is
+  # about to land on master, so a PR whose checks passed against an older
+  # base (e.g. a stale renovate lockfile branch) cannot break master.
+  merge_group:
+
+  workflow_dispatch:
+
+  # to execute once a day (more info see https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#schedule )
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  build:
+    if: >-
+      (
+        github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name != github.repository
+      )
+      && (
+        github.event_name != 'schedule'
+        || github.repository_owner == 'conventional-changelog'
+      )
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, windows-2022, windows-2025]
+        # 22 = Ubuntu 26.04 LTS
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm version is sourced from package.json `packageManager` field.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+  codeQuality:
+    name: Code quality
+    if: >-
+      (
+        github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name != github.repository
+      )
+      && (
+        github.event_name != 'schedule'
+        || github.repository_owner == 'conventional-changelog'
+      )
+    needs: [build]
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check format
+        run: pnpm format || (pnpm format-fix; git diff; echo "Formatting did not match (see above diff), please run 'pnpm format-fix'" >&2 && exit 1)
+
+      - name: Lint
+        run: pnpm lint
+
+      # oxlint has no equivalent of the eslint vitest/no-focused-tests rule,
+      # so a stray it.only / describe.only would silently disable the rest of
+      # a test file. This step is the safety net; the same check also runs
+      # via lint-staged on pre-commit. See scripts/check-no-focused-tests.js.
+      - name: Check no focused tests
+        run: pnpm check-no-focused-tests
+
+  nodeJsBaselineAptCompatibility:
+    name: NodeJS installed from stock Ubuntu-LTS packages (not external sources)
+    if: >-
+      (
+        github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name != github.repository
+      )
+      && (
+        github.event_name != 'schedule'
+        || github.repository_owner == 'conventional-changelog'
+      )
+    runs-on: ubuntu-26.04
+    container:
+      image: "ubuntu:26.04"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          apt update --yes
+
+          # NOTE: do not change the below with an `actions/setup-node` step! or it
+          # would make this CI job entirely pointless.
+          #
+          # `git` is needed because the test suite bootstraps throwaway repos via
+          # `git init`. It used to arrive as an apt Recommends of the npm chain,
+          # but on ubuntu:26.04 apt stopped pulling that recommend in (same image
+          # digest, same node/npm versions), so install it explicitly. The
+          # checkout step runs before this and uses the REST API fallback either
+          # way, which is fine — the tests create their own repos.
+          apt install --yes nodejs npm git
+
+          # Ubuntu's bundled corepack (with stock Node) trips on the dynamic
+          # ESM imports pnpm 11 uses at launch (ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING).
+          # Install pnpm directly via npm so this job stays honest about
+          # "stock apt + one explicit pnpm install" rather than papering over
+          # a packaging mismatch.
+          PNPM_VERSION=$(node -p "require('./package.json').packageManager.split('@')[1].split('+')[0]")
+          npm install --global pnpm@${PNPM_VERSION}
+          pnpm install --frozen-lockfile
+
+      - name: Print versions
+        run: node --version && npm --version && pnpm --version
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run Tests
+        run: pnpm test

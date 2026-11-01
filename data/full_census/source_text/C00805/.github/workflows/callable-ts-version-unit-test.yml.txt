@@ -1,0 +1,56 @@
+name: TypeScript Type-check
+
+# Type-checks the repo with a specific TypeScript version. Used by the daily
+# TypeScript canary (on-schedule-ts-canary.yml) to catch an upcoming TypeScript
+# release rejecting our published declarations before customers hit it.
+#
+# Design: install and build on the repo's pinned TypeScript first (rollup's
+# TypeScript plugin and api-extractor use the TypeScript JS API, which the
+# native TypeScript 7 compiler no longer ships), then swap in the target
+# TypeScript and run plain `tsc --noEmit` the way a customer's build would.
+# Lint and jest are dev tooling on the pinned TypeScript; they run in pr.yml,
+# not here. No build cache is used so the target TypeScript can never be
+# shadowed by, or leak into, a cached node_modules. Ticket: P456860642
+
+on:
+  workflow_call:
+    inputs:
+      tsVersion:
+        description: npm dist-tag or version of `typescript` to type-check with
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    name: Type-check (TS ${{ inputs.tsVersion }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./amplify-data
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: amplify-data
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+      - name: Enable Corepack for Yarn 4
+        run: corepack enable
+      - name: Install and build on the pinned TypeScript
+        run: |
+          yarn install --immutable
+          yarn tsc --version
+          yarn build
+      - name: Install target TypeScript
+        env:
+          VERSION: ${{ inputs.tsVersion }}
+        run: yarn add typescript@$VERSION
+      - name: Report target TypeScript version
+        run: yarn tsc --version
+      - name: Type-check with the target TypeScript
+        run: yarn typecheck:canary

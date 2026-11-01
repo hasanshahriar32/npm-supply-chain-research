@@ -1,0 +1,139 @@
+name: ci
+
+on:
+  merge_group:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      src: ${{ steps.filter.outputs.src }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false 
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          base: ${{ github.event.merge_group.base_sha || github.event.pull_request.base.sha || github.event.before }}
+          ref: ${{ github.event.merge_group.head_sha || github.sha }}
+          filters: |
+            src:
+              - 'src/**'
+              - 'test/**'
+              - 'scripts/**'
+              - 'playground/**'
+              - 'playground-v5/**'
+              - 'example/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'vitest.config.mts'
+              - 'build.config.ts'
+              - 'eslint.config.mjs'
+              - '.github/workflows/ci.yml'
+
+  lint:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          cache: true
+        
+      - run: pnpm dev:prepare
+
+      - name: 🔠 Lint project
+        run: pnpm lint
+
+      - name: ✂️ Knip project
+        run: pnpm knip --workspace .
+
+      - name: ⚙️ Check package engines
+        run: pnpm installed-check -d --no-workspaces
+
+  ci:
+    needs: changes
+    if: needs.changes.outputs.src == 'true'
+    strategy:
+      fail-fast: ${{ github.event_name == 'merge_group' }}
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@24.22.1
+          cache: true
+
+      - name: Install Playwright
+        # does not need to explicitly set chromium after https://github.com/microsoft/playwright/issues/14862 is solved
+        run: pnpm playwright-core install chromium
+        
+      - run: pnpm dev:prepare
+
+      - name: 💪 Type check
+        run: pnpm test:types
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 🧪 Test project
+        run: pnpm test
+
+      - name: 💪 Type check (built)
+        run: pnpm test:built:types
+        
+      - run: pnpm dev:build
+
+      - name: 🟩 Coverage
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+        if: matrix.os != 'windows-latest'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-ok:
+    if: always()
+    runs-on: ubuntu-slim
+    needs:
+      - changes
+      - lint
+      - ci
+    steps:
+      - name: Check required jobs
+        run: |
+          results=( \
+            "${{ needs.changes.result }}" \
+            "${{ needs.lint.result }}" \
+            "${{ needs.ci.result }}" \
+          )
+          for result in "${results[@]}"; do
+            if [[ "$result" == "failure" || "$result" == "cancelled" ]]; then
+              echo "One or more required jobs failed or were cancelled: $result"
+              exit 1
+            fi
+          done
+          echo "All required jobs passed or were skipped."

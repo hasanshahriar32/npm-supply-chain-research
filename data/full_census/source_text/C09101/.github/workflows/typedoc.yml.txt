@@ -1,0 +1,26 @@
+name: typedoc
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  typedoc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+
+      - run: yarn install --immutable
+
+      - name: Create the docs directory locally in CI
+        run: ./node_modules/.bin/typedoc --githubPages src
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@4.1.4
+        with:
+          branch: gh-pages
+          folder: docs

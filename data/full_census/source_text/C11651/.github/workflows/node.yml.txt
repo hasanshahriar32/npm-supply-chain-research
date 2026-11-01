@@ -1,0 +1,80 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main, versions/** ]
+  pull_request:
+    branches: [ main, versions/** ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js 20
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm i -g npm@11.17.0
+      - run: npm i
+      - run: npm run build
+      - run: npm run lint
+      - run: npm run prettier:check
+      - name: Archive build assets
+        run: tar cvf build-result.tar packages/*/lib
+      - name: Save build assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-result
+          path: build-result.tar
+  test:
+    strategy:
+      matrix:
+        node-version: [ 25, 24, 22, 20 ]
+
+    needs: [ build ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm i -g npm@11.17.0
+      - run: npm i
+      - name: Load build assets
+        uses: actions/download-artifact@v8
+        with:
+          name: build-result
+      - name: Unarchive build assets
+        run: tar xvf build-result.tar
+      - run: npm run test
+  docs:
+    if: ${{ github.event_name == 'push' }}
+    needs: [ build, test ]
+    runs-on: ubuntu-latest
+    concurrency:
+      group: docs-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js 20
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: npm i -g npm@11.17.0
+      - run: npm i
+      - name: Load build assets
+        uses: actions/download-artifact@v8
+        with:
+          name: build-result
+      - name: Unarchive build assets
+        run: tar xvf build-result.tar
+      - env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          REPO_USER: ${{ github.repository_owner }}
+          GIT_REF: ${{ github.ref }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: scripts/github/publishDocs.sh

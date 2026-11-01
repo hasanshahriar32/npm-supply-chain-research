@@ -1,0 +1,81 @@
+{
+  "name": "preact-transition-group",
+  "amdName": "PreactTransitionGroup",
+  "version": "2.0.0",
+  "description": "transition-group ui component for preact",
+  "source": "src/index.js",
+  "module": "dist/preact-transition-group.mjs",
+  "main": "dist/preact-transition-group.js",
+  "umd:main": "dist/preact-transition-group.umd.js",
+  "scripts": {
+    "build": "microbundle",
+    "test": "run-s lint build test:karma",
+    "lint": "eslint src tests",
+    "test:karma": "karmatic",
+    "test:karma:watch": "karmatic watch --no-headless",
+    "prepublishOnly": "run-s test",
+    "release": "npm run -s build && git commit -am $npm_package_version && git tag $npm_package_version && git push && git push --tags && npm publish"
+  },
+  "mangle": {
+    "regex": "^_"
+  },
+  "eslintConfig": {
+    "extends": "developit",
+    "settings": {
+      "react": {
+        "pragma": "h"
+      }
+    },
+    "globals": {
+      "spyOn": "readonly"
+    },
+    "rules": {
+      "prefer-rest-params": 0,
+      "no-prototype-builtins": 0,
+      "prefer-spread": 0,
+      "no-cond-assign": 0,
+      "react/jsx-no-bind": 0,
+      "react/prefer-stateless-function": 0,
+      "react/sort-comp": 0,
+      "jest/valid-expect": 0,
+      "jest/no-disabled-tests": 0,
+      "jest/no-jasmine-globals": 0
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "keywords": [
+    "preact",
+    "preact-component",
+    "preact-transition-group"
+  ],
+  "homepage": "http://github.com/developit/preact-transition-group",
+  "authors": [
+    "Jason Miller <jason@developit.ca>",
+    "React Authors (https://facebook.github.io/react)"
+  ],
+  "repository": "developit/preact-transition-group",
+  "bugs": {
+    "url": "http://github.com/developit/preact-transition-group/issues"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/preset-env": "^7.9.6",
+    "@types/jasmine": "^3.5.10",
+    "core-js": "^2.6.11",
+    "eslint": "^7.0.0",
+    "eslint-config-developit": "^1.1.1",
+    "karmatic": "^1.2.0",
+    "microbundle": "^0.12.0",
+    "npm-merge-driver-install": "^1.1.1",
+    "npm-run-all": "^4.1.3",
+    "preact": "^10.4.1",
+    "webpack": "^4.19.1"
+  },
+  "peerDependencies": {
+    "preact": "*"
+  },
+  "dependencies": {}
+}

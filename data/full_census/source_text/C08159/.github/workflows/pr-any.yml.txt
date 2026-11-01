@@ -1,0 +1,28 @@
+name: PR
+on: [pull_request]
+
+jobs:
+  pr:
+    continue-on-error: true
+    strategy:
+      matrix:
+        step: ['lint', 'test', 'build', 'deno']
+    runs-on: ubuntu-latest
+    env:
+      YARN_ENABLE_SCRIPTS: false
+      CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+    - uses: denoland/setup-deno@v1
+      with:
+        # Deno v2 throws errors with specific types therefore we set it to the last version before v2
+        deno-version: v1.46.3
+    - name: ${{ matrix.step }}
+      if: always()
+      run: |
+        deno --version
+        yarn install --immutable
+        yarn ${{ matrix.step }}

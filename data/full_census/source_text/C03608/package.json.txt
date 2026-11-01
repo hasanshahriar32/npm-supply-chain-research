@@ -1,0 +1,142 @@
+{
+    "name": "tss-react",
+    "version": "4.9.21",
+    "description": "Type safe CSS-in-JS API heavily inspired by react-jss",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/garronej/tss-react.git"
+    },
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "module": "dist/esm/index.js",
+    "exports": {
+        ".": {
+            "module": "./dist/esm/index.js",
+            "default": "./dist/index.js"
+        },
+        "./mui": {
+            "module": "./dist/esm/mui/index.js",
+            "default": "./dist/mui/index.js"
+        },
+        "./next/pagesDir": {
+            "module": "./dist/esm/next/pagesDir.js",
+            "default": "./dist/next/pagesDir.js"
+        },
+        "./next/appDir": {
+            "module": "./dist/esm/next/appDir.js",
+            "default": "./dist/next/appDir.js"
+        },
+        "./dsfr": {
+            "module": "./dist/esm/dsfr.js",
+            "default": "./dist/dsfr.js"
+        },
+        "./cssAndCx": {
+            "module": "./dist/esm/cssAndCx.js",
+            "default": "./dist/cssAndCx.js"
+        },
+        "./next": {
+            "module": "./dist/esm/next/index.js",
+            "default": "./dist/next/index.js"
+        },
+        "./nextJs": {
+            "module": "./dist/esm/nextJs.js",
+            "default": "./dist/nextJs.js"
+        },
+        "./compat": {
+            "module": "./dist/esm/compat.js",
+            "default": "./dist/compat.js"
+        },
+        "./mui-compat": {
+            "module": "./dist/esm/mui-compat.js",
+            "default": "./dist/mui-compat.js"
+        }
+    },
+    "scripts": {
+        "build": "tsc && tsc -p tsconfig-esm.json && ts-node src/bin/shim_jsx_element.ts",
+        "start_spa": "yarn yarn_link && cd src/test/apps/spa && yarn start",
+        "start_ssr": "yarn yarn_link && cd src/test/apps/ssr && yarn dev",
+        "start_appdir": "yarn yarn_link && cd src/test/apps/next-appdir && yarn dev",
+        "lint:check": "eslint . --ext .ts,.tsx",
+        "lint": "yarn lint:check --fix",
+        "_format": "prettier '**/*.{ts,tsx,json,md}'",
+        "format": "yarn _format --write",
+        "format:check": "yarn _format --list-different",
+        "yarn_link": "ts-node src/bin/yarn_link.ts"
+    },
+    "lint-staged": {
+        "*.{ts,tsx}": [
+            "eslint --fix"
+        ],
+        "*.{ts,tsx,json,md}": [
+            "prettier --write"
+        ]
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged -v"
+        }
+    },
+    "author": "u/garronej",
+    "license": "MIT",
+    "files": [
+        "dist/",
+        "!dist/test/",
+        "!dist/tsconfig.tsbuildinfo",
+        "!dist/package.json",
+        "!dist/esm/test/",
+        "!dist/esm/tsconfig.tsbuildinfo"
+    ],
+    "keywords": [
+        "jss",
+        "hooks",
+        "react",
+        "@material-ui",
+        "mui",
+        "css",
+        "makeStyles",
+        "withStyles"
+    ],
+    "homepage": "https://www.tss-react.dev",
+    "peerDependencies": {
+        "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+        "@types/react": "^16.8.0 || ^17.0.2 || ^18.0.0 || ^19.0.0",
+        "@emotion/react": "^11.4.1",
+        "@emotion/server": "^11.4.0",
+        "@mui/material": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^9.0.0"
+    },
+    "peerDependenciesMeta": {
+        "@emotion/server": {
+            "optional": true
+        },
+        "@mui/material": {
+            "optional": true
+        }
+    },
+    "dependencies": {
+        "@emotion/serialize": "*",
+        "@emotion/utils": "*",
+        "@emotion/cache": "*"
+    },
+    "devDependencies": {
+        "@codegouvfr/react-dsfr": "^1.2.2",
+        "@emotion/server": "11.10.0",
+        "@emotion/react": "11.10.5",
+        "@mui/material": "5.11.1",
+        "@emotion/styled": "11.10.5",
+        "@types/node": "^15.3.1",
+        "@types/react": "18.0.26",
+        "@types/react-dom": "18.0.9",
+        "@typescript-eslint/eslint-plugin": "^4.24.0",
+        "@typescript-eslint/parser": "^4.24.0",
+        "eslint": "^7.26.0",
+        "eslint-config-prettier": "^8.3.0",
+        "husky": "^4.3.8",
+        "lint-staged": "^11.0.0",
+        "next": "13.0.7",
+        "prettier": "^2.3.0",
+        "react": "18.1.0",
+        "ts-node": "^10.2.1",
+        "tsafe": "^1.6.6",
+        "typescript": "4.4.4"
+    }
+}

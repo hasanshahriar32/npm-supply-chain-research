@@ -1,0 +1,74 @@
+name: Check and Sync Node.js Versions
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # everyday
+  workflow_dispatch:
+
+permissions:
+  id-token: write 
+  contents: read
+
+jobs:
+  sync-node-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org' # set ~/.npmrc need add repository secrets in the settings
+
+      - name: Ensure latest npm 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch Node.js versions released in the last 30 days
+        run: |
+          set -x
+          DATE_30_DAYS_AGO=$(date --date='30 days ago' +%Y-%m-%d)
+          curl -s https://nodejs.org/dist/index.json | jq --arg DATE "$DATE_30_DAYS_AGO" -r '.[] | select(.date >= $DATE) | .version' | sed -e 's@^v@@g' | sort > versions.txt
+          echo "Node.js versions released in the last 30 days:"
+          cat versions.txt
+
+      - name: Check each version and sync if not published
+        run: |
+          set -x
+          while IFS= read -r VERSION; do
+            echo "Checking version $VERSION..."
+            if [ -z "$(npm view node@$VERSION)" ]; then
+              echo "Version $VERSION is not published on npm."
+              (
+                mkdir -p "target/$VERSION" && cd "target/$VERSION"
+                node ../../index.js $VERSION
+                for dir in */ ; do
+                  pkg="$(cat $dir/package.json | jq -r .name)"
+                  if [ -z "$(npm view $pkg@$VERSION)" ]; then
+                    echo "$pkg has not been published."
+                    echo "Publishing directory: $dir"
+                    npm view $pkg version | IFS=. read MAJOR MINOR PATCH
+                    echo $VERSION | IFS=. read NEWMAJ NEWMIN NEWPATCH
+                    if [ $NEWMAJOR -gt $MAJOR ] || [ $NEWMAJOR = $MAJOR -a $NEWMINOR -gt $MINOR ] || [ $NEWMAJOR = $MAJOR -a $NEWMINOR = $MINOR -a $NEWPATCH -gt $PATCH ]; then 
+                      TAG=latest
+                    else
+                      TAG=v$NEWMAJOR-latest
+                    fi
+                    (
+                      cd "$dir"
+                      npm publish --tag="$TAG"
+                      # npm publish --dry-run
+                    )
+                  else
+                    echo "$pkg@$VERSION is already published on npm. Skipping."
+                  fi
+                done
+              )
+            else
+              echo "Version $VERSION is already published on npm. Skipping."
+            fi
+          done < versions.txt

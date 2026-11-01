@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+
+  test:
+    name: "Test (Babel ${{ matrix.babel }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - babel: "7"
+            override: "@babel/core@^7.29.0 @babel/preset-env@^7 @babel/plugin-proposal-decorators@^7 @babel/plugin-transform-class-properties@^7 @babel/plugin-transform-private-methods@^7"
+          - babel: "8"
+            override: "@babel/core@^8 @babel/preset-env@^8 @babel/plugin-proposal-decorators@^8 @babel/plugin-transform-class-properties@^8 @babel/plugin-transform-private-methods@^8"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
+      - name: Override Babel Version For Matrix
+        run: pnpm add -D ${{ matrix.override }}
+      - name: Run Tests
+        run: pnpm run test

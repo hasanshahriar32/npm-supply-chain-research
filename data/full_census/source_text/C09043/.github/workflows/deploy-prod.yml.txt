@@ -1,0 +1,135 @@
+name: Deploy to Production Environment
+
+on:
+  pull_request:
+    branches: ['main']
+    types:
+      - closed
+
+# A production deploy must never be pre-empted, and two of them must never
+# overlap. The deploy job uploads the pinned plugin directory before it
+# overwrites the core at /v3, so a run that is cancelled part way through --
+# or overtaken by a second release -- can leave a live core pointing at an
+# incomplete pinned plugin directory, a state no invalidation repairs. A
+# queued run is strictly safer than a truncated or racing one.
+#
+# The group is deliberately constant. github.ref here is the pull request's
+# merge ref, which differs per release PR, so including it would put two
+# release merges in separate groups and let them publish to /v3 at the same
+# time -- exactly what this is meant to prevent.
+concurrency:
+  # Shared with rollback.yml: both write the same production /v3 paths and
+  # invalidate the same distribution, so they have to queue against each
+  # other and not just against themselves. A literal rather than
+  # github.workflow, which differs per workflow and would split the group.
+  group: production-cdn-write
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  get-deploy-inputs:
+    name: Get Deploy Inputs
+    runs-on: arc-amd64
+    outputs:
+      trigger_source: ${{ steps.set-outputs.outputs.trigger_source }}
+      release_version: ${{ steps.extract-release-info.outputs.release_version }}
+      release_ticket_id: ${{ steps.extract-release-info.outputs.release_ticket_id }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Set outputs
+        id: set-outputs
+        env:
+          PR_HTML_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SERVER_URL: ${{ github.server_url }}
+          ACTOR: ${{ github.actor }}
+        run: echo "trigger_source=PR <${PR_HTML_URL}|#${PR_NUMBER}> merged by <${SERVER_URL}/${ACTOR}|${ACTOR}>" >> $GITHUB_OUTPUT
+
+      - name: Extract release info from branch
+        id: extract-release-info
+        if: startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix-release/')
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          echo "Branch name: $PR_BRANCH"
+          
+          # Extract version and ticket from branch name (format: release/3.2.1-SDK-1234 or hotfix-release/3.2.2-SDK-5678)
+          version=$(echo "$PR_BRANCH" | sed -n 's|.*\/\([0-9]\+\.[0-9]\+\.[0-9]\+\)-.*|\1|p')
+          ticket=$(echo "$PR_BRANCH" | sed -n 's|.*[0-9]\+-\(.*\)$|\1|p')
+          
+          echo "Extracted version: $version"
+          echo "Extracted ticket: $ticket"
+          
+          echo "release_version=$version" >> $GITHUB_OUTPUT
+          echo "release_ticket_id=$ticket" >> $GITHUB_OUTPUT
+
+  deploy:
+    permissions:
+      contents: read
+      id-token: write
+    name: Deploy to production environment
+    needs: [get-deploy-inputs]
+    if: (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix-release/')) && github.event.pull_request.merged == true
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: 'production'
+      bugsnag_release_stage: 'production'
+      s3_dir_path: 'v3'
+      s3_dir_path_legacy: 'v1.1'
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+      monorepo_release_version: ${{ needs.get-deploy-inputs.outputs.release_version }}
+      release_ticket_id: ${{ needs.get-deploy-inputs.outputs.release_ticket_id }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_PROD_ACCOUNT_ID }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_PROD_S3_BUCKET_NAME }}
+      AWS_S3_SYNC_ROLE: ${{ secrets.AWS_PROD_S3_SYNC_ROLE }}
+      AWS_CF_DISTRIBUTION_ID: ${{ secrets.AWS_PROD_CF_DISTRIBUTION_ID }}
+      BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_RELEASE_CHANNEL_ID: ${{ secrets.SLACK_RELEASE_CHANNEL_ID }}
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  deploy-sanity-suite:
+    permissions:
+      contents: read
+      id-token: write
+    name: Deploy sanity suite
+    needs: [get-deploy-inputs]
+    if: (startsWith(github.event.pull_request.head.ref, 'release/') || startsWith(github.event.pull_request.head.ref, 'hotfix-release/')) && github.event.pull_request.merged == true
+    uses: ./.github/workflows/deploy-sanity-suite.yml
+    with:
+      environment: 'production'
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+      monorepo_release_version: ${{ needs.get-deploy-inputs.outputs.release_version }}
+      release_ticket_id: ${{ needs.get-deploy-inputs.outputs.release_ticket_id }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_PROD_ACCOUNT_ID }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_PROD_S3_BUCKET_NAME }}
+      AWS_S3_SYNC_ROLE: ${{ secrets.AWS_PROD_S3_SYNC_ROLE }}
+      AWS_CF_DISTRIBUTION_ID: ${{ secrets.AWS_PROD_CF_DISTRIBUTION_ID }}
+      SANITY_SUITE_WRITE_KEY: ${{ secrets.SANITY_SUITE_PROD_WRITE_KEY }}
+      SANITY_SUITE_DATAPLANE_URL: ${{ secrets.SANITY_SUITE_PROD_DATAPLANE_URL }}
+      SANITY_SUITE_CONFIG_SERVER_HOST: ${{ secrets.SANITY_SUITE_PROD_CONFIG_SERVER_HOST }}
+      BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_RELEASE_CHANNEL_ID: ${{ secrets.SLACK_RELEASE_CHANNEL_ID_NON_PROD }}
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  run-e2e-regression-test-suites:
+    uses: ./.github/workflows/run-e2e-regression-test-suites.yml
+    name: Run E2E Regression Test Suites
+    needs: [get-deploy-inputs, deploy-sanity-suite, deploy]
+    with:
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+      environment: production
+      monorepo_release_version: ${{ needs.get-deploy-inputs.outputs.release_version }}
+      release_ticket_id: ${{ needs.get-deploy-inputs.outputs.release_ticket_id }}
+    secrets:
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

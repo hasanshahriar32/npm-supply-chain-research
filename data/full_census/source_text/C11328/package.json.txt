@@ -1,0 +1,38 @@
+{
+  "name": "tuf-js-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JavaScript implementation of The Update Framework (TUF)",
+  "scripts": {
+    "build": "tsc --build tsconfig.build.json",
+    "clean": "npm run clean --workspaces --if-present",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:ci": "jest --maxWorkers=2 --coverage",
+    "prettier": "prettier --write packages/**/*.ts",
+    "prettier:check": "prettier --check packages/**/*.ts",
+    "lint": "eslint --fix",
+    "lint:check": "eslint --max-warnings 0",
+    "release": "npm run build && changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@eslint/js": "^10.0.1",
+    "@tsconfig/node22": "^22.0.6",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.1",
+    "eslint": "^10.9.1",
+    "jest": "^30.5.0",
+    "nock": "^14.0.11",
+    "prettier": "^3.9.6",
+    "ts-jest": "^29.4.12",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.68.0"
+  },
+  "workspaces": [
+    "./packages/*"
+  ],
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  }
+}

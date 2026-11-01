@@ -1,0 +1,67 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version:
+          - 22.15.0
+          - 22
+          - 24
+          - 26
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+          node-version: ^26.3.0
+
+      - name: Bootstrap
+        run: npm ci --ignore-scripts
+
+      - name: Build 🔧
+        run: npm run compile
+
+      # The compile above runs on the repo's pinned build Node (^26.3.0).
+      # Switch to the matrix Node version so tests exercise every supported
+      # runtime.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: ${{ matrix.node_version }}
+
+      - name: Install collector
+        run: |
+          curl -sSL -o otelcol-contrib.tar.gz https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.126.0/otelcol-contrib_0.126.0_linux_amd64.tar.gz
+          tar -xzf otelcol-contrib.tar.gz
+        working-directory: e2e-tests
+      - name: run collector in background
+        run: |
+          ./otelcol-contrib --config collector-config.yaml &
+        working-directory: e2e-tests
+      - name: Export telemetry to collector
+        run: npm run export-telemetry
+        working-directory: e2e-tests
+      - name: stop collector
+        run: pkill -f otelcol-contrib
+        working-directory: e2e-tests
+      - name: Print output
+        run: cat collector-output.json
+        working-directory: e2e-tests
+      - name: verify exported telemetry
+        run: npm run verify
+        working-directory: e2e-tests

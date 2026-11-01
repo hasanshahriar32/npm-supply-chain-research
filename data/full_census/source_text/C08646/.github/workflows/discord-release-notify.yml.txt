@@ -1,0 +1,20 @@
+name: 'Discord'
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify:
+    name: 'Notify'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        uses: Ilshidur/action-discord@d2594079a10f1d6739ee50a2471f0ca57418b554 # 0.4.0
+        with:
+          args: |
+            🎊 New release published: **${{ github.event.release.name }}**
+
+            ${{ github.event.release.html_url }}"

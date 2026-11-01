@@ -1,0 +1,353 @@
+{
+  "name": "aegir",
+  "version": "48.1.6",
+  "description": "JavaScript project management",
+  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/ipfs/aegir#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ipfs/aegir.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ipfs/aegir/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "keywords": [
+    "build",
+    "lint"
+  ],
+  "bin": {
+    "aegir": "src/index.js"
+  },
+  "type": "module",
+  "types": "./dist/src/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "dist/*",
+        "dist/src/*",
+        "dist/src/*/index"
+      ],
+      "src/*": [
+        "*",
+        "dist/*",
+        "dist/src/*",
+        "dist/src/*/index"
+      ],
+      "utils/*": [
+        "*",
+        "dist/*",
+        "dist/utils/*"
+      ],
+      "chai": [
+        "dist/utils/chai.d.ts"
+      ],
+      "echo-server": [
+        "dist/utils/echo-server.d.ts"
+      ],
+      "fixtures": [
+        "dist/utils/fixtures.d.ts"
+      ],
+      "get-port": [
+        "dist/utils/get-port.d.ts"
+      ],
+      "resolve": [
+        "dist/utils/resolve.d.ts"
+      ],
+      "src/config/tsconfig.aegir.json": [
+        "src/config/tsconfig.aegir.json"
+      ],
+      "eslint.config.js": [
+        "eslint.config.js"
+      ]
+    }
+  },
+  "files": [
+    "cspell.json",
+    "eslint.config.js",
+    "src",
+    "dictionaries",
+    "dist",
+    "utils",
+    "!dist/test",
+    "!**/*.tsbuildinfo"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./chai": {
+      "types": "./dist/utils/chai.d.ts",
+      "import": "./utils/chai.js"
+    },
+    "./echo-server": {
+      "types": "./dist/utils/echo-server.d.ts",
+      "import": "./utils/echo-server.js"
+    },
+    "./eslint.config.js": {
+      "types": "./dist/eslint.config.d.ts",
+      "import": "./eslint.config.js"
+    },
+    "./env": {
+      "types": "./dist/src/env.d.ts",
+      "import": "./src/env.js"
+    },
+    "./fixtures": {
+      "types": "./dist/utils/fixtures.d.ts",
+      "browser": "./utils/fixtures.browser.js",
+      "import": "./utils/fixtures.js"
+    },
+    "./get-port": {
+      "types": "./dist/utils/get-port.d.ts",
+      "import": "./utils/get-port.js"
+    },
+    "./resolve": {
+      "types": "./dist/utils/resolve.d.ts",
+      "browser": "./utils/resolve.browser.js",
+      "import": "./utils/resolve.js"
+    },
+    "./src/config/tsconfig.aegir.json": {
+      "require": "./src/config/tsconfig.aegir.json"
+    }
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "breaking": true,
+              "release": "major"
+            },
+            {
+              "revert": true,
+              "release": "patch"
+            },
+            {
+              "type": "feat",
+              "release": "minor"
+            },
+            {
+              "type": "fix",
+              "release": "patch"
+            },
+            {
+              "type": "docs",
+              "release": "patch"
+            },
+            {
+              "type": "test",
+              "release": "patch"
+            },
+            {
+              "type": "deps",
+              "release": "patch"
+            },
+            {
+              "scope": "no-release",
+              "release": false
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "chore",
+                "section": "Trivial Changes"
+              },
+              {
+                "type": "docs",
+                "section": "Documentation"
+              },
+              {
+                "type": "deps",
+                "section": "Dependencies"
+              },
+              {
+                "type": "test",
+                "section": "Tests"
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      "@semantic-release/github",
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "CHANGELOG.md",
+            "package.json"
+          ]
+        }
+      ]
+    ]
+  },
+  "scripts": {
+    "clean": "node src/index.js clean",
+    "build": "node src/index.js build --no-bundle",
+    "lint": "node src/index.js lint",
+    "test": "node src/index.js test",
+    "docs": "node src/index.js docs",
+    "dep-check": "node src/index.js dep-check",
+    "doc-check": "node src/index.js doc-check",
+    "spell-check": "node src/index.js spell-check",
+    "test:node": "node src/index.js test -t node --cov",
+    "test:bun": "node src/index.js test -t bun",
+    "test:deno": "node src/index.js test -t deno",
+    "test:chrome": "node src/index.js test -t browser --cov",
+    "test:chrome-webworker": "node src/index.js test -t webworker",
+    "test:firefox": "node src/index.js test -t browser --browser firefox",
+    "test:firefox-webworker": "node src/index.js test -t webworker --browser firefox",
+    "test:electron-main": "node src/index.js test -t electron-main",
+    "release": "node src/index.js release --no-bundle"
+  },
+  "dependencies": {
+    "@electron/get": "^5.0.0",
+    "@polka/send-type": "^0.5.2",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.0",
+    "@semantic-release/npm": "^13.1.1",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@types/chai": "^4.2.16",
+    "@types/chai-as-promised": "^7.1.3",
+    "@types/chai-string": "^1.4.2",
+    "@types/chai-subset": "^1.3.3",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^24.12.2",
+    "@typescript-eslint/parser": "^8.32.1",
+    "bun": "^1.3.14",
+    "buffer": "^6.0.3",
+    "bytes": "^3.1.0",
+    "c8": "^11.0.0",
+    "chai": "^4.3.4",
+    "chai-as-promised": "^7.1.1",
+    "chai-bites": "^0.3.1",
+    "chai-parentheses": "^0.0.2",
+    "chai-string": "^1.5.0",
+    "chai-subset": "^1.6.0",
+    "conventional-changelog-conventionalcommits": "^9.3.1",
+    "cors": "^2.8.5",
+    "cspell": "^10.0.0",
+    "deno": "^2.7.12",
+    "depcheck": "^1.4.3",
+    "diff": "^9.0.0",
+    "electron-mocha": "^13.0.0",
+    "env-paths": "^4.0.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.27.0",
+    "eslint-formatter-unix": "^9.0.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsdoc": "^62.3.1",
+    "eslint-plugin-no-only-tests": "^3.3.0",
+    "execa": "^9.5.3",
+    "fast-glob": "^3.3.2",
+    "fs-extra": "^11.1.0",
+    "gh-pages": "^6.0.0",
+    "globby": "^16.1.0",
+    "is-plain-obj": "^4.1.0",
+    "kleur": "^4.1.4",
+    "latest-version": "^9.0.0",
+    "lilconfig": "^3.0.0",
+    "listr": "~0.14.2",
+    "mdast-util-from-markdown": "^2.0.0",
+    "mdast-util-gfm": "^3.0.0",
+    "mdast-util-gfm-footnote": "^2.0.0",
+    "mdast-util-gfm-strikethrough": "^2.0.0",
+    "mdast-util-gfm-table": "^2.0.0",
+    "mdast-util-gfm-task-list-item": "^2.0.0",
+    "mdast-util-to-markdown": "^2.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "micromark-extension-gfm-footnote": "^2.0.0",
+    "micromark-extension-gfm-strikethrough": "^2.0.0",
+    "micromark-extension-gfm-table": "^2.0.0",
+    "micromark-extension-gfm-task-list-item": "^2.0.1",
+    "mocha": "^11.0.1",
+    "neostandard": "^0.13.0",
+    "npm-package-json-lint": "^10.2.0",
+    "nyc": "^18.0.0",
+    "p-map": "^7.0.1",
+    "p-queue": "^9.0.0",
+    "p-retry": "^8.0.0",
+    "pascalcase": "^2.0.0",
+    "path": "^0.12.7",
+    "playwright-test": "^14.0.0",
+    "polka": "^0.5.2",
+    "prompt": "^1.2.2",
+    "proper-lockfile": "^4.1.2",
+    "react-native-test-runner": "^5.0.0",
+    "read-pkg-up": "^11.0.0",
+    "rimraf": "^6.0.1",
+    "semantic-release": "^25.0.2",
+    "semantic-release-monorepo": "^8.0.2",
+    "semver": "^7.3.8",
+    "source-map-support": "^0.5.20",
+    "strip-ansi": "^7.2.0",
+    "strip-bom": "^5.0.0",
+    "strip-json-comments": "^5.0.0",
+    "strong-log-transformer": "^2.1.0",
+    "tempy": "^3.1.0",
+    "typedoc": "^0.28.4",
+    "typedoc-plugin-mdn-links": "^5.0.2",
+    "typedoc-plugin-mermaid": "^1.12.0",
+    "typedoc-plugin-missing-exports": "^4.0.0",
+    "typescript": "6.0.3",
+    "typescript-docs-verifier": "^3.0.1",
+    "wherearewe": "^2.0.1",
+    "yargs": "^18.0.0",
+    "yargs-parser": "^22.0.0",
+    "yauzl": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/bytes": "^3.1.0",
+    "@types/cors": "^2.8.10",
+    "@types/diff": "^8.0.0",
+    "@types/eslint": "^9.6.1",
+    "@types/fs-extra": "^11.0.1",
+    "@types/gh-pages": "^6.1.0",
+    "@types/listr": "^0.14.2",
+    "@types/mdast": "^4.0.3",
+    "@types/pascalcase": "^1.0.0",
+    "@types/polka": "^0.5.2",
+    "@types/prompt": "^1.1.2",
+    "@types/proper-lockfile": "^4.1.1",
+    "@types/semver": "^7.3.4",
+    "@types/strong-log-transformer": "^1.0.2",
+    "@types/yargs": "^17.0.0",
+    "@types/yauzl": "^3.3.0",
+    "electron": "^42.4.0",
+    "uint8arrays": "^6.0.0"
+  },
+  "browser": {
+    "fs": false,
+    "./utils/fixtures.js": "./utils/fixtures.browser.js",
+    "./utils/resolve.js": "./utils/resolve.browser.js"
+  }
+}

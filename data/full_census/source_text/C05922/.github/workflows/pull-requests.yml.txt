@@ -1,0 +1,278 @@
+name: Pull Requests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  npm:
+    uses: ./.github/workflows/npm.yml
+
+  Changesets:
+    needs: npm
+    # Changesets no longer exist when releasing
+    if: github.event_name == 'pull_request' && !startsWith(github.event.pull_request.title, '🦋 Changeset release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+      - run: npx changeset status --since=${{ github.event.pull_request.base.sha }}
+
+  Commitlint:
+    needs: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+      - run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+  TypeScript:
+    needs: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+      - run: npm run typecheck
+
+  Lint:
+    needs: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+      - run: node bin/lint-staged.js --all
+      - run: npm run lint
+
+  test-node-range:
+    name: Test Node.js version range
+    needs: npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-ubuntu-latest-${{ hashFiles('package-lock.json') }}
+      - run: node ./scripts/test-node-range.js
+
+  test-matrix:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test with Node.js active LTS versions, and the latest version
+        node:
+          - '22.22.1' # lowest supported version
+          - '22.x'
+          - '24.x'
+          - '26.x'
+        # Test with Ubuntu, macOS, and Windows
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    name: Node.js v${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - if: matrix.os == 'windows-latest'
+        run: git config --global core.autocrlf true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci --ignore-scripts
+      - run: node --version
+      - run: npm --version
+      - run: git --version
+      - run: node bin/lint-staged.js --version
+      - run: node bin/lint-staged.js --help
+      # Run tests
+      - run: npm test
+
+  test-deno:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    name: Deno (latest) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-${{ matrix.os }}-${{ hashFiles('package-lock.json') }}
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci --ignore-scripts
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # https://github.com/denoland/setup-deno/releases/tag/v2.0.5
+        with:
+          deno-version: latest
+      - run: node --version
+      - run: npm --version
+      - run: deno --version
+      - run: git --version
+      - run: deno -A bin/lint-staged.js --version
+      - run: deno -A bin/lint-staged.js --help
+      - run: deno run test
+
+  test-bun:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    name: Bun (latest) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # https://github.com/oven-sh/setup-bun/releases/tag/v2.2.0
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun --version
+      - run: git --version
+      - run: bun bin/lint-staged.js --version
+      - run: bun bin/lint-staged.js --help
+      - run: bun --bun run test
+
+  test-msys2:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test with Node.js active LTS versions, and the latest version
+        node:
+          - '22.22.1' # lowest supported version
+          - '22.x'
+          - '24.x'
+          - '26.x'
+    name: Node.js ${{ matrix.node }} on windows-latest (MSYS2)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # https://github.com/msys2/setup-msys2/releases/tag/v2.33.0
+        with:
+          msystem: UCRT64
+          path-type: inherit
+          install: >-
+            git
+      - run: git config --global core.autocrlf true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-windows-msys2-latest-${{ hashFiles('package-lock.json') }}
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci --ignore-scripts
+      - run: node --version
+      - run: npm --version
+      - run: git --version
+      - run: node bin/lint-staged.js --version
+      - run: node bin/lint-staged.js --help
+      - run: npm test
+
+  test-cygwin:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test with Node.js active LTS versions, and the latest version
+        node:
+          - '22.22.1' # lowest supported version
+          - '22.x'
+          - '24.x'
+          - '26.x'
+    name: Node.js ${{ matrix.node }} on windows-latest (Cygwin)
+    runs-on: windows-latest
+    steps:
+      - uses: cygwin/cygwin-install-action@5a1b0cd107181fa6bb6bf3f90d500f4fb3132f18 # https://github.com/cygwin/cygwin-install-action/tree/v7.0.0
+        with:
+          site: |
+            https://mirrors.kernel.org/sourceware/cygwin/
+      - run: git config --global core.autocrlf true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # https://github.com/actions/checkout/releases/tag/v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # https://github.com/actions/setup-node/releases/tag/v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # https://github.com/actions/cache/releases/tag/v6.1.0
+        id: cache-node_modules
+        with:
+          path: node_modules
+          key: node-modules-windows-cygwin-latest-${{ hashFiles('package-lock.json') }}
+      - if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: npm ci --ignore-scripts
+      - run: node --version
+      - run: npm --version
+      - run: git --version
+      - run: node bin/lint-staged.js --version
+      - run: node bin/lint-staged.js --help
+      - run: npm test

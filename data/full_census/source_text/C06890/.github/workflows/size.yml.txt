@@ -1,0 +1,24 @@
+name: Size
+on: [pull_request]
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    env:
+      CI_JOB_NUMBER: 1
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+      - name: Symlink npm to bun
+        run: |
+          sudo ln -sf $(which bun) /usr/local/bin/npm
+          sudo ln -sf $(which bunx) /usr/local/bin/npx
+      - uses: andresz1/size-limit-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          skip_step: install
+          # Run after each checkout so the base comparison uses its own sources.
+          build_script: --cwd packages/wouter-preact prepublishOnly

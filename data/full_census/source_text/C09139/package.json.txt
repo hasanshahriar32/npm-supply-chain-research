@@ -1,0 +1,136 @@
+{
+  "name": "node-pg-migrate",
+  "version": "10.0.0-alpha.7",
+  "description": "PostgreSQL database migration management tool for node.js",
+  "scripts": {
+    "clean": "git clean -fdx --exclude .claude --exclude local",
+    "build": "tsdown",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint",
+    "ts-check": "tsc",
+    "test": "vitest",
+    "test:unit": "vitest --project unit",
+    "test:integration": "vitest --project integration",
+    "test:update-snapshots": "vitest run -u",
+    "test:coverage": "vitest --project unit --coverage",
+    "pretest:docs": "pnpm run docs:build",
+    "test:docs": "playwright test",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
+    "premigrate": "pnpm run build",
+    "migrate": "node bin/node-pg-migrate.js",
+    "prepublishOnly": "pnpm run clean && pnpm install && pnpm run build",
+    "preflight": "pnpm install && run-s format build lint test:update-snapshots ts-check"
+  },
+  "keywords": [
+    "api",
+    "cockroach",
+    "cockroachdb",
+    "database",
+    "db",
+    "db-migrate",
+    "expandable",
+    "extensible",
+    "migrate",
+    "migration",
+    "migrations",
+    "migrator",
+    "pg",
+    "postgre",
+    "postgres",
+    "postgresql",
+    "programable",
+    "programatic",
+    "sql"
+  ],
+  "homepage": "https://github.com/salsita/node-pg-migrate",
+  "bugs": {
+    "url": "https://github.com/salsita/node-pg-migrate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/salsita/node-pg-migrate.git"
+  },
+  "license": "MIT",
+  "author": "Theo Ephraim",
+  "contributors": [
+    "Salsita Software <jando@salsitasoft.com>",
+    "Christopher Quadflieg <chrissi92@hotmail.de>",
+    "Breno A. <git@breno.tech>",
+    "Omar Diab <me@omardiab.com>"
+  ],
+  "type": "module",
+  "exports": {
+    "./bin/*": {
+      "default": "./bin/*.js"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "node-pg-migrate": "bin/node-pg-migrate.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "templates"
+  ],
+  "dependencies": {
+    "commander": "~15.0.0",
+    "glob": "~13.0.0",
+    "jiti": "~2.7.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@shikijs/vitepress-twoslash": "4.5.0",
+    "@testcontainers/postgresql": "12.2.1",
+    "@types/config": "4.4.0",
+    "@types/node": "26.6.5",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/ui": "5.0.5",
+    "config": "5.0.1",
+    "dotenv": "17.3.1",
+    "dotenv-expand": "12.0.3",
+    "node-pg-migrate": "link:.",
+    "npm-run-all2": "9.0.3",
+    "oxfmt": "0.74.0",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "pg": "8.23.1",
+    "testcontainers": "12.2.1",
+    "tsdown": "0.23.1",
+    "typescript": "7.0.2",
+    "typescript-6": "npm:typescript@6.0.3",
+    "vitepress": "2.0.0-alpha.20",
+    "vitest": "5.0.5"
+  },
+  "peerDependencies": {
+    "@types/pg": ">=7.0.0 <9.0.0",
+    "pg": ">=7.0.2 <9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/pg": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.14.0",
+      "onFail": "download"
+    }
+  }
+}

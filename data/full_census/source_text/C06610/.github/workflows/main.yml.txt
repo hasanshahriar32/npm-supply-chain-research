@@ -1,0 +1,62 @@
+name: main
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["lts/-2", "lts/-1", "lts/*"]
+    name: Test on node@v${{ matrix.node }}
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+      - name: Setup pnpm 🔧
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      - name: Setup node 🔧
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: "pnpm"
+      - name: Install 🪄
+        run: pnpm install --frozen-lockfile
+      - name: Lint 🔍
+        run: pnpm run lint
+      - name: Prettier 🔍
+        run: pnpm run prettycheck
+      - name: TypeScript 🔍
+        run: pnpm run typecheck
+      - name: Vitest 🔍
+        run: pnpm run spec
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["lts/-2", "lts/-1", "lts/*"]
+    name: Build on node@v${{ matrix.node }}
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+      - name: Setup pnpm 🔧
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      - name: Setup node 🔧
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: "pnpm"
+      - name: Install 🪄
+        run: pnpm install --frozen-lockfile
+      - name: Build 💎
+        run: pnpm run build

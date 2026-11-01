@@ -1,0 +1,44 @@
+name: Cleanup e2e instances
+on:
+  workflow_dispatch:
+  schedule:
+    # run every 2 hours on every weekday
+    - cron: '0 */2 * * 1-5'
+
+permissions:
+  contents: read
+
+jobs:
+  integration-tests:
+    name: Cleanup e2e instances
+    runs-on: ${{ vars.RUNNER_NORMAL || 'ubuntu-latest' }}
+    timeout-minutes: ${{ vars.TIMEOUT_MINUTES_NORMAL && fromJSON(vars.TIMEOUT_MINUTES_NORMAL) || 10 }}
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Setup
+        id: config
+        uses: $/.github/actions/init
+        with:
+          cache-enabled: true
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          turbo-team: ${{ vars.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          playwright-enabled: true
+
+      - name: Build packages
+        run: pnpm turbo build $TURBO_ARGS --only
+
+      - name: Run cleanup
+        run: pnpm test:integration:cleanup
+        env:
+          E2E_CLEANUP_STALE_APPLICATIONS: '1'
+          CLERK_PLATFORM_API_KEY: ${{ secrets.CLERK_PLATFORM_API_KEY }}
+          INTEGRATION_INSTANCE_KEYS: ${{ secrets.INTEGRATION_INSTANCE_KEYS }}
+          INTEGRATION_STAGING_INSTANCE_KEYS: ${{ secrets.INTEGRATION_STAGING_INSTANCE_KEYS }}

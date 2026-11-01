@@ -1,0 +1,49 @@
+name: Node.js Package
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+# Required for NPM Trusted Publishing (OIDC)
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: mkdir -p coverage
+
+      - run: npm test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true
+          files: ./coverage/lcov.info
+          fail_ci_if_error: true
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Uses OIDC Trusted Publishing - no token needed
+      # Provenance attestation is automatically generated
+      - run: npm publish --access public

@@ -1,0 +1,46 @@
+{
+  "name": "@serialport/bindings-interface",
+  "version": "0.0.0-development",
+  "description": "SerialPort Bindings Typescript Types",
+  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    "require": "./dist/index.js",
+    "default": "./dist/index-esm.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": "git@github.com:serialport/bindings-interface.git",
+  "homepage": "https://github.com/serialport/bindings-interface",
+  "scripts": {
+    "lint": "tsc && eslint lib/**/*.ts",
+    "format": "eslint lib/**/*.ts --fix",
+    "clean": "rm -rf dist-ts dist",
+    "build": "npm run clean && tsc -p tsconfig-build.json && rollup -c && node -r esbuild-register bundle-types",
+    "prepublishOnly": "npm run build",
+    "semantic-release": "semantic-release"
+  },
+  "keywords": [
+    "serialport",
+    "serialport-binding"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@microsoft/api-extractor": "7.36.4",
+    "@rollup/plugin-node-resolve": "15.2.1",
+    "@tsconfig/node18": "18.2.1",
+    "@types/node": "22.19.3",
+    "@typescript-eslint/eslint-plugin": "8.51.0",
+    "@typescript-eslint/parser": "8.51.0",
+    "esbuild": "0.27.2",
+    "esbuild-register": "3.6.0",
+    "eslint": "8.57.1",
+    "rollup": "3.28.1",
+    "semantic-release": "21.1.0",
+    "typescript": "5.1.6"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "name": "prettier-plugin-sort-json",
+  "version": "4.2.0",
+  "description": "Prettier plugin to sort JSON files alphanumerically by key",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gudahtt/prettier-plugin-sort-json.git"
+  },
+  "homepage": "https://github.com/Gudahtt/prettier-plugin-sort-json#readme",
+  "bugs": {
+    "url": "https://github.com/Gudahtt/prettier-plugin-sort-json/issues"
+  },
+  "license": "MIT",
+  "author": "Mark Stacey <markjstacey@gmail.com>",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "yarn lint:eslint && yarn lint:misc --check",
+    "lint:eslint": "eslint . --cache",
+    "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
+    "lint:misc": "prettier '**/*.json' '**/*.json5' '**/*.md' '**/*.yml' '!.yarnrc.yml' '!fixtures/invalid-json.json' --ignore-path .gitignore",
+    "prepack": "./scripts/prepack.sh",
+    "test": "node --test",
+    "test:coverage": "c8 --config ./.c8rc.json node --test",
+    "test:update": "node --test-update-snapshots --test"
+  },
+  "devDependencies": {
+    "@babel/types": "^8.0.0",
+    "@lavamoat/allow-scripts": "^5.0.0",
+    "@lavamoat/preinstall-always-fail": "^3.0.0",
+    "@metamask/auto-changelog": "^6.0.0",
+    "@metamask/eslint-config": "^15.0.0",
+    "@metamask/eslint-config-nodejs": "^15.0.0",
+    "@metamask/eslint-config-typescript": "^15.0.0",
+    "@types/node": "^26.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "c8": "^11.0.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-import-resolver-typescript": "^3.6.3",
+    "eslint-plugin-import-x": "^4.3.0",
+    "eslint-plugin-jsdoc": "^50.0.0",
+    "eslint-plugin-n": "^17.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-promise": "^7.0.0",
+    "prettier": "^3.0.0",
+    "prettier-plugin-packagejson": "^3.0.0",
+    "typescript": "~5.9.0",
+    "typescript-eslint": "^8.16.0"
+  },
+  "peerDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "packageManager": "yarn@4.18.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@lavamoat/preinstall-always-fail": false,
+      "eslint-plugin-import-x>unrs-resolver": false
+    }
+  }
+}

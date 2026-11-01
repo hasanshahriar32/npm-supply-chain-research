@@ -1,0 +1,42 @@
+name: Bundle size | Baseline
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  NX_PARALLEL: 4
+
+jobs:
+  bundle-size:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository_owner == 'microsoft' }}
+
+    permissions:
+      contents: 'read'
+      actions: 'read'
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          cache: yarn
+          node-version: '24'
+
+      - run: yarn install --immutable
+
+      - name: Measure all packages
+        run: yarn nx run-many --all --target=bundle-size --nxBail
+
+      - name: Prepare report
+        run: yarn monosize upload-report --branch main --commit-sha ${{ github.sha }}
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: monosize-report
+          retention-days: 90
+          if-no-files-found: error
+          path: dist/monosize-report.json

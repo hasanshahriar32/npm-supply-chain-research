@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  merge_group:
+
+jobs:
+  Job:
+    name: Node.js
+    uses: node-modules/github-actions/.github/workflows/node-test.yml@master
+    with:
+      os: 'ubuntu-latest'
+      version: '16, 18, 20, 22, 24'
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+      - name: Install dependencies
+        run: npm install
+      - name: Lint
+        run: npx oxlint

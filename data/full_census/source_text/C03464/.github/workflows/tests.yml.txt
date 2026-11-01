@@ -1,0 +1,25 @@
+name: Package Verifier
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  registry:
+    uses: fontsource/fontsource/.github/workflows/registry-check.yml@main
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Run Tests
+        run: bun run test

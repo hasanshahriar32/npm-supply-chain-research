@@ -1,0 +1,63 @@
+{
+	"name": "is-json",
+	"version": "3.0.1",
+	"description": "Check if a value is a valid JSON object/array string (or a plain object), without try/catch on the caller side.",
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.mts",
+				"default": "./dist/index.mjs"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup && mv dist/index.d.ts dist/index.d.mts",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"format": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"prepublishOnly": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+	},
+	"keywords": [
+		"json",
+		"validation",
+		"is-json",
+		"typescript"
+	],
+	"author": "@joaquimserafim",
+	"license": "ISC",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/joaquimserafim/is-json.git"
+	},
+	"bugs": {
+		"url": "https://github.com/joaquimserafim/is-json/issues"
+	},
+	"homepage": "https://github.com/joaquimserafim/is-json#readme",
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.15",
+		"@types/node": "^25.9.1",
+		"@vitest/coverage-v8": "^4.1.7",
+		"tsup": "^8.5.1",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.7"
+	}
+}

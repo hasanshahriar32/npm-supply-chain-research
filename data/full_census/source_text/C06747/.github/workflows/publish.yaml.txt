@@ -1,0 +1,35 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test-matrix:
+    uses: ./.github/workflows/test.yaml
+
+  publish:
+    needs: test-matrix
+    environment: publishing
+    permissions:
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@main
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: latest
+      - run: npm install --global npm@latest
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

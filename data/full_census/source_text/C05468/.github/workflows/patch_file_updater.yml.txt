@@ -1,0 +1,62 @@
+name: Patchright Driver .Patch File Updater
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  patch-file-updater:
+    name: "Patchright Driver .Patch File Updater: Create and Commit Patch File Comparing"
+    # Skip the bot's own commits. A step-level `exit 0` only ends that step, so this has to be a job condition.
+    if: ${{ !contains(github.event.head_commit.committer.name, 'github-actions') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Configure Fast APT Mirror
+        uses: vegardit/fast-apt-mirror.sh@v1
+
+      - name: Setup Node v24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Get Commit Message
+        id: get_commit_info
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          echo "commit_message=$COMMIT_MESSAGE" >> $GITHUB_OUTPUT
+
+      - name: Install Playwright Driver
+        run: |
+          response=$(curl --silent "https://api.github.com/repos/microsoft/playwright/releases/latest")
+          version=$(echo "$response" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+          git clone https://github.com/microsoft/playwright --branch "$version"
+          cd playwright
+          npm ci
+
+      - name: Create Patched Copy of Playwright Driver
+        run: |
+          cp -r playwright playwright_not_patched
+          cd playwright
+          git -C .. submodule update --init --recursive --remote patchright-nodejs
+          cd .. && npm run patch
+
+      - name: Compare Directories and Create Patch File
+        run: utils/create_patch_file.sh
+
+      - name: Commit and Push Patch File
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "[Patch-Comparison] Automatic Commit: ${{ steps.get_commit_info.outputs.commit_message }}"
+          branch: "main"
+          file_pattern: "patchright.patch"
+          skip_fetch: true

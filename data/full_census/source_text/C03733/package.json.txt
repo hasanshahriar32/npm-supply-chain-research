@@ -1,0 +1,39 @@
+{
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.25.0",
+  "scripts": {
+    "build": "pnpm -r run --if-present build",
+    "format": "pnpm dlx @biomejs/biome check --formatter-enabled=true --linter-enabled=false --fix . && scripts/add_license",
+    "format:check": "pnpm dlx @biomejs/biome ci --linter-enabled=false --formatter-enabled=true . && scripts/check_license",
+    "lint": "pnpm dlx @biomejs/biome lint --fix . && scripts/add_license",
+    "test": "pnpm -C js run test"
+  },
+  "dependencies": {
+    "handlebars": "^4.7.8",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
+    "@types/node": "^25.0.10",
+    "@typescript/native-preview": "7.0.0-dev.20260122.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@vscode/vsce-sign",
+      "esbuild",
+      "js",
+      "keytar",
+      "sharp",
+      "tree-sitter",
+      "tree-sitter-cli"
+    ],
+    "overrides": {
+      "rollup@>=4.0.0 <4.22.4": ">=4.22.4",
+      "cross-spawn@>=7.0.0 <7.0.5": ">=7.0.5"
+    }
+  }
+}

@@ -1,0 +1,107 @@
+name: Check & Release
+
+on:
+    push:
+        branches: [ master, next, renovate/** ]
+    pull_request:
+        branches: [ master, next ]
+
+jobs:
+    test:
+        name: Test
+        if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+        runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: [ 22, 24, 26 ]
+
+        steps:
+            -   uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+            -   name: Use Node.js ${{ matrix.node-version }}
+                uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+                with:
+                    node-version: ${{ matrix.node-version }}
+            -   name: Install pnpm and dependencies
+                uses: apify/actions/pnpm-install@v1.1.2
+            -   name: Run Tests
+                run: pnpm test
+
+    build:
+        name: Build
+        runs-on: ubuntu-latest
+
+        steps:
+            -   uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+            -   name: Use Node.js 24
+                uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+                with:
+                    node-version: 24
+            -   name: Install pnpm and dependencies
+                uses: apify/actions/pnpm-install@v1.1.2
+            -   run: pnpm build
+
+            -   name: Check build consistency
+                run: |
+                    git diff --exit-code || {
+                        echo -e "Some files changed after running pnpm build! Please build the project locally and commit the changes.";
+                        exit 1;
+                    }
+
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+
+        steps:
+            -   uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+            -   name: Use Node.js 24
+                uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+                with:
+                    node-version: 24
+            -   name: Install pnpm and dependencies
+                uses: apify/actions/pnpm-install@v1.1.2
+            -   run: pnpm lint
+
+    format-check:
+        name: Format check
+        runs-on: ubuntu-latest
+
+        steps:
+            -   uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+            -   name: Use Node.js 24
+                uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+                with:
+                    node-version: 24
+            -   name: Install pnpm and dependencies
+                uses: apify/actions/pnpm-install@v1.1.2
+            -   run: pnpm format:check
+
+    publish:
+        name: Publish to NPM
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/next'
+        needs: [ test, build, lint, format-check ]
+        runs-on: ubuntu-latest
+        steps:
+            -   uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+                with:
+                    fetch-depth: 0 # we need to pull everything to allow lerna to detect what packages changed
+            -   uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+                with:
+                    node-version: 24
+            -   name: Install pnpm and dependencies
+                uses: apify/actions/pnpm-install@v1.1.2
+            -   name: Check for changes
+                id: changed_packages
+                run: |
+                    echo "changed_packages=$(pnpm exec lerna changed -p | wc -l | xargs)" | tee -a $GITHUB_OUTPUT
+            -   name: Execute publish workflow
+                if: steps.changed_packages.outputs.changed_packages != '0'
+                uses: apify/actions/execute-workflow@v1.1.2
+                with:
+                    workflow: publish_to_npm.yaml
+                    inputs: >
+                        {
+                            "ref": "${{ github.ref_name }}",
+                            "prerelease": "${{ github.ref == 'refs/heads/next' }}"
+                        }

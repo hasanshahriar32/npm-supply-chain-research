@@ -1,0 +1,51 @@
+{
+  "name": "folder-hash",
+  "version": "5.0.0-dev",
+  "description": "Create a hash checksum over a folder and its content - its children and their content",
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs",
+    "./cli": "./cli.mjs"
+  },
+  "main": "index.mjs",
+  "bin": {
+    "folder-hash": "bin/folder-hash"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test",
+    "cover": "node --test --experimental-test-coverage --test-coverage-exclude=test/*.mjs",
+    "format": "prettier --write *.mjs examples/ test/"
+  },
+  "author": {
+    "name": "Marc Walter",
+    "email": "walter.marc@outlook.com"
+  },
+  "license": "MIT",
+  "files": [
+    "cli.js",
+    "index.js",
+    "bin",
+    "**/*.d.ts",
+    "**/*.d.ts.map"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/marc136/node-folder-hash.git"
+  },
+  "dependencies": {
+    "debug": "4.4.0",
+    "minimatch": "10.0.3"
+  },
+  "devDependencies": {
+    "@types/debug": "4.1.12",
+    "@types/node": "22.10.4",
+    "jsdoc": "4.0.4",
+    "memfs": "3.5.3",
+    "prettier": "3.6.2",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": "20 || >=22"
+  }
+}

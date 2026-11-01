@@ -1,0 +1,176 @@
+name: mlt-ffi - Release
+
+on:
+  push:
+    tags:
+      - 'rust-mlt-ffi-v*.*.*'
+  workflow_dispatch:
+
+permissions: { }
+
+jobs:
+  build-native:
+    name: Build mlt-ffi for ${{ matrix.classifier }}
+    permissions: { contents: read }
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            classifier: linux-x86_64
+            lib_name: libmlt_ffi.so
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            classifier: linux-x86_64-musl
+            lib_name: libmlt_ffi.so
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            classifier: linux-aarch64
+            lib_name: libmlt_ffi.so
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            classifier: linux-aarch64-musl
+            lib_name: libmlt_ffi.so
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            classifier: macos-aarch64
+            lib_name: libmlt_ffi.dylib
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            classifier: macos-x86_64
+            lib_name: libmlt_ffi.dylib
+          - os: ubuntu-latest
+            target: x86_64-unknown-freebsd
+            classifier: freebsd-x86_64
+            lib_name: libmlt_ffi.so
+          - os: ubuntu-latest
+            target: aarch64-unknown-freebsd
+            classifier: freebsd-aarch64
+            lib_name: libmlt_ffi.so
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            classifier: windows-x86_64
+            lib_name: mlt_ffi.dll
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            classifier: windows-aarch64
+            lib_name: mlt_ffi.dll
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: ./.github/actions/mlt-setup-rust
+        if: ${{ !contains(matrix.target, 'musl') }}
+      - name: Build mlt-ffi
+        if: ${{ !contains(matrix.target, 'musl') && !contains(matrix.target, 'freebsd') }}
+        working-directory: rust
+        # Panics already abort at the extern "C" boundary, so unwind tables are dead weight.
+        env:
+          RUSTFLAGS: -C strip=symbols -C panic=abort
+        run: |
+          rustup target add ${{ matrix.target }}
+          cargo build --release --target ${{ matrix.target }} -p mlt-ffi
+      # A static musl crt drops the cdylib, and only Alpine has a musl libgcc_s to link a dynamic one against.
+      - name: Build mlt-ffi on Alpine
+        if: contains(matrix.target, 'musl')
+        run: >-
+          docker run --rm -v "$PWD:/src" -w /src/rust
+          -e RUSTFLAGS='-C strip=symbols -C panic=abort -C target-feature=-crt-static'
+          rust:1-alpine
+          sh -c 'apk add musl-dev && cargo build --release --target ${{ matrix.target }} -p mlt-ffi'
+      - uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
+        if: contains(matrix.target, 'freebsd')
+        with: { tool: 'cross' }
+      # GitHub has no FreeBSD runners, and the cross image carries the FreeBSD sysroot and linker.
+      - name: Cross-compile mlt-ffi for FreeBSD
+        if: contains(matrix.target, 'freebsd')
+        working-directory: rust
+        env:
+          RUSTFLAGS: -C strip=symbols -C panic=abort
+          # cross 0.2.5 predates the aarch64 image, so it is pinned from cross's main.
+          CROSS_TARGET_AARCH64_UNKNOWN_FREEBSD_IMAGE: ghcr.io/cross-rs/aarch64-unknown-freebsd:main@sha256:317107ff710735ba2ab91d71185e32a5781870238aa93d9c2e0399b986668fb1
+        run: cross build --release --target ${{ matrix.target }} -p mlt-ffi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: native-${{ matrix.classifier }}
+          path: rust/target/${{ matrix.target }}/release/${{ matrix.lib_name }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish ${{ matrix.artifact }}
+    needs: build-native
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - project: kotlin
+            artifact: mlt-ffi-kotlin
+            java-version: '21'
+          - project: java
+            artifact: mlt-ffi-java
+            java-version: '25'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+
+      - name: Setup Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - uses: taiki-e/install-action@a4d3f3f761dcd95cce1b72cb61cb6d1963438177 # v2.87.30
+        with: { tool: 'just' }
+
+      - name: Get version from tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="$(just ci-extract-version rust-mlt-ffi "$REF_NAME")"
+          echo version="$version" >> "$GITHUB_ENV"
+
+      - name: Download all native artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v3.1.0-node20
+        with:
+          path: rust/mlt-ffi/generated/${{ matrix.project }}/build/natives
+
+      - name: Organize native libraries
+        run: |
+          cd rust/mlt-ffi/generated/${{ matrix.project }}/build/natives
+          for dir in native-*; do
+            classifier="${dir#native-}"
+            mkdir -p "$classifier"
+            mv "$dir"/* "$classifier"/
+            rmdir "$dir"
+          done
+          find . -type f
+
+      - name: Publish to Maven Central
+        working-directory: rust/mlt-ffi/generated/${{ matrix.project }}
+        env:
+          MLT_VERSION: ${{ env.version }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: ./gradlew publishToMavenCentral -Pversion="$MLT_VERSION"
+
+  release:
+    name: Create GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}

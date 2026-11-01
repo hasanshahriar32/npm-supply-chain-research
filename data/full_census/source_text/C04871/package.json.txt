@@ -1,0 +1,103 @@
+{
+  "name": "jest-fetch-mock",
+  "version": "4.2.0",
+  "description": "fetch mock for jest",
+  "main": "src/index.js",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.mjs",
+      "default": "./src/index.js"
+    },
+    "./factory": {
+      "types": "./types/factory.d.ts",
+      "import": "./src/factory.mjs",
+      "default": "./src/factory.js"
+    },
+    "./setup": "./src/setup.js",
+    "./package.json": "./package.json",
+    "./*": "./*"
+  },
+  "scripts": {
+    "test": "jest && yarn tsc && yarn lint",
+    "test:unit": "jest",
+    "lint": "eslint .",
+    "tsc": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jefflau/jest-fetch-mock.git"
+  },
+  "keywords": [
+    "jest",
+    "mock",
+    "fetch"
+  ],
+  "author": "Jeff Lau <jeff-lau@live.com> (http://jefflau.net/)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "bugs": {
+    "url": "https://github.com/jefflau/jest-fetch-mock/issues"
+  },
+  "homepage": "https://github.com/jefflau/jest-fetch-mock#readme",
+  "dependencies": {
+    "cross-fetch": "^3.1.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.0.0",
+    "eslint": "^10.0.0",
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0",
+    "prettier": "^3.2.5",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.63.0"
+  },
+  "prettier": {
+    "semi": false,
+    "arrowParens": "always",
+    "editor.formatOnSave": true,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "overrides": [
+      {
+        "files": "**/*.ts",
+        "options": {
+          "semi": true,
+          "tabWidth": 4,
+          "singleQuote": false,
+          "printWidth": 125
+        }
+      }
+    ]
+  },
+  "jest": {
+    "automock": false,
+    "testPathIgnorePatterns": [
+      "types",
+      "integration"
+    ],
+    "setupFiles": [
+      "./setupJest.js"
+    ],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "src/**/*.js"
+    ],
+    "coverageReporters": [
+      "text-summary"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 97,
+        "branches": 94,
+        "functions": 100,
+        "lines": 97
+      }
+    }
+  }
+}

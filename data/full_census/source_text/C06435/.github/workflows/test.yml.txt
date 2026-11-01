@@ -1,0 +1,14 @@
+name: test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - renovate/**
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/test

@@ -1,0 +1,79 @@
+{
+  "name": "smithy-typescript",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Smithy TypeScript packages",
+  "license": "UNLICENSED",
+  "author": "AWS Smithy Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smithy-lang/smithy-typescript/tree/main"
+  },
+  "workspaces": [
+    "packages/*",
+    "private/*"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "clean": "turbo run clean --force --parallel",
+    "build": "make build-packages",
+    "build:release": "turbo run build build:types:downlevel",
+    "test": "make test-unit",
+    "test:integration": "yarn build-test-packages && make test-integration",
+    "test:protocols": "make generate-protocol-tests test-protocols benchmark",
+    "lint": "make lint",
+    "lint-fix": "make lint",
+    "lint:pkgJson": "yarn lint:dependencies",
+    "lint:dependencies": "node scripts/check-dependencies.js",
+    "lint:versions": "node scripts/runtime-dep-version-check.js",
+    "lint:api": "node scripts/validation/api-snapshot.js",
+    "format": "make format",
+    "extract:docs": "mkdir -p api-extractor-packages && turbo run extract:docs",
+    "release": "yarn changeset publish",
+    "build-test-packages": "./gradlew clean build && node ./scripts/build-generated-test-packages",
+    "g:tsc": "cd $INIT_CWD && tsc",
+    "g:vitest": "cd $INIT_CWD && vitest"
+  },
+  "dependencies": {
+    "@changesets/cli": "^3.0.0",
+    "glob": "^7.1.6",
+    "premove": "4.0.0"
+  },
+  "devDependencies": {
+    "@aws-crypto/crc32": "5.2.0",
+    "@aws-crypto/sha256-js": "5.2.0",
+    "@aws-sdk/core": "3.977.0",
+    "@microsoft/api-extractor": "7.52.7",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@types/jsdom": "20.0.1",
+    "@types/node": "^18.11.9",
+    "esbuild": "^0.25.9",
+    "fast-check": "3.22.0",
+    "get-port": "^7.1.0",
+    "happy-dom": "21.0.4",
+    "husky": "^4.2.3",
+    "oxc-parser": "^0.139.0",
+    "oxc-transform": "^0.139.0",
+    "oxfmt": "0.58.0",
+    "oxlint": "1.73.0",
+    "puppeteer": "^19.2.0",
+    "rollup": "^4.59.0",
+    "tsx": "^4.21.0",
+    "turbo": "2.9.14",
+    "typescript": "~7.0.2",
+    "typescript-6": "npm:typescript@~6.0.3",
+    "vite": "^7.1.11",
+    "vitest": "^3.2.4",
+    "webpack": "^5.104.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "overrides": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn lint:dependencies && yarn lint:versions"
+    }
+  },
+  "packageManager": "yarn@4.17.1"
+}

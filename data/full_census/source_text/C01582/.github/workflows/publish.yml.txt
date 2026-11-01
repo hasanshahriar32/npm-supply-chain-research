@@ -1,0 +1,37 @@
+name: publish to npmjs
+on:
+  release:
+    types: [prereleased, released]
+jobs:
+  build-and-publish:
+    # prevents this action from running on forks
+    # only allow listed user to publish
+    if: |
+      github.repository == 'chimurai/http-proxy-middleware' &&
+      github.triggering_actor == 'chimurai'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Required for OIDC
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
+      # Ensure npm 11.5.1 or later is installed
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Publish to NPM (beta)
+        if: 'github.event.release.prerelease'
+        run: npm stage publish --access public --tag beta
+
+      - name: Publish to NPM (stable)
+        if: '!github.event.release.prerelease'
+        run: npm stage publish --access public

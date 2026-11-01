@@ -1,0 +1,37 @@
+name: Check Markdown links
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * *'
+  pull_request:
+    paths:
+      - '**/*.md'
+      - 'markdown_link_check_config.json'
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-yarn-cache-ubuntu:
+    uses: ./.github/workflows/prepare-cache.yml
+    with:
+      os: ubuntu-latest
+
+  markdown-link-check:
+    needs: prepare-yarn-cache-ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: yarn
+      - name: install
+        run: yarn
+      - name: Run markdown-link-check on MD files
+        run:
+          find . -name "*.md" | grep -v node_modules | grep -v CHANGELOG.md |
+          xargs -n 1 yarn markdown-link-check -c markdown_link_check_config.json

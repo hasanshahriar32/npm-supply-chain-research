@@ -1,0 +1,51 @@
+{
+  "name": "vscode-textmate",
+  "version": "9.3.2",
+  "description": "VSCode TextMate grammar helpers",
+  "author": {
+    "name": "Microsoft Corporation"
+  },
+  "main": "./release/main.js",
+  "typings": "./types/vscode-textmate.d.ts",
+  "files": [
+    "release/**/*.js",
+    "!release/tests/**/*.js",
+    "types/vscode-textmate.d.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/vscode-textmate"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/microsoft/vscode-textmate/issues"
+  },
+  "scripts": {
+    "watch": "tsc --watch",
+    "compile": "tsc",
+    "test": "vitest run",
+    "benchmark": "node benchmark/benchmark.js",
+    "inspect": "node out/tests/inspect.js",
+    "tmconvert": "node scripts/tmconvert.js",
+    "version": "npm run compile && npm run test",
+    "postversion": "git push && git push --tags",
+    "prepublishOnly": "tsc && webpack --progress && npm run api-extractor",
+    "bundle": "webpack && npm run api-extractor",
+    "api-extractor": "mkdirp etc && npx api-extractor run --local"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "^7.48.0",
+    "@types/node": "^20.0.0",
+    "copy-webpack-plugin": "^9.1.0",
+    "mkdirp": "^3.0.1",
+    "typescript": "^5.5.0",
+    "vitest": "^4.0.18",
+    "vscode-oniguruma": "^1.5.1",
+    "webpack": "^5.50.0",
+    "webpack-cli": "^4.8.0"
+  },
+  "overrides": {
+    "serialize-javascript": ">=7.0.5",
+    "minimatch@>=10.0.0 <10.2.3": "10.2.3"
+  }
+}

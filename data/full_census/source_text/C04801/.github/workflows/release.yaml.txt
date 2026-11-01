@@ -1,0 +1,225 @@
+name: release
+
+# Stages the packages on `main` to npm; a maintainer approves each staged
+# version with 2FA before it goes live. Only `main` is staged: a GitHub
+# Release must be tagged on a commit on `main`, and a manual run from any
+# other branch is a dry run. Those checks only bind copies of this file that
+# contain them; the `release` environment's deployment-branch rule is what
+# keeps an older copy on another branch from staging. The v5 line is staged
+# by its own workflow, release-v5.yaml, run from the `v5` branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — compute and print the publish plan without publishing"
+        type: boolean
+        default: true
+  release:
+    types: [published]
+
+# Never run two releases at once; let an in-flight stage finish rather than
+# cancelling it half-way through the package set. `queue: max` keeps every
+# queued release pending in FIFO order (up to 100) instead of GitHub's default
+# of a single pending run, where a newly queued release silently cancels the
+# one already waiting.
+concurrency:
+  group: release
+  cancel-in-progress: false
+  queue: max
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Dependencies
+        run: sfw pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+  aikido-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: aikido-gate
+    permissions:
+      contents: read
+    steps:
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install Aikido CI client
+        # zizmor: ignore[adhoc-packages] pinned Aikido CI client for the release gate
+        run: sfw npm install --global @aikidosec/ci-api-client@1.0.17
+
+      # Fails on new SAST/IaC/secrets findings. The API key comes from Aikido's
+      # Continuous Integration settings — it grants no publish authority.
+      - name: Run Aikido release scan
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          AIKIDO_CLIENT_API_KEY: ${{ secrets.AIKIDO_CLIENT_API_KEY }}
+        run: >
+          aikido-api-client scan-release
+          "$REPO_NAME" "$GITHUB_SHA"
+          --apikey "$AIKIDO_CLIENT_API_KEY"
+          --fail-on-sast-scan --fail-on-iac-scan --fail-on-secrets-scan
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    name: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Start Services
+        run: pnpm test:services:start
+
+      - name: Install Dependencies
+        run: sfw pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test Packages
+        run: pnpm test
+
+  publish:
+    needs: [build, test, aikido-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: publish
+    environment: release
+    # OIDC trusted publishing: GitHub mints a short-lived OIDC token that pnpm
+    # exchanges with npm for a one-time stage credential. No NPM_TOKEN needed.
+    # The trusted publisher must be configured stage-only on npmjs.com.
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      # Provenance is generated automatically when staging via OIDC; setting
+      # this makes it explicit and fails closed if OIDC ever isn't available.
+      # release-publish.ts also passes --provenance on every stage publish, and
+      # the "Verify release-tag logic" step fails the release if that flag is
+      # ever removed from the script.
+      NPM_CONFIG_PROVENANCE: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history so the release-tag guard below can check ancestry.
+          fetch-depth: 0
+
+      # A GitHub Release runs the copy of this file at the tagged commit, so
+      # refuse a tag whose commit is not on main: a tag cut from any other
+      # branch can never reach npm's stage queue from here.
+      - name: Verify the release tag is on main
+        if: github.event_name == 'release'
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          if git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
+            echo "Release $RELEASE_TAG ($RELEASE_SHA) is on main."
+          else
+            echo "::error::Release $RELEASE_TAG points at $RELEASE_SHA, which is not on the main branch. Refusing to stage."
+            exit 1
+          fi
+
+      - name: Install Socket Firewall
+        uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+          firewall-version: "1.15.1"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      # No `registry-url`: it writes an .npmrc whose `_authToken=${NODE_AUTH_TOKEN}`
+      # is never set here. Staging authenticates with OIDC only, and `npm view`
+      # reads the public registry without a token.
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Dependencies
+        run: sfw pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Verify the dist-tag logic before any stage publish runs.
+      - name: Verify release-tag logic
+        run: pnpm test:scripts
+
+      # Computes the dist-tag from the released version (pre-release -> beta;
+      # stable current major -> latest; stable old major -> v{major}-lts),
+      # skips versions already on the registry, guards `latest` from moving
+      # backwards, then packs and stages each package under that tag.
+      # Uses OIDC only — no token.
+      - name: Stage publish (compute dist-tag, skip unchanged, guard latest)
+        env:
+          # The major that owns npm's `latest`. Bump it in the release PR for the
+          # first stable release of a new major; a stable release of any other
+          # major is staged under v{major}-lts and never moves `latest`.
+          LATEST_MAJOR: 6
+          # Stages for real on a `release` event (its tag was verified above)
+          # or a manual run from main with Dry run unchecked. A manual run from
+          # any other branch is always a dry run.
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run || github.ref != 'refs/heads/main') }}
+        run: pnpm tsx scripts/release-publish.ts

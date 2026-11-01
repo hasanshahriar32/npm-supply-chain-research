@@ -1,0 +1,89 @@
+name: Test PEM module
+on:
+  push:
+    branches:
+      - '*'
+    pull_request:
+      - '*'
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TARGET: x86_64-unknown-linux-gnu
+  DEBUG: true
+jobs:
+  build:
+    name: Build and Test PEM
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20]
+        library:
+          - name: openssl
+            version: 0.9.8zh
+          - name: openssl
+            version: 1.0.1u
+          - name: openssl
+            version: 1.0.2u
+          - name: openssl
+            version: 1.1.0l
+          - name: openssl
+            version: 1.1.1l
+          - name: openssl
+            version: 3.0.8
+          - name: openssl
+            version: 3.1.0
+          - name: libressl
+            version: 2.4.5
+          - name: libressl
+            version: 2.5.5
+          - name: libressl
+            version: 2.6.5
+          - name: libressl
+            version: 2.7.5
+          - name: libressl
+            version: 2.8.3
+          - name: libressl
+            version: 2.9.2
+          - name: libressl
+            version: 3.0.2
+          - name: libressl
+            version: 3.1.5
+          - name: libressl
+            version: 3.2.7
+          - name: libressl
+            version: 3.3.5
+          - name: libressl
+            version: 3.4.2
+    steps:
+    - uses: actions/checkout@v4
+    - run: |
+        sudo apt-get install -y haveged ca-certificates
+        sudo haveged -w 2048
+        mkdir -p openssl
+    - name: Compile ${{ matrix.library.name }} ${{ matrix.library.version }}
+      shell: bash
+      run: |
+        set +e
+        set -x
+        echo $PWD
+        openssl version
+        ./bin/build-openssl.sh
+      env:
+        LIBRARY: ${{ matrix.library.name }}
+        VERSION: ${{ matrix.library.version }}
+    - name: Use Node.js ${{ matrix.node }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node }}
+        cache: yarn
+    - name: Run Tests
+      shell: bash
+      run: |
+        yarn install
+        yarn run test
+      env:
+        LIBRARY: ${{ matrix.library.name }}
+        VERSION: ${{ matrix.library.version }}

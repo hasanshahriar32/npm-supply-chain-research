@@ -1,0 +1,755 @@
+name: release
+run-name: release
+
+on:
+  push:
+    # NOTE: pushes from CI without a PAT will not trigger the tags below
+    tags:
+      - "jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "bare-jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "bare-jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "jco-node-fs-v[0-9]+.[0-9]+.[0-9]+*"
+      - "jco-node-fs-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "jco-transpile-v[0-9]+.[0-9]+.[0-9]+*"
+      - "jco-transpile-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "jco-cm-runtime-v[0-9]+.[0-9]+.[0-9]+*"
+      - "jco-cm-runtime-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "jco-std-v[0-9]+.[0-9]+.[0-9]+*"
+      - "jco-std-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "preview2-shim-v[0-9]+.[0-9]+.[0-9]+*"
+      - "preview2-shim-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "preview3-shim-v[0-9]+.[0-9]+.[0-9]+*"
+      - "preview3-shim-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "rolldown-plugin-jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "rolldown-plugin-jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "js-component-bindgen-v[0-9]+.[0-9]+.[0-9]+*"
+      - "js-component-bindgen-v[0-9]+.[0-9]+.[0-9]+-*"
+    branches:
+      - "prep-release-jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-bare-jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-bare-jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-jco-node-fs-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-jco-node-fs-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-jco-transpile-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-jco-transpile-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-jco-cm-runtime-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-jco-cm-runtime-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-jco-std-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-jco-std-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-preview2-shim-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-preview2-shim-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-preview3-shim-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-preview3-shim-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-rolldown-plugin-jco-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-rolldown-plugin-jco-v[0-9]+.[0-9]+.[0-9]+-*"
+      - "prep-release-js-component-bindgen-v[0-9]+.[0-9]+.[0-9]+*"
+      - "prep-release-js-component-bindgen-v[0-9]+.[0-9]+.[0-9]+-*"
+
+  workflow_dispatch:
+    inputs:
+      project:
+        type: choice
+        required: true
+        default: "jco"
+        options:
+          - jco
+          - bare-jco
+          - jco-node-fs
+          - jco-transpile
+          - jco-cm-runtime
+          - jco-std
+          - js-component-bindgen
+          - preview2-shim
+          - preview3-shim
+          - rolldown-plugin-jco
+        description: |
+          Project to tag for release (ex. `0.1.0`)
+
+      version:
+        type: string
+        required: true
+        description: |
+          Version tag to release (e.x. `0.1.0`, `0.2.0`)
+
+permissions:
+  contents: none
+
+jobs:
+  meta:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      project: ${{ steps.meta.outputs.project }}
+      project-dir: ${{ steps.project-meta.outputs.project-dir }}
+      project-package-name: ${{ steps.project-meta.outputs.project-package-name }}
+      is-js-project: ${{ steps.project-meta.outputs.is-js-project }}
+      is-napi-project: ${{ steps.project-meta.outputs.is-napi-project }}
+      is-rust-project: ${{ steps.project-meta.outputs.is-rust-project }}
+      artifacts-glob: ${{ steps.project-meta.outputs.artifacts-glob }}
+      artifact-name: ${{ steps.project-meta.outputs.artifact-name }}
+      next-release-tag: ${{ steps.project-meta.outputs.next-release-tag }}
+      is-prerelease: ${{ steps.project-meta.outputs.is-prerelease }}
+      prerelease-tag: ${{ steps.project-meta.outputs.prerelease-tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: install cargo-get
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: cargo-get
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ">=22"
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: Install debug packages
+        run: |
+          pnpm install -D
+
+      - name: Collect metadata
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: meta
+        with:
+          script: |
+            if (context.payload.inputs?.project && context.payload.inputs?.version) {
+              core.setOutput('project', context.payload.inputs.project);
+              core.setOutput('version', context.payload.inputs.version);
+              return;
+            }
+
+            if (context.ref.startsWith('refs/tags/')) {
+              match = context.ref.replace('refs/tags/', '').match(/^(.*)-v([^\s]+)$/);
+            } else if (context.ref.startsWith('refs/heads/')) {
+              match = context.ref.replace('refs/heads/', '').match(/^prep-release-(.+)-v([^\s]+)$/);
+             } else {
+               throw new Error(`Unexpected context ref [${context.ref}]`);
+             }
+             if (!match) { throw new Error(`Failed to parse tag/branch: [${context.ref}]`); }
+             const [_, project, version] = match;
+             core.setOutput('project', project);
+             core.setOutput('version', version);
+
+      - name: Gather project metadata
+        id: project-meta
+        env:
+          NEXT_VERSION: ${{ steps.meta.outputs.version }}
+          PROJECT: ${{ steps.meta.outputs.project }}
+        shell: bash
+        run: |
+          if [[ "$NEXT_VERSION" == v* ]]; then
+            echo "::error::next version [$NEXT_VERSION] starts with 'v' -- enter only the semver version (ex. '0.1.0', not 'v0.1.0')";
+            exit 1;
+          fi
+
+          case "$PROJECT" in
+            jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/jco/bytecodealliance-jco-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-$NEXT_VERSION.tgz";
+              ;;
+            bare-jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/bare-jco/bytecodealliance-jco-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-$NEXT_VERSION.tgz";
+              ;;
+            jco-node-fs)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_NAPI_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/jco-node-fs/release/*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-node-fs-$NEXT_VERSION.tgz";
+              ;;
+            jco-transpile)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/jco-transpile/bytecodealliance-jco-transpile-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-transpile-$NEXT_VERSION.tgz";
+              ;;
+            jco-cm-runtime)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/jco-cm-runtime/bytecodealliance-jco-cm-runtime-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-cm-runtime-$NEXT_VERSION.tgz";
+              ;;
+            jco-std)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/jco-std/bytecodealliance-jco-std-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-jco-std-$NEXT_VERSION.tgz";
+              ;;
+            preview2-shim)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/preview2-shim/bytecodealliance-preview2-shim-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-preview2-shim-$NEXT_VERSION.tgz";
+              ;;
+            preview3-shim)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/$PROJECT";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/preview3-shim/bytecodealliance-preview3-shim-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-preview3-shim-$NEXT_VERSION.tgz";
+              ;;
+            rolldown-plugin-jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              export PROJECT_PACKAGE_NAME="@bytecodealliance/rolldown-plugin-jco";
+              CURRENT_VERSION=$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)");
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              export ARTIFACTS_GLOB="packages/rolldown-plugin-jco/bytecodealliance-rolldown-plugin-jco-*.tgz";
+              export ARTIFACT_NAME="bytecodealliance-rolldown-plugin-jco-$NEXT_VERSION.tgz";
+              ;;
+            js-component-bindgen)
+              export PROJECT_DIR="$PWD/crates/$PROJECT";
+              export PROJECT_PACKAGE_NAME="$PROJECT";
+              CURRENT_VERSION=$(cargo get package.version --terminator Nul --entry="$PROJECT_DIR");
+              export CURRENT_VERSION;
+              export IS_RUST_PROJECT=true;
+              export ARTIFACTS_GLOB="target/package/js-component-bindgen-*.crate";
+              export ARTIFACT_NAME="js-component-bindgen-$NEXT_VERSION.crate";
+              ;;
+            *)
+              echo "unexpected project type";
+              exit 1;
+          esac
+
+          {
+              echo -e "project-dir=$PROJECT_DIR";
+              echo -e "project-package-name=$PROJECT_PACKAGE_NAME";
+              echo -e "is-rust-project=$IS_RUST_PROJECT";
+              echo -e "is-js-project=$IS_JS_PROJECT";
+              echo -e "is-napi-project=$IS_NAPI_PROJECT";
+              echo -e "artifacts-glob=$ARTIFACTS_GLOB";
+              echo -e "artifact-name=$ARTIFACT_NAME";
+              echo -e "next-release-tag=${PROJECT}-v${NEXT_VERSION}";
+          } >> "$GITHUB_OUTPUT";
+
+          IS_PRERELEASE="$(node scripts/semver-is-prerelease.mjs "$NEXT_VERSION")";
+          export IS_PRERELEASE;
+          echo -e "is-prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT";
+
+          PRERELEASE_TAG="$(node scripts/semver-get-prerelease.mjs "$NEXT_VERSION")";
+          export PRERELEASE_TAG;
+          echo -e "prerelease-tag=$PRERELEASE_TAG" >> "$GITHUB_OUTPUT";
+
+  pack-crate-release:
+    if: ${{ needs.meta.outputs.is-rust-project == 'true' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+    permissions:
+      actions: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Release crate (dry run)
+        working-directory: ${{ needs.meta.outputs.project-dir }}
+        run: |
+          cargo publish --locked --dry-run
+
+      - name: Create release package
+        working-directory: ${{ needs.meta.outputs.project-dir }}
+        run: |
+          cargo package
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ needs.meta.outputs.artifacts-glob }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          if-no-files-found: error
+          name: ${{ needs.meta.outputs.project }}
+          path: |
+            ${{ needs.meta.outputs.artifacts-glob }}
+
+  build-napi-release:
+    if: ${{ needs.meta.outputs.is-napi-project == 'true' }}
+    needs:
+      - meta
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            build-arg: ""
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build-arg: ""
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build-arg: ""
+          - host: windows-latest
+            target: aarch64-pc-windows-msvc
+            build-arg: ""
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build-arg: ""
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            build-arg: "--use-napi-cross"
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            build-arg: "--cross-compile"
+            zig: true
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            build-arg: "--cross-compile"
+            zig: true
+    name: Build jco-node-fs
+    runs-on: ${{ matrix.settings.host }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: Install Rust target
+        env:
+          TARGET: ${{ matrix.settings.target }}
+        shell: bash
+        run: |
+          rustup update stable --no-self-update
+          rustup target add "$TARGET"
+
+      - name: Install Zig
+        if: ${{ matrix.settings.zig }}
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+        with:
+          version: 0.15.2
+          use-cache: false
+
+      - name: Install node modules
+        run: pnpm install --frozen-lockfile
+
+      - name: Build native filesystem helper
+        env:
+          BUILD_ARG: ${{ matrix.settings.build-arg }}
+          TARGET: ${{ matrix.settings.target }}
+        shell: bash
+        run: |
+          EXTRA_ARGS=()
+          if [[ -n "$BUILD_ARG" ]]; then
+            EXTRA_ARGS+=("$BUILD_ARG")
+          fi
+          pnpm --filter '@bytecodealliance/jco-node-fs' exec napi build --platform --release --target "$TARGET" "${EXTRA_ARGS[@]}"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          if-no-files-found: error
+          name: bindings-${{ matrix.settings.target }}
+          path: packages/jco-node-fs/jco-node-fs.*.node
+
+  pack-napi-release:
+    if: ${{ needs.meta.outputs.is-napi-project == 'true' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+      - build-napi-release
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: Install node modules
+        run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bindings-*
+          path: packages/jco-node-fs/artifacts
+          merge-multiple: true
+
+      - name: Assemble and pack native release packages
+        env:
+          PROJECT_DIR: ${{ needs.meta.outputs.project-dir }}
+        run: node scripts/pack-napi-release.mjs "$PROJECT_DIR"
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ needs.meta.outputs.artifacts-glob }}
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          if-no-files-found: error
+          name: ${{ needs.meta.outputs.project }}
+          path: ${{ needs.meta.outputs.artifacts-glob }}
+
+  pack-npm-release:
+    if: ${{ needs.meta.outputs.is-js-project == 'true' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # NOTE: we must use a node version new-enough to have --experimental-wasm-jspi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ">=22"
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: Install NPM packages
+        run: |
+          pnpm install
+
+      - name: Create release package
+        working-directory: ${{ needs.meta.outputs.project-dir }}
+        env:
+          PROJECT_PACKAGE_NAME: ${{ needs.meta.outputs.project-package-name }}
+        run: |
+          pnpm --filter "$PROJECT_PACKAGE_NAME" pack
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          if-no-files-found: error
+          name: ${{ needs.meta.outputs.project }}
+          path: |
+            ${{ needs.meta.outputs.artifacts-glob }}
+
+  test-crate-release:
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+      - pack-crate-release
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: gh-artifacts
+
+      - name: Test built crates.io crate
+        if: ${{ needs.meta.outputs.project == 'js-component-bindgen' }}
+        env:
+          PROJECT: ${{ needs.meta.outputs.project }}
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+        shell: bash
+        run: |
+          mkdir -p "/tmp/$PROJECT"
+          cp -r gh-artifacts/* "/tmp/$PROJECT/"
+          cd "/tmp/$PROJECT"
+          tar --strip-components=1 -xvf "$ARTIFACT_NAME"
+          rm Cargo.toml.orig
+
+          cargo build
+
+  test-npm-release:
+    if: ${{ always() && needs.meta.result == 'success' && (needs.pack-npm-release.result == 'success' || needs.pack-napi-release.result == 'success') }}
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+      - pack-npm-release
+      - pack-napi-release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.meta.outputs.project }}
+          path: gh-artifacts
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ">=22"
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      # TODO: jco-transpile packed into a tgz *should* be ~2.1MB, but it's
+      # 4MB in CI
+      - name: Test jco-transpile package size
+        if: ${{ needs.meta.outputs.project == 'jco-transpile' }}
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          GH_WORKSPACE: ${{ github.workspace }}
+        run: |
+          export FILE="$GH_WORKSPACE/gh-artifacts/$ARTIFACT_NAME";
+          SIZE=$(wc -c < "$FILE");
+          MAX_SIZE=$((5 * 1024 * 1024));
+          echo -e "jco-transpile package size ${SIZE} bytes";
+          if (( SIZE > MAX_SIZE )); then
+              echo "::error:: next jco-transpile NPM package artifacts should less than 5MB";
+              exit 1;
+          fi
+
+      - name: Test built jco NPM package
+        if: ${{ needs.meta.outputs.project == 'jco' }}
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          GH_WORKSPACE: ${{ github.workspace }}
+        run: |
+          export PACKAGE_DIR="$GH_WORKSPACE/gh-artifacts/$ARTIFACT_NAME"
+          cp -r examples/components/http-hello-world /tmp/test
+          cd /tmp/test
+          pnpm install --save "$PACKAGE_DIR"
+          pnpm run all
+
+      - name: Test built jco-transpile NPM package
+        if: ${{ needs.meta.outputs.project == 'jco-transpile' }}
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          GH_WORKSPACE: ${{ github.workspace }}
+        run: |
+          export PACKAGE_DIR="$GH_WORKSPACE/gh-artifacts/$ARTIFACT_NAME"
+          cp -r examples/transpile/adder /tmp/test
+          cd /tmp/test
+          pnpm install --save "$PACKAGE_DIR"
+          pnpm run all
+
+      - name: Test built Component Model runtime NPM package
+        if: ${{ needs.meta.outputs.project == 'jco-cm-runtime' }}
+        shell: bash
+        env:
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          GH_WORKSPACE: ${{ github.workspace }}
+        run: |
+          export PACKAGE_PATH="$GH_WORKSPACE/gh-artifacts/$ARTIFACT_NAME"
+          mkdir -p /tmp/test-jco-cm-runtime
+          cd /tmp/test-jco-cm-runtime
+          echo '{"private":true,"type":"module"}' > package.json
+          pnpm install "$PACKAGE_PATH"
+          cp "$GH_WORKSPACE/scripts/test-jco-cm-runtime-release.mjs" ./smoke.mjs
+          cp -r "$GH_WORKSPACE/scripts/cm-runtime-conformance" ./cm-runtime-conformance
+          node smoke.mjs
+
+      - name: Test built jco-node-fs NPM package
+        if: ${{ needs.meta.outputs.project == 'jco-node-fs' }}
+        env:
+          ARTIFACT_DIR: ${{ github.workspace }}/gh-artifacts
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: node scripts/test-jco-node-fs-release.mjs
+
+  crate-publish:
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+      - test-crate-release
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.meta.outputs.project }}
+          path: gh-artifacts
+
+      - uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+        id: auth
+
+      - name: Publish ${{ needs.meta.outputs.project }} to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+          PROJECT: ${{ needs.meta.outputs.project }}
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          GH_REF_TYPE: ${{ github.ref_type }}
+        run: |
+          export OPT_DRY_RUN="--dry-run"
+          if [ "tag" == "$GH_REF_TYPE" ]; then
+            export OPT_DRY_RUN="";
+          fi
+
+          mkdir -p "/tmp/$PROJECT"
+          cp -r gh-artifacts/* "/tmp/$PROJECT/"
+          cd "/tmp/$PROJECT"
+          tar --strip-components=1 -xvf "$ARTIFACT_NAME"
+          rm Cargo.toml.orig
+
+          cargo publish $OPT_DRY_RUN
+
+  npm-publish:
+    # test-npm-release deliberately runs after either pack-npm-release or
+    # pack-napi-release succeeds. Override the implicit success() check here so
+    # the skipped, inapplicable pack job does not propagate and skip publishing.
+    if: ${{ !cancelled() && needs.meta.result == 'success' && needs.test-npm-release.result == 'success' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - meta
+      - test-npm-release
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      # NOTE: We need to checkout to pull npmrc
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ">=22"
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.meta.outputs.project }}
+          path: gh-artifacts
+
+      - name: Publish ${{ needs.meta.outputs.project }} to NPM
+        env:
+          PROJECT: ${{ needs.meta.outputs.project }}
+          ARTIFACT_DIR: ${{ github.workspace }}/gh-artifacts
+          ARTIFACT_NAME: ${{ needs.meta.outputs.artifact-name }}
+          IS_PRERELEASE: ${{ needs.meta.outputs.is-prerelease }}
+          PRERELEASE_TAG: ${{ needs.meta.outputs.prerelease-tag }}
+          GH_REF_TYPE: ${{ github.ref_type }}
+        run: node scripts/publish-npm-release.mjs
+
+  create-gh-release:
+    runs-on: ubuntu-24.04
+    if: ${{ !cancelled() && needs.meta.result == 'success' && (needs.npm-publish.result == 'success' || needs.crate-publish.result == 'success') }}
+    needs:
+      - meta
+      - test-crate-release
+      - test-npm-release
+      - npm-publish
+      - crate-publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: install git-cliff
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: git-cliff
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ needs.meta.outputs.project }}
+          path: gh-artifacts
+
+      - name: extract latest changelog section
+        env:
+          OUTPUT_PATH: ${{ needs.meta.outputs.project-dir }}/CHANGELOG.latest
+          CHANGELOG_PATH: ${{ needs.meta.outputs.project-dir }}/CHANGELOG.md
+        run: |
+          node scripts/extract-latest-changelog-section.mjs
+
+      - name: Create GH release
+        if: ${{ github.ref_type == 'tag' }}
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          token: ${{ secrets.RELEASE_PAT || github.token }}
+          prerelease: ${{ needs.meta.outputs.is-prerelease == 'true' }}
+          tag_name: ${{ needs.meta.outputs.next-release-tag }}
+          generate_release_notes: false
+          body_path: ${{ needs.meta.outputs.project-dir }}/CHANGELOG.latest
+          make_latest: ${{ needs.meta.outputs.project == 'jco' && github.ref_type == 'tag' && needs.meta.outputs.is-prerelease == 'false' }}
+          files: |
+            ./gh-artifacts/*
+
+      - name: Install NPM packages
+        run: |
+          # NOTE: `pnpm install -D` skips both regular and optional transitive,
+          # which are needed by the git-cliff NPM package
+          pnpm install --frozen-lockfile
+
+      - name: Update related PRs with release note
+        continue-on-error: true
+        if: ${{ github.repository_owner == 'bytecodealliance' && github.ref_type == 'tag' }}
+        env:
+          IS_PRE_RELEASE: ${{ needs.meta.outputs.is-prerelease }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT || github.token }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.repository }}
+          PRE_RELEASE_TAG_PATTERN: "^${{ needs.meta.outputs.project }}-v[0-9]+.[0-9]+.[0-9]+(-beta|-rc|-alpha)?"
+          DEFAULT_TAG_PATTERN: "^${{ needs.meta.outputs.project }}-v[0-9]+.[0-9]+.[0-9]+$"
+          GIT_CLIFF_CONFIG_PATH: ${{ needs.meta.outputs.project-dir }}/cliff.toml
+          GIT_CLIFF_REPOSITORY: ${{ github.workspace }}/.git
+          GIT_CLIFF_RELEASE_TAG: ${{ needs.meta.outputs.next-release-tag }}
+        run: |
+          export GIT_CLIFF_TAG_PATTERN=$DEFAULT_TAG_PATTERN;
+          if [ "true" == "$IS_PRE_RELEASE" ]; then
+            export GIT_CLIFF_TAG_PATTERN=$PRE_RELEASE_TAG_PATTERN;
+          fi
+
+          node scripts/post-release-issue-update.mjs

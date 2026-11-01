@@ -1,0 +1,137 @@
+name: Release Please
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Publish dev prerelease of {0}', inputs.branch) || '' }}
+
+on:
+  push:
+    branches:
+      - main
+  # Manual dev prereleases live in this workflow (rather than a separate file)
+  # because npm allows a single trusted publisher per package, and it is
+  # pinned to this filename. The branch to publish is an input instead of the
+  # run ref: the "NPM Trusted Publishing" environment only permits runs on
+  # main, and this way the branch does not need to contain this workflow.
+  # Anyone with write access can dispatch this; what stops an unreviewed
+  # publish is the required reviewers on the environment.
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to publish a dev prerelease from'
+        required: true
+        type: string
+      suffix:
+        description: 'Prerelease suffix (defaults to the sanitized branch name)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    name: Run release-please
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      id-token: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      sha: ${{ steps.rp.outputs.sha }}
+      version: ${{ steps.rp.outputs.version }}
+    steps:
+      - id: get-github-app-token
+        uses: grafana/shared-workflows/actions/create-github-app-token@5bbb526b1728ca57fbe1750c4c27ab6ab06171c2 # create-github-app-token/v1.0.0
+        with:
+          github_app: pyroscope-development-app
+
+      - id: rp
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+        with:
+          token: ${{ steps.get-github-app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          skip-github-pull-request: >-
+            ${{ contains(github.event.head_commit.message, 'chore(main): release ') }}
+
+  publish:
+    name: Publish npm package
+    needs: release-please
+    runs-on: ubuntu-latest
+    if: needs.release-please.outputs.release_created == 'true'
+    environment: 'NPM Trusted Publishing'
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release-please.outputs.sha }}
+          persist-credentials: 'false'
+      - name: Setup .npmrc file to publish to npm
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.12.1'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Enable corepack
+        run: corepack enable
+      - name: Install modules
+        run: yarn
+      - name: Build
+        run: yarn build
+      - name: Publish to npm
+        run: npm publish
+      - name: Publish GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: gh release edit "$TAG_NAME" --draft=false
+
+  publish-dev:
+    name: Publish dev prerelease to npm
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    environment: 'NPM Trusted Publishing'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.branch }}
+          persist-credentials: 'false'
+      - name: Setup .npmrc file to publish to npm
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26.12.1'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Enable corepack
+        run: corepack enable
+      - name: Install modules
+        run: yarn
+      - name: Set prerelease version
+        id: version
+        env:
+          BRANCH: ${{ inputs.branch }}
+          SUFFIX: ${{ inputs.suffix }}
+        run: |
+          suffix="${SUFFIX:-$BRANCH}"
+          suffix="$(printf '%s' "$suffix" | tr -c 'A-Za-z0-9-' '-' | sed -E 's/-+/-/g; s/^-+|-+$//g')"
+          version="$(node -p "require('./package.json').version")-${suffix:-dev}.${GITHUB_RUN_NUMBER}"
+          npm version "$version" --no-git-tag-version
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+      - name: Build
+        run: yarn build
+      - name: Publish to npm
+        run: npm publish --tag dev
+      - name: Write summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "Published \`@pyroscope/nodejs@${VERSION}\` under dist-tag \`dev\`"
+            echo
+            echo '```'
+            echo "npm install @pyroscope/nodejs@${VERSION}"
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*' # older version branches
+    tags:
+      - '*'
+  pull_request: {}
+  schedule:
+    - cron: '0 6 * * 0' # weekly, on sundays
+
+jobs:
+  test:
+    timeout-minutes: 5
+    name: Tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node: ['22', '24']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    env:
+      # Override the node version pinned in mise.toml for this matrix entry.
+      MISE_NODE_VERSION: ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v4
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm prepare
+      - run: pnpm lint
+      - run: pnpm test

@@ -1,0 +1,50 @@
+name: 🤖 PR auto merge
+on:
+  pull_request:
+
+env:
+  PR_JOBS_NAME: '[ "Packages", "Demo", "Firebase", "Lint result", "tests", "E2E result" ]'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.value }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - id: matrix
+        run: echo "value=$PR_JOBS_NAME" >> $GITHUB_OUTPUT
+
+  wait:
+    needs: [setup]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        value: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    steps:
+      - uses: taiga-family/actions/wait-job@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          job: ${{ matrix.value }}
+
+  approve:
+    needs: [wait]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/auto-approve-double@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        if: env.IS_TAIGA_FAMILY_BOT_PR_AUTHOR == 'true'
+        with:
+          token1: ${{ secrets.GITHUB_TOKEN }}
+          token2: ${{ secrets.TAIGA_FAMILY_APPROVE_BOT_PAT }}
+      - uses: taiga-family/actions/auto-merge@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        if: env.IS_TAIGA_FAMILY_BOT_PR_AUTHOR == 'true'
+        with:
+          token: ${{ secrets.TAIGA_FAMILY_BOT_PAT }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

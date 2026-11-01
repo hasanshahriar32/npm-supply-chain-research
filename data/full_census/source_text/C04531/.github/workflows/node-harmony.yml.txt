@@ -1,0 +1,12 @@
+name: 'Tests: node.js (harmony)'
+
+on: [pull_request, push]
+
+jobs:
+  tests:
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '>=0.4 <16'
+      type: minors
+      command: npm run test:harmony
+      skip-ls-check: true

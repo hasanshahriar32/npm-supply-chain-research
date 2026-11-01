@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ci.yml'
+      - 'plugins/**'
+      - 'src/**'
+      - 'test/**'
+      - '.browserslistrc'
+      - '.prettierrc'
+      - 'karma.conf.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'rollup.config.js'
+      - 'tsconfig.json'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ci.yml'
+      - 'plugins/**'
+      - 'src/**'
+      - 'test/**'
+      - '.browserslistrc'
+      - '.prettierrc'
+      - 'karma.conf.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'rollup.config.js'
+      - 'tsconfig.json'
+
+jobs:
+  testing:
+    name: 'Testing on OS: ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+        os: [windows-latest, macOS-latest]
+
+    steps:
+      - name: Checkout Project Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Use NodeJS ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install
+        run: npm ci
+      - name: Lint & Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm run test:coverage
+        env:
+          CI: true
+      - name: Send Coverage to Codecov
+        uses: codecov/codecov-action@v2
+        with:
+          files: .coverage/lcov.info
+          flags: unittests
+          fail_ci_if_error: true

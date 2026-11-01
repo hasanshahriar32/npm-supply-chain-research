@@ -1,0 +1,30 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+    js:
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: ["12", "14", "16", "18", "20", "22", "24", "26"]
+
+        defaults:
+            run:
+                working-directory: ./js
+
+        steps:
+
+        - uses: actions/checkout@v7
+
+        - name: Use Node.js ${{ matrix.node-version }}
+          uses: actions/setup-node@v7
+          with:
+              node-version: ${{ matrix.node-version }}
+
+        - run: npm clean-install
+
+        - run: npm test
+
+

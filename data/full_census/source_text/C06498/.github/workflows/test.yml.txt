@@ -1,0 +1,165 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: 3
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          package-manager-cache: true
+
+      - run: npm ci
+
+      - run: npx eslint .
+
+      - run: npx prettier --check .
+
+      - run: npx --package=typescript tsc --noEmit
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          package-manager-cache: true
+
+      - run: npm ci
+
+      - name: Lint
+        id: lint
+        run: npm run lint -- --fail-on-warnings
+
+      - name: Fix lint issues
+        id: lint-fix
+        if: failure() && steps.lint.conclusion == 'failure'
+        run: |
+          npm run lint:fix
+          if [[ -n $(git diff) ]]; then
+            echo "files_modified=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect artifact files
+        if: failure() && steps.lint-fix.outputs.files_modified == 'true'
+        run: |
+          mkdir -p lint-results
+          git diff > lint-results/lint.diff
+
+      - name: Upload artifact
+        if: failure() && steps.lint-fix.outputs.files_modified == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lint-results
+          path: lint-results
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          package-manager-cache: true
+
+      - run: npm ci
+
+      - run: npm run unittest
+
+  diff-build:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.event.pull_request.number }}-diff-build
+      cancel-in-progress: true
+
+    steps:
+      - name: Determine base ref
+        id: base
+        run: |
+          if [[ "$GITHUB_HEAD_REF" == "release" ]]; then
+            VERSION=$(npm view @mdn/browser-compat-data version)
+            echo "ref=v$VERSION" >> "$GITHUB_OUTPUT"
+            echo "Comparing release branch against published v$VERSION"
+          else
+            echo "ref=$GITHUB_BASE_REF" >> "$GITHUB_OUTPUT"
+            echo "Comparing against base branch: $GITHUB_BASE_REF"
+          fi
+
+      # Base
+
+      - name: Checkout (base)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.base.outputs.ref }}
+          path: base
+          persist-credentials: false
+
+      - name: Checkout (PR)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pr
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: pr/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            base/package-lock.json
+            pr/package-lock.json
+          package-manager-cache: true
+
+      - name: Install
+        run: |
+          # sed command prefixes each line of output with [base] or [pr]
+          cd base && npm ci | sed "s/^/[base] /" &
+          cd pr && npm ci | sed "s/^/[pr] /" &
+          wait
+
+      - name: Format
+        run: |
+          # sed command prefixes each line of output with [base] or [pr]
+          cd base/build && npx prettier --ignore-path /dev/null --write . | sed "s/^/[base] /" &
+          cd pr/build && npx prettier --ignore-path /dev/null --write . | sed "s/^/[pr] /" &
+          wait
+
+      - name: Diff
+        run: git diff --color=always --no-index base/build/ pr/build/ || true

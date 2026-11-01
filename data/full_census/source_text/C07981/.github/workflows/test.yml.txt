@@ -1,0 +1,126 @@
+name: Test
+
+on:
+  schedule:
+    - cron: '0 17 1 * *'
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  src_test_node:
+    name: ES Modules Test (Node.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+
+      - run: node test/src/index.mjs
+
+  src_test_deno:
+    name: ES Modules Test (Deno)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: vx.x.x
+
+      - run: deno run test/src/index.mjs
+
+  src_test_bun:
+    name: ES Modules Test (Bun)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - run: curl -fsSL https://bun.sh/install | bash
+      - run: echo "${HOME}/.bun/bin" >> $GITHUB_PATH
+
+      - run: bun test/src/index.mjs
+
+  lib_test:
+    name: Unit Test (Node.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+
+      - uses: pnpm/action-setup@v6.0.10
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build:lib
+        env:
+          NODE_ENV: test
+
+      - run: pnpm test
+
+  browser_test:
+    name: Unit Test (Browser)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: lts/*
+
+      - uses: pnpm/action-setup@v6.0.10
+        with:
+          version: 10
+
+      - uses: saucelabs/sauce-connect-action@v3
+        with:
+          username: petamoriken # ${{ vars.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          region: us-west-1
+          tunnelName: github-action-tunnel
+          proxyLocalhost: allow
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build:browser
+        env:
+          NODE_ENV: test
+
+      - run: pnpm run docs
+
+      - name: Start Server
+        run: |
+          pnpm setup-test-browser
+          sleep 5
+      - run: pnpm run test-browser
+        env:
+          SAUCE_USERNAME: petamoriken # ${{ vars.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+
+      - uses: syossan27/purge-github-readme-image@v1.0.0
+        with:
+          repository: ${{ github.repository }}
+          token: ${{ secrets.GITHUB_TOKEN }}

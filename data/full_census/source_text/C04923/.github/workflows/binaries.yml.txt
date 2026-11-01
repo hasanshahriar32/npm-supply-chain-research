@@ -1,0 +1,48 @@
+on:
+  release:
+    types: [created]
+name: Binary artifacts
+jobs:
+  generate:
+    env:
+      # The version needs to match with the one used in the printer
+      PRETTIER_CORE_LIB_VERSION: 3.2.5
+    name: Create release artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+        with:
+          path: "prettier-java"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20.x
+      - name: Install tools
+        run: |
+          sudo apt update
+          sudo apt install jq
+          npm i -g pkg
+      - name: Checkout Prettier
+        uses: actions/checkout@v7
+        with:
+          repository: prettier/prettier
+          ref: refs/tags/${{ env.PRETTIER_CORE_LIB_VERSION }}
+          path: prettier
+      - name: Link Prettier-java to Prettier
+        # We need to give the path to the plugin for pkg
+        run: |
+          cd $GITHUB_WORKSPACE/prettier
+          npm i
+          npm link prettier-plugin-java
+          mv package.json package.json.old
+          jq '.dependencies["prettier-plugin-java"] = "./node_modules/prettier-plugin-java"' package.json.old | cat > package.json
+      - name: Build the artifacts
+        run: |
+          cd $GITHUB_WORKSPACE/prettier
+          pkg package.json -o $GITHUB_WORKSPACE/prettier-java-${GITHUB_REF##*/} --targets node10-linux-x64,node10-macos-x64,node10-win-x64
+      - name: Upload the artifacts
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: "prettier-java-*"

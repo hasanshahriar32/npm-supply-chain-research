@@ -1,0 +1,23 @@
+name: Coverage
+on:
+  push:
+    branches:
+      - "master"
+    tags-ignore:
+      - "*"
+jobs:
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install
+        run: bun install
+      - name: Test
+        run: bun run test:coverage
+      - name: Coverage Report
+        if: github.ref == 'refs/heads/master'
+        env:
+          CODECLIMATE_REPO_TOKEN: ${{ secrets.CODECLIMATE_REPO_TOKEN }}
+        run: bunx codeclimate-test-reporter < coverage/lcov.info

@@ -1,0 +1,63 @@
+{
+  "name": "utoo",
+  "version": "1.0.0",
+  "description": "",
+  "packageManager": "npm@11.6.2",
+  "main": "index.js",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:e2e:utooweb": "playwright test -c e2e/utoo-web/playwright.config.ts",
+    "vitest:all": "turbo run test --filter=@utoo/pack --filter=@utoo/pack-shared",
+    "lint": "turbo run lint",
+    "dev": "turbo run dev",
+    "clean": "turbo run clean",
+    "biome": "biome check --write .",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@biomejs/biome": "2.1.2",
+    "@playwright/test": "1.60.0",
+    "acorn": "^8.18.0",
+    "husky": "^9.1.7",
+    "tombi": "^0.7.32",
+    "turbo": "^2.6.3",
+    "vitest": "^3.2.4"
+  },
+  "workspaces": [
+    "packages/pack",
+    "packages/pack-shared",
+    "packages/pack-cli",
+    "packages/utoo-web",
+    "crates/pack-core/js",
+    "crates/pack/js",
+    "examples/define",
+    "examples/config-js",
+    "examples/externals",
+    "examples/multi-entries-heavy",
+    "examples/webpack-compat",
+    "examples/with-antd",
+    "examples/with-less",
+    "examples/with-library",
+    "examples/with-nodejs",
+    "examples/with-sass",
+    "examples/with-tailwind",
+    "examples/resolve",
+    "examples/with-react",
+    "examples/shared-runtime-async-module",
+    "examples/utooweb-demo",
+    "examples/expose-entry-exports",
+    "examples/pack-esm-api",
+    "examples/inline-css",
+    "examples/with-postcss",
+    "examples/with-swc-plugin",
+    "examples/with-server-references"
+  ],
+  "repository": "https://github.com/utooland/utoo",
+  "engines": {
+    "install-node": "22"
+  }
+}

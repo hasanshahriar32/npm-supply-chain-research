@@ -1,0 +1,66 @@
+name: Fallow
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  fallow:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Summary
+        run: pnpm fallow --summary --quiet || true
+
+      - name: Audit changed files
+        run: |
+          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
+          # The explicit refspec matters. `git fetch origin <branch>` writes only
+          # FETCH_HEAD, so `origin/<branch>` never appears for any base other than
+          # the default branch, which checkout already fetched. On a stacked PR the
+          # audit then cannot resolve its base and exits 2, which reads as a lint
+          # failure rather than a missing ref.
+          # No --depth: checkout already has full history, and a shallow fetch of a
+          # base that moved since checkout grafts its tip without parents, leaving
+          # no merge base.
+          git fetch origin "+$BASE_REF:refs/remotes/origin/$BASE_REF" || true
+          AUDIT_OUTPUT=$(pnpm --silent fallow audit --base "origin/$BASE_REF" --format markdown --quiet) || AUDIT_EXIT=$?
+          # Echoed as well as summarised: a failure is otherwise undiagnosable from
+          # the job log, since the summary is only rendered in the web UI.
+          {
+            echo "## Fallow audit"
+            echo ""
+            echo "$AUDIT_OUTPUT"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit "${AUDIT_EXIT:-0}"
+
+      - name: Hotspots
+        if: always()
+        run: |
+          {
+            echo "## Hotspots"
+            echo ""
+            echo '```'
+            pnpm fallow health --hotspots --ownership --production --quiet || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

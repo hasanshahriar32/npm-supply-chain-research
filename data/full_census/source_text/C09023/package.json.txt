@@ -1,0 +1,67 @@
+{
+  "name": "@rsbuild/plugin-type-check",
+  "version": "1.6.1",
+  "homepage": "https://github.com/rstackjs/rsbuild-plugin-type-check#readme",
+  "bugs": {
+    "url": "https://github.com/rstackjs/rsbuild-plugin-type-check/issues"
+  },
+  "repository": "https://github.com/rstackjs/rsbuild-plugin-type-check",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rs lib",
+    "bump": "pnpm version -m \"release: v%s\"",
+    "check": "rs check",
+    "dev": "rs lib -w",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "prepare": "rs hooks",
+    "test": "rs test"
+  },
+  "dependencies": {
+    "deepmerge": "^4.3.1",
+    "json5": "^2.2.3",
+    "reduce-configs": "^1.1.2",
+    "ts-checker-rspack-plugin": "^1.7.1"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.2.13",
+    "@rstackjs/test-utils": "^1.0.0",
+    "@rstest/playwright": "^0.12.3",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.19.2",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "fs-extra": "^11.4.1",
+    "playwright": "^1.64.0",
+    "rstack": "^0.8.3",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "@rsbuild/core": "^1.0.0 || ^2.0.0-0",
+    "@typescript/native-preview": "^7.0.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@rsbuild/core": {
+      "optional": true
+    },
+    "@typescript/native-preview": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@11.28.5",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

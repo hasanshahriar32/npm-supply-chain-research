@@ -1,0 +1,31 @@
+# https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['lts/-1', 'lts/*', 'latest']
+        os: [macos-latest, ubuntu-latest, ubuntu-24.04-arm, windows-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - name: Upgrade node-gyp if it cannot detect the installed Visual Studio
+        if: runner.os == 'Windows'
+        run: npm run upgrade-node-gyp
+      - run: npm audit || true
+      - run: npm run lint
+      # - run: npm run update-crosswalk  # To support newer versions of Node.js
+      - run: npm run build --if-present
+      - run: npm test

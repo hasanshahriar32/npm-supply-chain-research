@@ -1,0 +1,69 @@
+{
+  "name": "vercel-flags",
+  "version": "0.0.1",
+  "description": "A monorepo for the Flags SDK",
+  "homepage": "https://flags-sdk.dev",
+  "bugs": {
+    "url": "https://github.com/vercel/flags/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel/flags.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "attw": "turbo attw",
+    "build": "turbo build --filter='./packages/*'",
+    "build:all": "turbo build",
+    "dev": "turbo dev",
+    "dev:docs": "pnpm dev -F docs",
+    "check": "turbo check",
+    "format": "biome check --write .",
+    "next-15": "pnpm dev -F next-15",
+    "next-16": "pnpm dev -F next-16",
+    "prepare": "husky",
+    "publint": "turbo publint",
+    "registry": "pnpm dev -F registry",
+    "release": "turbo build --filter='./packages/*' && changeset publish",
+    "shirt-shop": "pnpm dev -F shirt-shop",
+    "shirt-shop-api": "pnpm dev -F shirt-shop-api",
+    "snippets": "pnpm dev -F snippets",
+    "playground": "pnpm dev -F playground",
+    "svelte": "pnpm dev -F svelte-example",
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e",
+    "test:integration": "turbo test:integration",
+    "type-check": "turbo type-check",
+    "validate-packages": "node scripts/validate-packages.mjs",
+    "validate-skills": "node scripts/validate-skills.mjs",
+    "version-packages": "changeset version && pnpm i --no-frozen-lockfile && git add .",
+    "deps:check": "syncpack lint",
+    "deps:fix": "syncpack fix"
+  },
+  "lint-staged": {
+    "*": [
+      "biome check --no-errors-on-unmatched --files-ignore-unknown=true"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "3.0.0",
+    "@types/node": "22.14.0",
+    "gray-matter": "4.0.3",
+    "husky": "9.0.10",
+    "lint-staged": "^16.4.0",
+    "next": "16.4.3",
+    "playwright": "1.56.1",
+    "publint": "0.3.14",
+    "react": "canary",
+    "syncpack": "15.3.3",
+    "turbo": "2.10.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "8.46.1"
+  },
+  "packageManager": "pnpm@10.19.0",
+  "engines": {
+    "node": "^22.11 || ^24 || >=26"
+  }
+}

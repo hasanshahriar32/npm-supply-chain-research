@@ -1,0 +1,79 @@
+{
+  "name": "@stencil/sass",
+  "version": "3.3.3",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./wizard": {
+      "types": "./dist/wizard.d.ts",
+      "import": "./dist/wizard.js"
+    }
+  },
+  "stencil": {
+    "wizard": "./dist/wizard.js"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "prebuild": "rimraf ./dist",
+    "prettier": "prettier --cache \"src/**/*.ts\" --write",
+    "prettier.dry-run": "prettier --cache \"src/**/*.ts\" --list-different",
+    "build": "rollup -c rollup.config.mjs",
+    "watch": "rollup -c rollup.config.mjs --watch",
+    "version": "pnpm run build",
+    "release": "np",
+    "test": "vitest run",
+    "test.ci": "pnpm run test && pnpm run prettier.dry-run",
+    "test.watch": "vitest"
+  },
+  "dependencies": {
+    "sass-embedded": "^1.93.2"
+  },
+  "peerDependencies": {
+    "@stencil/core": "^4.0.0 || ^5.0.0 || >=5.0.0-alpha.19 <5.0.0-next.0"
+  },
+  "devDependencies": {
+    "@ionic/prettier-config": "^4.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@stencil/cli": "^5.0.0 || >=5.0.0-alpha.19 <5.0.0-next.0",
+    "@stencil/core": "^4.38.2 || ^5.0.0 || >=5.0.0-alpha.19 <5.0.0-next.0",
+    "@types/node": "^24.9.2",
+    "np": "^11.0.1",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.52.5",
+    "terser": "^5.44.0",
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stenciljs/sass.git"
+  },
+  "author": "Ionic Team",
+  "homepage": "https://stenciljs.com/",
+  "description": "The Stencil Sass Plugin",
+  "keywords": [
+    "stencil",
+    "sass"
+  ],
+  "prettier": "@ionic/prettier-config",
+  "packageManager": "pnpm@10.5.2",
+  "volta": {
+    "node": "24.11.1"
+  }
+}

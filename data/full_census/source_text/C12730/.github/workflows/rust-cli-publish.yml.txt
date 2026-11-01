@@ -1,0 +1,97 @@
+name: Rust CLI Publish
+
+on:
+  push:
+    branches:
+      - "master"
+      - "next"
+    paths:
+      - 'zowex/**'
+      - '.github/workflows/rust-cli*.yml'
+
+jobs:
+  build:
+    name: Build Release Archives
+    uses: ./.github/workflows/rust-cli.yml
+    permissions:
+      contents: read
+    with:
+      release: true
+
+  check-release:
+    name: Check for Existing Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        sparse-checkout: zowex
+
+    - name: Get version
+      working-directory: zowex
+      run: echo "RELEASE_TAG=native-v$(cargo metadata --no-deps --format-version 1 | jq -r .packages[0].version)" >> "$GITHUB_ENV"
+
+    - name: Check release tag
+      id: release
+      run: |
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+        fi
+
+  publish:
+    name: Attest and Publish Release
+    needs: [build, check-release]
+    if: ${{ needs.check-release.outputs.tag != '' }}
+    runs-on: ubuntu-slim
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+
+    steps:
+    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      with:
+        pattern: zowe-*.tgz
+        path: release-assets
+        merge-multiple: true
+
+    - name: Verify Build Digests
+      working-directory: release-assets
+      env:
+        LINUX_SHA256: ${{ needs.build.outputs.LINUX_SHA256 }}
+        MACOS_SHA256: ${{ needs.build.outputs.MACOS_SHA256 }}
+        WINDOWS_SHA256: ${{ needs.build.outputs.WINDOWS_SHA256 }}
+      run: |
+        for digest in "$LINUX_SHA256" "$MACOS_SHA256" "$WINDOWS_SHA256"; do
+          [[ "$digest" =~ ^[0-9a-f]{64}$ ]] || exit 1
+        done
+        printf '%s  zowe-linux.tgz\n%s  zowe-macos.tgz\n%s  zowe-windows.tgz\n' \
+          "$LINUX_SHA256" "$MACOS_SHA256" "$WINDOWS_SHA256" | sha256sum --strict -c -
+
+    - name: Attest Release Assets
+      uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d # v4.2.1
+      with:
+        subject-path: 'release-assets/zowe-*.tgz'
+
+    - name: Create and Publish Complete Release
+      env:
+        RELEASE_TAG: ${{ needs.check-release.outputs.tag }}
+      run: |
+        gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" \
+          --notes "Native Zowe CLI client which communicates with a 'daemon' version of Zowe CLI." \
+          --title "Native Client Release ${RELEASE_TAG#native-v}" \
+          release-assets/zowe-*.tgz
+        # Enable Settings > Releases > Enable release immutability before using this workflow.
+        # All assets must be attached while the release is still a draft.
+        gh release edit "$RELEASE_TAG" --draft=false --latest=false
+        gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" | jq -e '.immutable == true'

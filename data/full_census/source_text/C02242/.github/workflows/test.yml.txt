@@ -1,0 +1,40 @@
+name: Test
+
+on:
+    push:
+        branches: ['**']
+    pull_request:
+        branches: ['**']
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Use Node.js 24
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24.18.1
+            - run: corepack enable
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm lint
+            - run: pnpm test:types
+            - run: pnpm test
+            - run: pnpm --filter tailwind-merge build
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: build-output
+                  path: packages/tailwind-merge/dist
+                  if-no-files-found: error
+            - run: pnpm --filter tailwind-merge test:exports
+            # The vite package's build and packed-tarball gate come after the library's build on purpose: the gate resolves tailwind-merge through its published shape (dist and types), which the library build above just produced.
+            - run: pnpm --filter @tailwind-merge/vite build
+            - run: pnpm --filter @tailwind-merge/vite test:exports
+            # Same for the Next.js package: its gate runs a real `next build` of a consumer app against the packed tarball, resolving the library through the build above.
+            - run: pnpm --filter @tailwind-merge/next build
+            - run: pnpm --filter @tailwind-merge/next test:exports

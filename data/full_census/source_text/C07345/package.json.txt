@@ -1,0 +1,94 @@
+{
+  "name": "urllib",
+  "version": "4.9.0",
+  "description": "Help in opening URLs (mostly HTTP) in a complex world — basic and digest authentication, redirections, timeout and more. Base undici API.",
+  "keywords": [
+    "curl",
+    "fetch",
+    "http",
+    "https",
+    "request",
+    "undici",
+    "urllib",
+    "urlopen",
+    "wget"
+  ],
+  "homepage": "https://github.com/node-modules/urllib",
+  "license": "MIT",
+  "author": "fengmk2 <fengmk2@gmail.com> (https://github.com/fengmk2)",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/node-modules/urllib.git"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "tag": "latest"
+  },
+  "scripts": {
+    "typecheck": "node scripts/tsrs.js --noEmit",
+    "build": "vp pack",
+    "build:esm:test": "node test/esm/index.js",
+    "build:mts:test": "node scripts/tsrs.js -p test/mts",
+    "build:test": "vp run build && vp run build:esm:test && vp run build:mts:test && vp run test-tsrs",
+    "test-tsrs": "node scripts/tsrs.js -p test/fixtures/ts-esm && node test/fixtures/ts-esm/hello.js",
+    "test": "vp run check && vp test run --reporter=dot",
+    "bench": "vp test bench",
+    "test-keepalive": "cross-env TEST_KEEPALIVE_COUNT=50 vp test run --reporter=dot --test-timeout 180000 keep-alive-header.test.ts",
+    "cov": "vp test run --reporter=dot --coverage",
+    "ci": "vp run cov && vp run build:test && npm pack",
+    "clean": "rm -rf dist && node scripts/tsrs.js -b --clean",
+    "prepublishOnly": "vp run build",
+    "prepare": "vp config",
+    "fallow": "fallow dead-code --fail-on-issues",
+    "check": "vp check",
+    "check:fix": "vp check --fix"
+  },
+  "dependencies": {
+    "form-data": "^4.0.5",
+    "formstream": "^1.5.2",
+    "mime-types": "^2.1.35",
+    "qs": "^6.15.0",
+    "type-fest": "^4.41.0",
+    "undici": "^8.10.0",
+    "ylru": "^2.0.0"
+  },
+  "devDependencies": {
+    "@e18e/eslint-plugin": "^0.8.1",
+    "@eggjs/tsconfig": "^2.0.0",
+    "@ts-rs/wasm": "0.15.0-ts7.1.0-dev.20260929",
+    "@types/busboy": "^1.5.4",
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^26.0.0",
+    "@types/qs": "^6.15.0",
+    "@types/tar-stream": "^2.2.3",
+    "@vitest/coverage-v8": "catalog:",
+    "busboy": "^1.6.0",
+    "cross-env": "^10.1.0",
+    "fallow": "^3.33.1",
+    "iconv-lite": "^0.7.0",
+    "proxy": "^4.0.0",
+    "selfsigned": "^3.0.1",
+    "tar-stream": "^2.2.0",
+    "tsrs": "0.15.0-ts7.1.0-dev.20260929",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">= 22.19.0"
+  },
+  "packageManager": "pnpm@12.16.0"
+}

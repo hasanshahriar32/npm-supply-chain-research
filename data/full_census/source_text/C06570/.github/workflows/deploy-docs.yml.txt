@@ -1,0 +1,36 @@
+name: Deploy docs
+on:
+  release:
+    types: published
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+jobs:
+  deploy-docs:
+    permissions:
+      contents: read
+      id-token: write
+      pages: write
+      deployments: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy-pages.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: configure-pages
+        uses: actions/configure-pages@v4
+      - run: pnpm run build:docs
+        env:
+          BASE_URL: ${{ steps.configure-pages.base_url }}/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+      - id: deploy-pages
+        uses: actions/deploy-pages@v4

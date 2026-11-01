@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - next
+
+env:
+  TURBO_ENV_MODE: loose
+
+jobs:
+  release:
+    permissions:
+      contents: write # to create release (changesets/action)
+      pull-requests: write # to create pull request (changesets/action)
+      id-token: write #  required for provenance and oidc publish
+    # prevents this action from running on forks
+    if: github.repository == 'storybookjs/mcp'
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      # see https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/making-authenticated-api-requests-with-a-github-app-in-a-github-actions-workflow
+      - uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        id: app-token
+        with:
+          app-id: ${{ vars.STORYBOOK_BOT_APP_ID }}
+          private-key: ${{ secrets.STORYBOOK_BOT_APP_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+
+      - name: Setup Node.js and Install Dependencies
+        uses: ./.github/actions/setup-node-and-install
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
+        with:
+          publish: pnpm release
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      # See: https://modelcontextprotocol.io/registry/github-actions
+      - name: Install mcp-publisher
+        if: steps.changesets.outputs.published == 'true' && contains(steps.changesets.outputs.publishedPackages, '@storybook/addon-mcp')
+        working-directory: packages/addon-mcp
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        if: steps.changesets.outputs.published == 'true' && contains(steps.changesets.outputs.publishedPackages, '@storybook/addon-mcp')
+        working-directory: packages/addon-mcp
+        run: ./mcp-publisher login github-oidc
+
+      - name: Sync addon MCP registry version with jq
+        if: steps.changesets.outputs.published == 'true' && contains(steps.changesets.outputs.publishedPackages, '@storybook/addon-mcp')
+        working-directory: packages/addon-mcp
+        run: |
+          # Pull the published addon version directly from Changesets output.
+          # The output is a JSON array like:
+          # [{"name":"@storybook/addon-mcp","version":"0.4.1"}, ...]
+          ADDON_MCP_VERSION="$(jq -r '.[] | select(.name == "@storybook/addon-mcp") | .version' <<< '${{ steps.changesets.outputs.publishedPackages }}')"
+
+          # Fail fast if the package was expected to publish but no version was found.
+          test -n "$ADDON_MCP_VERSION"
+
+          # Update only the server.json fields that need to match the published package version:
+          # 1. the top-level MCP server version
+          # 2. the local npm package entry version used for installation metadata
+          jq --tab --arg version "$ADDON_MCP_VERSION" '
+            .version = $version |
+            .packages[0].version = $version
+          ' server.json > server.json.tmp
+
+          # Replace the original file only after jq succeeds, to avoid partial writes.
+          mv server.json.tmp server.json
+
+      - name: Publish addon MCP to MCP Registry
+        if: steps.changesets.outputs.published == 'true' && contains(steps.changesets.outputs.publishedPackages, '@storybook/addon-mcp')
+        working-directory: packages/addon-mcp
+        run: ./mcp-publisher publish

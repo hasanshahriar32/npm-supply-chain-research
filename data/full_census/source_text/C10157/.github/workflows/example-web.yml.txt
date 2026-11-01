@@ -1,0 +1,102 @@
+name: Publish Example Web App
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ '.github/**', 'examples/example-web-app/**', 'js/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ '.github/**', 'examples/example-web-app/**', 'js/**' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_REFLECTOR_HOST_AUTHORITY:  ${{ secrets.URL_REFLECTOR_DEV }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+      
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: true
+          cache_dependency_path: 'examples/example-web-app/pnpm-lock.yaml'
+          package_json_file: 'examples/example-web-app/package.json'
+
+      - name: 'Build Project'
+        working-directory: 'js/'
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      
+      - name: '[Example Web App] Install dependencies'
+        working-directory: 'examples/example-web-app/'
+        run: pnpm install
+      - name: '[Example Web App] Format Check'
+        working-directory: 'examples/example-web-app/'
+        run: pnpm format:check
+      - name: '[Example Web App] Lint'
+        working-directory: 'examples/example-web-app/'
+        run: pnpm lint:check
+      - name: '[Example Web App] Type Check'
+        working-directory: 'examples/example-web-app/'
+        run: npx tsc --noEmit
+        continue-on-error: true # TODO: fix all lint issues and remove this line
+      - name: '[Example Web App] Build'
+        working-directory: 'examples/example-web-app/'
+        run: pnpm build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: example-web-app
+          path: examples/example-web-app/out/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-to-gh-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    concurrency: publish-to-gh-pages
+    if: ${{ github.event_name == 'push' && !github.event.repository.fork }}
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.PR_BOT_APP_ID }}
+          private-key: ${{ secrets.PR_BOT_PRIVATE_KEY }}
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Refresh example-web-app directory
+        run: rm -rf example-web-app
+
+      - name: Download Example Web App
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: example-web-app
+          path: example-web-app
+
+      - name: Commit and push to gh-pages
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+          else
+            git commit -m "Update Example Web App"
+            git push origin gh-pages
+          fi

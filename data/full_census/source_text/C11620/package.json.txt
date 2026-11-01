@@ -1,0 +1,36 @@
+{
+  "name": "@turist/fetch",
+  "version": "8.0.0-undici.0",
+  "description": "Opinionated `fetch` (with retrying and DNS caching) optimized for use inside microservices — undici edition",
+  "license": "MIT",
+  "repository": "turist-cloud/fetch",
+  "files": [
+    "dist/"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "rm -rf ./dist && tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit && node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "async-retry-ng": "2.0.1",
+    "debug": "^4.4.0",
+    "lru-cache": "5.1.1"
+  },
+  "peerDependencies": {
+    "undici": ">=6.19.0"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/lru-cache": "5.1.0",
+    "@types/node": "^20.19.0",
+    "tsx": "^4.22.4",
+    "typescript": "^5.6.3",
+    "undici": "^6.27.0"
+  }
+}

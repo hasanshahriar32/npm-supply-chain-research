@@ -1,0 +1,59 @@
+{
+  "name": "command-line-commands",
+  "author": "Lloyd Brookes <75pound@gmail.com>",
+  "version": "4.0.1",
+  "description": "Add a git-like command interface to your app.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/75lb/command-line-commands.git"
+  },
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "option.js",
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    "import": "./index.js",
+    "require": "./dist/index.cjs"
+  },
+  "keywords": [
+    "argv",
+    "parse",
+    "argument",
+    "args",
+    "option",
+    "parser",
+    "parsing",
+    "cli",
+    "command",
+    "commands",
+    "line"
+  ],
+  "engines": {
+    "node": ">=12.17"
+  },
+  "scripts": {
+    "test": "npm run dist && npm run test:ci",
+    "test:ci": "75lb-nature test-runner test.js",
+    "docs": "75lb-nature jsdoc2md -t README.hbs index.js > README.md",
+    "dist": "75lb-nature cjs-build index.js"
+  },
+  "peerDependencies": {
+    "@75lb/nature": "latest"
+  },
+  "peerDependenciesMeta": {
+    "@75lb/nature": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "array-back": "^6.2.2"
+  },
+  "devDependencies": {
+    "command-line-args": "^6.0.0",
+    "command-line-usage": "^7.0.3",
+    "minimist": "^1.2.8"
+  }
+}

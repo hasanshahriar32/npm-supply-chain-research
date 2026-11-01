@@ -1,0 +1,88 @@
+{
+  "name": "jotai-scope",
+  "version": "0.12.2",
+  "description": "👻🔭",
+  "type": "module",
+  "author": "Daishi Kato",
+  "contributors": [
+    "yf-yang (https://github.com/yf-yang)",
+    "David Maskasky (https://github.com/dmaskasky)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jotaijs/jotai-scope.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jotaijs/jotai-scope/issues"
+  },
+  "homepage": "https://jotai.org/docs/extensions/scope",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "setup": "pnpm run '/^setup:.*/'",
+    "setup:jotai": "git clone https://github.com/pmndrs/jotai.git && $(cd jotai && pnpm install && pnpm build)",
+    "setup:jotai-effect": "git clone https://github.com/jotaijs/jotai-effect.git && $(cd jotai-effect && pnpm install && pnpm build)",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "fix": "pnpm run '/^fix:.*/'",
+    "fix:format": "prettier --write .",
+    "fix:lint": "eslint --config ./eslint.config.ts --fix .",
+    "pretest": "pnpm build",
+    "test": "pnpm run \"/^test:.*/\"",
+    "test:format": "prettier --list-different .",
+    "test:types": "tsc --noEmit",
+    "test:lint": "eslint .",
+    "test:spec": "vitest run"
+  },
+  "keywords": [
+    "jotai",
+    "react",
+    "scope"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "jotai": ">=2.20.0 || >=3.0.0-alpha.0",
+    "react": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "dedent": "^1.7.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^3.7.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-prettier": "^5.2.3",
+    "happy-dom": "^15.11.7",
+    "jiti": "^2.4.2",
+    "jotai": "3.0.0-alpha.0",
+    "jotai-effect": "^2.4.0",
+    "jotai-family": "^1.0.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.21.0",
+    "vite": "^6.0.11",
+    "vitest": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

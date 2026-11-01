@@ -1,0 +1,47 @@
+name: Build Site
+on:
+    push:
+    pull_request:
+    schedule:
+        - cron: "0 5 * * *"
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        name: Build Site
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+              with:
+                  fetch-depth: 0
+            - name: Set up Node
+              uses: actions/setup-node@v6.3.0
+              with:
+                  node-version: 26
+            - name: Set up pnpm
+              run: npm i -g pnpm@10
+            - name: Install
+              run: pnpm install
+            - name: Build Site
+              run: node_modules/.bin/hereby build:site
+            - name: Upload static files as artifact
+              id: deployment
+              uses: actions/upload-pages-artifact@0ca16172ca884f0a37117fed41734f29784cc980
+              with:
+                  path: docs-site/
+                  include-hidden-files: true
+    deploy:
+        needs: build
+        if: github.ref == 'refs/heads/master'
+        name: Deploy
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+
+        runs-on: ubuntu-latest
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v5.0.0

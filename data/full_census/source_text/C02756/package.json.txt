@@ -1,0 +1,73 @@
+{
+  "name": "electron-installer-dmg",
+  "description": "Create DMG installers for your electron apps.",
+  "version": "0.0.0-development",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "author": "Lucas Hrabovsky <lucas@mongodb.com> (http://imlucas.com)",
+  "homepage": "http://github.com/electron-userland/electron-installer-dmg",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/electron-userland/electron-installer-dmg.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "coverage": "nyc --reporter=lcov --reporter=text yarn spec",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "spec": "ts-mocha test/*.test.ts",
+    "test": "tsc && yarn lint && yarn spec",
+    "prepublishOnly": "tsc"
+  },
+  "bin": "dist/electron-installer-dmg-bin.js",
+  "engines": {
+    "node": ">= 22.12.0"
+  },
+  "packageManager": "yarn@4.10.3+sha512.c38cafb5c7bb273f3926d04e55e1d8c9dfa7d9c3ea1f36a4868fa028b9e5f72298f0b7f401ad5eb921749eb012eb1c3bb74bf7503df3ee43fd600d14a018266f",
+  "files": [
+    "dist",
+    "resources",
+    "usage.txt"
+  ],
+  "dependencies": {
+    "@types/appdmg": "^0.5.5",
+    "debug": "^4.3.2",
+    "minimist": "^1.2.7"
+  },
+  "optionalDependencies": {
+    "appdmg": "^0.6.4"
+  },
+  "dependenciesMeta": {
+    "fs-xattr": {
+      "built": true
+    },
+    "macos-alias": {
+      "built": true
+    }
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "provenance": true
+  },
+  "devDependencies": {
+    "@electron/get": "^2.0.2",
+    "@types/debug": "^4.1.7",
+    "@types/minimist": "^1.2.2",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^22.10.2",
+    "mocha": "^10.8.2",
+    "nyc": "^15.1.0",
+    "oxlint": "^1.59.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.5.2"
+  },
+  "keywords": [
+    "mongodb.js",
+    "electron",
+    "installer",
+    "electron-installer",
+    "gulpfriendly",
+    "dmg",
+    "electron create dmg"
+  ]
+}

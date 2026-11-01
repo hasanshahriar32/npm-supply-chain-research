@@ -1,0 +1,108 @@
+{
+  "name": "dependency-check",
+  "version": "5.0.0-7",
+  "description": "checks which modules you have used in your code and then makes sure they are listed as dependencies in your package.json",
+  "bin": {
+    "dependency-check": "cli.cjs"
+  },
+  "type": "module",
+  "exports": "./index.js",
+  "types": "index.d.ts",
+  "files": [
+    "lib/**/*.cjs",
+    "lib/**/*.js",
+    "lib/**/*.d.ts",
+    "lib/**/*.d.ts.map",
+    "cli.cjs",
+    "index.js",
+    "index.d.ts",
+    "index.d.ts.map"
+  ],
+  "scripts": {
+    "build:0": "run-s clean",
+    "build:1-declaration": "tsc -p declaration.tsconfig.json",
+    "build": "run-s build:*",
+    "check:dependencies": "node cli.cjs index.js cli.cjs 'lib/**/*.js' --no-dev",
+    "check:node-versions": "installed-check -i precinct -i eslint-plugin-jsdoc",
+    "check:lint": "eslint --report-unused-disable-directives .",
+    "check:tsc": "tsc",
+    "check:type-coverage": "type-coverage --detail --strict --at-least 95",
+    "check": "run-s clean && run-p -c --aggregate-output check:*",
+    "clean:declarations": "rm -rf $(find . -maxdepth 2 -type f -name '*.d.*ts*')",
+    "clean": "run-p clean:*",
+    "prepare": "husky install",
+    "prepublishOnly": "run-s build",
+    "test-ci": "run-s test:*",
+    "test:cli:positive:custom-detective": "node cli.cjs test/mock-positive/ -e js:detective-cjs",
+    "test:cli:positive:glob": "node cli.cjs 'test/mock-positive/**/*.js' --no-default-entries",
+    "test:cli:positive:multi-glob": "node cli.cjs test/mock-positive/foo.js 'test/mock-positive/*.js' \"test/mock-positive/donkey/*.js\" --no-default-entries",
+    "test:cli:positive:ts": "node cli.cjs test/mock-positive/abc.ts",
+    "test:cli:positive:main-as-file": "node cli.cjs test/mock-positive/index.js",
+    "test:cli:positive:simple": "node cli.cjs test/mock-positive/",
+    "test:cli": "run-p test:cli:**",
+    "test:mocha": "c8 --reporter=lcov --reporter text mocha 'test/**/*.spec.js'",
+    "test": "run-s check test:*"
+  },
+  "engines": {
+    "node": "^14.18.0 || >=16.0.0"
+  },
+  "author": "max ogden",
+  "dependencies": {
+    "debug": "^4.3.1",
+    "globby": "^13.1.2",
+    "is-relative": "^1.0.0",
+    "meow": "^11.0.0",
+    "picomatch": "^2.3.1",
+    "pkg-up": "^4.0.0",
+    "pony-cause": "^2.1.4",
+    "precinct": "^8.2.0",
+    "read-pkg": "^7.0.0",
+    "resolve": "^1.19.0",
+    "version-guard": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.4",
+    "@types/chai-as-promised": "^7.1.4",
+    "@types/debug": "^4.1.5",
+    "@types/is-relative": "^1.0.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^14.18.38",
+    "@types/picomatch": "^2.3.0",
+    "@types/resolve": "^1.20.2",
+    "@voxpelli/eslint-config": "^15.2.0",
+    "@voxpelli/tsconfig": "^7.0.0",
+    "c8": "^7.12.0",
+    "chai": "^4.3.7",
+    "chai-as-promised": "^7.1.1",
+    "detective-cjs": "^3.0.0",
+    "eslint": "^8.27.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-es": "^4.1.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsdoc": "^39.6.2",
+    "eslint-plugin-mocha": "^10.1.0",
+    "eslint-plugin-n": "^15.5.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-security": "^1.5.0",
+    "eslint-plugin-sort-destructure-keys": "^1.4.0",
+    "eslint-plugin-unicorn": "^43.0.2",
+    "husky": "^8.0.2",
+    "installed-check": "^6.0.4",
+    "mocha": "^10.1.0",
+    "npm-run-all2": "^6.0.4",
+    "type-coverage": "^2.25.0",
+    "typescript": "~5.0.2"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dependency-check-team/dependency-check.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dependency-check-team/dependency-check/issues"
+  },
+  "homepage": "https://github.com/dependency-check-team/dependency-check",
+  "license": "BSD-3-Clause"
+}

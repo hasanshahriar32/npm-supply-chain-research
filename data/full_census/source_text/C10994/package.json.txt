@@ -1,0 +1,39 @@
+{
+  "name": "swc-plugins",
+  "packageManager": "pnpm@10.4.1",
+  "private": true,
+  "scripts": {
+    "prepare": "husky install",
+    "test": "pnpm -F '@swc/*' -F '@swc-contrib/*' run test"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@swc/core": "^1.16.0",
+    "@taplo/cli": "^0.7.0",
+    "@types/node": "^22.13.9",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
+    "vitest": "^3.0.7"
+  },
+  "lint-staged": {
+    "*.toml": [
+      "taplo format"
+    ],
+    "*.rs": [
+      "cargo fmt --"
+    ],
+    "!(**/tests/**/*)*.js": [
+      "prettier --write"
+    ],
+    "!(**/tests/**/*)*.ts": [
+      "prettier --write"
+    ],
+    "!(**/tests/**/*)*.jsx": [
+      "prettier --write"
+    ],
+    "!(**/tests/**/*)*.tsx": [
+      "prettier --write"
+    ]
+  }
+}

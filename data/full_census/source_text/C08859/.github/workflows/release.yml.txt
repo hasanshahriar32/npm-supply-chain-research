@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Reset the default permissions and grant them per job instead
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Never cancel a release midway - it can leave tags pushed without a published package
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create GitHub releases, push tags and version commits
+      pull-requests: write # create/update the "Version Packages" pull request
+      id-token: write # npm trusted publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Changesets needs the full history to diff against the base branch
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      # Trusted publishing requires npm >= 11.5.1
+      - run: npm install --global npm@latest
+
+      - run: npm ci
+
+      - name: Create version PR or publish to npm
+        uses: changesets/action@v2.1.2
+        with:
+          version-script: npm run release:version
+          publish-script: npm run release:publish
+          create-github-releases: true
+          # Conventional commit subjects, so the version pull request and the
+          # commit it squashes into main match every other commit in the history
+          pr-title: 'chore: version packages'
+          commit-message: 'chore: version packages'
+          # Used to open the version PR, create GitHub releases and resolve
+          # contributors/PR links in the changelog
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          NPM_CONFIG_PROVENANCE: true

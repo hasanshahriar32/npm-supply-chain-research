@@ -1,0 +1,74 @@
+name: Metrics report
+
+on: [pull_request]
+
+jobs:
+    generate-report:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        outputs:
+            trusted-post-comment-script-available: ${{ steps.trusted_post_comment_script.outputs.available }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Use Node.js 24
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24.18.1
+            - run: corepack enable
+            - run: pnpm install --frozen-lockfile
+            - uses: ./.github/actions/metrics-report
+              with:
+                  comment-body-path: metrics-report-comment.md
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: metrics-report-comment
+                  path: metrics-report-comment.md
+                  if-no-files-found: error
+                  retention-days: 1
+            - name: Check whether the base checkout can post comments
+              id: trusted_post_comment_script
+              env:
+                  BASE_SHA: ${{ github.event.pull_request.base.sha }}
+              run: |
+                  git fetch --no-tags --depth=1 origin "$BASE_SHA"
+
+                  if git cat-file -e "$BASE_SHA:.github/actions/metrics-report/src/post-comment.mjs"; then
+                    echo "available=true" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "available=false" >> "$GITHUB_OUTPUT"
+                  fi
+
+    post-comment:
+        if: >-
+            ${{
+                github.event.pull_request.head.repo.full_name == github.repository &&
+                needs.generate-report.outputs.trusted-post-comment-script-available == 'true'
+            }}
+        needs: generate-report
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ github.event.pull_request.base.sha }}
+                  persist-credentials: false
+            - name: Use Node.js 24
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 24.18.1
+                  package-manager-cache: false
+            - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: metrics-report-comment
+                  digest-mismatch: error
+            - name: Post metrics report comment
+              env:
+                  COMMENT_BODY_PATH: metrics-report-comment.md
+                  GITHUB_TOKEN: ${{ github.token }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+              run: node .github/actions/metrics-report/src/post-comment.mjs

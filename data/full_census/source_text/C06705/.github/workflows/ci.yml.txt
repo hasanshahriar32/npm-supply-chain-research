@@ -1,0 +1,121 @@
+name: CI
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - NodeVersion: 22.23.4
+            NodeVersionDisplayName: 22
+            OS: ubuntu-latest
+          - NodeVersion: 24.22.1
+            NodeVersionDisplayName: 24
+            OS: ubuntu-latest
+          - NodeVersion: 26.12.1
+            NodeVersionDisplayName: 26
+            OS: ubuntu-latest
+          - NodeVersion: 26.12.1
+            NodeVersionDisplayName: 26
+            OS: windows-latest
+    name: Node.js v${{ matrix.NodeVersionDisplayName }} (${{ matrix.OS }})
+    runs-on: ${{ matrix.OS }}
+    env:
+      INSTALL_RUN_RUSH_LOCKFILE_PATH: ${{ github.workspace }}/repo-a/common/config/validation/rush-package-lock.json
+    steps:
+      - name: Create ~/.rush-user/settings.json
+        shell: pwsh
+        # Create a .rush-user/settings.json file that looks like this:
+        #
+        # { "buildCacheFolder": "/<runner working directory>/rush-cache" }
+        #
+        # This configures the local cache to be shared between all Rush repos. This allows us to run a build in
+        # one clone of the repo (repo-a), and restore from the cache in another clone of the repo (repo-b) to test
+        # the build cache.
+        run: |
+          mkdir -p $HOME/.rush-user
+          @{ buildCacheFolder = Join-Path ${{ github.workspace }} rush-cache } | ConvertTo-Json > $HOME/.rush-user/settings.json
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: repo-a
+
+      - name: Git config user
+        run: |
+          git config --local user.name "Rushbot"
+          git config --local user.email "rushbot@users.noreply.github.com"
+        working-directory: repo-a
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.NodeVersion }}
+
+      - name: Verify Change Logs
+        run: node common/scripts/install-run-rush.js change --verify
+        working-directory: repo-a
+
+      - name: Rush Install
+        run: node common/scripts/install-run-rush.js install
+        working-directory: repo-a
+
+      # - if: runner.os == 'Linux'
+      #   name: Start xvfb
+      #   run: /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+      #   working-directory: repo-a
+
+      - name: Rush retest (install-run-rush)
+        run: node common/scripts/install-run-rush.js retest --verbose --production
+        working-directory: repo-a
+        env:
+          NODE_OPTIONS: ${{ matrix.NodeVersionDisplayName == 26 && '--no-experimental-webstorage' || '' }}
+
+      - name: Run package manager integration tests
+        run: npm run test
+        working-directory: repo-a/build-tests/rush-package-manager-integration-test
+
+      - name: Ensure repo README is up-to-date
+        run: node repo-scripts/repo-toolbox/lib-commonjs/start.js readme --verify
+        working-directory: repo-a
+
+      - name: Collect JSON schemas
+        run: node repo-scripts/repo-toolbox/lib-commonjs/start.js collect-project-files --subfolder temp/json-schemas --output-path ${GITHUB_WORKSPACE}/artifacts/json-schemas
+        working-directory: repo-a
+
+      - name: Collect API review files
+        run: node repo-scripts/repo-toolbox/lib-commonjs/start.js collect-project-files --subfolder temp/api --output-path ${GITHUB_WORKSPACE}/artifacts/api
+        working-directory: repo-a
+
+      - name: Clone another copy of the repo to test the build cache
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          path: repo-b
+
+      - name: Git config user
+        run: |
+          git config --local user.name "Rushbot"
+          git config --local user.email "rushbot@users.noreply.github.com"
+        working-directory: repo-b
+
+      - name: Rush update (rush-lib)
+        run: node ${{ github.workspace }}/repo-a/apps/rush/lib-commonjs/start-dev.js update
+        working-directory: repo-b
+
+      - name: Rush test (rush-lib)
+        run: node ${{ github.workspace }}/repo-a/apps/rush/lib-commonjs/start-dev.js test --verbose --production --timeline
+        working-directory: repo-b
+        env:
+          NODE_OPTIONS: ${{ matrix.NodeVersionDisplayName == 26 && '--no-experimental-webstorage' || '' }}
+
+      - name: Rush test (rush-lib) again to verify build cache hits
+        run: node ${{ github.workspace }}/repo-a/apps/rush/lib-commonjs/start-dev.js test --verbose --production --timeline
+        working-directory: repo-b
+        env:
+          NODE_OPTIONS: ${{ matrix.NodeVersionDisplayName == 26 && '--no-experimental-webstorage' || '' }}

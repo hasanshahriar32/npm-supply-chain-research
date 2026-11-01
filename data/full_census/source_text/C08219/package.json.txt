@@ -1,0 +1,101 @@
+{
+  "name": "@portabletext/editor-root",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "build:block-tools": "turbo build --filter=@portabletext/block-tools...",
+    "build:docs": "turbo build --filter=docs",
+    "build:editor": "turbo build --filter=@portabletext/editor...",
+    "build:example-basic": "turbo build --filter=example-basic...",
+    "build:keyboard-shortcuts": "turbo build --filter=@portabletext/keyboard-shortcuts...",
+    "build:markdown": "turbo build --filter=@portabletext/markdown...",
+    "build:patches": "turbo build --filter=@portabletext/patches...",
+    "build:playground": "turbo build --filter=playground...",
+    "build:plugin-emoji-picker": "turbo build --filter=@portabletext/plugin-emoji-picker...",
+    "build:plugin-input-rule": "turbo build --filter=@portabletext/plugin-input-rule...",
+    "build:plugin-typeahead-picker": "turbo build --filter=@portabletext/plugin-typeahead-picker...",
+    "build:sanity-bridge": "turbo build --filter=@portabletext/sanity-bridge...",
+    "build:schema": "turbo build --filter=@portabletext/schema...",
+    "build:toolbar": "turbo build --filter=@portabletext/toolbar...",
+    "changeset:version": "changeset version && node .changeset/annotate-lockstep-releases.mjs",
+    "check:format": "oxfmt --check . && prettier --check \"**/*.{astro,feature}\"",
+    "check:knip": "knip",
+    "check:lint": "oxlint",
+    "check:types": "turbo check:types",
+    "check:types:watch": "turbo check:types:watch",
+    "clean": "turbo clean && del .turbo && del node_modules",
+    "dev": "turbo dev",
+    "dev:block-tools": "turbo dev --filter=@portabletext/block-tools...",
+    "dev:docs": "turbo dev --filter=docs",
+    "dev:editor": "turbo dev --filter=@portabletext/editor...",
+    "dev:example-basic": "turbo dev --filter=example-basic",
+    "dev:keyboard-shortcuts": "turbo dev --filter=@portabletext/keyboard-shortcuts...",
+    "dev:playground": "turbo dev --filter=playground",
+    "dev:plugin-emoji-picker": "turbo dev --filter=@portabletext/plugin-emoji-picker...",
+    "dev:sanity-bridge": "turbo dev --filter=@portabletext/sanity-bridge...",
+    "dev:schema": "turbo dev --filter=@portabletext/schema...",
+    "dev:toolbar": "turbo dev --filter=@portabletext/toolbar...",
+    "format": "oxfmt . && prettier --cache --write \"**/*.{astro,feature}\"",
+    "lint:fix": "oxlint --fix",
+    "postinstall": "husky",
+    "release": "pnpm build --filter=./packages/* && changeset publish",
+    "test": "turbo test",
+    "test:browser:chromium": "turbo test:browser:chromium",
+    "test:browser:firefox": "turbo test:browser:firefox",
+    "test:browser:webkit": "turbo test:browser:webkit",
+    "test:unit": "turbo test:unit && node --test .changeset/annotate-lockstep-releases.test.mjs",
+    "test:unit:watch": "turbo test:unit:watch",
+    "test:watch": "turbo test:watch"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@playwright/test": "^1.62.1",
+    "@rexxars/bundle-stats": "catalog:",
+    "@sanity/prettier-config": "^3.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-is": "^19.2.0",
+    "del-cli": "^6.0.0",
+    "husky": "^9.1.7",
+    "knip": "6.0.0",
+    "lint-staged": "^15.5.2",
+    "oxfmt": "catalog:tooling",
+    "oxlint": "catalog:tooling",
+    "pkg-pr-new": "catalog:tooling",
+    "prettier": "^3.9.1",
+    "prettier-plugin-astro": "^0.14.1",
+    "prettier-plugin-gherkin": "^3.1.4",
+    "turbo": "^2.6.3"
+  },
+  "lint-staged": {
+    "*": "oxfmt --no-error-on-unmatched-pattern",
+    "*.{astro,feature}": "prettier --write"
+  },
+  "packageManager": "pnpm@10.25.0",
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowAny": [
+        "react",
+        "react-dom",
+        "react-is"
+      ]
+    },
+    "overrides": {
+      "@astrojs/mdx": "^7.0.3",
+      "@portabletext/block-tools": "workspace:*",
+      "@portabletext/editor": "workspace:*",
+      "@portabletext/patches": "workspace:*",
+      "@types/react": "$@types/react",
+      "@types/react-dom": "$@types/react-dom",
+      "@types/react-is": "$@types/react-is",
+      "jsdom": "^27.2.0",
+      "sanity>@portabletext/editor": "workspace:*",
+      "sanity>@sanity/cli": "8.9.0"
+    },
+    "patchedDependencies": {
+      "@microsoft/api-extractor": "patches/@microsoft__api-extractor.patch",
+      "@vitest/browser-playwright": "patches/@vitest__browser-playwright.patch"
+    }
+  }
+}

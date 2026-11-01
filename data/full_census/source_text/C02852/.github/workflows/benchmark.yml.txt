@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*' # older version branches
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    name: perf:benchmark
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install
+
+    - name: Build project
+      run: pnpm build
+
+    - name: Run script
+      run: pnpm perf:benchmark

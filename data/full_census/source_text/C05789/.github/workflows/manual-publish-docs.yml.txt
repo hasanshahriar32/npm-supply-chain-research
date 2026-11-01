@@ -1,0 +1,72 @@
+on:
+  workflow_dispatch:
+    inputs:
+      workspace_path:
+        description: 'The workspace to publish docs for'
+        required: true
+        default: 'packages/shared/common'
+        type: choice
+        options:
+          - packages/shared/common
+          - packages/shared/sdk-server
+          - packages/shared/sdk-server-edge
+          - packages/shared/akamai-edgeworker-sdk
+          - packages/sdk/cloudflare
+          - packages/sdk/fastly
+          - packages/sdk/server-node
+          - packages/sdk/vercel
+          - packages/sdk/akamai-base
+          - packages/sdk/akamai-edgekv
+          - packages/store/node-server-sdk-redis
+          - packages/store/node-server-sdk-dynamodb
+          - packages/telemetry/node-server-sdk-otel
+          - packages/sdk/browser
+          - packages/sdk/server-ai
+          - packages/sdk/shopify-oxygen
+          - packages/sdk/electron
+          - packages/sdk/react
+          - packages/sdk/openfeature-cloudflare-server
+          - packages/sdk/openfeature-node-server
+          - packages/sdk/vue
+          - packages/shared/eventsource
+name: Publish Documentation
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to push docs to the gh-pages branch.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./actions/setup-yarn
+        with:
+          node-version: 24.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 'Setup Redis'
+        if: ${{ inputs.workspace_path == 'packages/store/node-server-sdk-redis' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install redis-server
+          sudo service redis-server start
+
+      - name: 'Setup DynamoDB'
+        if: ${{ inputs.workspace_path == 'packages/store/node-server-sdk-dynamodb' }}
+        run: |
+          sudo docker run -d -p 8000:8000 amazon/dynamodb-local
+
+      - name: 'Set WORKSPACE_NAME variable'
+        run: |
+          WORKSPACE_NAME=$(./scripts/package-name.sh ${{ inputs.workspace_path }})
+          echo "WORKSPACE_NAME=$WORKSPACE_NAME" >> $GITHUB_ENV
+      - id: build
+        # Build using the same steps from CI.
+        name: Build and Test
+        uses: ./actions/ci
+        with:
+          workspace_name: ${{ env.WORKSPACE_NAME }}
+          workspace_path: ${{ inputs.workspace_path }}
+      - id: publish
+        name: Publish Documentation
+        uses: ./actions/publish-docs
+        with:
+          workspace_path: ${{ inputs.workspace_path }}

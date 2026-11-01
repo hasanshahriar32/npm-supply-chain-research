@@ -1,0 +1,28 @@
+name: bundle-stats
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-stats:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Install project dependencies
+        run: pnpm install
+
+      - uses: rexxars/bundle-stats@v2
+        with:
+          build-command: pnpm build --filter='./packages/*'

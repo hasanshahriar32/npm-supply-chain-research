@@ -1,0 +1,46 @@
+# Code Quality Workflow
+#
+# This workflow ensures code quality standards are maintained by running:
+# - ESLint linting to check for code style and potential issues
+# - Prettier formatting checks to ensure consistent code formatting
+#
+# These checks help maintain code quality and consistency across the project.
+#
+# Triggers: Push to master, pull requests (opened, synchronize, reopened)
+
+name: Code Quality
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.22.1'
+          cache: 'yarn'
+
+      - name: Install Yarn
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type-check source and tests
+        run: yarn typecheck
+
+      - name: Run linting
+        run: yarn lint
+
+      - name: Check formatting
+        run: yarn prettier --check "**/*.{ts,js,yml}"

@@ -1,0 +1,59 @@
+name: Visual Tests
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  visual:
+    runs-on: ubuntu-latest
+    # skip for external PRs, run for push on main branch
+    if: ${{ !github.event.pull_request || github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+
+      - name: Get yarn cache
+        uses: actions/cache@v5
+        id: yarn-cache
+        with:
+          path: |
+            **/node_modules
+            ~/.cache
+          key: ${{ runner.os }}-repo-${{ github.event.pull_request.head.repo.full_name }}-node-24-yarn-${{ hashFiles('**/yarn.lock') }}-${{ hashFiles('.github/workflows/**.yml') }}
+
+      - name: Install Node.js dependencies
+        if: steps.yarn-cache.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+
+      # Same browser as the renderer's visual tests: Playwright's pinned Chromium, so the baselines only change
+      # when the Playwright version does. Skips the download when the browser is cached.
+      - name: Install Playwright browser
+        run: yarn playwright install --with-deps chromium
+
+      - run: yarn build
+
+      - run: yarn test:visual
+        env:
+          VRT_APIURL: ${{ secrets.VRT_APIURL }}
+          VRT_APIKEY: ${{ secrets.VRT_APIKEY }}
+          VRT_PROJECT: ${{ secrets.VRT_PROJECT }}
+          VRT_BRANCHNAME: ${{ github.head_ref || github.ref_name }}
+          VRT_CIBUILDID: ${{ github.sha }}
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-visual-report-${{ github.run_id }}
+          path: |
+            packages/embed/playwright-report/
+            packages/embed/test-results/
+          if-no-files-found: ignore

@@ -1,0 +1,70 @@
+name: Dry-run release
+
+on:
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Dry-run release
+    runs-on: ubuntu-22.04
+    # Dry-run cannot be be triggered on the release branch
+    if: github.ref != 'refs/heads/release'
+    # GH Token permissions as required by semantic-release
+    # https://github.com/semantic-release/github?tab=readme-ov-file#github-authentication
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all branches
+
+      - name: Fetch release branch
+        run: git fetch origin release:refs/remotes/origin/release
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run build
+        run: yarn build
+
+      - name: Run test
+        run: yarn test
+
+      - name: Install jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+
+      - name: Configure .releaserc
+        run: |
+          BRANCH_CONFIG='[{ "name": "${{ github.ref_name }}", "prerelease": "beta", "channel": "beta" }, "release"]'
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            BRANCH_CONFIG='[{ "name": "main", "prerelease": "beta", "channel": "beta" }, "release"]'
+          fi
+
+          # Patch only the branches field in the existing .releaserc
+          jq --argjson branches "$BRANCH_CONFIG" '.branches = $branches' .releaserc > .releaserc.dry-run
+          mv .releaserc.dry-run .releaserc
+
+      - name: Dry-run release
+        run: npx semantic-release --dry-run
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          NPMJS_NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+          NPMJS_NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_NPM_CONFIG_REGISTRY: https://npm.pkg.github.com
+          GITHUB_NPM_TOKEN: ${{ github.token }}

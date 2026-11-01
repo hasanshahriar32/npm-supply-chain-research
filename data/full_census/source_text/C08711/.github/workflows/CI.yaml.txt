@@ -1,0 +1,73 @@
+# This is a basic workflow
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the main branch
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    permissions:
+      checks: write  ## for coveralls
+      contents: read ##  for docker-push
+      security-events: write ## for upload-sarif
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v7
+
+      # Set up Node
+      - name: Use Node 22.13.0
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+          registry-url: 'https://registry.npmjs.org'
+
+      # Run install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Build extension
+      - name: Run build
+        run: npm run build
+
+      - name: Generate SARIF
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run lint-ci
+        env:
+          SARIF_ESLINT_IGNORE_SUPPRESSED: 'true'
+
+      - name: Upload SARIF file
+        if: matrix.os == 'ubuntu-latest'
+        uses: github/codeql-action/upload-sarif@17573ee1cc1b9d061760f3a006fc4aac4f944fd5 #v2
+        with:
+          # Path to SARIF file relative to the root of the repository
+          sarif_file: eslint-result.sarif
+          # Optional category for the results
+          # Used to differentiate multiple results for one commit
+          category: eslint
+
+      # Run tests
+      - name: Run Test
+        run: npm run coveralls
+
+        # Run Coveralls
+      - name: Coveralls
+        if: matrix.os == 'ubuntu-latest'
+        uses: coverallsapp/github-action@c7885c00cb7ec0b8f9f5ff3f53cddb980f7a4412 # v2.2.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

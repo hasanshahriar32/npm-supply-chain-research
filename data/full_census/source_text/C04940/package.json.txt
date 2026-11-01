@@ -1,0 +1,73 @@
+{
+  "name": "postcss-font-family-system-ui",
+  "version": "5.0.0",
+  "description": "Use the system-ui font family in CSS",
+  "author": "Junliang Huang <i@jhuang.me>",
+  "contributors": [
+    "Junliang Huang <i@jhuang.me>",
+    "Jonathan Neal <jonathantneal@hotmail.com>"
+  ],
+  "license": "CC0-1.0",
+  "repository": "JLHwung/postcss-font-family-system-ui",
+  "homepage": "https://github.com/JLHwung/postcss-font-family-system-ui#readme",
+  "bugs": "https://github.com/JLHwung/postcss-font-family-system-ui/issues",
+  "main": "./dist/index.bundle.cjs",
+  "type": "module",
+  "exports": {
+    "import": "./dist/index.bundle.mjs",
+    "require": "./dist/index.bundle.cjs"
+  },
+  "files": [
+    "dist/"
+  ],
+  "scripts": {
+    "build": "rollup -c .rollup.mjs",
+    "check:js": "eslint *.[cm]js --cache --ignore-path .gitignore --quiet",
+    "prepublishOnly": "yarn test",
+    "check": "yarn check:js",
+    "test": "yarn build && echo 'Running tests...'; yarn check && yarn test:tape",
+    "test:tape": "postcss-tape --config .tape.cjs"
+  },
+  "dependencies": {
+    "browserslist": "^4.0.0",
+    "caniuse-lite": "^1.0.30000655"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/eslint-parser": "7.29.9",
+    "@babel/preset-env": "7.29.7",
+    "@rollup/plugin-babel": "5.3.1",
+    "ajv": "8.20.0",
+    "eslint": "8.57.1",
+    "eslint-config-dev": "2.0.0",
+    "postcss": "8.5.32",
+    "postcss-tape": "6.0.1",
+    "pre-commit": "2.0.0",
+    "rollup": "4.67.2"
+  },
+  "peerDependencies": {
+    "postcss": "^8.0.0"
+  },
+  "eslintConfig": {
+    "extends": "dev",
+    "parser": "@babel/eslint-parser"
+  },
+  "keywords": [
+    "postcss",
+    "css",
+    "postcss-plugin",
+    "ua",
+    "user",
+    "agent",
+    "platform",
+    "system",
+    "ui",
+    "default",
+    "font",
+    "font-family",
+    "family",
+    "face",
+    "type",
+    "typeface"
+  ]
+}

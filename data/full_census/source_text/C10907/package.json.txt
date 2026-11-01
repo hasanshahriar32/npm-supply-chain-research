@@ -1,0 +1,98 @@
+{
+  "name": "elastic-builder",
+  "version": "0.0.0-development",
+  "description": "A JavaScript implementation of the elasticsearch Query DSL",
+  "main": "src/index.js",
+  "files": [
+    "src/",
+    "repl.js",
+    "index.d.ts"
+  ],
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "build:umd": "webpack ./src/index.js --output-path browser --output-filename elastic-builder.min.js --mode production",
+    "build:docs": "documentation build src/index.js --github -o docs -f html -c ./docs/documentation.yml",
+    "build": "npm run build:umd && npm run build:docs",
+    "lint": "eslint src test",
+    "lint:fix": "npm run lint -- --fix",
+    "precommit": "lint-staged",
+    "test:src": "vitest run --coverage",
+    "test:typedef": "tsc --noEmit ./test/typedef.test.ts",
+    "test": "npm run test:src && npm run test:typedef",
+    "test:watch": "vitest",
+    "check": "npm run lint && npm test",
+    "print-version": "cross-env-shell echo v$npm_package_version",
+    "prepublishOnly": "npm run -s build",
+    "postpublish": "bash deploy-docs.sh"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.25.9",
+    "@babel/eslint-parser": "^7.25.9",
+    "@babel/plugin-transform-runtime": "^7.25.9",
+    "@babel/preset-env": "^7.25.9",
+    "@vitest/coverage-v8": "^2.1.8",
+    "babel-loader": "^10.0.0",
+    "cross-env": "^7.0.3",
+    "documentation": "^8.0.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "eslint-plugin-vitest": "^0.5.4",
+    "husky": "^0.14.3",
+    "lint-staged": "^7.2.0",
+    "lodash": "^4.17.21",
+    "prettier": "^3.4.2",
+    "sinon": "^17.0.2",
+    "terser-webpack-plugin": "^5.3.14",
+    "typescript": "^5.9.2",
+    "vitest": "^2.1.8",
+    "webpack": "^5.101.2",
+    "webpack-cli": "^6.0.1"
+  },
+  "lint-staged": {
+    "src/**/*.js": [
+      "eslint --fix",
+      "git add"
+    ],
+    "test/**/*.js": [
+      "eslint --fix",
+      "git add"
+    ]
+  },
+  "homepage": "https://elastic-builder.js.org",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sudo-suhas/elastic-builder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sudo-suhas/elastic-builder/issues"
+  },
+  "keywords": [
+    "elasticsearch",
+    "elastic-builder",
+    "querying",
+    "queries",
+    "query",
+    "elastic",
+    "search",
+    "elasticjs",
+    "ejs",
+    "dsl"
+  ],
+  "author": "Suhas Karanth <sudo.suhas@gmail.com>",
+  "contributors": [
+    "austin ce <austin.cawley@gmail.com>",
+    "Julien Maitrehenry <julien.maitrehenry@me.com>",
+    "ochan12 <mateochando@gmail.com>",
+    "kennylindahl <haxxblaster@gmail.com>",
+    "foxstarius <aj.franzon@gmail.com>",
+    "sandeep952 <sandy335582@gmail.com>",
+    "florian-lackner365 <florian.lackner@365talents.com>",
+    "Alejandro Marulanda <alejokf@gmail.com>"
+  ]
+}

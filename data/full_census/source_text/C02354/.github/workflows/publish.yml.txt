@@ -1,0 +1,45 @@
+name: Publishing
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write  # Required for OIDC (Trusted Publishing)
+  contents: read
+
+jobs:
+  npm-publish:
+    if: ${{ !github.event.release.draft }}
+    runs-on: ubuntu-latest
+    environment: npmjs
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+      - uses: DevExpress/testcafe-build-system/actions/publish@main
+        with:
+          pre-publish-script: gulp test-server
+          audit-level: critical
+          omit-dev-dependencies: true
+          version: ${{ github.event.release.tag_name }}
+  docker-publish:
+    needs: npm-publish
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.target_commitish }}
+      - run: git fetch --force --tags
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - uses: docker/login-action@v3
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - run: npm ci
+      - run: npx --no-install gulp build
+      - run: gulp docker-publish

@@ -1,0 +1,38 @@
+name: Run tests
+
+on:
+    push:
+    pull_request:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    test:
+        name: Test (Node.js ${{ matrix.node }})
+        timeout-minutes: 10
+        strategy:
+            fail-fast: false
+            matrix:
+                node: [20.x, 22.x, 24.x, latest]
+                os: [ubuntu-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v7
+            - name: Use Node.js ${{ matrix.node }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node }}
+                  cache: npm
+            - run: npm ci
+            - run: npm run lint
+            - run: npm run format:check
+            - run: npm test
+            # The suite again with require(esm) switched off, the way EmailEngine's pkg binary loads
+            # the package; Node 20 has no such flag to set
+            - run: npm run test:cjs
+              if: matrix.node != '20.x'

@@ -1,0 +1,423 @@
+name: Testing
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Branch name or SHA to checkout'
+        required: false
+        type: string
+      docs_only:
+        description: 'Diff touches only *.md/guides/**; skip setup, integration-tests, teardown, example-app-semantic-search, external-app, and typescript-compilation-tests'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Setup shared resources
+    runs-on: ubuntu-latest
+    # Dependabot PRs run with the Dependabot secret store, where
+    # PINECONE_API_KEY and VERCEL_TOKEN are not set. Skip the jobs that need
+    # a live key; lint, unit tests, mocked smoke, and the TS compile matrix
+    # still gate the bump, and integration coverage runs on merge to main.
+    # docs_only skips it too: a *.md/guides/** diff can't touch the surface
+    # these tests exercise.
+    if: github.event.pull_request.user.login != 'dependabot[bot]' && !inputs.docs_only
+    outputs:
+      fixturesJson: ${{ steps.setup.outputs.FIXTURES_JSON }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run setup script
+        id: setup
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          # Capture the exit code rather than letting `bash -e` abort on the
+          # assignment; otherwise a failing setup kills the step before the
+          # output below is ever printed, leaving only "exit code 1".
+          set +e
+          SETUP_OUTPUT=$(npx ts-node ./src/integration/setup.ts 2>&1)
+          SETUP_EXIT=$?
+          set -e
+
+          # Always surface the setup logs (minus the fixtures line) first.
+          echo "$SETUP_OUTPUT" | grep -v "^FIXTURES_JSON=" || true
+
+          FIXTURES_JSON=$(echo "$SETUP_OUTPUT" | sed -n 's/^FIXTURES_JSON=//p' | tail -n 1)
+          if [ -n "$FIXTURES_JSON" ]; then
+            echo "FIXTURES_JSON=$FIXTURES_JSON" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$SETUP_EXIT" -ne 0 ]; then
+            echo "::error::setup.ts failed with exit code $SETUP_EXIT"
+            exit "$SETUP_EXIT"
+          fi
+
+          if [ -z "$FIXTURES_JSON" ]; then
+            echo "::error::setup.ts exited 0 but emitted no FIXTURES_JSON line"
+            exit 1
+          fi
+
+  lockfile:
+    name: Validate lockfile
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.docs_only }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version: [22.x, 24.x]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+        with:
+          node_version: ${{ matrix.node_version }}
+      - name: Validate committed lockfile
+        run: npm ci --ignore-scripts
+
+  integration-tests:
+    needs: [setup]
+    if: ${{ !inputs.docs_only }}
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        pinecone_env:
+          - prod
+        node_version: [22.x, 24.x]
+        config:
+          [
+            { runner: 'npm', jest_env: 'node' },
+            { runner: 'bun', jest_env: 'node', bun_version: '1.2' },
+          ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node_version: ${{ matrix.node_version }}
+
+      - name: Setup bun
+        if: matrix.config.bun_version
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ matrix.config.bun_version }}
+
+      - name: Run integration tests (Prod)
+        if: matrix.pinecone_env == 'prod'
+        env:
+          CI: true
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          FIXTURES_JSON: ${{ needs.setup.outputs.fixturesJson }}
+        run: ${{ matrix.config.runner }} run test:integration:${{ matrix.config.jest_env }}
+
+  teardown:
+    name: Teardown shared resources
+    needs: [setup, integration-tests]
+    # Setup emits partial fixtures on failure so cleanup can reclaim them too. Failed integration
+    # tests keep their fixtures so "Re-run failed jobs" can reuse them; the nightly
+    # testing-cleanup workflow reclaims fixtures from runs that are never re-run.
+    if: >-
+      ${{ !inputs.docs_only && needs.setup.outputs.fixturesJson != '' &&
+      (success() || cancelled() || needs.setup.result == 'failure') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run teardown script
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          FIXTURES_JSON: ${{ needs.setup.outputs.fixturesJson }}
+        run: npx ts-node ./src/integration/teardown.ts
+
+  unit-tests:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run tests
+        env:
+          CI: true
+        run: npm run test:unit -- --coverage
+
+  smoke-mocked:
+    name: Smoke (mocked, no key)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      # No PINECONE_API_KEY in env: proves the mocked critical path needs none.
+      # The dedicated smoke config targets only src/smoke and does NOT set
+      # --passWithNoTests, so the job fails (jest exits 1) if that suite ever
+      # collects zero tests, rather than silently passing by running nothing.
+      - name: Run mocked critical-path smoke test
+        env:
+          CI: true
+        run: npm run test:smoke:mocked
+
+  compatibility-package:
+    name: Build compatibility package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+      - name: Install build dependencies
+        run: npm ci
+      # prepack runs the production build. Every consumer below tests this
+      # same tarball, without rebuilding it under the consumer's runtime.
+      - name: Pack SDK
+        run: |
+          mkdir -p "$RUNNER_TEMP/compatibility-package"
+          npm pack --pack-destination "$RUNNER_TEMP/compatibility-package"
+      - name: Upload packed SDK
+        uses: actions/upload-artifact@v7
+        with:
+          name: compatibility-package
+          path: ${{ runner.temp }}/compatibility-package/*.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+  package-consumers:
+    name: Package consumers (Node ${{ matrix.node_version }})
+    needs: [compatibility-package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version: [22.x, 24.x]
+    steps:
+      - name: Checkout consumer fixtures
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+      # No repository dependencies or compiler in the runtime jobs. The
+      # consumer installer uses npm bundled with the selected Node release.
+      - name: Setup consumer runtime
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node_version }}
+      - name: Download packed SDK
+        uses: actions/download-artifact@v8
+        with:
+          name: compatibility-package
+          path: ${{ runner.temp }}/compatibility-package
+      - name: Run CommonJS and ESM consumers (no API key)
+        run: node scripts/test-package.mjs "$RUNNER_TEMP"/compatibility-package/*.tgz
+
+  edge-runtime-entry:
+    name: Edge runtime entry check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Load built entry and construct a client under a real Edge runtime sandbox
+        run: npm run test:edge-runtime
+
+  typescript-compilation-tests:
+    name: TS compile
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.docs_only }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tsVersion:
+          [
+            '~5.2.0',
+            '~5.3.0',
+            '~5.4.0',
+            '~5.5.0',
+            '~5.6.0',
+            '~5.7.0',
+            '~5.8.0',
+            '~5.9.0',
+            '~6.0.0',
+            '~7.0.0',
+            'latest',
+          ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+      - name: Setup runtime
+        uses: ./.github/actions/setup-runtime
+      - name: Install npm packages
+        run: |
+          npm ci --ignore-scripts
+        shell: bash
+      - name: Build TypeScript for Pinecone
+        run: npm run build
+        shell: bash
+      - name: install, compile, and run sample app
+        shell: bash
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+        run: |
+          set -x
+          # $GITHUB_WORKSPACE, not a hardcoded directory name: the default
+          # checkout directory is the repository name, which differs between
+          # the public repo and the internal development mirror.
+          cp -r "$GITHUB_WORKSPACE/ts-compilation-test" "$RUNNER_TEMP/ts-compilation-test"
+          cd "$RUNNER_TEMP/ts-compilation-test"
+          npm install typescript@${{ matrix.tsVersion }} --no-cache
+          # Pin @types/node to the major that matches this job's Node runtime
+          # (.nvmrc). The unpinned "@types/node" pulled the
+          # latest major, whose iterator-helper types (IteratorObject,
+          # BuiltinIteratorReturn, ...) require TypeScript >= 5.6 and broke the
+          # TS 5.2-5.5 matrix legs. Pinning aligns the type defs with the Node
+          # version actually under test. See #396.
+          npm install @types/node@22 --no-cache
+          npm install "$GITHUB_WORKSPACE" --no-cache
+          cat package.json
+          cat package-lock.json
+          npm run tsc-version
+          npm run build
+          # Two more consumer shapes: the TypeScript 6+ default of an empty
+          # `types` list (no automatic @types inclusion), and an ESM project
+          # under `module: nodenext` with `verbatimModuleSyntax`.
+          npm run typecheck:default-types
+          npm run typecheck:esm
+          # `npm run build` and the typechecks are the actual TS-version
+          # compatibility check and need no credentials. `npm run start` calls
+          # listIndexes() against the live API, so it is skipped when no key is
+          # available (e.g. Dependabot PRs, which cannot read Actions secrets).
+          if [ -n "$PINECONE_API_KEY" ]; then
+            npm run start
+          else
+            echo "PINECONE_API_KEY not set; skipping live run."
+          fi
+
+  example-app-semantic-search:
+    name: 'Example app: semantic search'
+    # The sample app is a public repo that tracks the released client, so this
+    # job can only pass against the public repo at release time. Skip it in the
+    # internal development mirror (see pinecone-ts-client-internal#5). The
+    # Dependabot clause covers the public repo, where such runs cannot read the
+    # secrets this job needs; see the `setup` job.
+    if: >-
+      github.repository == 'pinecone-io/pinecone-ts-client' &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      !inputs.docs_only
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout pinecone-ts-client
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+          path: pinecone-ts-client
+      - name: Checkout semantic-search-example
+        uses: actions/checkout@v7
+        with:
+          repository: pinecone-io/semantic-search-example
+          ref: main
+          path: semantic-search-example
+      - name: Setup runtime
+        uses: ./pinecone-ts-client/.github/actions/setup-runtime
+        with:
+          working_directory: pinecone-ts-client
+      - name: Install and build client
+        shell: bash
+        run: |
+          cd pinecone-ts-client
+          npm ci --ignore-scripts
+          npm run build
+      - name: Install and build sample app
+        shell: bash
+        run: |
+          cd semantic-search-example
+          npm install --no-cache
+          npm install '../pinecone-ts-client'
+          cat package.json
+      - name: Run example tests with dev version of client
+        env:
+          CI: true
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          PINECONE_INDEX: 'semantic-search'
+          PINECONE_CLOUD: 'aws'
+          PINECONE_REGION: 'us-west-2'
+        shell: bash
+        run: |
+          cd semantic-search-example
+          npm run test
+
+  external-app:
+    name: external-app
+    runs-on: ubuntu-latest
+    # VERCEL_TOKEN only exists in the public repo, and this job deploys to
+    # Vercel production on the shared pinecone-io scope, so it cannot pass from
+    # the internal mirror for anyone -- and would publish unreleased API
+    # surface if it did. See pinecone-ts-client-internal#5. The Dependabot
+    # clause covers the public repo, where the token exists but Dependabot runs
+    # cannot read it.
+    if: >-
+      github.repository == 'pinecone-io/pinecone-ts-client' &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      !inputs.docs_only
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+
+      - name: Run external app tests
+        uses: ./.github/actions/external-app/edge
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}

@@ -1,0 +1,31 @@
+name: Node.js CI
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    actions: read
+    contents: read
+
+jobs:
+    nx:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: package.json
+                  cache: "npm"
+
+            - run: npm ci --legacy-peer-deps
+            - uses: nrwl/nx-set-shas@v5
+
+            - run: npx nx run-many -t format:check lint build coverage

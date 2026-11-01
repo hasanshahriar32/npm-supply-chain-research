@@ -1,0 +1,47 @@
+name: Filestash
+
+on:
+  push:
+    branches:
+      - main
+  # Or manually
+  workflow_dispatch:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    environment: filestash
+    env:
+      NODE_VERSION: 22.x
+    name: Update Filestash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Set up SSH
+        run: |
+          install --directory ~/.ssh --mode 700
+          base64 --decode <<< "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -t ed25519 -H "${{ secrets.FILESTASH_SERVER }}" >> ~/.ssh/known_hosts
+
+      - name: Upload to Filestash
+        run: |
+          rsync dist/jquery-ui.js filestash@"${{ secrets.FILESTASH_SERVER }}":ui/jquery-ui-git.js
+          rsync dist/jquery-ui.css filestash@"${{ secrets.FILESTASH_SERVER }}":ui/jquery-ui-git.css

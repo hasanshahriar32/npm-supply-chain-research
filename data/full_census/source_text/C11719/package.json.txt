@@ -1,0 +1,129 @@
+{
+  "name": "napi-postinstall",
+  "version": "0.3.7",
+  "type": "commonjs",
+  "description": "The `postinstall` script helper for handling native bindings in legacy `npm` versions",
+  "repository": "git+https://github.com/un-ts/napi-postinstall.git",
+  "author": "JounQin <admin@1stg.me> (https://www.1stG.me)",
+  "funding": "https://opencollective.com/napi-postinstall",
+  "license": "MIT",
+  "packageManager": "yarn@4.18.1",
+  "engines": {
+    "node": "^12.20.0 || ^14.18.0 || >=16.0.0"
+  },
+  "bin": {
+    "napi-patch": "./lib/patch.js",
+    "napi-postinstall": "./lib/cli.js"
+  },
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./fallback": {
+      "types": "./lib/fallback.d.ts",
+      "default": "./lib/fallback.js"
+    },
+    "./cli": {
+      "types": "./lib/cli.d.ts",
+      "default": "./lib/cli.js"
+    },
+    "./patch": {
+      "types": "./lib/patch.d.ts",
+      "default": "./lib/patch.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc -b src",
+    "clean": "rimraf -g .type-coverage coverage dist lib '.*cache'",
+    "dev": "vitest",
+    "docs": "vite",
+    "docs:build": "vite build",
+    "format": "prettier --write .",
+    "lint": "concurrently -r 'yarn:lint:*'",
+    "lint:es": "eslint . --cache --max-warnings 10",
+    "lint:style": "stylelint . --cache",
+    "lint:tsc": "tsc -b --noEmit",
+    "prepare": "patch-package && simple-git-hooks && yarn-berry-deduplicate || exit 0",
+    "release": "yarn build && clean-pkg-json && changeset publish",
+    "serve": "vite preview",
+    "test": "vitest run",
+    "typecov": "type-coverage",
+    "version": "changeset version && yarn --no-immutable && yarn test -u"
+  },
+  "devDependencies": {
+    "@1stg/browserslist-config": "^2.1.4",
+    "@1stg/common-config": "^16.0.0",
+    "@1stg/postcss-config": "^7.0.0",
+    "@1stg/stylelint-config": "^7.0.0",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@commitlint/cli": "^21.0.0",
+    "@eslint-react/eslint-plugin": "^5.0.0",
+    "@mdx-js/rollup": "^3.1.0",
+    "@shikijs/rehype": "^4.0.0",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^24.0.0",
+    "@types/pnpapi": "^0.0.5",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@types/web": "^0.0.359",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@unts/patch-package": "^8.1.1",
+    "@vitejs/plugin-react-swc": "^4.0.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/eslint-plugin": "^1.3.4",
+    "clean-pkg-json": "^2.0.0",
+    "concurrently": "^10.0.0",
+    "eslint": "^10.0.0",
+    "eslint-plugin-node-dependencies": "^2.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "github-markdown-css": "^5.8.1",
+    "nano-staged": "^1.0.0",
+    "napi-postinstall": "^0.3.7",
+    "prettier": "^3.6.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "rimraf": "^6.0.1",
+    "simple-git-hooks": "^2.13.0",
+    "size-limit": "^14.0.0",
+    "size-limit-preset-node-lib": "^0.5.0",
+    "stylelint": "^17.0.0",
+    "tinyexec": "^1.0.1",
+    "type-coverage": "^2.29.7",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vite": "^8.0.0",
+    "vitest": "^5.0.5",
+    "yarn-berry-deduplicate": "^7.0.0"
+  },
+  "resolutions": {
+    "napi-postinstall": "workspace:*",
+    "prettier": "^3.6.2"
+  },
+  "publishConfig": {
+    "provenance": true
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "cache": true,
+    "detail": true,
+    "ignoreAsAssertion": true,
+    "ignoreFiles": [
+      "**/*.d.ts"
+    ],
+    "ignoreNonNullAssertion": true,
+    "showRelativePath": true,
+    "strict": true,
+    "update": true
+  }
+}

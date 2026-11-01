@@ -1,0 +1,55 @@
+name: PR
+
+on:
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  check-code-generation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    name: 'Check Code Generation: node-24, ubuntu-latest'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set node version to 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.1
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Generate code
+        id: generate
+        run: |
+          pnpm run generate
+          pnpm run format
+          pnpm run build
+          pnpm run test -u
+        continue-on-error: true
+        env:
+          CI_PREFLIGHT: true
+
+      - name: Check diff
+        id: diff
+        run: |
+          git add .
+          git diff --cached --name-only | sed -E 's/^(.*)$/::error file=\1,line=1,title=Diff detected::Please run `pnpm run preflight` and commit the changes./'
+          git diff --cached --name-only --exit-code
+        continue-on-error: true
+
+      - name: Status
+        if: ${{ steps.generate.outcome == 'failure' || steps.diff.outcome == 'failure' }}
+        run: exit 1

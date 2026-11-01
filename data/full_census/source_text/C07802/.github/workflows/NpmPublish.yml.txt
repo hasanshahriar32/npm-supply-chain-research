@@ -1,0 +1,31 @@
+name: publish
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  release:
+    # prevents this action from running on forks
+    if: github.repository == 'ota-meshi/postcss-html'
+    permissions:
+      contents: write # to create release (changesets/action)
+      id-token: write # OpenID Connect token needed for provenance
+      pull-requests: write # to create pull request (changesets/action)
+    name: check version, and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: setup Node
+        uses: actions/setup-node@v7
+        with:
+          registry-url: "https://registry.npmjs.org"
+          node-version: "lts/*"
+      - name: Install Packages
+        run: npm i
+      - name: test
+        run: npm run test
+      - name: check can npm-publish
+        run: npx can-npm-publish
+      - name: release
+        run: npm publish

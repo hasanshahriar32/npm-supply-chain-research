@@ -1,0 +1,49 @@
+{
+  "name": "jsonforms-monorepo",
+  "engines": {
+    "node": "^24",
+    "pnpm": "^11"
+  },
+  "packageManager": "pnpm@11.27.1+sha512.a81d4c21b9b09a4b0aebf90ef5e527d4262bdda322d26082978cb549023ac6d9cafc98b19fffaa5c71db438a65f70224edb78d7311187861ff96480d1cdca23c",
+  "scripts": {
+    "lerna": "lerna",
+    "preparePublish": "git clean -dfx && pnpm i --frozen-lockfile && pnpm run clean && pnpm run build && pnpm run doc && pnpm run test",
+    "merge-report": "mkdir -p coverage && lcov-result-merger 'packages/**/coverage/lcov.info' 'coverage/lcov.info' --prepend-source-files",
+    "check-format": "echo 'temporarily disabled'",
+    "build": "lerna run build",
+    "bundle": "lerna run bundle",
+    "clean": "lerna run clean",
+    "doc": "lerna run doc",
+    "test": "lerna run test",
+    "test-cov": "lerna run test-cov",
+    "lint": "lerna run --no-bail lint",
+    "lint:fix": "lerna run --no-bail lint:fix",
+    "build:examples-app": "lerna run build:examples-app && node packages/examples-app/prepare-examples-app.js"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.29.7",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@types/lodash": "^4.14.149",
+    "ajv": "^8.18.0",
+    "ajv-formats": "^2.1.0",
+    "babel-loader": "^8.0.6",
+    "core-js": "^3.9.1",
+    "coveralls": "^3.0.9",
+    "cross-env": "^10.1.0",
+    "css-loader": "^3.2.0",
+    "istanbul-lib-coverage": "^3.2.0",
+    "lcov-result-merger": "^3.1.0",
+    "lerna": "^9.0.1",
+    "nan": "^2.14.2",
+    "nyc": "^15.1.0",
+    "prettier": "^2.8.4",
+    "source-map-loader": "^0.2.4",
+    "style-loader": "^1.0.1",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.4.0",
+    "tslib": "^2.5.0",
+    "typescript": "~5.8.3",
+    "webpack": "^5.78.0",
+    "webpack-merge": "^5.10.0"
+  }
+}

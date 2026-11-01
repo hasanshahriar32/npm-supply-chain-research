@@ -1,0 +1,77 @@
+{
+  "name": "@willsoto/nestjs-prometheus",
+  "version": "7.0.0",
+  "description": "NestJS module for Prometheus",
+  "license": "Apache-2.0",
+  "author": "Will Soto <willsoto@users.noreply.github.com> (https://github.com/willsoto)",
+  "repository": "git://github.com/willsoto/nestjs-prometheus.git",
+  "files": [
+    "dist",
+    "typings"
+  ],
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
+  "scripts": {
+    "prebuild": "pnpm run clean",
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "rimraf dist coverage",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint --fix",
+    "prepare": "lefthook install",
+    "prerelease": "pnpm run build",
+    "release": "semantic-release",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --project tsconfig.lint.json --noEmit"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@fastify/compress": "9.2.2",
+    "@nestjs/common": "12.1.3",
+    "@nestjs/core": "12.1.3",
+    "@nestjs/platform-express": "12.1.3",
+    "@nestjs/platform-fastify": "12.1.3",
+    "@nestjs/testing": "12.1.3",
+    "@prometheus-io/client": "0.16.1",
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "@types/supertest": "7.2.1",
+    "@vitest/coverage-v8": "5.0.5",
+    "lefthook": "2.2.2",
+    "markdown-toc": "1.2.0",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
+    "reflect-metadata": "0.2.2",
+    "rimraf": "6.1.3",
+    "rxjs": "7.8.2",
+    "supertest": "7.3.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0",
+    "@prometheus-io/client": "^0.16.0"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/github",
+      "@semantic-release/npm",
+      "@semantic-release/changelog",
+      "@semantic-release/git"
+    ]
+  },
+  "packageManager": "pnpm@12.14.0"
+}

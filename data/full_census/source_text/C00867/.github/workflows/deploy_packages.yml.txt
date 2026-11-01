@@ -1,0 +1,202 @@
+name: Deploy Packages
+on:
+  push:
+    branches: [master, patch/*]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    outputs:
+      needs_release: ${{ steps.release_check.outputs.needs_release }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x, 24.x]
+
+    services:
+      postgres18:
+        image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432/tcp
+      postgres14:
+        image: postgres:14@sha256:14bfab572eec6abf65892e1db7c3ba8d41b2a2855c1b143664907d6e146eb6e1
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432/tcp
+      mysql8:
+        image: mysql:8.4@sha256:24989179f58856db763f418010c1169fecc944e3ec1ea7e921572d83eb070f70
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 3306/tcp
+      redis:
+        image: redis:7@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379/tcp
+
+    env:
+      CI: true
+      NODE_OPTIONS: --max-old-space-size=8192 --no-node-snapshot --experimental-vm-modules
+      INTEGRATION_TEST_GITHUB_TOKEN: ${{ secrets.INTEGRATION_TEST_GITHUB_TOKEN }}
+      INTEGRATION_TEST_GITLAB_TOKEN: ${{ secrets.INTEGRATION_TEST_GITLAB_TOKEN }}
+      INTEGRATION_TEST_BITBUCKET_TOKEN: ${{ secrets.INTEGRATION_TEST_BITBUCKET_TOKEN }}
+      INTEGRATION_TEST_AZURE_TOKEN: ${{ secrets.INTEGRATION_TEST_AZURE_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: use node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version == '24.x' && '24.22.1' || '22.23.4' }}
+          registry-url: https://registry.npmjs.org/ # Needed for auth
+      - name: yarn install
+        uses: backstage/actions/yarn-install@a9e1b58ad52aaf319264e18c3ff6887a4c824b52 # v0.7.13
+        with:
+          cache-prefix: ${{ runner.os }}-v${{ matrix.node-version }}
+
+      # Only the tree of the previous commit is needed to diff package versions,
+      # so keep this shallow rather than fetching its entire ancestry.
+      - name: Fetch previous commit for release check
+        env:
+          GH_EVENT_BEFORE: ${{ github.event.before }}
+        run: git fetch --depth 1 origin "$GH_EVENT_BEFORE"
+
+      - name: Check if release
+        if: inputs.force_release != true
+        id: release_check
+        run: node scripts/check-if-release.js
+        env:
+          COMMIT_SHA_BEFORE: '${{ github.event.before }}'
+
+      - name: validate config
+        run: yarn backstage-cli config:check --lax
+
+      - name: Restore backstage-cli cache
+        id: backstage-cli-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .cache/backstage-cli
+          key: ${{ runner.os }}-v${{ matrix.node-version }}-backstage-cli-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-v${{ matrix.node-version }}-backstage-cli-
+
+      - name: lint
+        run: yarn backstage-cli repo lint --success-cache --success-cache-dir .cache/backstage-cli
+
+      - name: type checking and declarations
+        run: yarn tsc:full
+
+      - name: build
+        run: yarn backstage-cli repo build --all
+
+      - name: verify type dependencies
+        run: yarn lint:type-deps
+
+      - name: test (and upload coverage)
+        id: test
+        run: |
+          yarn backstage-cli repo test --maxWorkers=3 --workerIdleMemoryLimit=1300M --coverage --success-cache --success-cache-dir .cache/backstage-cli
+        env:
+          BACKSTAGE_TEST_DISABLE_DOCKER: 1
+          BACKSTAGE_TEST_DATABASE_POSTGRES18_CONNECTION_STRING: postgresql://postgres:postgres@localhost:${{ job.services.postgres18.ports[5432] }}
+          BACKSTAGE_TEST_DATABASE_POSTGRES14_CONNECTION_STRING: postgresql://postgres:postgres@localhost:${{ job.services.postgres14.ports[5432] }}
+          BACKSTAGE_TEST_DATABASE_MYSQL8_CONNECTION_STRING: mysql://root:root@localhost:${{ job.services.mysql8.ports[3306] }}/ignored
+          BACKSTAGE_TEST_CACHE_REDIS7_CONNECTION_STRING: redis://localhost:${{ job.services.redis.ports[6379] }}
+
+      - name: Save backstage-cli cache
+        if: ${{ !cancelled() && steps.test.outcome != 'skipped' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .cache/backstage-cli
+          key: ${{ steps.backstage-cli-cache.outputs.cache-primary-key }}
+
+      - name: Discord notification
+        if: ${{ failure() }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          script: |
+            const webhook = process.env.DISCORD_WEBHOOK;
+            if (!webhook) {
+              throw new Error('DISCORD_WEBHOOK secret is not set');
+            }
+            const repo = context.repo.owner + '/' + context.repo.repo;
+            const runId = context.runId;
+            const message = `Master build failed https://github.com/${repo}/actions/runs/${runId}`;
+            const response = await fetch(webhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: message }),
+            });
+            if (!response.ok) {
+              throw new Error(`Discord webhook request failed: ${response.status} ${response.statusText}`);
+            }
+
+  # A separate release build that is only run for commits that are the result of merging the "Version Packages" PR
+  # We can't reuse the output from the above step, but we'll have a guaranteed node_modules cache and
+  # only run the build steps that are necessary for publishing
+  release:
+    needs: build
+
+    if: needs.build.outputs.needs_release == 'true'
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+
+      # Notify maintainers that a new release is ready to be published
+      - name: Discord notification
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_MAINTAINERS_WEBHOOK }}
+        with:
+          script: |
+            const webhook = process.env.DISCORD_WEBHOOK;
+            if (!webhook) {
+              throw new Error('DISCORD_MAINTAINERS_WEBHOOK secret is not set');
+            }
+            const sha = context.sha;
+            const message = `A new release is ready to be [published](https://github.com/backstage/publishing/actions/workflows/publish-main.yml) from ${sha}`;
+            const response = await fetch(webhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content: message }),
+            });
+            if (!response.ok) {
+              throw new Error(`Discord webhook request failed: ${response.status} ${response.statusText}`);
+            }

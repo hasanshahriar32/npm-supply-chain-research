@@ -1,0 +1,133 @@
+name: CI
+
+defaults:
+  run: {shell: bash}
+
+env:
+  PROTOC_VERSION: 3.x
+
+on:
+  push:
+    branches: [main, feature.*]
+    tags: ['**']
+  pull_request:
+
+jobs:
+  static_analysis:
+    name: Static analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+          check-latest: true
+
+      - name: Check out the language repo
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/sass, path: language}
+
+      - run: npm install
+      - name: npm run init
+        run: |
+          npm run init -- --skip-compiler --language-path=language $args
+
+      - run: npm run check
+
+  tests:
+    name: 'Tests | Node ${{ matrix.node-version }} | ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      matrix:
+        os: [ubuntu, macos, windows]
+        node-version: ['lts/*', 'lts/-1', 'lts/-2']
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          check-latest: true
+      - uses: dart-lang/setup-dart@v1.8.1
+        with: {sdk: stable}
+      - run: dart --version
+
+      - name: Check out Dart Sass
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/dart-sass}
+
+      - name: Check out the language repo
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/sass, path: language}
+
+      - run: npm install
+      - name: npm run init
+        run: |
+          npm run init -- --compiler-path=dart-sass --language-path=language $args
+
+      - run: npm run test
+      - run: npm run compile
+      - run: node test/after-compile-test.mjs
+
+  sass_spec:
+    name: 'JS API Tests | Node ${{ matrix.node_version }} | ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu, windows, macos]
+        node_version: ['lts/*']
+        include:
+          # Include LTS versions on Ubuntu
+          - os: ubuntu
+            node_version: lts/-1
+          - os: ubuntu
+            node_version: lts/-2
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dart-lang/setup-dart@v1.8.1
+        with: {sdk: stable}
+      - uses: actions/setup-node@v7
+        with: {node-version: "${{ matrix.node_version }}"}
+
+      - name: Check out Dart Sass
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/dart-sass}
+
+      - name: Check out the language repo
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/sass, path: language}
+
+      - run: npm install
+      - name: npm run init
+        run: |
+          npm run init -- --compiler-path=dart-sass --language-path=language $args
+
+      - name: Check out sass-spec
+        uses: sass/clone-linked-repo@v1
+        with: {repo: sass/sass-spec}
+
+      - name: Install sass-spec dependencies
+        run: npm install
+        working-directory: sass-spec
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Run tests
+        run: npm run js-api-spec -- --sassPackage .. --sassSassRepo ../language
+        working-directory: sass-spec
+
+  deploy_npm:
+    needs: [static_analysis, tests, sass_spec]
+    if: "github.ref_type == 'tag' && github.event.repository.fork == false"
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/release.yml

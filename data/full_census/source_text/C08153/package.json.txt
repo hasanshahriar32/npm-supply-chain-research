@@ -1,0 +1,37 @@
+{
+  "name": "root",
+  "version": "10.0.0",
+  "private": true,
+  "repository": "git+https://github.com/storybookjs/addon-designs.git",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "build:example": "pnpm --filter examples run build-storybook && pnpm --filter examples run build-storybook:tab",
+    "dev": "pnpm -r run dev",
+    "example": "pnpm --filter examples run storybook",
+    "fmt": "prettier --write README.md CHANGELOG.md CONTRIBUTING.md package.json 'packages/**/*.{js,jsx,ts,tsx,md,mdx,json}'",
+    "release": "changeset publish"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@storybook/addon-designs": "workspace:*",
+    "@storybook/addon-docs": "^10.1.0",
+    "@storybook/react-vite": "^10.1.0",
+    "@types/react": "^18.2.65",
+    "@types/react-dom": "^18.2.21",
+    "figma-js": "^1.16.0",
+    "prettier": "^3.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remark-gfm": "^4.0.0",
+    "storybook": "^10.1.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.9.2",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "pkg-pr-new": "^0.0.57"
+  },
+  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a"
+}

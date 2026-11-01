@@ -1,0 +1,39 @@
+name: Node.js CI
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.*'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.*'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 24.x]
+        mocha-version: [11, 12]
+        # Mocha 12 requires Node ^20.19 || >=22.12, so it can't run on Node 18.
+        # Node 18 support is covered by the Mocha 11 leg (Mocha 11 allows ^18.18).
+        exclude:
+          - node-version: 18.x
+            mocha-version: 12
+    name: Node ${{ matrix.node-version }} / Mocha ${{ matrix.mocha-version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Mocha ${{ matrix.mocha-version }}
+        run: npm install --no-save mocha@${{ matrix.mocha-version }}
+      - run: npm test

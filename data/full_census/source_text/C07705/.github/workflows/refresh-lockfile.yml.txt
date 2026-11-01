@@ -1,0 +1,132 @@
+name: Refresh Lockfile
+
+on:
+  schedule:
+    # Daily at 4 AM UTC (after check-xz-updates at 3 AM)
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      force_change:
+        description: 'Force "changed" state for testing the PR creation path'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Setup pnpm
+        # v6.0.0 produced a broken 2-document YAML lockfile (issue #228).
+        # Fixed in v6.0.1 (2026-04-17): two-document only when using devEngines.packageManager.
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Regenerate lockfile
+        run: |
+          rm pnpm-lock.yaml
+          pnpm install --no-frozen-lockfile --ignore-scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for changes
+        id: diff
+        env:
+          FORCE: ${{ inputs.force_change }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "# force-test $(date -Iseconds)" >> pnpm-lock.yaml
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Forced change for testing"
+          elif git diff --quiet pnpm-lock.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Lockfile is up to date"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Lockfile has changes"
+          fi
+
+      - name: Build TypeScript
+        if: steps.diff.outputs.changed == 'true'
+        id: build
+        continue-on-error: true
+        run: pnpm build && pnpm -r --filter './packages/*' run build
+
+      - name: Run lint
+        if: steps.diff.outputs.changed == 'true' && steps.build.outcome == 'success'
+        id: lint
+        continue-on-error: true
+        run: pnpm check
+
+      - name: Type check
+        if: steps.diff.outputs.changed == 'true' && steps.lint.outcome == 'success'
+        id: typecheck
+        continue-on-error: true
+        run: pnpm type-check
+
+      - name: Determine outcome
+        if: steps.diff.outputs.changed == 'true'
+        id: result
+        run: |
+          if [ "$BUILD" = "success" ] && [ "$LINT" = "success" ] && [ "$TYPECHECK" = "success" ]; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          BUILD: ${{ steps.build.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+
+      - name: Commit directly (all checks passed)
+        if: steps.diff.outputs.changed == 'true' && steps.result.outputs.passed == 'true'
+        run: |
+          git config user.name "Olivier ORABONA"
+          git config user.email "oorabona@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          git commit -m "chore(deps): refresh lockfile for latest transitive dependencies"
+          git push
+
+      - name: Create PR (checks failed)
+        if: steps.diff.outputs.changed == 'true' && steps.result.outputs.passed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          LINT_OUTCOME: ${{ steps.lint.outcome }}
+          TYPECHECK_OUTCOME: ${{ steps.typecheck.outcome }}
+        run: |
+          BRANCH="chore/refresh-lockfile-$(date +%Y%m%d)"
+          git config user.name "Olivier ORABONA"
+          git config user.email "oorabona@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add pnpm-lock.yaml
+          git commit -m "chore(deps): refresh lockfile (checks need review)"
+          git push -u origin "$BRANCH"
+
+          FAILED=""
+          [ "$BUILD_OUTCOME" != "success" ] && FAILED="build"
+          [ "$LINT_OUTCOME" != "success" ] && [ "$LINT_OUTCOME" != "skipped" ] && FAILED="${FAILED:+$FAILED, }lint"
+          [ "$TYPECHECK_OUTCOME" != "success" ] && [ "$TYPECHECK_OUTCOME" != "skipped" ] && FAILED="${FAILED:+$FAILED, }typecheck"
+          [ -z "$FAILED" ] && FAILED="unknown"
+
+          gh pr create \
+            --title "chore(deps): refresh lockfile (${FAILED} failed)" \
+            --body "## Lockfile Refresh
+
+          The daily lockfile regeneration found updated transitive dependencies, but **${FAILED}** failed.
+
+          Please review the changes and fix any issues before merging.
+
+          This PR was created automatically by the refresh-lockfile workflow."

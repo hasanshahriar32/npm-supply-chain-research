@@ -1,0 +1,93 @@
+on:
+  # No `paths:` filter. This check is required, and a workflow-level path filter
+  # never creates a check run at all, so a required context would wait forever.
+  # The gating lives on the job instead, via Detect Changes.
+  pull_request:
+  merge_group:
+  schedule:
+    - cron: '0 0 * * *'
+
+# Raised from `permissions: {}` because Detect Changes needs `pull-requests: read`
+# to read the diff, and a called workflow can never hold more than its caller.
+permissions:
+  contents: read
+  pull-requests: read
+
+name: Check Markdown Links
+jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
+  check-links:
+    needs: changes
+    if: needs.changes.outputs.markdown == 'true'
+    runs-on: ubuntu-latest
+    # This file deliberately ran on `permissions: {}` before. Only `changes`
+    # needs to read the diff, so keep that grant off this job.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+      - name: Check links
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        # lychee reads GITHUB_TOKEN to check github.com links authenticated. Unauthenticated,
+        # GitHub answers this job's burst of `github.com/.../blob/...` requests from shared
+        # runner IPs with 503s, failing the check on links nobody changed. `contents: read`
+        # above is all the token needs.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          max_attempts: 3
+          timeout_minutes: 5
+          command: mise run check-links
+
+  # The single context branch protection requires from this workflow. See the
+  # equivalent job in checks.yml for why this shape is necessary.
+  link_check_complete:
+    name: Link Check Complete
+    if: always()
+    needs: [changes, check-links]
+    runs-on: ubuntu-latest
+    steps:
+      # See the equivalent step in checks.yml: without this, a broken
+      # classification output skips the check and still reports a green
+      # aggregate.
+      - name: Fail if Detect Changes produced no classification
+        if: >-
+          ${{
+               needs.changes.result != 'success'
+            || (needs.changes.outputs.markdown != 'true' && needs.changes.outputs.markdown != 'false')
+          }}
+        env:
+          RESULT: ${{ needs.changes.result }}
+          MARKDOWN: ${{ needs.changes.outputs.markdown }}
+        run: |
+          echo "::error::Detect Changes did not classify this change (result='$RESULT', markdown='$MARKDOWN')."
+          exit 1
+
+      - name: Fail if a check failed or was cancelled
+        if: >-
+          ${{
+               contains(needs.*.result, 'failure')
+            || contains(needs.*.result, 'cancelled')
+          }}
+        run: |
+          echo '::error::The markdown link check failed or was cancelled.'
+          exit 1
+
+      - name: Fail if the link check was skipped despite markdown changes
+        if: >-
+          ${{
+            needs.changes.outputs.markdown == 'true'
+              && needs['check-links'].result == 'skipped'
+          }}
+        run: |
+          echo '::error::The link check was skipped even though this change touches markdown it reads. Check the job if: conditions in check-links.yml.'
+          exit 1

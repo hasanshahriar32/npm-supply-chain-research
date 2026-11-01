@@ -1,0 +1,48 @@
+name: Test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, 20, 22]
+    name: Node ${{ matrix.node }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Use node ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install
+        run: npm install
+      - name: Test
+        run: npm test
+      - name: Coverage
+        run: npm run coverage
+      - name: Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+  browsers:
+    name: Browsers
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Install
+        run: npm install --ignore-scripts
+      - name: Install Playwright dependencies
+        run: npx --no-install playwright install-deps
+      - name: Install Playwright
+        run: npx --no-install playwright install
+      - name: Test
+        run: npm run test-browsers

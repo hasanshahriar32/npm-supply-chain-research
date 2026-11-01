@@ -1,0 +1,57 @@
+{
+	"name": "@mysten/ts-sdks",
+	"private": true,
+	"license": "Apache-2.0",
+	"scripts": {
+		"test": "turbo run test",
+		"test:e2e": "turbo run test:e2e --concurrency=1",
+		"changeset-version": "pnpm changeset version && pnpm --filter @mysten/* codegen:version && pnpm prettier --write --ignore-path /dev/null \"packages/**/CHANGELOG.md\"",
+		"prettier:check": "prettier -c --ignore-unknown .",
+		"prettier:fix": "prettier -w --ignore-unknown .",
+		"prettier:fix:watch": "onchange '**' -i -f add -f change -j 5 -- prettier -w --ignore-unknown {{file}}",
+		"oxlint:check": "oxlint .",
+		"oxlint:fix": "oxlint --fix .",
+		"lint": "pnpm run oxlint:check && pnpm run prettier:check",
+		"lint:fix": "pnpm run oxlint:fix && pnpm run prettier:fix",
+		"build": "turbo run build",
+		"release": "pnpm turbo run build --filter \"./packages/*\" && pnpm changeset publish"
+	},
+	"packageManager": "pnpm@10.33.0",
+	"pnpm": {
+		"overrides": {
+			"axios": ">=1.20.0",
+			"js-yaml@>=4.0.0 <4.3.2": "4.3.2"
+		},
+		"patchedDependencies": {
+			"braces@3.0.3": "patches/braces@3.0.3.patch"
+		}
+	},
+	"engines": {
+		"pnpm": ">=10.33.0"
+	},
+	"manypkg": {
+		"ignoredRules": [
+			"INTERNAL_MISMATCH",
+			"ROOT_HAS_DEV_DEPENDENCIES",
+			"INVALID_DEV_AND_PEER_DEPENDENCY_RELATIONSHIP"
+		]
+	},
+	"devDependencies": {
+		"@arethetypeswrong/cli": "^0.18.5",
+		"@changesets/cli": "^2.31.0",
+		"@ianvs/prettier-plugin-sort-imports": "^4.7.0",
+		"@manypkg/cli": "^0.25.1",
+		"@testcontainers/postgresql": "^12.2.1",
+		"concurrently": "^10.0.6",
+		"graphql-config": "^5.1.8",
+		"oxlint": "1.78.0",
+		"oxlint-tsgolint": "^7.0.2001",
+		"prettier": "3.9.6",
+		"prettier-plugin-tailwindcss": "^0.8.1",
+		"testcontainers": "^12.2.1",
+		"tsdown": "0.22.14",
+		"tsx": "^4.23.12",
+		"turbo": "^2.10.10",
+		"typescript": "^7.0.2"
+	}
+}

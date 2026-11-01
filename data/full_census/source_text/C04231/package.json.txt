@@ -1,0 +1,79 @@
+{
+	"name": "postcss-sorting",
+	"version": "10.0.0",
+	"description": "PostCSS plugin to keep rules and at-rules content in order.",
+	"keywords": [
+		"postcss",
+		"css",
+		"postcss-plugin",
+		"sorting",
+		"order"
+	],
+	"author": "Aleks Hudochenkov <aleks@hudochenkov.com>",
+	"license": "MIT",
+	"repository": "hudochenkov/postcss-sorting",
+	"bugs": {
+		"url": "https://github.com/hudochenkov/postcss-sorting/issues"
+	},
+	"homepage": "https://github.com/hudochenkov/postcss-sorting",
+	"type": "module",
+	"exports": "./index.js",
+	"files": [
+		"lib",
+		"!lib/**/__tests__",
+		"!lib/**/*.d.ts",
+		"index.js",
+		"!.DS_Store"
+	],
+	"peerDependencies": {
+		"postcss": "^8.4.20"
+	},
+	"devDependencies": {
+		"@types/jest": "^30.0.0",
+		"@types/node": "^26.6.5",
+		"eslint": "^9.39.5",
+		"eslint-config-hudochenkov": "^13.0.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.13.0",
+		"husky": "^9.1.7",
+		"jest": "^30.5.2",
+		"jest-light-runner": "^0.8.2",
+		"jest-watch-typeahead": "^3.0.1",
+		"lint-staged": "^17.6.0",
+		"postcss": "^8.5.30",
+		"postcss-html": "^2.0.0",
+		"postcss-styled-syntax": "^0.7.4",
+		"prettier": "^3.9.10",
+		"prettier-config-hudochenkov": "^0.4.0",
+		"tinybench": "^6.2.2",
+		"typescript": "^6.0.3"
+	},
+	"scripts": {
+		"test-full": "pnpm run lint && pnpm run types && pnpm run test",
+		"test": "jest",
+		"watch": "jest --watch",
+		"coverage": "jest --coverage",
+		"fix": "eslint . --max-warnings 0 --fix && prettier --write '**/*.{js,ts}'",
+		"lint": "eslint . --max-warnings 0 && prettier --check '**/*.{js,ts}'",
+		"types": "tsc",
+		"benchmark": "node benchmark/run.js",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.js": "eslint --fix --max-warnings=0",
+		"*.{js,ts}": "prettier --write"
+	},
+	"jest": {
+		"runner": "jest-light-runner",
+		"setupFiles": [
+			"./jest-setup.js"
+		],
+		"testEnvironment": "node",
+		"testRegex": "__tests__/[a-zA-Z-.]+\\.js$",
+		"watchPlugins": [
+			"jest-watch-typeahead/filename",
+			"jest-watch-typeahead/testname"
+		]
+	},
+	"prettier": "prettier-config-hudochenkov"
+}

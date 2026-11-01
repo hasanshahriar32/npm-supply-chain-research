@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: write
+  id-token: write # Required for npm OIDC trusted publishing
+  issues: write
+  pull-requests: write
+
+# Same toolchain as ci.yml, so the published artifacts are built on a version CI covers
+env:
+  NODE_VERSION: 24
+  JAVA_VERSION: 17
+  JAVA_DISTRIBUTION: temurin
+
+jobs:
+  release:
+    if: github.repository == 'ionic-team/trapeze'
+    runs-on: ubuntu-latest
+    steps:
+      # Verified before release-please cuts any tag, so a broken commit fails here
+      # instead of leaving a tagged release that never reaches npm
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # Gradle tests shell out to java; don't rely on the JDK preinstalled in the runner image
+      - uses: actions/setup-java@v4
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+      - run: npm ci
+      # Scoped to the published packages; the private website is covered by CI
+      - run: npm run build -- --filter='@trapezedev/*'
+      - run: npm run typecheck -- --filter='@trapezedev/*'
+      - run: npm test -- --filter='@trapezedev/*'
+      # Catches packaging breakage (files/bin/exports) that unit tests can't see
+      - run: node scripts/smoke.mjs
+      - name: Create release pull request or GitHub release
+        id: release-please
+        uses: googleapis/release-please-action@v4
+      # OIDC trusted publishing needs npm >= 11.5.1; pinned to the packageManager
+      # version instead of npm@latest, whose Node requirement moves independently
+      - name: Update npm for OIDC trusted publishing
+        if: ${{ steps.release-please.outputs.releases_created == 'true' }}
+        run: npm install -g npm@11.13.0
+      # Published in dependency order: gradle-parse <- project <- configure
+      - name: Publish @trapezedev/gradle-parse
+        if: ${{ steps.release-please.outputs['packages/gradle-parse--release_created'] == 'true' }}
+        run: npm publish -w packages/gradle-parse
+      - name: Publish @trapezedev/project
+        if: ${{ steps.release-please.outputs['packages/project--release_created'] == 'true' }}
+        run: npm publish -w packages/project
+      - name: Publish @trapezedev/configure
+        if: ${{ steps.release-please.outputs['packages/configure--release_created'] == 'true' }}
+        run: npm publish -w packages/configure

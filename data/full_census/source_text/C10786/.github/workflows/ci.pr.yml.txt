@@ -1,0 +1,44 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    types:
+      - labeled
+      - unlabeled
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  pull_request_ci:
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@svta'
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Generated skill files are current
+        run: git add -N skills && git diff --exit-code -- skills || { echo "skills/ is stale. Run npm run build and commit the skills/ directory."; exit 1; }
+
+      # - name: Change Log
+      #   uses: dangoslen/changelog-enforcer@v3

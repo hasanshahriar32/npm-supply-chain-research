@@ -1,0 +1,102 @@
+{
+  "name": "js-lingui-workspaces",
+  "private": true,
+  "version": "6.0.0",
+  "type": "module",
+  "author": {
+    "name": "Tomáš Ehrlich",
+    "email": "tomas.ehrlich@gmail.com"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "vitest --run",
+    "test:ci": "vitest --run",
+    "test:ci:coverage": "vitest --run --coverage",
+    "test:e2e": "yarn workspaces foreach -p --all run test:e2e",
+    "test:types": "tstyche",
+    "test:all": "yarn test && yarn test:e2e && yarn test:types",
+    "lint:types": "yarn workspaces foreach -v --all run check-types",
+    "lint:eslint": "eslint ./packages --flag v10_config_lookup_from_file",
+    "lint:all": "yarn lint:eslint && yarn lint:types",
+    "prettier": "prettier --write '**/*.{ts,tsx,js,jsx}'",
+    "prettier:check": "prettier --check '**/*.{ts,tsx,js,jsx}'",
+    "verdaccio:release": "tsx ./scripts/verdaccio-release.ts",
+    "release:build": "yarn workspaces foreach --topological-dev --all run build",
+    "release:test": "yarn release:build && yarn test:all",
+    "version": "yarn install --no-immutable && tsx scripts/tidy-changelogs.ts && prettier --write lerna.json && git stage yarn.lock",
+    "version:next": "lerna version --exact --force-publish --no-private --preid next --conventional-commits --conventional-prerelease --no-git-tag-version --no-push --yes",
+    "version:latest": "lerna version --exact --force-publish --no-private --conventional-commits --no-git-tag-version --no-push --yes",
+    "release:latest": "lerna publish from-package --dist-tag latest --yes",
+    "release:next": "lerna publish from-package --canary --preid next --pre-dist-tag next --yes",
+    "build:docs": "cd website && yarn install && yarn build",
+    "size-limit": "size-limit",
+    "prepare": "husky install"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.3",
+    "@size-limit/preset-small-lib": "^11.1.6",
+    "@types/mock-fs": "^4.13.1",
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "catalog:",
+    "eslint": "^9.39.3",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "husky": "^8.0.3",
+    "lerna": "^10.0.1",
+    "lint-staged": "^13.1.0",
+    "mock-fs": "^5.2.0",
+    "npm-cli-login": "^0.1.1",
+    "ora": "^9.1.0",
+    "prettier": "3.9.9",
+    "size-limit": "^11.1.6",
+    "tstyche": "^7.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.56.1",
+    "vitest": "catalog:"
+  },
+  "workspaces": [
+    "packages/*",
+    "test/*"
+  ],
+  "homepage": "https://lingui.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lingui/js-lingui.git"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write --ignore-unknown",
+      "eslint --fix --no-warn-ignored"
+    ]
+  },
+  "size-limit": [
+    {
+      "path": "./packages/core/dist/index.mjs",
+      "import": "{ i18n }",
+      "limit": "2.25 kB"
+    },
+    {
+      "path": "./packages/detect-locale/dist/index.mjs",
+      "limit": "1 kB"
+    },
+    {
+      "path": "./packages/react/dist/index.mjs",
+      "limit": "2 kB",
+      "ignore": [
+        "react"
+      ]
+    },
+    {
+      "path": "./packages/vue/dist/index.mjs",
+      "limit": "2.5 kB",
+      "ignore": [
+        "vue"
+      ]
+    }
+  ],
+  "packageManager": "yarn@4.14.1"
+}

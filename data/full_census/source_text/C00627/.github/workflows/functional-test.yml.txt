@@ -1,0 +1,95 @@
+name: Functional Tests
+
+on:
+  pull_request:
+    paths-ignore:
+    - 'docs/**'
+    - '*.md'
+    - 'mkdocs.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - target: desktop
+          npm_script: e2e-test:desktop
+          artifact: appium-desktop.log
+        - target: simulator
+          npm_script: e2e-test:simulator
+          artifact: appium-simulator.log
+          platform_version: '26.5'
+          device_name: iPhone 17
+    name: ${{ matrix.target }}
+    env:
+      CI: true
+      APPIUM_TEST_SERVER_PORT: 4567
+      APPIUM_TEST_SERVER_HOST: 127.0.0.1
+      APPIUM_STARTUP_TIMEOUT_SEC: 30
+      PLATFORM_VERSION: ${{ matrix.platform_version }}
+      DEVICE_NAME: ${{ matrix.device_name }}
+      _FORCE_LOGS: 1
+    runs-on: macos-26
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version: lts/*
+        check-latest: true
+    - run: |
+        appium_ver=$(node -p "require('./package.json').peerDependencies?.appium")
+        npm install -g "appium@$appium_ver"
+        npm install
+      name: Install dev dependencies
+    - run: sudo safaridriver --enable
+      name: Enable safaridriver
+    - name: Prepare iOS simulator
+      if: matrix.target == 'simulator'
+      id: prepareSimulator
+      uses: futureware-tech/simulator-action@v6
+      with:
+        model: "${{ matrix.device_name }}"
+        os_version: "${{ matrix.platform_version }}"
+        shutdown_after_job: false
+        wait_for_boot: true
+        settle_timeout_seconds: 150
+        settle_cpu_threshold_percent: 30
+    - name: Set simulator UDID
+      if: matrix.target == 'simulator'
+      run: echo "DEVICE_UDID=${{ steps.prepareSimulator.outputs.udid }}" >> "$GITHUB_ENV"
+    - run: |
+        cwd=$(pwd)
+        pushd "$cwd"
+        cd ~
+        appium driver install --source=local "$cwd"
+        nohup appium server \
+          --port=$APPIUM_TEST_SERVER_PORT \
+          --address=$APPIUM_TEST_SERVER_HOST \
+          --relaxed-security \
+          2>&1 > "$cwd/appium.log" &
+        popd
+      name: Start Appium server
+    - run: |
+        seconds_started=$(date +%s)
+        while ! nc -z $APPIUM_TEST_SERVER_HOST $APPIUM_TEST_SERVER_PORT; do
+          sleep 0.1
+          seconds_elapsed=$(( $(date +%s) - seconds_started ))
+          if [[ $seconds_elapsed -gt $APPIUM_STARTUP_TIMEOUT_SEC ]]; then
+            echo "Appium server was unable to start within $APPIUM_STARTUP_TIMEOUT_SEC seconds timeout"
+            exit 1
+          fi
+        done
+      name: Wait for Appium server startup
+    - run: npm run ${{ matrix.npm_script }}
+      name: Run ${{ matrix.target }} functional tests
+    - name: Save server output
+      if: ${{ always() }}
+      uses: actions/upload-artifact@master
+      with:
+        name: ${{ matrix.artifact }}
+        path: appium.log

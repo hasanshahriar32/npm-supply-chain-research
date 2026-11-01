@@ -1,0 +1,38 @@
+{
+  "name": "pofile-ts-monorepo",
+  "private": true,
+  "description": "Monorepo for pofile-ts and documentation",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebastian-software/pofile-ts.git"
+  },
+  "scripts": {
+    "build": "pnpm --filter pofile-ts build",
+    "dev": "pnpm --filter pofile-ts dev",
+    "test": "pnpm --filter pofile-ts test",
+    "test:coverage": "pnpm --filter pofile-ts test:coverage",
+    "lint": "pnpm --filter pofile-ts lint",
+    "lint:fix": "pnpm --filter pofile-ts lint:fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm --filter pofile-ts typecheck",
+    "prepare": "husky",
+    "bench": "pnpm --filter pofile-ts-benchmark bench",
+    "bench:generate": "pnpm --filter pofile-ts-benchmark generate-fixture",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.3",
+    "prettier": "^3.8.1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
+  },
+  "packageManager": "pnpm@10.32.1"
+}

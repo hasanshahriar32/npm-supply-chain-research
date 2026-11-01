@@ -1,0 +1,63 @@
+name: "Skills E2E"
+
+permissions: {}
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/e2e-skills.yml
+      - skills/**
+      - tests/e2e/skills/**
+      - packages/client-common/package.json
+      - packages/client-node/package.json
+      - packages/client-web/package.json
+  # Always validate the full skills packaging E2E on pull requests that target
+  # the release branch, regardless of which paths changed, so every release is
+  # gated by the same QA suite as the other test workflows.
+  pull_request:
+    branches:
+      - release
+
+env:
+  # Network resilience: npm's default of 2 fetch retries is not enough for
+  # the transient registry errors (ECONNRESET) we regularly hit in CI.
+  NPM_CONFIG_FETCH_RETRIES: "5"
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: "10000"
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: "60000"
+  NPM_CONFIG_FETCH_TIMEOUT: "600000"
+
+jobs:
+  skills-packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: npm --workspaces run build
+
+      - name: Pack packages
+        run: npm --workspaces run pack
+
+      - name: Install packed packages
+        working-directory: tests/e2e/skills
+        run: |
+          npm install \
+            ../../../packages/client-common/clickhouse-client-common-*.tgz \
+            ../../../packages/client-node/clickhouse-client-*.tgz \
+            ../../../packages/client-web/clickhouse-client-web-*.tgz
+
+      - name: Install test dependencies
+        working-directory: tests/e2e/skills
+        run: npm install
+
+      - name: Check skills are accessible
+        working-directory: tests/e2e/skills
+        run: node check.js

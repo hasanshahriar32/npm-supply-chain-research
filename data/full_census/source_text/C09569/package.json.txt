@@ -1,0 +1,52 @@
+{
+    "name": "@simonwep/pickr",
+    "version": "1.10.2",
+    "license": "MIT",
+    "author": "Simon Reinisch <trash@reinisch.io>",
+    "description": "Flat, Simple, Hackable Color-Picker.",
+    "homepage": "https://github.com/simonwep/pickr#readme",
+    "bugs": "https://github.com/simonwep/pickr/issues",
+    "repository": "https://github.com/simonwep/pickr",
+    "keywords": [
+        "ux",
+        "pickr",
+        "color",
+        "color-picker"
+    ],
+    "packageManager": "pnpm@10.27.0",
+    "type": "module",
+    "main": "./dist/pickr.min.js",
+    "module": "./dist/pickr.min.mjs",
+    "types": "./types/pickr.d.ts",
+    "files": [
+        "types",
+        "dist",
+        "src/scss"
+    ],
+    "exports": {
+        "./dist/themes/*": "./dist/themes/*",
+        ".": {
+            "import": "./dist/pickr.min.mjs",
+            "require": "./dist/pickr.min.js",
+            "types": "./types/pickr.d.ts"
+        }
+    },
+    "scripts": {
+        "dev": "vite --config build/demo.config.ts",
+        "lint": "eslint \"**/*.{js,mjs,ts,mts,vue,json}\" --cache",
+        "lint:fix": "pnpm lint --fix",
+        "build:lib": "vite build --config build/lib.config.ts && node build/themes.js",
+        "build:demo": "vite build --config build/demo.config.ts",
+        "preview": "vite preview  --config build/demo.config.ts"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@types/node": "24.13.3",
+        "eslint": "10.10.0",
+        "globals": "17.12.0",
+        "nanopop": "2.4.2",
+        "sass": "1.101.0",
+        "vite": "8.1.5",
+        "vite-plugin-banner": "0.8.1"
+    }
+}

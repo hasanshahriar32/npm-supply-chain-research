@@ -1,0 +1,163 @@
+name: SDK Canary
+
+# Weekly canary against @anthropic-ai/claude-agent-sdk@latest.
+#
+# A failure here means UPSTREAM SDK DRIFT (a new @latest broke typecheck or
+# tests) — NOT a regression in this repository. Typecheck includes guards in
+# src/options-coverage.test.ts:
+#   - Options drift: a new/changed Options key; map it or add it to
+#     KnownExcludedKey.
+#   - SDKMessage_collapsed_to_any: broken upstream d.ts references missing
+#     union members; report/track upstream and wait for a fixed release before
+#     bumping.
+# The pinned-dependency CI workflow (ci.yml) is the repo-health signal.
+
+on:
+  schedule:
+    # Mondays 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-sdk-drift:
+    name: Upstream SDK drift (claude-agent-sdk@latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+
+    # Consumed by the file-drift-issue job below. For matrix jobs the last
+    # leg to write a non-empty value wins; both legs test the same resolved
+    # @latest, and drift/failed-step are only written on a real drift failure,
+    # so a leg that passed (or failed on infra) cannot clobber a drift signal.
+    outputs:
+      sdk-version: ${{ steps.outcome.outputs.sdk-version }}
+      pinned-range: ${{ steps.outcome.outputs.pinned-range }}
+      drift: ${{ steps.outcome.outputs.drift }}
+      failed-step: ${{ steps.outcome.outputs.failed-step }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Defense in depth: do not persist the token into git config, so a
+          # lifecycle script in the unpinned @latest SDK (or a transitive dep)
+          # installed below cannot read a credential from disk. (This job also
+          # deliberately holds no write scopes — issue filing lives in the
+          # separate file-drift-issue job.)
+          persist-credentials: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Install @anthropic-ai/claude-agent-sdk@latest (not saved)
+        # --ignore-scripts: do not run lifecycle scripts from the unpinned
+        # @latest package or its transitive deps.
+        run: npm install --no-save --ignore-scripts @anthropic-ai/claude-agent-sdk@latest
+
+      - name: Print resolved SDK version
+        run: |
+          echo "Pinned range in package.json:"
+          node -e "console.log(require('./package.json').dependencies['@anthropic-ai/claude-agent-sdk'])"
+          echo "Resolved @latest version under test:"
+          # The SDK does not export ./package.json, so read it from disk.
+          node -e "console.log(require('./node_modules/@anthropic-ai/claude-agent-sdk/package.json').version)"
+
+      - name: Type check against @latest (includes Options drift guard)
+        id: typecheck
+        run: npm run typecheck
+
+      - name: Unit tests against @latest
+        id: tests
+        run: npm run test
+
+      # Record whether this leg saw real SDK drift (vs an infra failure such
+      # as npm ci or the @latest install flaking, which must not be
+      # misreported — in that case node_modules would still hold the PINNED
+      # version and neither guarded step has a 'failure' outcome).
+      - name: Record drift outcome
+        id: outcome
+        if: always()
+        run: |
+          {
+            echo "sdk-version=$(node -e "console.log(require('./node_modules/@anthropic-ai/claude-agent-sdk/package.json').version)" 2>/dev/null || echo unknown)"
+            echo "pinned-range=$(node -e "console.log(require('./package.json').dependencies['@anthropic-ai/claude-agent-sdk'])" 2>/dev/null || echo unknown)"
+          } >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.typecheck.outcome }}" = "failure" ]; then
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "failed-step=typecheck" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.tests.outcome }}" = "failure" ]; then
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+            echo "failed-step=unit tests" >> "$GITHUB_OUTPUT"
+          fi
+
+  # On drift, file (or update) a single tracking issue for the whole run so
+  # drift is logged actionably instead of vanishing into a notification email.
+  # This runs ONCE, after both matrix legs finish — filing from inside the
+  # matrix raced: legs failing simultaneously each looked for the tracking
+  # issue before either had created it, and filed duplicates (#141/#142).
+  file-drift-issue:
+    name: File or update SDK drift issue
+    needs: upstream-sdk-drift
+    if: always() && needs.upstream-sdk-drift.outputs.drift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/github-script@v8
+        env:
+          SDK_VERSION: ${{ needs.upstream-sdk-drift.outputs.sdk-version }}
+          PINNED_RANGE: ${{ needs.upstream-sdk-drift.outputs.pinned-range }}
+          FAILED_STEP: ${{ needs.upstream-sdk-drift.outputs.failed-step }}
+        with:
+          script: |
+            const title = 'SDK canary failing against @anthropic-ai/claude-agent-sdk@latest';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `The weekly canary failed against \`@anthropic-ai/claude-agent-sdk@${process.env.SDK_VERSION}\`.`,
+              '',
+              `- Run: ${runUrl}`,
+              `- Failed step: ${process.env.FAILED_STEP}`,
+              `- Pinned range: \`${process.env.PINNED_RANGE}\``,
+              '',
+              'A failure here means **upstream SDK drift** — typecheck (including guards in',
+              '`src/options-coverage.test.ts`) or unit tests broke against `@latest`, not a',
+              'regression in this repository.',
+              '',
+              'Triage: check the failed step in the run log. For Options drift guard errors,',
+              'the SDK added/changed an `Options` key; map it or add it to `KnownExcludedKey`.',
+              'If a typecheck error names `SDKMessage_collapsed_to_any`, upstream published',
+              'a broken d.ts (the `SDKMessage` union references undeclared members); there is',
+              'nothing to fix repo-side — report/track upstream and wait for a fixed release',
+              'before bumping. A test failure means runtime behavior changed and needs',
+              'investigation before the next dependency bump.',
+            ].join('\n');
+            // Paginate so the tracking issue is still found (and not duplicated)
+            // even if the repo ever has more than 100 open issues.
+            const open = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo,
+              state: 'open',
+              per_page: 100,
+            });
+            const existing = open.find((i) => !i.pull_request && i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: existing.number,
+                body: `Still failing.\n\n${body}`,
+              });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body });
+            }

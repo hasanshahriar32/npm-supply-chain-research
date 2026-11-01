@@ -1,0 +1,83 @@
+{
+  "name": "ghooks",
+  "description": "Simple git hooks",
+  "version": "0.0.0-semantically-released",
+  "main": "./lib/runner.js",
+  "keywords": [
+    "git",
+    "hooks",
+    "hook"
+  ],
+  "author": "Guilherme Tramontina <guilherme.tramontina@gmail.com>",
+  "homepage": "https://github.com/gtramontina/ghooks",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gtramontina/ghooks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gtramontina/ghooks/issues"
+  },
+  "scripts": {
+    "lint": "if-node-version \">=6\" eslint bin/* lib/* test/",
+    "test:unit": "mocha",
+    "test": "npm run lint && npm run coverage",
+    "coverage": "nyc --reporter=lcov --reporter=text mocha",
+    "check-coverage": "nyc check-coverage --statements 100 --branches 100 --functions 100 --lines 100",
+    "report-coverage": "cat ./coverage/lcov.info | node_modules/.bin/codecov",
+    "validate": "npm t && npm run check-coverage",
+    "commit": "git-cz",
+    "install": "node ./bin/module-install",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+  },
+  "dependencies": {
+    "findup": "0.1.5",
+    "lodash.clone": "4.5.0",
+    "manage-path": "2.0.0",
+    "opt-cli": "1.6.0",
+    "path-exists": "4.0.0",
+    "spawn-command": "0.0.2"
+  },
+  "devDependencies": {
+    "babel-eslint": "9.0.0",
+    "chai": "4.2.0",
+    "chai-string": "1.5.0",
+    "codecov": "3.5.0",
+    "commitizen": "3.1.1",
+    "cz-conventional-changelog": "2.1.0",
+    "eslint": "3.19.0",
+    "eslint-config-kentcdodds": "11.1.0",
+    "eslint-plugin-babel": "4.1.2",
+    "eslint-plugin-import": "2.18.0",
+    "eslint-plugin-mocha": "4.12.1",
+    "ghooks": "*",
+    "if-node-version": "1.1.1",
+    "mocha": "3.2.0",
+    "mock-fs": "4.10.1",
+    "nyc": "10.0.0",
+    "proxyquire": "2.1.0",
+    "semantic-release": "6.3.2",
+    "sinon": "7.3.2",
+    "sinon-chai": "3.3.0",
+    "sinon-test": "2.4.0",
+    "travis-after-all": "1.4.5",
+    "validate-commit-msg": "2.14.0"
+  },
+  "nyc": {
+    "extension": [
+      ".raw"
+    ],
+    "include": [
+      "lib/**"
+    ]
+  },
+  "config": {
+    "ghooks": {
+      "pre-commit": "opt --in pre-commit --exec \"npm run validate\"",
+      "commit-msg": "opt --in commit-msg --exec validate-commit-msg"
+    },
+    "commitizen": {
+      "path": "node_modules/cz-conventional-changelog"
+    }
+  }
+}

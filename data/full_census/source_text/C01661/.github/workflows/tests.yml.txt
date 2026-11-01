@@ -1,0 +1,51 @@
+name: Tests
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Lint, format, typecheck, unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Typecheck (root and examples)
+        run: pnpm typecheck:all
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+  examples-integration-tests:
+    name: Examples integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+
+      - name: Run integration tests in each example
+        run: pnpm test
+        timeout-minutes: 15

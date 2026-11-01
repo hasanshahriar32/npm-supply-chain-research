@@ -1,0 +1,42 @@
+{
+  "name": "connect-es",
+  "private": true,
+  "workspaces": [
+    "packages/connect",
+    "packages/connect-web",
+    "packages/connect-node",
+    "packages/connect-fastify",
+    "packages/connect-next",
+    "packages/connect-express",
+    "packages/connect-web-bench",
+    "packages/example",
+    "packages/connect-migrate",
+    "packages/connect-conformance",
+    "packages/connect-cloudflare",
+    "packages/typescript-compat/*"
+  ],
+  "scripts": {
+    "all": "turbo run --ui tui build format test conformance bundle-size lint attw license-header",
+    "clean": "git clean -Xdf",
+    "setversion": "node scripts/set-workspace-version.js",
+    "postsetversion": "npm run all",
+    "format": "biome format --write",
+    "license-header": "license-header --ignore 'packages/**'",
+    "lint": "biome lint --error-on-warnings --config-path biome.json"
+  },
+  "type": "module",
+  "engineStrict": true,
+  "packageManager": "npm@10.9.0",
+  "licenseHeader": {
+    "licenseType": "apache",
+    "yearRange": "2021-2026",
+    "copyrightHolder": "The Connect Authors"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@biomejs/biome": "^1.9.4",
+    "@bufbuild/license-header": "^0.0.4",
+    "turbo": "^2.11.5",
+    "typescript": "^6.0.3"
+  }
+}

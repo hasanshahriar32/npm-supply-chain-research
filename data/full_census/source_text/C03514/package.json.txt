@@ -1,0 +1,31 @@
+{
+  "name": "react-live-workspace",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "packages/react-live",
+    "website"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "build:lib": "npm run build -w react-live",
+    "changeset": "changeset",
+    "changeset:version": "changeset version && npm install --package-lock-only",
+    "check": "npm run check:lint && npm run check:format && npm run check:types && npm test",
+    "check:format": "prettier --check .",
+    "check:lint": "oxlint",
+    "check:types": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write . && oxlint --fix",
+    "start:docs": "npm run start -w website",
+    "stories": "npm run stories -w react-live",
+    "stories:test": "npm run stories:test -w react-live",
+    "test": "npm test -w react-live",
+    "dep:check": "npx npm-check-updates -w"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "oxlint": "^1.83.0",
+    "prettier": "^3.9.6"
+  }
+}

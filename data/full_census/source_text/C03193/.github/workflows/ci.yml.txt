@@ -1,0 +1,95 @@
+name: JsonStreamStringify-CI
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+concurrency: 
+  group: ${{ github.head_ref || 'push' }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # if: startsWith(github.ref, 'refs/tags/') || github.head_ref || ${{ env.ACT }}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: volta-cli/action@v5
+      with:
+        node-version: 22.23.0
+    - run: npm ci
+    - run: npm run lint
+    - run: npm run build
+    - run: npx es-check es8 'lib/umd/index.js'
+    - run: cp -r copy_to_lib/* lib
+    # install older mocha for node<14 tests
+    - run: npm i mocha@6 --no-save
+    - uses: montudor/action-zip@v1
+      with:
+        args: zip -0 -qq -r node_modules.zip node_modules
+    - uses: actions/upload-artifact@v4
+      with:
+        name: node-modules-artifact-${{ github.run_id }}
+        retention-days: 1
+        path: node_modules.zip
+        compression-level: 0
+    - uses: actions/upload-artifact@v4
+      with:
+        name: build-artifact-${{ github.run_id }}
+        retention-days: 1
+        path: |
+          package.json
+          package-lock.json
+          README.md
+          LICENSE
+          lib
+          test
+
+  coverage:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: build-artifact-${{ github.run_id }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: node-modules-artifact-${{ github.run_id }}
+    - uses: montudor/action-zip@v1
+      with:
+        args: unzip -qq node_modules.zip -d .
+    - uses: volta-cli/action@v4
+      with:
+        node-version: 22.23.0
+    - run: npm run coverage
+    - uses: actions/upload-artifact@v4
+      with:
+        name: coverage-${{ github.run_id }}
+        retention-days: 1
+        path: coverage
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      if: ${{ !env.ACT }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+  
+  test:
+    needs: build
+    strategy:
+      matrix:
+        node: ['7.10.1', 10, 16, 18]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: build-artifact-${{ github.run_id }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: node-modules-artifact-${{ github.run_id }}
+    - uses: montudor/action-zip@v1
+      with:
+        args: unzip -qq node_modules.zip -d .
+    - uses: volta-cli/action@v4
+      with:
+        node-version: ${{ matrix.node }}
+    # Don't use npm here — volta pins npm@11 which requires Node 20+ and node: imports
+    - run: volta run --node ${{ matrix.node }} node node_modules/mocha/bin/mocha --require source-map-support/register -R spec -b "test/*.spec.js"

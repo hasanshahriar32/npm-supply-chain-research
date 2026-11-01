@@ -1,0 +1,47 @@
+name: Release
+on:
+  push:
+    tags:
+      - '*'
+jobs:
+  publish:
+    name: Stage npm Packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+      - name: Resolve workspace dependencies
+        run: node scripts/resolve-workspaces.js
+      - name: Stage npm packages
+        run: |
+          failed=""
+          for pkg in packages/*/; do
+            ( cd "$pkg" && npm stage publish --access public ) || failed="$failed $pkg"
+          done
+          if [ -n "$failed" ]; then
+            echo "Failed to stage:$failed" >&2
+            exit 1
+          fi
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Copy changelog to release
+        uses: ai/copy-changelog-to-release@a6dc825c34575add2da2060796794f7b84894628 # v0.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

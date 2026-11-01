@@ -1,0 +1,27 @@
+# No target-channel label is required here -- a PR targeting main/v4-main with none of the
+# `:dart: *` labels is presumed to need no backport (what `:dart: canary` used to spell out
+# explicitly). Add a `:dart: beta`/`release`/`lts`/`lts-prev` label only when this change does
+# need to be backported to that channel.
+name: PR
+
+# The changelog label check lives in enforce-changelog-label.yml, which keeps its own copy
+# of the `branches:` filter below -- update both together.
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, reopened]
+    branches:
+      - main
+      - v4-main
+
+concurrency:
+  group: pr-labels-canary-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  ban-release-branch-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: yogevbd/enforce-label-action@a3c219da6b8fa73f6ba62b68ff09c469b3a1c024 # 2.2.2
+        with:
+          BANNED_LABELS: 'backport-beta,backport-release,backport-lts,backport-lts-prev,backport-old-release'
+          BANNED_LABELS_DESCRIPTION: "The following labels should only be applied to PRs targeting release channel branches that backport a change already on the main branch, remove them.['backport-beta', 'backport-release', 'backport-lts', 'backport-lts-prev', 'backport-old-release']"

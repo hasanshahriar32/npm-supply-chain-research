@@ -1,0 +1,133 @@
+name: Rust Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master, feat/v6]
+
+concurrency:
+  group: rust-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@v4.0.3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'rust/**'
+              - 'src/commands/**'
+              - '.github/workflows/rust-test.yml'
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.should_run == 'true'
+    name: Rust Tests
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: 'yarn'
+
+      - name: Generate rawScripts (resolve Lua includes)
+        run: |
+          yarn install --frozen-lockfile --non-interactive
+          yarn generate:raw:scripts
+          yarn copy:lua:rust
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache Cargo registry and build
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check formatting
+        working-directory: rust
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        working-directory: rust
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Build
+        working-directory: rust
+        run: cargo build --all-targets
+
+      - name: Start Redis Cluster
+        run: |
+          docker run -d --name redis-cluster --network host redis:8-alpine sh -c '
+            for port in 7000 7001 7002; do
+              redis-server --port $port --cluster-enabled yes --cluster-config-file nodes-$port.conf --daemonize yes
+            done
+            sleep 1
+            redis-cli --cluster create 127.0.0.1:7000 127.0.0.1:7001 127.0.0.1:7002 --cluster-replicas 0 --cluster-yes
+            tail -f /dev/null'
+          for i in $(seq 1 30); do
+            ready=true
+            for port in 7000 7001 7002; do
+              if ! docker exec redis-cluster redis-cli -p "$port" cluster info 2>/dev/null | grep -q 'cluster_state:ok'; then
+                ready=false
+                break
+              fi
+            done
+            if [ "$ready" = true ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Redis Cluster did not become ready" >&2
+          docker logs redis-cluster
+          exit 1
+
+      - name: Run tests
+        working-directory: rust
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+          REDIS_CLUSTER_NODES: redis://127.0.0.1:7000,redis://127.0.0.1:7001,redis://127.0.0.1:7002
+        run: cargo test --all-targets
+
+      - name: Build documentation
+        working-directory: rust
+        env:
+          RUSTDOCFLAGS: '-D missing_docs'
+        run: cargo doc --no-deps

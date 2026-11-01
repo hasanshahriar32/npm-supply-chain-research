@@ -1,0 +1,36 @@
+name: "CI"
+on:
+  pull_request:
+    branches:
+      - "main"
+  push:
+    branches:
+      - "main"
+    tags-ignore:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  skip-check:
+    if: ${{ !contains(github.event.pull_request.title, 'chore(release):') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run only on non-release commits"
+  validate:
+    needs: [skip-check]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm check-types
+      - run: pnpm test

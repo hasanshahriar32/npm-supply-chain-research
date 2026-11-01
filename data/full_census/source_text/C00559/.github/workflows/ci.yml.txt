@@ -1,0 +1,122 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: Node CI
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: javascript
+          queries: security-and-quality
+          config: |
+            paths-ignore:
+              - coverage
+              - node_modules
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+
+  test:
+    name: NodeJS ${{ matrix.node.version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-26]
+        # The "--test-coverage-exclude" flag is supported in v22.5.0 and later.
+        # By default, all matching test files are excluded from the coverage report.
+        # Only Node.js 22.x requires explicitly declaring test file exclusions.
+        node:
+          - version: 20
+          - version: 22
+            options: --test-coverage-exclude="test/**/*.js"
+          - version: 24
+          - version: 26
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node.version }}
+
+      - name: Environment Information
+        run: |
+          node --version
+          npm --version
+
+      - name: npm install
+        run: npm ci
+        env:
+          CI: true
+          NODE_OPTIONS: ${{ matrix.node.options }}
+
+      - name: Build parser
+        run: npm run build
+        env:
+          CI: true
+          NODE_OPTIONS: ${{ matrix.node.options }}
+
+      - name: Check for uncommitted changes
+        if: ${{ ! startsWith(matrix.os, 'windows') }}
+        run: |
+          if ! git diff --exit-code; then
+            echo ""
+            echo "::error::Detected changes that appear to not be committed."
+            echo "::error::Please run 'npm run build' and commit the built parser."
+            exit 1
+          fi
+
+      - name: npm test
+        run: npm t
+        env:
+          CI: true
+          NODE_OPTIONS: ${{ matrix.node.options }}
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: success()
+        with:
+          name: ${{ runner.os }} node.js ${{ matrix.node.version }}
+          token: ${{ secrets.CORDOVA_CODECOV_TOKEN }}
+          fail_ci_if_error: false

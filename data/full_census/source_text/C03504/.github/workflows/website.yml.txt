@@ -1,0 +1,60 @@
+name: Deploy Docs to Organization GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # The branch where updates are made in the source repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - uses: bazel-contrib/setup-bazel@0.19.1
+        with:
+          # Avoid downloading Bazel every time.
+          bazelisk-cache: true
+          # Store build cache per workflow.
+          disk-cache: ${{ github.workflow }}
+          # Share repository cache between workflows.
+          repository-cache: true
+
+      # Build the docs site
+      - name: Build Docs Site
+        id: build
+        run: |
+          bazel build \
+            --config=ci \
+            --remote_download_outputs=all \
+            --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_ORG_API_KEY }} \
+            //docs:dist
+          BUILD_PATH=$(readlink -f bazel-bin)/docs/dist/client
+          echo "BUILD_PATH=$BUILD_PATH" >> $GITHUB_OUTPUT
+
+      # Verify build folder is not empty
+      - name: Verify Build Output
+        run: |
+          BUILD_PATH="${{ steps.build.outputs.BUILD_PATH }}"
+          if [ ! -d "$BUILD_PATH" ]; then
+            echo "Error: Build path does not exist: $BUILD_PATH"
+            exit 1
+          fi
+          if [ -z "$(ls -A "$BUILD_PATH")" ]; then
+            echo "Error: Build path is empty: $BUILD_PATH"
+            exit 1
+          fi
+          echo "Build verification successful. Contents of $BUILD_PATH:"
+          ls -lh "$BUILD_PATH"
+
+      # Deploy to Organization GitHub Pages Repository
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4.1.0
+        with:
+          deploy_key: ${{ secrets.WEBSITE_SECRET_KEY }}
+          external_repository: formatjs/formatjs.github.io
+          publish_branch: main # default: gh-pages
+          publish_dir: ${{ steps.build.outputs.BUILD_PATH }}

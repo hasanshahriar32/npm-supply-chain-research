@@ -1,0 +1,56 @@
+name: Release executable files for macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to deploy assets for"
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      HOMEBREW_TAP_DEPLOY_SECRET_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_SECRET_KEY }}
+    permissions: write-all
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Install ldid
+        uses: MOZGIII/install-ldid-action@v1
+        with:
+          tag: v2.1.5-procursus6
+
+      - name: Check out repository code
+        uses: actions/checkout@v4
+
+      - name: Use node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build
+        run: yarn build
+
+      - name: Tell release-it to do the GitHub release here
+        run:
+          node -e 'const fs = require("fs"); const a = JSON.parse(fs.readFileSync("./.release-it.json", "utf8"));
+          a.github.release = true; a.hooks["after:bump"] = a.hooks["_after:bump"]; a.hooks["after:release"] =
+          a.hooks["_after:release"]; fs.writeFileSync("./.release-it.json", JSON.stringify(a))'
+
+      - name: Package
+        run: |
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
+          npm run release -- ${{ github.event.inputs.version }} --no-npm --ci --no-git
+
+      - name: Update homebrew/tap repo for new release
+        shell: bash
+        run: scripts/create-homebrew-tap-pr.sh
+        env:
+          VERSION: ${{ env.VERSION }}

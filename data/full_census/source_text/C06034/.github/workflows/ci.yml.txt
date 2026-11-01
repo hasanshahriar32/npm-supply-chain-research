@@ -1,0 +1,243 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        types: [opened, reopened, synchronize]
+    merge_group:
+    workflow_dispatch:
+        inputs:
+            maintain_release_pull_request:
+                default: false
+                required: false
+                type: boolean
+            release_pull_request_number:
+                required: false
+                type: string
+
+permissions: {}
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: true
+            matrix:
+                node: [22, 24, 26]
+        name: Node ${{ matrix.node }}
+        permissions:
+            contents: read # required for actions/checkout to read the repository source
+            pull-requests: read # required to read release PR files and metadata
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: ${{ matrix.node }}
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Compile
+              run: npx just compile
+            - name: Run linters
+              run: npx just lint
+            - name: Run tests
+              run: npx just test
+              timeout-minutes: 20
+            - name: Coveralls
+              uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+              with:
+                  fail-on-error: false
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  path-to-lcov: ./target/coverage/lcov.info
+                  parallel: true
+    package-checks:
+        needs: build
+        runs-on: ubuntu-latest
+        name: Package checks
+        permissions:
+            contents: read # required for actions/checkout to read the repository source
+            pull-requests: read # required to read release PR files and metadata
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Check packages
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: npx just publish-dry-run
+    workflow-security:
+        runs-on: ubuntu-latest
+        name: Workflow security analysis
+        permissions:
+            contents: read # required for actions/checkout to read the workflow source
+            security-events: write # required by zizmor-action to upload SARIF to code scanning
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Install zizmor
+              run: |
+                  python -m venv "$RUNNER_TEMP/zizmor-venv"
+                  "$RUNNER_TEMP/zizmor-venv/bin/python" -m pip install zizmor==1.28.0
+            - name: Run zizmor
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  SARIF_FILE: ${{ runner.temp }}/zizmor.sarif
+              run: |
+                  "$RUNNER_TEMP/zizmor-venv/bin/zizmor" \
+                      --persona pedantic \
+                      --min-severity informational \
+                      --min-confidence low \
+                      --config .github/zizmor.yml \
+                      --format sarif \
+                      --no-exit-codes \
+                      .github > "$SARIF_FILE"
+            - name: Upload zizmor SARIF
+              uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+              with:
+                  sarif_file: ${{ runner.temp }}/zizmor.sarif
+                  category: zizmor
+            - name: Fail if zizmor reported findings
+              env:
+                  SARIF_FILE: ${{ runner.temp }}/zizmor.sarif
+              run: |
+                  jq -r '
+                    def escape: gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
+                    .runs[].results[]
+                    | select((.suppressions // []) | length == 0)
+                    | . as $result
+                    | .locations[0].physicalLocation as $location
+                    | "::error file=\($location.artifactLocation.uri),line=\($location.region.startLine // 1),title=\($result.ruleId)::\($result.message.text | escape)"
+                  ' "$SARIF_FILE"
+                  count="$(jq '[.runs[].results[] | select((.suppressions // []) | length == 0)] | length' "$SARIF_FILE")"
+                  echo "zizmor findings: $count"
+                  test "$count" -eq 0
+    release-pr-policy:
+        needs: build
+        runs-on: ubuntu-latest
+        name: Release PR policy
+        if: >
+            github.event_name == 'pull_request' ||
+            github.event_name == 'merge_group' ||
+            (github.event_name == 'workflow_dispatch' && github.ref_name == 'release/eslint-plugin-mocha')
+        permissions:
+            contents: read # required for actions/checkout to read the repository source
+            pull-requests: read # required to read release PR files and metadata
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Validate release pull request
+              if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: npx just validate-release-pr
+    mutation-testing:
+        needs: build
+        runs-on: ubuntu-latest
+        name: Mutation testing
+        permissions:
+            contents: read # required for actions/checkout to read the repository source
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Run mutation tests
+              run: npx just test-mutation
+              timeout-minutes: 30
+    publish-release:
+        needs: [build, package-checks, release-pr-policy, mutation-testing]
+        name: Publish release
+        if: >
+            !failure() &&
+            !cancelled() &&
+            (
+                github.event_name == 'push' ||
+                (github.event_name == 'workflow_dispatch' && inputs.release_pull_request_number != '')
+            )
+        uses: ./.github/workflows/release-publish.yml
+        permissions:
+            contents: write # required to create release tags and GitHub releases
+            id-token: write # required by npm trusted publishing to mint the OIDC token
+            pull-requests: read # required to validate release PR identity before publishing
+        with:
+            release_pull_request_number: ${{ inputs.release_pull_request_number || '' }}
+    maintain-release-pr:
+        needs: [build, release-pr-policy, mutation-testing, publish-release]
+        runs-on: ubuntu-latest
+        name: Maintain release PR
+        if: >
+            !failure() &&
+            !cancelled() &&
+            (
+                github.event_name == 'push' ||
+                (
+                    github.event_name == 'workflow_dispatch' &&
+                    inputs.maintain_release_pull_request &&
+                    inputs.release_pull_request_number == ''
+                )
+            ) &&
+            needs.publish-release.result != 'failure' &&
+            needs.publish-release.result != 'cancelled'
+        permissions:
+            actions: write # required to dispatch release PR CI and delete gated PR runs
+            contents: write # required to push and delete the release branch
+            issues: write # required to replace release PR labels
+            pull-requests: write # required to create, update, and close release PRs
+            statuses: write # required to mirror dispatched release PR CI results
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: main
+                  fetch-depth: 0
+                  persist-credentials: true
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Maintain release pull request
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: npx just prepare-release
+    coverage:
+        needs: build
+        runs-on: ubuntu-latest
+        name: Coveralls Finished
+        permissions:
+            contents: read # required by coverallsapp/github-action to read repository metadata
+        steps:
+            - name: Coveralls Finished
+              uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+              with:
+                  fail-on-error: false
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  parallel-finished: true

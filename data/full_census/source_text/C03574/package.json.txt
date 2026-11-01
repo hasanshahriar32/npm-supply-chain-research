@@ -1,0 +1,110 @@
+{
+  "name": "rs-module-lexer",
+  "version": "2.9.0",
+  "description": "ES module parser powered by Rust",
+  "keywords": [
+    "es-module-lexer",
+    "es-module-lexer-rust",
+    "es-module-parser",
+    "es-module-parser-rust",
+    "rs-module-parser",
+    "swc",
+    "rust"
+  ],
+  "homepage": "https://github.com/fz6m/rs-module-lexer#README",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fz6m/rs-module-lexer"
+  },
+  "license": "MIT",
+  "author": "fz6m",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "binding.js",
+    "postinstall.js",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --cargo-cwd crates/binding_node --platform --js binding.js --release",
+    "build:postprocess": "tsx ./scripts/postprocess.ts",
+    "build:dev": "napi build --cargo-cwd crates/binding_node --platform --js binding.js",
+    "build:wasm:dts": "tsx ./scripts/wasmDts.ts",
+    "build:wasm:dev": "cd crates/binding_wasm && wasm-pack build --target nodejs --verbose --out-dir ../../target/wasm --out-name index --dev",
+    "build:wasm:release": "cd crates/binding_wasm && RUSTFLAGS=\"-C opt-level=z -Zshare-generics=y --cfg getrandom_backend=\\\"wasm_js\\\"\" wasm-pack build --target nodejs --verbose --out-dir ../../target/wasm --out-name index --release",
+    "build:wasm": "pnpm build:wasm:release && pnpm build:wasm:dts && pnpm build:wasm:opt",
+    "build:wasm:opt": "tsx ./scripts/wasmOpt.ts",
+    "build:wasm:web:dev": "cd crates/binding_wasm && wasm-pack build --verbose --out-dir ../../target/wasm_web --out-name index --dev",
+    "build:wasm:web": "cd crates/binding_wasm && RUSTFLAGS=\"-C opt-level=z -Zshare-generics=y --cfg getrandom_backend=\\\"wasm_js\\\"\" wasm-pack build --verbose --out-dir ../../target/wasm_web --out-name index --release",
+    "build:wasm:web:opt": "tsx ./scripts/wasmOpt.ts --dir wasm_web",
+    "coverage": "vitest run --coverage",
+    "format": "prettier --write --parser typescript --cache \"./example/**/*.{ts,tsx}\"",
+    "preinstall": "husky install",
+    "prepublishOnly": "pnpm format && pnpm build",
+    "push": "vary push",
+    "release": "vary np",
+    "release:only": "vary release:only",
+    "release:root": "tsx ./scripts/checkWasmPublished.ts && vary np --root",
+    "release:wasm": "vary np --wasm",
+    "test": "vitest --run",
+    "test:wasm": "TEST_WASM=1 vitest --run",
+    "vp": "vary vp",
+    "postinstall": "node postinstall.js",
+    "bootstrap:scripts": "DEBUG_VARY=1 vary np --wasm"
+  },
+  "lint-staged": {
+    "*.ts?(x)": [
+      "prettier --cache --parser=typescript --write"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.7",
+    "@napi-rs/cli": "^2.18.4",
+    "@types/lodash": "^4.17.7",
+    "@types/node": "^20.14.14",
+    "@xn-sakina/mental": "^4.2.1",
+    "@xn-sakina/vary": "^1.4.0",
+    "es-module-lexer": "2.3.2",
+    "esbuild": "0.25.10",
+    "husky": "8.0.3",
+    "lint-staged": "^15.2.8",
+    "lodash": "^4.17.21",
+    "prettier": "^3.3.3",
+    "rs-module-lexer": "link:./",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.4",
+    "vitest": "0.29.8",
+    "zx": "^7.2.3"
+  },
+  "//": "Do not upgrade 'husky' version, because it's using new es syntax",
+  "packageManager": "pnpm@9.7.0",
+  "engines": {
+    "node": ">=14"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "napi": {
+    "name": "rs-module-lexer",
+    "triples": {
+      "defaults": false,
+      "additional": [
+        "x86_64-apple-darwin",
+        "aarch64-apple-darwin",
+        "x86_64-pc-windows-msvc",
+        "aarch64-pc-windows-msvc",
+        "x86_64-unknown-linux-gnu",
+        "aarch64-unknown-linux-gnu",
+        "x86_64-unknown-linux-musl",
+        "aarch64-unknown-linux-musl",
+        "armv7-unknown-linux-gnueabihf"
+      ]
+    },
+    "package": {
+      "name": "@xn-sakina/rml"
+    }
+  }
+}

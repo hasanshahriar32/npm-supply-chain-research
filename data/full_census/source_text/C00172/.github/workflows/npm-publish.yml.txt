@@ -1,0 +1,61 @@
+name: Publish Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      id-token: write # Required for OpenID Connect (OIDC) for trusted publishing on NPM
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Setup .npmrc file to publish to npm
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Project Dependencies
+        run: yarn install --immutable
+
+      # Copy README to adyen-web package
+      - run: cp README.md packages/lib/
+
+      # Copy LICENSE to adyen-web package
+      - run: cp LICENSE packages/lib/
+
+      # Determine the npm dist-tag from the git ref this workflow runs from:
+      #   - prerelease ref (alpha / beta / rc) -> use "next"
+      #   - otherwise                          -> use "latest"
+      - name: Determine npm dist-tag
+        id: dist-tag
+        run: |
+          REF_NAME="${GITHUB_REF_NAME}"
+          echo "Publishing from ref: ${REF_NAME}"
+
+          if [[ "${REF_NAME}" == *alpha* || "${REF_NAME}" == *beta* || "${REF_NAME}" == *rc* ]]; then
+            DIST_TAG="next"
+          else
+            DIST_TAG="latest"
+          fi
+
+          echo "Resolved dist-tag: ${DIST_TAG}"
+          echo "dist_tag=${DIST_TAG}" >> "${GITHUB_OUTPUT}"
+
+      # Build and publish to npm
+      - name: Build and release
+        env:
+          DIST_TAG: ${{ steps.dist-tag.outputs.dist_tag }}
+        run: |
+          cd packages/lib
+          echo "Publishing with dist-tag: ${DIST_TAG}"
+          npm publish --access public --tag "${DIST_TAG}"
+ 

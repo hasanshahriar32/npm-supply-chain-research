@@ -1,0 +1,526 @@
+name: Publish package on NPM
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  id-token: write # For OIDC publishing with provenance and to federate tokens
+  contents: write # Required for the draft release
+
+jobs:
+  create-draft-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release-id: ${{ steps.draft-release.outputs.result }}
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - name: Create a draft release
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        id: draft-release
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ github.ref_name }}',
+              name: '${{ github.ref_name }}',
+              draft: true,
+              prerelease: false,
+              generate_release_notes: true,
+            })
+
+            const editReleaseLink = release.html_url.replace('datadog-ci/releases/tag/', 'datadog-ci/releases/edit/')
+
+            await core.summary
+              .addHeading('Draft release created')
+              .addRaw('Please go to the link below, copy the release notes and paste them in your release PR.', true)
+              .addBreak()
+              .addBreak()
+              .addLink('Edit ${{ github.ref_name }} (draft)', editReleaseLink)
+              .write()
+
+            return release.id
+
+  build-binary-ubuntu:
+    runs-on: ubuntu-latest
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - name: Install project dependencies
+        run: yarn install --immutable
+      - name: Bundle library
+        run: yarn build
+      - name: Create standalone binary
+        run: yarn dist-standalone -t node22-linux-x64 -o datadog-ci_linux-x64
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+      - name: Compute binary checksum
+        run: shasum -a 256 ./datadog-ci_linux-x64 | awk '{print $1 "  datadog-ci_linux-x64"}' > checksum-linux-x64.txt
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-linux-x64
+          path: checksum-linux-x64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_linux-x64',
+              data: await fs.readFile('./datadog-ci_linux-x64'),
+            })
+
+  build-binary-ubuntu-arm:
+    runs-on: ubuntu-24.04-arm
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - run: npm install -g yarn
+        name: Install Yarn # Yarn is not installed by default in this runner
+      - name: Install project dependencies
+        run: yarn install --immutable
+      - name: Bundle library
+        run: yarn build
+      - name: Create standalone binary
+        run: yarn dist-standalone -t node22-linux-arm64 -o datadog-ci_linux-arm64
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+      - name: Compute binary checksum
+        run: shasum -a 256 ./datadog-ci_linux-arm64 | awk '{print $1 "  datadog-ci_linux-arm64"}' > checksum-linux-arm64.txt
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-linux-arm64
+          path: checksum-linux-arm64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_linux-arm64',
+              data: await fs.readFile('./datadog-ci_linux-arm64'),
+            })
+
+  build-binary-alpine:
+    runs-on: ubuntu-latest
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Alpine
+        uses: jirutka/setup-alpine@ae3b3ddba35054804fc4a3507b519fa7e8152050 # v1.4.1
+        with:
+          shell-name: alpine.sh
+      - name: Install project dependencies (root)
+        run: |
+          apk add npm
+          npm install -g corepack
+        shell: alpine.sh --root {0}
+      - name: Install project dependencies (workspace)
+        run: |
+          yarn install --immutable
+          yarn build
+        shell: alpine.sh {0}
+      - name: Create standalone binary
+        run: yarn dist-standalone:standard -t node22-alpine-x64 -o datadog-ci_alpine-x64
+        shell: alpine.sh {0}
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+        shell: alpine.sh {0}
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+        shell: alpine.sh {0}
+        env:
+          STANDALONE_BINARY_PATH: ./datadog-ci_alpine-x64
+      - name: Compute binary checksum
+        run: sha256sum ./datadog-ci_alpine-x64 | awk '{print $1 "  datadog-ci_alpine-x64"}' > checksum-alpine-x64.txt
+        shell: alpine.sh {0}
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-alpine-x64
+          path: checksum-alpine-x64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_alpine-x64',
+              data: await fs.readFile('./datadog-ci_alpine-x64'),
+            })
+
+  build-binary-alpine-arm:
+    runs-on: ubuntu-24.04-arm
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Setup Alpine
+        uses: jirutka/setup-alpine@ae3b3ddba35054804fc4a3507b519fa7e8152050 # v1.4.1
+        with:
+          arch: aarch64
+          shell-name: alpine.sh
+          # Taken from https://github.com/jirutka/setup-alpine/pull/22
+          apk-tools-url: https://gitlab.alpinelinux.org/api/v4/projects/5/packages/generic/v2.14.10/aarch64/apk.static#!sha256!e471d35aa221d031abe9b6288aede12a8e9f1a398954e5a2e1d1bce1727b4ef4
+      - name: Install project dependencies (root)
+        run: |
+          apk add npm
+          npm install -g corepack
+        shell: alpine.sh --root {0}
+      - name: Install project dependencies (workspace)
+        run: |
+          yarn install --immutable
+          yarn build
+        shell: alpine.sh {0}
+      - name: Create standalone binary
+        run: yarn dist-standalone:standard -t node22-alpine-arm64 -o datadog-ci_alpine-arm64
+        shell: alpine.sh {0}
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+        shell: alpine.sh {0}
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+        shell: alpine.sh {0}
+        env:
+          STANDALONE_BINARY_PATH: ./datadog-ci_alpine-arm64
+      - name: Compute binary checksum
+        run: sha256sum ./datadog-ci_alpine-arm64 | awk '{print $1 "  datadog-ci_alpine-arm64"}' > checksum-alpine-arm64.txt
+        shell: alpine.sh {0}
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_alpine-arm64',
+              data: await fs.readFile('./datadog-ci_alpine-arm64'),
+            })
+
+  build-binary-windows:
+    runs-on: windows-latest
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - name: Install project dependencies
+        run: yarn install --immutable
+      - name: Bundle library
+        run: yarn build
+      - name: Create standalone binary
+        run: yarn dist-standalone -t node22-win-x64 -o datadog-ci_win-x64
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+      - name: Compute binary checksum
+        shell: bash
+        run: sha256sum ./datadog-ci_win-x64.exe | awk '{print $1 "  datadog-ci_win-x64"}' > checksum-win-x64.txt
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-win-x64
+          path: checksum-win-x64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_win-x64',
+              data: await fs.readFile('./datadog-ci_win-x64.exe'),
+            })
+
+  build-binary-macos:
+    # `macos-latest-large` is an x64 image, and we need it to run the standalone tests
+    # https://github.com/actions/runner-images#available-images
+    runs-on: macos-latest-large
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - name: Install project dependencies
+        run: yarn install --immutable
+      - name: Bundle library
+        run: yarn build
+      - name: Create standalone binary
+        run: yarn dist-standalone -t node22-macos-x64 -o datadog-ci_darwin-x64
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+      - name: Compute binary checksum
+        run: shasum -a 256 ./datadog-ci_darwin-x64 | awk '{print $1 "  datadog-ci_darwin-x64"}' > checksum-darwin-x64.txt
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-darwin-x64
+          path: checksum-darwin-x64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_darwin-x64',
+              data: await fs.readFile('./datadog-ci_darwin-x64'),
+            })
+
+  build-binary-macos-arm:
+    runs-on: macos-latest
+    needs: create-draft-release
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - name: Install project dependencies
+        run: yarn install --immutable
+      - name: Bundle library
+        run: yarn build
+      - name: Create standalone binary
+        run: yarn dist-standalone -t node22-macos-arm64 -o datadog-ci_darwin-arm64
+      - name: Remove src and dist folders to check that binary can stand alone
+        run: yarn rimraf --glob 'packages/*/{src,dist}'
+      - name: Test generated standalone binary
+        run: yarn dist-standalone:test
+      - name: Compute binary checksum
+        run: shasum -a 256 ./datadog-ci_darwin-arm64 | awk '{print $1 "  datadog-ci_darwin-arm64"}' > checksum-darwin-arm64.txt
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: checksum-darwin-arm64
+          path: checksum-darwin-arm64.txt
+      - name: Upload release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'datadog-ci_darwin-arm64',
+              data: await fs.readFile('./datadog-ci_darwin-arm64'),
+            })
+
+  upload-checksums:
+    name: Upload checksums
+    runs-on: ubuntu-latest
+    needs:
+      - create-draft-release
+      - build-binary-ubuntu
+      - build-binary-ubuntu-arm
+      - build-binary-alpine
+      - build-binary-alpine-arm
+      - build-binary-windows
+      - build-binary-macos
+      - build-binary-macos-arm
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/datadog-ci
+          policy: self.create-release
+      - name: Download all checksum artifacts
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          pattern: checksum-*
+          path: checksums
+      - name: Combine checksums
+        run: cat checksums/*/checksum-*.txt | sort > checksums.txt
+      - name: Upload checksums release asset
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const fs = require("fs").promises
+
+            github.rest.repos.uploadReleaseAsset({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: "${{ needs.create-draft-release.outputs.release-id }}",
+              name: 'checksums.txt',
+              data: await fs.readFile('./checksums.txt'),
+            })
+
+  pre-approval-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 22.19.0
+      - run: yarn install --immutable --mode=skip-build
+      - name: Lint packages
+        run: yarn lint:packages
+      - name: Check NPM packages
+        run: yarn check-npm-packages
+        env:
+          # Used to post comments on the PR
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Requires an approval
+  npm-publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    needs:
+      - pre-approval-checks
+      - build-binary-ubuntu
+      - build-binary-ubuntu-arm
+      - build-binary-alpine
+      - build-binary-alpine-arm
+      - build-binary-windows
+      - build-binary-macos
+      - build-binary-macos-arm
+      - upload-checksums
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24' # Needed for OIDC publishing
+          registry-url: 'https://registry.npmjs.org'
+      - run: yarn install --immutable
+      - run: yarn build
+      # Given every package is version X.X.X (enforced by `yarn lint:packages`), we can skip
+      # already published packages with `--tolerate-republish` (for example when OIDC was not yet enabled)
+      - name: Publish base package and plugins
+        run: yarn publish:deps --provenance --tolerate-republish
+      - name: Wait for base package and plugins to be available on NPM
+        timeout-minutes: 20
+        run: bash bin/wait-for-npm-packages.sh
+      - name: Publish datadog-ci
+        run: yarn publish:cli --provenance --tolerate-republish
+
+  bump-ci-integrations:
+    name: Bump datadog-ci in integration
+    runs-on: ubuntu-latest
+    needs: npm-publish
+    strategy:
+      fail-fast: false
+      matrix:
+        integration-repo:
+          - synthetics-ci-github-action
+          - datadog-ci-azure-devops
+          - synthetics-test-automation-circleci-orb
+          - synthetics-test-automation-bitrise-step-run-tests
+          - synthetics-test-automation-bitrise-step-upload-application
+          - synthetics-batch-smoke-tester
+    steps:
+      - uses: DataDog/dd-octo-sts-action@96a25462dbcb10ebf0bfd6e2ccc917d2ab235b9a # v1.0.4
+        id: octo-sts
+        with:
+          scope: DataDog/${{ matrix.integration-repo }}
+          policy: datadog-ci.publish-release.create-workflow-dispatch
+      - name: Create bump datadog-ci PR
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ steps.octo-sts.outputs.token }}
+          script: |
+            const tagName = '${{ github.event.release.tag_name }}'.replace('v', '')
+
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: '${{ matrix.integration-repo }}',
+              workflow_id: 'bump-datadog-ci.yml',
+              ref: 'main',
+              inputs: {
+                datadog_ci_version: tagName,
+              },
+            })

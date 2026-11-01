@@ -1,0 +1,64 @@
+{
+  "name": "linguist-languages",
+  "version": "9.5.0",
+  "type": "module",
+  "description": "Linguist languages data",
+  "keywords": [
+    "data",
+    "json",
+    "language",
+    "linguist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
+    "./data/*": "./data/*.js"
+  },
+  "repository": "https://github.com/ikatyang-collab/linguist-languages",
+  "homepage": "https://github.com/ikatyang-collab/linguist-languages#readme",
+  "author": {
+    "name": "Ika",
+    "email": "ikatyang@gmail.com",
+    "url": "https://github.com/ikatyang"
+  },
+  "license": "MIT",
+  "scripts": {
+    "lint": "prettier --check .",
+    "fix": "prettier --write .",
+    "check": "tsc",
+    "test": "vitest",
+    "build": "node ./scripts/build.js",
+    "update-data": "node ./scripts/build.js --update",
+    "release": "release-it"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "camelcase": "10.0.0",
+    "eslint": "10.13.0",
+    "eslint-plugin-unicorn": "78.0.0",
+    "jest-snapshot-serializer-raw": "2.0.0",
+    "node-style-text": "2.1.2",
+    "outdent": "0.8.0",
+    "prettier": "3.9.10",
+    "release-it": "21.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5",
+    "yaml": "2.9.1"
+  },
+  "files": [
+    "/index.js",
+    "/index.d.ts",
+    "/data/**/*",
+    "/ThirdPartyNoticeText.txt"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "packageManager": "yarn@4.18.1"
+}

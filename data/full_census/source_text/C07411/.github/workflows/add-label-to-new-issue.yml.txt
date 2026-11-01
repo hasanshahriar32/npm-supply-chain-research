@@ -1,0 +1,35 @@
+name: Add label to new issue
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+jobs:
+  label-new-issue:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const issue = await github.rest.issues.get({
+              owner: context.issue.owner,
+              repo: context.issue.repo,
+              issue_number: context.issue.number
+            });
+
+            console.log("Author association:", issue.data.author_association);
+            const isCollaborator = ["OWNER", "MEMBER", "COLLABORATOR"].includes(issue.data.author_association)
+            if (!isCollaborator) {
+              await github.rest.issues.addLabels({
+                owner: context.issue.owner,
+                repo: context.issue.repo,
+                issue_number: context.issue.number,
+                labels: ["status:triaging"]
+              });
+            }

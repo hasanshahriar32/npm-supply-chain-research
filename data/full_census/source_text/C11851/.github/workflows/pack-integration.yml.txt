@@ -1,0 +1,113 @@
+name: utoopack-integration
+
+on:
+  push:
+    branches: ["next"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '(pack)')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '(pack)'))
+    name: Pack Integration Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Init git submodules
+        run: git submodule update --init --recursive --depth 1
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/.ghcup
+          sudo rm -rf /usr/local/lib/node_modules
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/miniconda
+          sudo docker image prune --all --force
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Utoo
+        uses: utooland/setup-utoo@v1
+
+      - name: Keep Node 20 for integration tests
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            delete pkg.engines['install-node'];
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies
+        run: utoo install
+
+      - name: Verify Node 20 runtime
+        run: |
+          test "$(node -p 'process.versions.node.split(".")[0]')" = "20"
+          test "$(npm exec -- node -p 'process.versions.node.split(".")[0]')" = "20"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-08-20
+          components: rustfmt, clippy
+
+      # - name: Rust Cache
+      #   uses: swatinem/rust-cache@v2
+
+      - name: Integration Test
+        run: |
+          # Build packages
+          npm run build --workspace @utoo/pack-shared
+          npm run build:local --workspace @utoo/pack
+          npm run build --workspace @utoo/pack-cli
+
+          # Exercise the generated NAPI loader on the minimum supported Node major.
+          NAPI_RS_ENFORCE_VERSION_CHECK=1 node -e 'require("./packages/pack/src/binding.js")'
+
+          # Regression coverage for independent PostCSS and loader evaluator graphs sharing one
+          # build-time runtime (utooland/utoo#3316).
+          npm test --workspace shared-runtime-async-module
+
+          # Execute generated libraries with and without native Proxy support.
+          node examples/with-library/run-cache-regression.cjs
+
+          # Check entry export initialization, shared runtimes and Worker asset ordering.
+          node examples/expose-entry-exports/run-regression.cjs
+
+          # Project subpath externals must not replace embedded node-polyfill dependencies.
+          node examples/externals/run-polyfill-regression.cjs
+
+          # Verify examples
+          for dir in examples/*/; do
+            if [ -f "${dir}package.json" ]; then
+              if jq -e '.scripts.build // "" | contains("up build")' "${dir}package.json" > /dev/null; then
+                echo "----------------------------------------------------"
+                echo "Verifying example: $dir"
+                echo "----------------------------------------------------"
+                (cd "$dir" && npm run build && echo "Output dist content:" && ls -lh dist | awk 'NR>1 {print $5, $9}')
+                if [ $? -ne 0 ]; then
+                  echo "Error: Build failed for example $dir"
+                  exit 1
+                fi
+              fi
+            fi
+          done

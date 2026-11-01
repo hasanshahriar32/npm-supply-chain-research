@@ -1,0 +1,130 @@
+name: Check MDN RegExp Instance Properties
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Runs every Sunday at midnight
+  workflow_dispatch:
+
+jobs:
+  check-mdn-regexp:
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_TITLE: "New RegExp.prototype properties found on MDN"
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout workflow repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+      - name: Install gh cli if not present # support running locally with act
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
+              && sudo mkdir -p -m 755 /etc/apt/keyrings \
+              && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+              && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+              && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+              && sudo mkdir -p -m 755 /etc/apt/sources.list.d \
+              && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+              && sudo apt update \
+              && sudo apt install gh -y
+          else
+            echo "gh CLI already installed"
+          fi
+
+      - name: Clone MDN content repo
+        run: |
+          git clone --depth 1 https://github.com/mdn/content.git mdn-content
+
+      - name: Extract Instance Properties section
+        id: extract_section
+        run: |
+          FILE="mdn-content/files/en-us/web/javascript/reference/global_objects/regexp/index.md"
+          awk '/## Instance properties/{flag=1;next}/^## /{flag=0}flag' "$FILE" > instance_properties.md
+          cat instance_properties.md
+
+      - name: Find RegExp.prototype matches
+        id: find_matches
+        run: |
+          ALLOWED=(
+            "RegExp.prototype"
+            "RegExp.prototype.constructor"
+            "RegExp.prototype.dotAll"
+            "RegExp.prototype.flags"
+            "RegExp.prototype.global"
+            "RegExp.prototype.hasIndices"
+            "RegExp.prototype.ignoreCase"
+            "RegExp.prototype.multiline"
+            "RegExp.prototype.source"
+            "RegExp.prototype.sticky"
+            "RegExp.prototype.unicode"
+            "RegExp.prototype.unicodeSets"
+          )
+
+          grep -Eo 'RegExp\.prototype\.[a-zA-Z0-9_]+' instance_properties.md | sort | uniq > matches.txt
+          echo "MDN RegExp.prototype instance properties:"
+          cat matches.txt
+          echo ""
+
+          NEW_MATCHES=()
+          while read -r match; do
+            echo "Checking if new property: $match"
+            FOUND=0
+            for allowed in "${ALLOWED[@]}"; do
+              if [[ "$match" == "$allowed" ]]; then
+                FOUND=1
+                break
+              fi
+            done
+            if [[ $FOUND -eq 0 ]]; then
+              NEW_MATCHES+=("$match")
+              echo "  $match is new!"
+            fi
+          done < matches.txt
+
+          if [ ${#NEW_MATCHES[@]} -gt 0 ]; then
+            echo "new_matches=${NEW_MATCHES[*]}" >> $GITHUB_OUTPUT
+          else
+            echo "new_matches=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check if issue already exists
+        if: steps.find_matches.outputs.new_matches != ''
+        id: check_issue
+        run: |
+          RESULT=$(gh issue list --repo "$GITHUB_REPOSITORY" --search "$ISSUE_TITLE" --json title,number --jq '.[0]')
+          echo "Github issue: $RESULT"
+          TITLE=$(echo "$RESULT" | jq '.title')
+          if [[ "$TITLE" == *"$ISSUE_TITLE"* ]]; then
+            ISSUE_NUMBER=$(echo "$RESULT" | jq '.number')
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "issue_number=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or update issue with new matches
+        if: steps.find_matches.outputs.new_matches != ''
+        run: |
+          REPO="$GITHUB_REPOSITORY"
+          LIST=""
+          for match in ${{ steps.find_matches.outputs.new_matches }}; do
+            LIST="$LIST\n- $match"
+          done
+          UPDATED_BODY="The following new \`RegExp.prototype.*\` matches were found on [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp#instance_properties):\n\n$LIST"
+          if [[ "${{ steps.check_issue.outputs.exists }}" == "false" ]]; then
+            gh issue create \
+              --repo "$REPO" \
+              --title "$ISSUE_TITLE" \
+              --label "MDN" \
+              --body-file <(echo -e "$UPDATED_BODY")
+          else
+            ISSUE_NUMBER=${{ steps.check_issue.outputs.issue_number }}
+            gh issue edit "$ISSUE_NUMBER" \
+              --repo "$REPO" \
+              --body-file <(echo -e "$UPDATED_BODY")
+          fi

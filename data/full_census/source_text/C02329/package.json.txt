@@ -1,0 +1,72 @@
+{
+  "name": "descope",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "husky",
+    "postbuild:ci_": "pnpm -r $(npm run print-affected:ci | tail -n 1 | sed 's/, / --filter /g;s/^/--filter /') exec pwd | sed 's/$/\\//' | xargs -I {} rsync -av --progress {} /Users/nirgurarie/dev/monorepo-playground/dist/packages/ --exclude node_modules",
+    "build": "nx affected --target build",
+    "build:ci": "pnpm affected:ci --target build --parallel 1",
+    "leaks": "bash ./tools/scripts/gitleaks/gitleaks.sh",
+    "lint": "nx affected --target lint --fix=true",
+    "lint:ci": "pnpm affected:ci --target lint",
+    "licenseCheck": "nx affected --target licenseCheck",
+    "test": "nx affected --target test",
+    "test:e2e": "nx affected  --target test:e2e",
+    "print-affected": "nx show projects --affected",
+    "affected:ci": "nx affected --base=$(sh ./tools/scripts/latestTag.sh)",
+    "preversion:ci": "sh ./tools/scripts/latestTag.sh",
+    "version:ci": "pnpm affected:ci --target version --noVerify=true --parallel 1",
+    "postversion:ci": "pnpm run build:ci",
+    "print-affected:ci": "nx show projects --affected --base=$(sh ./tools/scripts/latestTag.sh) --select=projects",
+    "format": "nx format:write",
+    "format:ci": "nx format:check",
+    "postinstall": "if [ \"$NO_POSTINSTALL\" != \"true\" ]; then NO_POSTINSTALL=true pnpm update @descope/web-components-ui; fi"
+  },
+  "private": true,
+  "dependencies": {
+    "tslib": "2.8.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "@jscutlery/semver": "^5.0.0",
+    "@nrwl/devkit": "^19.0.0",
+    "@nrwl/eslint-plugin-nx": "19.8.4",
+    "@nrwl/jest": "19.8.4",
+    "@nrwl/js": "19.8.4",
+    "@nrwl/linter": "19.8.4",
+    "@nrwl/workspace": "19.8.4",
+    "@types/jest": "29.5.14",
+    "@types/node": "20.17.13",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "~9.18.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-playwright": "1.8.3",
+    "husky": "^9.0.0",
+    "jest": "29.7.0",
+    "jest-environment-jsdom": "29.7.0",
+    "lint-staged": "^15.0.0",
+    "ngx-deploy-npm": "^8.0.0",
+    "nx": "22.7.10",
+    "playwright": "1.55.1",
+    "prettier": "^3.0.0",
+    "ts-jest": "29.2.5",
+    "ts-node": "10.9.2"
+  },
+  "lint-staged": {
+    "*.*": [
+      "bash -c \"npm run format\"",
+      "git add"
+    ],
+    "package.json": [
+      "bash -c \"pnpm i\"",
+      "git add pnpm-lock.yaml"
+    ]
+  },
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": "^22.18.0"
+  }
+}

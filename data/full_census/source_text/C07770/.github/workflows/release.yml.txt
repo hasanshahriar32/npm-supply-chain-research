@@ -1,0 +1,82 @@
+name: Publish SDK to NPM and GitHub Package Registry
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Publish to NPM and GitHub Package Registry
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.draft }}
+    environment: npm
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+
+      # Configure auth for GHR only. npm registry auth is handled by OIDC
+      # (no .npmrc token entry needed — omitting registry-url from setup-node
+      # ensures npm falls through to OIDC for registry.npmjs.org).
+      - name: Configure GitHub Package Registry auth
+        run: echo "//npm.pkg.github.com/:_authToken=\${NODE_AUTH_TOKEN}" >> ~/.npmrc
+
+      # Deps only. --ignore-scripts stops `prepare` from building here; we build
+      # exactly once in the pack step below.
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      # Test, build, and pack a single tarball. Both registries publish this
+      # same artifact, so npm and GHR receive byte-identical bytes and the test
+      # suite runs only once. --ignore-scripts on pack avoids a rebuild.
+      - id: pack
+        name: Test, build, and pack
+        run: |
+          npm test
+          npm run build
+          tarball=$(npm pack --ignore-scripts | tail -n1)
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+
+      # publish.sh derives name/version from the tarball and computes the
+      # dist-tag itself: `latest` only when strictly newer than the registry's
+      # current latest, otherwise v<major>-last-published; beta/alpha/rc for
+      # pre-releases. npm publishes first; if it fails the job stops before GHR,
+      # keeping the registries in sync.
+      #
+      # npm publish uses OIDC trusted publishing (no NPM_PUBLISH_TOKEN needed).
+      # publish.sh adds --provenance for supply-chain attestations.
+      - id: release
+        name: Publish to NPM
+        env:
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+        run: scripts/publish.sh "https://registry.npmjs.org" "$TARBALL"
+
+      - name: Publish to GitHub Package Registry
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+        run: scripts/publish.sh "https://npm.pkg.github.com" "$TARBALL"
+
+      # - name: Report results to Jellyfish
+      #   uses: optimizely/jellyfish-deployment-reporter-action@main
+      #   if: ${{ always() && github.event_name == 'release' && (steps.release.outcome == 'success' || steps.release.outcome == 'failure') }}
+      #   with:
+      #     jellyfish_api_token: ${{ secrets.JELLYFISH_API_TOKEN }}
+      #     is_successful: ${{ steps.release.outcome == 'success' }}

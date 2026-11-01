@@ -1,0 +1,33 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [14.x, 16.x]
+        os: [macOS-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Git Repository
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile --network-timeout 300000 --ignore-scripts
+
+      - name: Bootstrap (Build Files + Link Dependents)
+        run: yarn lerna bootstrap
+
+      - name: Lint (ESLint + Prettier)
+        run: yarn lint-since
+
+      - name: Run Unit Tests
+        run: yarn test-since

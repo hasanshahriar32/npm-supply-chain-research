@@ -1,0 +1,60 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - v1
+      - main
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - v1
+      - main
+
+env:
+  TURBO_TOKEN: ${{ secrets.VERCEL_STORYBOOK_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  deploy_docs:
+    timeout-minutes: 50
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/v1' || github.ref == 'refs/heads/main' || github.event.pull_request
+
+    steps:
+      - name: checkout code repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - uses: rlespinasse/github-slug-action@v4
+
+      - name: 'print current git reference after'
+        run: |
+          echo "${{ env.GITHUB_REF_SLUG }}"
+
+      - name: install and audit
+        uses: ./support/actions/pnpm
+
+      - name: generate .d.ts files
+        run: pnpm typecheck
+
+      - name: generate api markdown files
+        run: pnpm api
+
+      - name: build docs
+        run: |
+          export NODE_OPTIONS=--max_old_space_size=4096
+          pnpm build:docs
+
+      - name: deploy docs
+        uses: nwtgck/actions-netlify@develop
+        with:
+          publish-dir: './website/build'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: 'Deploy Docs from GitHub Actions - ${{ github.event.pull_request.title || github.ref }}'
+          alias: '${{ env.GITHUB_REF_SLUG }}'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NEXT_NETLIFY_SITE_ID }}

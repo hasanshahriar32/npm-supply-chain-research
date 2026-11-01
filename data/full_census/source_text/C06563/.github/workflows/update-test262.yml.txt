@@ -1,0 +1,34 @@
+name: Update test262
+
+on:
+  workflow_dispatch:
+  schedule:
+    # “At 00:00 on day-of-month 1.” https://crontab.guru/#0_0_1_*_*
+    - cron: '0 0 1 * *'
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  update-test262:
+    if: github.event_name != 'schedule' || github.repository == 'meriyah/meriyah'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Update test262 commit hash
+        run: git ls-remote --exit-code https://github.com/tc39/test262.git HEAD | cut -f1 > test262/test262-commit-hash
+      - uses: actions/cache@v6
+        with:
+          path: test262/test262
+          key: ${{ hashFiles('test262/test262-commit-hash') }}
+      - run: yarn
+      - run: npm run generate-test262-whitelist
+      - run: echo "CURRENT_DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          title: 'test: update test262(${{ env.CURRENT_DATE }})'
+          commit-message: 'test: update test262(${{ env.CURRENT_DATE }})'
+          branch: automated-update-test262-${{ env.CURRENT_DATE }}
+          branch-suffix: timestamp

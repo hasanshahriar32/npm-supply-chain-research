@@ -1,0 +1,178 @@
+name: Tests
+
+env:
+  NODE_NO_WARNINGS: true
+  NODE_OPTIONS: '--max-old-space-size=8192'
+  CI: true
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  prettier-check:
+    name: 🧹 Prettier Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@f4eea983237a44bb0ca19c3348dacbfdfcdbec23 # main
+        with:
+          nodeVersion: 20
+
+      - name: Prettier Check
+        run: yarn prettier:check
+  lint:
+    name: Lint
+    uses: the-guild-org/shared-config/.github/workflows/lint.yml@f4eea983237a44bb0ca19c3348dacbfdfcdbec23 # main
+    with:
+      script: yarn ci:lint
+    secrets:
+      githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Type Check on GraphQL v${{matrix.graphql_version}}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        graphql_version:
+          - 15
+          - 16
+          - '17.0.0-alpha.1'
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@f4eea983237a44bb0ca19c3348dacbfdfcdbec23 # main
+        with:
+          nodeVersion: 20
+
+      - name: Use GraphQL v${{matrix.graphql_version}}
+        run: node ./scripts/match-graphql.js ${{matrix.graphql_version}}
+      - name: Install Dependencies using Yarn
+        run: yarn install --ignore-engines && git checkout yarn.lock
+      - name: Type Check
+        run: yarn ts:check
+
+  test:
+    name:
+      Unit Test on Node ${{matrix.node-version}} (${{matrix.os}}) and GraphQL
+      v${{matrix.graphql_version}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest] # remove windows to speed up the tests
+        node-version: [20, 22]
+        graphql_version:
+          - 15
+          - 16
+          - '17.0.0-alpha.1'
+        include:
+          - node-version: 20
+            os: windows-latest
+            graphql_version: 16
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@f4eea983237a44bb0ca19c3348dacbfdfcdbec23 # main
+        with:
+          nodeVersion: ${{matrix.node-version}}
+
+      - name: Use GraphQL v${{matrix.graphql_version}}
+        run: node ./scripts/match-graphql.js ${{matrix.graphql_version}}
+      - name: Install Dependencies using Yarn
+        run: yarn install --ignore-engines && git checkout yarn.lock
+      - name: Cache Jest
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: .cache/jest
+          key:
+            ${{ runner.os }}-${{matrix.node-version}}-${{matrix.graphql_version}}-jest-${{
+            hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{matrix.node-version}}-${{matrix.graphql_version}}-jest-
+      - name: Test
+        if: ${{ matrix.node-version >= 20 }}
+        run: yarn test --ci
+      - name: Test
+        if: ${{ matrix.node-version < 20 }}
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          command: yarn test:leaks --ci
+
+  test_esm:
+    name: ESM Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@f4eea983237a44bb0ca19c3348dacbfdfcdbec23 # main
+        with:
+          nodeVersion: 20
+
+      - name: Build Packages
+        run: yarn build
+      - name: Test ESM and CJS integrity
+        run: yarn bob check
+
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['javascript']
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
+        # Learn more:
+        # https://docs.github.com/en/free-pro-team@latest/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#changing-the-languages-that-are-analyzed
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e46ed2cbd01164d986452f91f178727624ae40d7 # v4
+        with:
+          languages: ${{ matrix.language }}
+          # If you wish to specify custom queries, you can do so here or in a config file.
+          # By default, queries listed here will override any specified in a config file.
+          # Prefix the list here with "+" to use these queries and those in the config file.
+          # queries: ./path/to/local/query, your-org/your-repo/queries@main
+
+      # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
+      # If this step fails, then you should remove it and run the build manually (see below)
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@e46ed2cbd01164d986452f91f178727624ae40d7 # v4
+
+      # ℹ️ Command-line programs to run using the OS shell.
+      # 📚 https://git.io/JvXDl
+
+      # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
+      #    and modify them (or add more) to build your code if your project
+      #    uses a compiled language
+
+      #- run: |
+      #   make bootstrap
+      #   make release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@e46ed2cbd01164d986452f91f178727624ae40d7 # v4

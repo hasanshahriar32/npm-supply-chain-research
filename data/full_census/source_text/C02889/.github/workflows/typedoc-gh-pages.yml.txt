@@ -1,0 +1,55 @@
+# Adapted from https://github.com/TypeStrong/typedoc/issues/1485#issuecomment-1796185086
+# and https://github.com/endojs/endo/new/master?filename=.github%2Fworkflows%2Fjekyll-gh-pages.yml&workflow_template=pages%2Fjekyll-gh-pages
+name: Deploy TypeDoc site with GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  # Allow running this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read # checkout source for `yarn docs`
+  actions: read # `actions/configure-pages` reads workflow-run metadata
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: 'pages'
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      # Without this, setup-node errors on mismatched yarn versions
+      - run: corepack enable
+      # Without this the inter-package imports don't resolve
+      - run: yarn install
+      # Generate the TypeDoc site
+      - run: yarn docs
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: ./api-docs # the "out" path in typedoc.json
+  deploy:
+    runs-on: ubuntu-latest
+    # Keeping these grants on the deploy job — not the workflow —
+    # ensures the `build` job's dependency graph (TypeDoc, yarn install)
+    # cannot reach an `id-token: write` context, which is the primary
+    # surface for OIDC-extraction supply-chain attacks of the
+    # TanStack / tj-actions class.
+    permissions:
+      pages: write # `actions/deploy-pages` publishes the built site
+      id-token: write # `actions/deploy-pages` mints an OIDC token to authenticate
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,33 @@
+name: AreTheTypesWrong
+on:
+  pull_request:
+    branches:
+      - main
+      - release-*
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  arethetypeswrong:
+    name: Are the types wrong
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24.x"
+
+      - run: npm ci
+
+      - name: Run build
+        run: npm run build
+      - name: Run AreTheTypesWrong
+        id: attw
+        run: ./node_modules/.bin/attw --format ascii --pack dist > $GITHUB_STEP_SUMMARY

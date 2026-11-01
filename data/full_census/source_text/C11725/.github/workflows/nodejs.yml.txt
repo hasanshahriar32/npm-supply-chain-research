@@ -1,0 +1,64 @@
+name: Node CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: pnpm/action-setup@v6
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: pnpm
+    - name: pnpm install, lint, format check, build, package checks, type-check, API docs check, and test
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm lint
+        pnpm format --check
+        pnpm build
+        pnpm exec oxfmt --check 'perf-testing/*.mjs' perf-testing/README.md perf-testing/budgets.json
+        pnpm benchmark:immer:build
+        node --expose-gc --enable-source-maps perf-testing/dist/immutability-benchmarks.mjs --check --patches both --object-size-1 10 --object-size-2 30 --rtkq-count 10
+        node --expose-gc --enable-source-maps perf-testing/dist/immutability-benchmarks.mjs --check --patches off --filter '^apply-'
+        pnpm test:benchmarks
+        pnpm size
+        pnpm test:package
+        pnpm test:build-watch
+        pnpm type-check
+        pnpm test:api-docs
+        pnpm test
+      env:
+        CI: true
+
+  minimum-node:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: pnpm/action-setup@v6
+    - name: Use Node.js 24.x to build the package
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24.x
+        cache: pnpm
+    - name: pnpm install, build, and pack
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm build
+        pnpm pack --pack-destination "$RUNNER_TEMP"
+    - name: Use Node.js 14.0.0, the oldest version that engines allows
+      uses: actions/setup-node@v7
+      with:
+        node-version: 14.0.0
+    - name: Check the packed package on Node.js 14.0.0
+      run: node scripts/check-minimum-node.mjs "$RUNNER_TEMP"/mutative-*.tgz

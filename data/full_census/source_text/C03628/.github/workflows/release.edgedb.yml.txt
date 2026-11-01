@@ -1,0 +1,390 @@
+# .github/release.edgedb.yml
+
+name: release edgedb
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+
+      - name: Install deps
+        run: yarn
+
+      - name: Build all packages
+        run: yarn build
+
+      # edgedb
+
+      - name: Check if 'edgedb' needs publishing
+        id: check_edgedb
+        working-directory: edgedb/edgedb
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage 'edgedb' to npm
+        if: steps.check_edgedb.outputs.skip == 'false'
+        working-directory: edgedb/edgedb
+        run: npm stage publish --access public --tag "${{ steps.check_edgedb.outputs.tag }}"
+
+      - name: Create 'edgedb' Release
+        if: steps.check_edgedb.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.check_edgedb.outputs.version }}
+          name: "edgedb-js v${{ steps.check_edgedb.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_edgedb.outputs.tag != 'latest' }}
+
+      # @edgedb/generate
+
+      - name: Check if '@edgedb/generate' needs publishing
+        id: check_generate
+        working-directory: edgedb/generate
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/generate' to npm
+        if: steps.check_generate.outputs.skip == 'false'
+        working-directory: edgedb/generate
+        run: npm stage publish --access public --tag "${{ steps.check_generate.outputs.tag }}"
+
+      - name: Create '@edgedb/generate' Release
+        if: steps.check_generate.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: generate-v${{ steps.check_generate.outputs.version }}
+          name: "@edgedb/generate v${{ steps.check_generate.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_generate.outputs.tag != 'latest' }}
+
+      # @edgedb/auth-core
+
+      - name: Check if '@edgedb/auth-core' needs publishing
+        id: check_auth_core
+        working-directory: edgedb/auth-core
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/auth-core' to npm
+        if: steps.check_auth_core.outputs.skip == 'false'
+        working-directory: edgedb/auth-core
+        run: npm stage publish --access public --tag "${{ steps.check_auth_core.outputs.tag }}"
+
+      - name: Create '@edgedb/auth-core' Release
+        if: steps.check_auth_core.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auth-core-v${{ steps.check_auth_core.outputs.version }}
+          name: "@edgedb/auth-core v${{ steps.check_auth_core.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_auth_core.outputs.tag != 'latest' }}
+
+      # @edgedb/auth-nextjs
+
+      - name: Check if '@edgedb/auth-nextjs' needs publishing
+        id: check_auth_nextjs
+        working-directory: edgedb/auth-nextjs
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/auth-nextjs' to npm
+        if: steps.check_auth_nextjs.outputs.skip == 'false'
+        working-directory: edgedb/auth-nextjs
+        run: npm stage publish --access public --tag "${{ steps.check_auth_nextjs.outputs.tag }}"
+
+      - name: Create '@edgedb/auth-nextjs' Release
+        if: steps.check_auth_nextjs.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auth-nextjs-v${{ steps.check_auth_nextjs.outputs.version }}
+          name: "@edgedb/auth-nextjs v${{ steps.check_auth_nextjs.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_auth_nextjs.outputs.tag != 'latest' }}
+
+      # @edgedb/auth-express
+
+      - name: Check if '@edgedb/auth-express' needs publishing
+        id: check_auth_express
+        working-directory: edgedb/auth-express
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/auth-express' to npm
+        if: steps.check_auth_express.outputs.skip == 'false'
+        working-directory: edgedb/auth-express
+        run: npm stage publish --access public --tag "${{ steps.check_auth_express.outputs.tag }}"
+
+      - name: Create '@edgedb/auth-express' Release
+        if: steps.check_auth_express.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auth-express-v${{ steps.check_auth_express.outputs.version }}
+          name: "@edgedb/auth-express v${{ steps.check_auth_express.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_auth_express.outputs.tag != 'latest' }}
+
+      # @edgedb/auth-remix
+
+      - name: Check if '@edgedb/auth-remix' needs publishing
+        id: check_auth_remix
+        working-directory: edgedb/auth-remix
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/auth-remix' to npm
+        if: steps.check_auth_remix.outputs.skip == 'false'
+        working-directory: edgedb/auth-remix
+        run: npm stage publish --access public --tag "${{ steps.check_auth_remix.outputs.tag }}"
+
+      - name: Create '@edgedb/auth-remix' Release
+        if: steps.check_auth_remix.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auth-remix-v${{ steps.check_auth_remix.outputs.version }}
+          name: "@edgedb/auth-remix v${{ steps.check_auth_remix.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_auth_remix.outputs.tag != 'latest' }}
+
+      # @edgedb/auth-sveltekit
+
+      - name: Check if '@edgedb/auth-sveltekit' needs publishing
+        id: check_auth_sveltekit
+        working-directory: edgedb/auth-sveltekit
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/auth-sveltekit' to npm
+        if: steps.check_auth_sveltekit.outputs.skip == 'false'
+        working-directory: edgedb/auth-sveltekit
+        run: npm stage publish --access public --tag "${{ steps.check_auth_sveltekit.outputs.tag }}"
+
+      - name: Create '@edgedb/auth-sveltekit' Release
+        if: steps.check_auth_sveltekit.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: auth-sveltekit-v${{ steps.check_auth_sveltekit.outputs.version }}
+          name: "@edgedb/auth-sveltekit v${{ steps.check_auth_sveltekit.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_auth_sveltekit.outputs.tag != 'latest' }}
+
+      # @edgedb/create
+
+      - name: Check if '@edgedb/create' needs publishing
+        id: check_create
+        working-directory: edgedb/create
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/create' to npm
+        if: steps.check_create.outputs.skip == 'false'
+        working-directory: edgedb/create
+        run: npm stage publish --access public --tag "${{ steps.check_create.outputs.tag }}"
+
+      - name: Create '@edgedb/create' Release
+        if: steps.check_create.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: create-v${{ steps.check_create.outputs.version }}
+          name: "@edgedb/create v${{ steps.check_create.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_create.outputs.tag != 'latest' }}
+
+      # @edgedb/ai
+
+      - name: Check if '@edgedb/ai' needs publishing
+        id: check_ai
+        working-directory: edgedb/ai
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          echo "Checking if ${NAME}@${VERSION} is published..."
+          if npm view "${NAME}@${VERSION}" version > /dev/null 2>&1; then
+            echo "Version ${VERSION} already published on npm. Skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Version ${VERSION} is not published. Staging release."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            if echo "$VERSION" | grep -q '-'; then
+              TAG=$(echo "$VERSION" | sed -E 's/.*-([^\.]+).*/\1/')
+            else
+              TAG="latest"
+            fi
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stage '@edgedb/ai' to npm
+        if: steps.check_ai.outputs.skip == 'false'
+        working-directory: edgedb/ai
+        run: npm stage publish --access public --tag "${{ steps.check_ai.outputs.tag }}"
+
+      - name: Create '@edgedb/ai' Release
+        if: steps.check_ai.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v2.0.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ai-v${{ steps.check_ai.outputs.version }}
+          name: "@edgedb/ai v${{ steps.check_ai.outputs.version }}"
+          draft: true
+          prerelease: ${{ steps.check_ai.outputs.tag != 'latest' }}

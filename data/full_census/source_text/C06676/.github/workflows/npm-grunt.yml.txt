@@ -1,0 +1,51 @@
+name: NodeJS with Grunt
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: build (${{ matrix.node-line }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node-line: 22.x
+            node-version: "22.23.4"
+          - node-line: 24.x
+            node-version: "24.22.1"
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Check Node.js security baseline
+      run: |
+        node scripts/check-node-version.js
+        node --test scripts/check-node-version.test.js
+
+    - name: Install and build main library
+      run: |
+        npm install
+        npm run build
+
+    - name: Pack local library
+      run: |
+        cd applicationinsights-react-js
+        npm pack
+        echo "REACT_PLUGIN_TGZ=$(ls *.tgz)" >> $GITHUB_ENV
+
+    - name: Build sample app
+      working-directory: sample/applicationinsights-react-sample
+      run: |
+        npm install ../../applicationinsights-react-js/${{ env.REACT_PLUGIN_TGZ }}
+        npm run build

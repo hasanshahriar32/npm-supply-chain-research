@@ -1,0 +1,22 @@
+name: Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      # Setup
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - run: npm i -g pnpm@7
+      - run: pnpm install
+      # Test
+      - run: pnpm compile
+      - run: pnpm test
+        env:
+          GH_TOKEN: ${{ secrets.GH_SPONSORS_TOKEN }}
+      - run: pnpm coverage

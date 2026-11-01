@@ -1,0 +1,88 @@
+name: "Build"
+
+on:
+  push:
+    branches: [main, 1.x]
+  pull_request:
+    branches: [main, 1.x]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install moreutils
+        run: sudo apt-get install -y moreutils
+      - name: Amend version
+        run: jq ".version += "'"'"+${GITHUB_SHA}"'"' package.json | sponge package.json
+        working-directory: webpack-subresource-integrity
+      - name: Remember version
+        run: (echo -n "PACKAGE_VERSION=" && jq --raw-output .version package.json) >> $GITHUB_ENV
+        working-directory: webpack-subresource-integrity
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Install dependencies
+        run: yarn
+      - name: Build all files
+        run: yarn build
+      - name: Create npm package
+        run: yarn pack
+        working-directory: webpack-subresource-integrity
+      - name: Upload npm package artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: webpack-subresouce-integrity-${{ env.PACKAGE_VERSION }}
+          path: webpack-subresource-integrity/package.tgz
+
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [12.x, 14.x, 16.x]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: yarn
+      - name: Run tests
+        run: yarn test:jest
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Install dependencies
+        run: yarn
+      - name: Run test coverage
+        run: yarn cover:run && yarn cover:lcov
+      - name: Upload test coverage
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: webpack-subresource-integrity/coverage/lcov.info
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Install dependencies
+        run: yarn
+      - name: Lint
+        run: yarn lint

@@ -1,0 +1,52 @@
+name: v4.x branch
+
+on:
+  push:
+    branches:
+    - v4.x
+
+jobs:
+  install:
+    name: Install
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Cache node_modules
+      id: cacheModules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm # this is cache where npm installs from before going out to the network
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
+    - name: Install dependencies
+      if: steps.cacheModules.outputs.cache-hit != 'true'
+      run: npm install
+
+  debug:
+    name: Debug
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hmarr/debug-action@v3
+
+  checks:
+    name: Check
+    needs: [install]
+    uses: ./.github/workflows/checks.yml
+    with:
+      ref: ${{ github.sha }}
+
+  # The security job can't run on pull requests opened from forks because
+  # Github doesn't pass down the SNYK_TOKEN environment variable.
+  security:
+    name: Check Security
+    needs: [install]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
+      with:
+        path: ~/.npm # this is cache where npm installs from before going out to the network
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package.json') }}
+    - run: npm install --prefer-offline
+    - run: make secure
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -1,0 +1,48 @@
+name: Lint
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '3 0 * * SUN'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      # Install only pnpm, not the repo's full toolchain — Node comes from
+      # actions/setup-node. See mise.toml [tools] comment for why.
+      - name: Setup mise
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          install: false
+          add_shims_to_path: false
+          # mise-action saves a cache only inside its install branch, so with
+          # install: false nothing here ever writes one. The restore is gated
+          # separately and would still run, always missing, so turn it off.
+          cache: false
+      - name: Install pnpm
+        env:
+          MISE_AUTO_INSTALL: 'false'
+        run: |
+          mise install --locked github:pnpm/pnpm
+          pnpm_bin=$(mise which pnpm)
+          [ -x "$pnpm_bin" ] || { echo "mise which pnpm produced no usable path" >&2; exit 1; }
+          dirname "$pnpm_bin" >> "$GITHUB_PATH"
+      # Smoke check only; there is no matrix here to get wrong.
+      - run: node --version && pnpm --version
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
+      - name: Run lint
+        run: pnpm run lint
+      - name: Run prettier
+        run: pnpm run prettier:ci

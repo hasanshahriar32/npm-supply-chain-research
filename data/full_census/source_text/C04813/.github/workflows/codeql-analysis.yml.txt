@@ -1,0 +1,29 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Make sure it goes back far enough to find where the branch split from main
+          fetch-depth: 20
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: "javascript"
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4

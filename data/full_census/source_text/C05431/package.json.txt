@@ -1,0 +1,75 @@
+{
+  "name": "angular-builders",
+  "description": "A consolidation of community builders for Angular build facade",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/just-jeb/angular-builders"
+  },
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "examples/*",
+      "examples/custom-esbuild/*",
+      "examples/custom-webpack/*",
+      "examples/jest/*"
+    ]
+  },
+  "author": "Evgeny Barabanov",
+  "license": "MIT",
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build:packages": "rm -rf .turbo/runs && turbo build --filter='@angular-builders/*...[origin/master]' --summarize",
+    "build:packages:all": "rm -rf .turbo/runs && turbo build --filter='@angular-builders/*' --summarize",
+    "test:local": "node scripts/run-local-tests.js",
+    "format": "prettier --write \"**/*.{js,ts,html,md}\"",
+    "format:check": "prettier --check \"**/*.{js,ts,html,md}\"",
+    "lerna": "lerna",
+    "graduate": "lerna publish --conventional-commits --conventional-graduate",
+    "prepare": "husky",
+    "update:package": "cd $INIT_CWD && yarn node ${PROJECT_CWD}/scripts/update-package.js",
+    "update:example": "cd $INIT_CWD && yarn node ${PROJECT_CWD}/scripts/update-example.js",
+    "update:packages": "yarn workspaces foreach -A --include '@angular-builders/*' run update:package",
+    "update:examples": "yarn workspaces foreach -A --exclude '@angular-builders/*' run update:example"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.0.0",
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@lerna-lite/cli": "^5.0.0",
+    "@lerna-lite/publish": "^5.0.0",
+    "@types/lodash": "^4.14.118",
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "4.1.12",
+    "husky": "^9.0.0",
+    "jiti": "^2.7.0",
+    "lint-staged": "^17.0.0",
+    "lodash": "^4.17.15",
+    "prettier": "^3.0.0",
+    "ts-jest": "29.4.15",
+    "turbo": "^2.4.0",
+    "vitest": "4.1.12"
+  },
+  "lint-staged": {
+    "*.{js,ts,html,md}": [
+      "prettier --write"
+    ]
+  },
+  "prettier": {
+    "semi": true,
+    "endOfLine": "lf",
+    "tabWidth": 2,
+    "printWidth": 100,
+    "trailingComma": "es5",
+    "bracketSpacing": true,
+    "arrowParens": "avoid",
+    "singleQuote": true
+  },
+  "packageManager": "yarn@4.18.1",
+  "resolutions": {
+    "@angular-devkit/architect": "0.2202.3",
+    "@angular-devkit/core": "22.2.3"
+  }
+}

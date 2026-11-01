@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fills the dep cache so parallel jobs can start faster.
+  # No sense in running tests if we can't install correctly.
+  setup:
+    name: "Setup"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+
+  # test:
+  #   name: "Tests"
+  #   runs-on: ubuntu-latest
+  #   needs: [setup]
+
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: wyvox/action-setup-pnpm@v3
+  #     - run: pnpm test
+
+  tests:
+    name: "Tests"
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+      - run: pnpm test
+      - run: pnpm --filter '*' test
+
+  tests_min_node:
+    name: "Tests (Node 20)"
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+        with:
+          node-version: 20
+      - run: pnpm test
+      - run: pnpm --filter '*' test
+
+  ts_support:
+    name: "TS: ${{ matrix.tsVersion }}, eslint-ts-deps: ${{ matrix.eslintTsVersion }}"
+    runs-on: ubuntu-latest
+    needs: [tests]
+    timeout-minutes: 2
+    strategy:
+      fail-fast: false
+      matrix:
+        eslintTsVersion:
+          - ^6
+          - ^7
+          - ^8
+          - canary
+        tsVersion:
+          - 5.3
+          - 5.4
+          - 5.5
+          - 5.6
+          - 5.7
+          - 5.8
+          - 5.9
+          - "6"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+      - name: "TS: ${{ matrix.tsVersion }}, eslint-plugin-ts: ${{ matrix.eslintTsVersion }}"
+        run: |-
+          function sponge() {
+            local line;
+            tmp=$(mktemp)
+            while IFS= read -r line
+            do
+              echo $line >> $tmp;
+            done
+            mv "$tmp" $1
+          }
+          jq '.pnpm.overrides."@typescript-eslint/parser" = "${{ matrix.eslintTsVersion }}"' package.json | sponge package.json
+          jq '.pnpm.overrides."@typescript-eslint/scope-manager" = "${{ matrix.eslintTsVersion }}"' package.json | sponge package.json
+          jq '.pnpm.overrides."@typescript-eslint/visitor-keys" = "${{ matrix.eslintTsVersion }}"' package.json | sponge package.json
+          # eslint-plugin v6/v7 lack the subpath exports used by the flat-ts
+          # test project (e.g. ./use-at-your-own-risk/eslint-recommended-raw),
+          # so only override it for v8+ where the full API is present.
+          # Also override the unified typescript-eslint package (used by flat-ts)
+          # so its bundled plugin copy stays in sync; use "latest" for ^8 to
+          # force an upgrade past the project's pinned 8.19.1 (which satisfies
+          # ^8 and would otherwise not be upgraded by pnpm).
+          if [[ "${{ matrix.eslintTsVersion }}" == "^8" ]]; then
+            jq '.pnpm.overrides."@typescript-eslint/eslint-plugin" = "latest"' package.json | sponge package.json
+            jq '.pnpm.overrides."typescript-eslint" = "latest"' package.json | sponge package.json
+          elif [[ "${{ matrix.eslintTsVersion }}" == "canary" ]]; then
+            jq '.pnpm.overrides."@typescript-eslint/eslint-plugin" = "canary"' package.json | sponge package.json
+            jq '.pnpm.overrides."typescript-eslint" = "canary"' package.json | sponge package.json
+          fi
+          jq '.pnpm.overrides.typescript = "${{ matrix.tsVersion }}"' package.json | sponge package.json
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm test
+      - run: pnpm --filter '*' test:check
+      - run: pnpm --filter '*' test:fix
+
+  test_eslint-plugin-ember:
+    name: "eslint-plugin-ember"
+    runs-on: ubuntu-latest
+    needs: [setup]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+      - run: node ./scripts/eslint-plugin-ember-test.mjs
+
+  lint:
+    name: "Lint"
+    runs-on: ubuntu-latest
+    needs: [setup]
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: wyvox/action-setup-pnpm@v4
+      - name: Lint
+        run: pnpm lint

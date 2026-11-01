@@ -1,0 +1,52 @@
+{
+  "name": "@tinyhttp/cors",
+  "version": "2.0.1",
+  "type": "module",
+  "description": "CORS middleware for modern Node.js ",
+  "homepage": "https://github.com/tinyhttp/cors#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tinyhttp/cors.git"
+  },
+  "engines": {
+    "node": ">=12.20 || 14.x || >=16"
+  },
+  "types": "./dist/index.d.ts",
+  "exports": "./dist/index.js",
+  "keywords": [
+    "tinyhttp",
+    "node.js",
+    "web framework",
+    "web",
+    "backend"
+  ],
+  "author": "v1rtl",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "tsx --test src/*.test.ts",
+    "cov": "c8 -r lcov pnpm test",
+    "lint": "biome lint .",
+    "format": "biome format .",
+    "check": "biome check ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@commitlint/cli": "19.3.0",
+    "@commitlint/config-conventional": "19.2.2",
+    "@tinyhttp/app": "2.2.4",
+    "@types/node": "^20.14.10",
+    "c8": "^10.1.2",
+    "husky": "^9.0.11",
+    "supertest-fetch": "^2.0.0",
+    "tsx": "^4.16.2",
+    "typescript": "~5.5.3"
+  },
+  "packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a",
+  "dependencies": {
+    "@tinyhttp/vary": "^0.1.3"
+  }
+}

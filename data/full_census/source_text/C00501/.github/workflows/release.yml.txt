@@ -1,0 +1,18 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    uses: sxzz/workflows/.github/workflows/release.yml@main
+    with:
+      build: pnpm build
+      publish: true
+      stage: true
+
+    permissions:
+      contents: write
+      id-token: write

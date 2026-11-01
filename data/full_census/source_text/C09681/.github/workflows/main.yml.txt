@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    name: Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 26
+          - 24
+          - 22
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install --legacy-peer-deps
+      - run: npm run test:js
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - run: npm install --legacy-peer-deps
+      - run: npm run lint
+  run-rules-on-codebase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - run: npm install --legacy-peer-deps
+      - run: npm run run-rules-on-codebase
+  integration:
+    name: Integration test (${{ matrix.group }})
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - "1"
+          - "2"
+          - "3"
+          - "4"
+          - "5"
+          - "7"
+          - "8"
+    env:
+      TIMING: 1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - run: npm install --legacy-peer-deps
+      - run: npm run integration -- --group ${{ matrix.group }}

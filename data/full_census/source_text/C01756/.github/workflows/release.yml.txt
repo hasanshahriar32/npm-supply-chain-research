@@ -1,0 +1,135 @@
+name: release
+
+# Publish only from a manually selected, fully tested commit. For v3, publish an
+# rc under `next`, exercise that exact version as a consumer, then rerun this
+# workflow on the promoted stable-version commit with `latest`.
+on:
+  workflow_dispatch:
+    inputs:
+      dist-tag:
+        description: npm distribution tag
+        required: true
+        type: choice
+        options: [next, latest]
+        default: next
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Validate version and requested dist-tag
+        env:
+          DIST_TAG: ${{ inputs['dist-tag'] }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$DIST_TAG" == latest && "$VERSION" == *-* ]]; then
+            echo "Refusing to publish prerelease $VERSION as latest" >&2
+            exit 1
+          fi
+          if [[ "$DIST_TAG" == next && "$VERSION" != *-* ]]; then
+            echo "Refusing to publish stable $VERSION as next" >&2
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      # the library's gate alone – the site (its build, browsers, accessibility) is pages.yml's
+      - name: Build and verify the library, GPU kernels and packed consumers
+        run: |
+          npm run prepare
+          npm test
+          npm run test:gpu
+          npm run test:package
+          npm audit --omit=dev
+      # MCP Registry (stable releases only): io.github.colorjs/color-space, granted to this
+      # repo's GitHub OIDC token (id-token: write, above). Validated BEFORE npm publish, so bad
+      # metadata stops the release while nothing irreversible has happened yet.
+      # https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx
+      - name: Prepare and validate MCP Registry metadata
+        if: inputs['dist-tag'] == 'latest'
+        run: |
+          # pinned publisher, checked against the sha256 in that release's checksums file
+          curl -fsSL -o mcp-publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          echo "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher && rm mcp-publisher.tar.gz
+          # server.json registers one exact npm version: align it with package.json
+          node -e "
+            const fs = require('fs'), s = JSON.parse(fs.readFileSync('server.json')), { version, mcpName } = require('./package.json')
+            if (s.name !== mcpName) throw Error('server.json name ' + s.name + ' != package.json mcpName ' + mcpName)
+            s.version = version; for (const p of s.packages) p.version = version
+            fs.writeFileSync('server.json', JSON.stringify(s, null, 2) + '\n')"
+          ./mcp-publisher validate server.json
+      - name: Check whether this immutable version already exists
+        id: registry
+        run: |
+          if npm view "color-space@$VERSION" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish the tested commit with provenance
+        if: steps.registry.outputs.exists != 'true'
+        run: npm publish --ignore-scripts --access public --provenance --tag "${{ inputs['dist-tag'] }}"   # the gate above ran; publish what it tested, not a second run
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Align next with the stable release
+        if: inputs['dist-tag'] == 'latest'
+        run: npm dist-tag add "color-space@$VERSION" next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Tag the exact published commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          if git rev-parse "refs/tags/v$VERSION" >/dev/null 2>&1; then
+            [[ "$(git rev-parse "v$VERSION^{}")" == "$GITHUB_SHA" ]] || { echo "v$VERSION points at a different commit" >&2; exit 1; }
+          else
+            git tag -a "v$VERSION" -m "v$VERSION"
+            git push origin "v$VERSION"
+          fi
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIST_TAG: ${{ inputs['dist-tag'] }}
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then exit 0; fi
+          EXTRA=()
+          if [[ "$DIST_TAG" == next ]]; then EXTRA+=(--prerelease); fi
+          gh release create "v$VERSION" --verify-tag --generate-notes --title "v$VERSION" "${EXTRA[@]}"
+      # Last on purpose: npm, the tag and the GitHub release are already out, so a registry
+      # outage can't strand them half-done. A failure turns the run red (never swallowed);
+      # a rerun repeats the job from the top, and every publishing step above is idempotent
+      # (npm publish, the tag and the release are skipped when they exist), so only this one
+      # does new work.
+      - name: Publish to the MCP Registry
+        if: inputs['dist-tag'] == 'latest'
+        run: |
+          NAME=$(node -p "require('./package.json').mcpName")
+          if curl -fsS -o /dev/null "https://registry.modelcontextprotocol.io/v0.1/servers/${NAME/\//%2F}/versions/$VERSION"; then
+            echo "$NAME $VERSION is already registered"; exit 0
+          fi
+          # the registry proves ownership by reading mcpName from registry.npmjs.org/color-space/$VERSION
+          for i in $(seq 30); do
+            [[ "$(npm view "color-space@$VERSION" mcpName 2>/dev/null)" == "$NAME" ]] && break
+            sleep 10
+          done
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish server.json

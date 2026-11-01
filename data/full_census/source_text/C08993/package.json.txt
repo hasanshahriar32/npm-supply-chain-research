@@ -1,0 +1,119 @@
+{
+    "name": "react-native-blob-util",
+    "version": "1.1.0",
+    "description": "A module provides upload, download, and files access API. Supports file stream read/write for process large files.",
+    "main": "index",
+    "files": [
+        "index.js",
+        "index.d.ts",
+        "index.web.js",
+        "android.js",
+        "ios.js",
+        "fetch.js",
+        "fs.js",
+        "media.js",
+        "mediacollection.js",
+        "open.js",
+        "types.js",
+        "app.plugin.js",
+        "class/",
+        "utils/",
+        "codegenSpecs/",
+        "plugin/",
+        "react-native-blob-util.podspec",
+        "Package.swift",
+        "ios/",
+        "android/build.gradle",
+        "android/gradle.properties",
+        "android/src/main/",
+        "windows/",
+        "NuGet.config",
+        "Migration.md"
+    ],
+    "scripts": {
+        "lint": "eslint \"*.js\" class utils",
+        "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./tests/unit/harness/register.mjs --test \"tests/unit/*.test.js\"",
+        "prepublishOnly": "node --test tests/unit/package.test.js",
+        "test:android": "node tests/native/run-android-unit-tests.js",
+        "test:ios": "node tests/native/run-ios-unit-tests.js",
+        "e2e:certs": "node tests/e2e/certs/generate.js",
+        "e2e:server": "node tests/e2e/server.js",
+        "e2e:android": "node tests/e2e/run-all.js --platforms android",
+        "e2e:ios": "node tests/e2e/run-all.js --platforms ios",
+        "e2e:windows": "node tests/e2e/run-all.js --platforms windows",
+        "e2e:runner": "node tests/e2e/appium/run.js",
+        "e2e:all": "node tests/e2e/run-all.js"
+    },
+    "dependencies": {
+        "base-64": "1.0.0"
+    },
+    "keywords": [
+        "react-native",
+        "fetch",
+        "blob",
+        "fs",
+        "upload",
+        "file",
+        "download",
+        "filestream",
+        "image header",
+        "android",
+        "ios",
+        "file system"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/RonRadtke/react-native-blob-util.git"
+    },
+    "author": {
+        "name": "RonRadtke",
+        "username": "RonRadtke"
+    },
+    "funding": {
+        "type": "github",
+        "url": "https://github.com/sponsors/ronradtke"
+    },
+    "license": "MIT",
+    "contributors": [
+        "Traviskn <>",
+        "Ben <benhsieh@catchplay.com>",
+        "wkh237 <xeiyan@gmail.com>"
+    ],
+    "devDependencies": {
+        "@react-native/babel-preset": "^0.84.1",
+        "@react-native/eslint-config": "^0.84.1",
+        "@typescript-eslint/eslint-plugin": "^8.61.1",
+        "@typescript-eslint/parser": "^8.61.1",
+        "eslint": "^8.57.1",
+        "eslint-plugin-ft-flow": "^3.0.11",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-react": "^7.37.5",
+        "eslint-plugin-react-native": "^5.0.0",
+        "prettier": "^3.9.6",
+        "react": "19.2.3",
+        "react-native": "0.84.1",
+        "react-native-windows": "0.84.0",
+        "webdriverio": "^9.30.0"
+    },
+    "peerDependencies": {
+        "react": "*",
+        "react-native": ">=0.84.0"
+    },
+    "codegenConfig": {
+        "name": "ReactNativeBlobUtilSpec",
+        "type": "modules",
+        "jsSrcsDir": "codegenSpecs",
+        "windows": {
+            "namespace": "ReactNativeBlobUtilCodegen",
+            "outputDirectory": "windows/ReactNativeBlobUtil/codegen",
+            "separateDataTypes": true
+        }
+    },
+    "react-native-windows": {
+        "init-windows": {
+            "name": "ReactNativeBlobUtil",
+            "namespace": "ReactNativeBlobUtil",
+            "template": "cpp-lib"
+        }
+    }
+}

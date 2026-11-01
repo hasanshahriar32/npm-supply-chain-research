@@ -1,0 +1,63 @@
+---
+name: release-please
+on:
+  push:
+    branches:
+      - main
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: get-token
+        with:
+          private-key: ${{ secrets.TOKENS_PRIVATE_KEY }}
+          app-id: ${{ secrets.TOKENS_APP_ID }}
+
+      - uses: GoogleCloudPlatform/release-please-action@v5
+        id: release
+        with:
+          token: ${{ steps.get-token.outputs.token }}
+          release-type: node
+          package-name: netlify-cli
+
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+    needs: create-release
+    if: ${{ needs.create-release.outputs.release_created }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Read primary Node version
+        id: node
+        run: echo "version=$(yq eval '.primary_node_version' .github/test-matrix.yml)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ steps.node.outputs.version }}
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pinned npm version
+        run: npm install -g npm@11.19.1
+
+      - name: Install core dependencies
+        run: npm ci --no-audit
+
+      - name: Build project
+        run: npm run build
+
+      - name: Publish netlify-cli package
+        run: npm publish --provenance
+
+      - name: Prepare netlify package
+        run: node scripts/netlifyPackage.js
+
+      - name: Publish netlify package
+        run: npm publish --provenance

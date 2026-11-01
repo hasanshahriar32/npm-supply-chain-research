@@ -1,0 +1,126 @@
+name: Benchmarks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Allow manual baseline seeding from the Actions tab.
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Bencher requires:
+#   - Repository secret `BENCHER_API_TOKEN` (from https://bencher.dev → user → API tokens)
+#   - Repository variable `BENCHER_PROJECT`  (the project slug, e.g. `zxing-wasm`)
+# Workflow runs from forked PRs skip the upload step (no secrets available).
+env:
+  BENCHER_PROJECT: ${{ vars.BENCHER_PROJECT }}
+  BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+  BENCHER_TESTBED: ubuntu-latest
+  BENCHER_ADAPTER: json
+
+jobs:
+  # Push-to-main: refresh the baseline on the main branch.
+  baseline:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    name: Update main baseline
+    runs-on: ubuntu-latest
+    permissions:
+      # Outside a PR context bencher posts results as a GitHub Check.
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build WASM
+        run: pnpm build:wasm
+
+      - name: Run benches → BMF
+        run: pnpm bench:bmf
+
+      - name: Install Bencher CLI
+        if: env.BENCHER_API_TOKEN != ''
+        uses: bencherdev/bencher@109473622f88ec4c6b8eebab31e18cd1902a296c # main
+
+      - name: Upload to Bencher (main)
+        if: env.BENCHER_API_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bencher run \
+            --branch main \
+            --threshold-measure latency-ms \
+            --threshold-test t_test \
+            --threshold-max-sample-size 64 \
+            --threshold-upper-boundary 0.99 \
+            --thresholds-reset \
+            --file bench/bmf.json \
+            --github-actions "$GH_TOKEN" \
+            true
+
+  # Pull request: compare against main, post a PR comment.
+  pr:
+    if: github.event_name == 'pull_request'
+    name: Compare PR vs main
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Build WASM
+        run: pnpm build:wasm
+
+      - name: Run benches → BMF
+        run: pnpm bench:bmf
+
+      - name: Install Bencher CLI
+        if: env.BENCHER_API_TOKEN != ''
+        uses: bencherdev/bencher@109473622f88ec4c6b8eebab31e18cd1902a296c # main
+
+      # Fork PRs have no access to BENCHER_API_TOKEN, so this step is skipped
+      # for them. The bench artifacts can still be uploaded for inspection.
+      - name: Upload to Bencher (PR)
+        if: env.BENCHER_API_TOKEN != ''
+        env:
+          # Indirect via env to prevent shell injection from attacker-controlled
+          # ref names (a fork branch could otherwise inject `$(...)` etc.).
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bencher run \
+            --branch "$HEAD_REF" \
+            --start-point "$BASE_REF" \
+            --start-point-hash "$BASE_SHA" \
+            --start-point-clone-thresholds \
+            --start-point-reset \
+            --file bench/bmf.json \
+            --github-actions "$GH_TOKEN" \
+            true
+
+      - name: Upload BMF artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-bmf
+          path: bench/bmf.json
+          if-no-files-found: warn

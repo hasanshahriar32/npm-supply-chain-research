@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: (stencil-sass with Stencil version ${{ matrix.stencil_version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run with multiple different versions of Stencil in parallel:
+        # 1. DEFAULT - uses the version of Stencil written in `pnpm-lock.yaml`, keeping the same version used by the
+        # Stencil team as a source of truth
+        # 2. 4 - will install the latest release under major version 4 of Stencil. This should be kept as long as this
+        # library supports Stencil v4.Y.Z
+        stencil_version: ['DEFAULT', '4']
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: 📦 Setup pnpm
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+    - name: 🟢 Setup Node
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'pnpm'
+
+    - name: 📥 Install Dependencies
+      run: pnpm install --frozen-lockfile
+      shell: bash
+
+    - name: 📝 Prettier Check
+      run: pnpm run prettier.dry-run
+      shell: bash
+
+    - name: 📦 Install Stencil ${{matrix.stencil_version}}
+      run: pnpm add --save-dev @stencil/core@${{matrix.stencil_version}}
+      shell: bash
+      if: ${{ matrix.stencil_version != 'DEFAULT' }}
+
+    - name: 📊 Report Stencil Version
+      run: pnpm ls @stencil/core
+      shell: bash
+
+    - name: 🏗️ Build
+      run: pnpm run build
+      shell: bash
+
+    - name: 🧪 Test
+      run: pnpm run test.ci
+      shell: bash
+
+    # Guards against regressions in the plugin's packaging (e.g. the exports/main
+    # fields losing CJS support) by actually building a Stencil v4 app whose
+    # stencil.config.ts is loaded via CommonJS `require`. Pinned to Stencil v4
+    # regardless of the matrix leg, since that's the specific loading path this
+    # checks; only needs to run once per CI run.
+    - name: 📥 Install Integration Fixture Dependencies
+      if: matrix.stencil_version == 'DEFAULT'
+      run: pnpm install --no-frozen-lockfile
+      shell: bash
+      working-directory: test/fixtures/stencil-v4-app
+
+    - name: 🧪 Integration Test (build a Stencil v4 app using this plugin)
+      if: matrix.stencil_version == 'DEFAULT'
+      run: pnpm run build
+      shell: bash
+      working-directory: test/fixtures/stencil-v4-app
+
+    - name: 🔍 Verify Integration Fixture Compiled Sass
+      if: matrix.stencil_version == 'DEFAULT'
+      run: grep -q 'color:rebeccapurple' www/build/*.entry.js
+      shell: bash
+      working-directory: test/fixtures/stencil-v4-app
+

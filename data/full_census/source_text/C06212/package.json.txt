@@ -1,0 +1,44 @@
+{
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:mainmatter/qunit-dom.git"
+  },
+  "scripts": {
+    "build": "cd packages/qunit-dom && pnpm build",
+    "docs": "pnpm build && pnpm exec documentation build packages/qunit-dom/dist/qunit-dom.js --config documentation.yml -f md -o API.md",
+    "lint": "pnpm --filter '*' lint",
+    "lint:fix": "pnpm --filter '*' lint:fix",
+    "prepare": "pnpm build",
+    "release": "cd packages/qunit-dom && pnpm run release",
+    "test:coverage": "pnpm --filter '*' test:coverage",
+    "test:ember": "pnpm --filter '*' test:ember"
+  },
+  "devDependencies": {
+    "concurrently": "8.2.2",
+    "documentation": "14.0.3",
+    "eslint": "8.57.1",
+    "prettier": "2.8.8",
+    "release-plan": "^0.18.0"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">= 18.*",
+    "npm": "use pnpm",
+    "yarn": "use pnpm"
+  },
+  "volta": {
+    "node": "20.16.0",
+    "pnpm": "10.14.0"
+  },
+  "changelog": {
+    "repo": "mainmatter/qunit-dom",
+    "labels": {
+      "breaking": ":boom: Breaking Change",
+      "enhancement": ":rocket: Enhancement",
+      "bug": ":bug: Bug Fix",
+      "documentation": ":memo: Documentation",
+      "internal": ":house: Internal"
+    }
+  }
+}

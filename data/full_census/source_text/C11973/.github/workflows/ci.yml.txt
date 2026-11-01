@@ -1,0 +1,223 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - .changeset/**
+      - .github/workflows/ci.yml
+      - 'packages/**'
+      - 'tests/**'
+      - 'docker-examples/**'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'vite.lib.config.mjs'
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    name: Lint & Format
+    if: ${{ github.event.pull_request.draft == false }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+        with:
+          reporter: 'default'
+      - name: Lint
+        run: pnpm lint
+      - name: Format
+        run: pnpm format:check
+  # Pushes to master only run lint and format; everything else runs on PRs
+  build:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        node_version: [24, 26]
+    name: Build / ${{ matrix.os }} / Node ${{ matrix.node_version }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+        with:
+          node-version: ${{ matrix.node_version }}
+      - name: Build
+        run: pnpm build
+      - uses: ./.github/actions/build-cache
+        with:
+          mode: save
+          node-version: ${{ matrix.node_version }}
+  test-docker:
+    needs: [lint-and-format, build]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && !failure() && !cancelled() }}
+    uses: ./.github/workflows/test-docker.yml
+  test:
+    needs: [lint-and-format, build]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && !failure() && !cancelled() }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        node_version: [24, 26]
+        suite: [ui, core]
+        # ui-components alone takes as long as every other package together
+        include:
+          - suite: ui
+            filter: --filter @verdaccio/ui-components
+          - suite: core
+            filter: --filter "./packages/**" --filter "!@verdaccio/ui-components" --no-sort
+    name: Test / ${{ matrix.os }} / Node ${{ matrix.node_version }} / ${{ matrix.suite }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+        with:
+          node-version: ${{ matrix.node_version }}
+      - uses: ./.github/actions/build-cache
+        with:
+          mode: restore
+          node-version: ${{ matrix.node_version }}
+      - name: Test
+        run: pnpm ${{ matrix.filter }} test
+        env:
+          NODE_OPTIONS: ${{ matrix.node_version == 26 && '--no-webstorage' || '' }}
+  e2e-cli:
+    needs: [lint-and-format, build]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    name: E2E CLI (${{ matrix.pm }})
+    strategy:
+      fail-fast: false
+      matrix:
+        pm:
+          - npm@10
+          - npm@11
+          - npm@12
+          - yarn-modern@3
+          - yarn-modern@4
+          - pnpm@11
+          - pnpm@12
+          - bun
+          - deno
+          # installed by the e2e CLI itself; both only exercise install and ci
+          - upm@1.3.1
+          - nub@0.9.5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+      - uses: ./.github/actions/build-cache
+        with:
+          mode: restore
+          node-version: 24
+      - uses: ./.github/actions/start-verdaccio
+      - uses: ./.github/actions/e2e-cli
+        with:
+          pm: ${{ matrix.pm }}
+      - name: Show Verdaccio logs
+        if: always()
+        run: cat /tmp/verdaccio-e2e/verdaccio.log 2>/dev/null || echo "No log file found"
+  e2e-ui:
+    needs: [lint-and-format, build]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    name: E2E UI (${{ matrix.shard }}/2)
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+      - uses: ./.github/actions/build-cache
+        with:
+          mode: restore
+          node-version: 24
+      - uses: ./.github/actions/cypress-binary
+      - uses: ./.github/actions/start-verdaccio
+        with:
+          config: ./scripts/e2e-ui-config.yaml
+          test-user: 'true'
+      - uses: ./.github/actions/e2e-ui
+        with:
+          shard: ${{ matrix.shard }}
+          shards: 2
+      - name: Show Verdaccio logs
+        if: always()
+        run: cat /tmp/verdaccio-e2e/verdaccio.log 2>/dev/null || echo "No log file found"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ matrix.shard }}
+          path: cypress/screenshots
+          if-no-files-found: ignore
+  # Not a check: keeps the Cypress binary cached for master and 7.x PRs, only when its version changes
+  cypress-cache:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    name: Cypress binary cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cypress version
+        id: cypress-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies.cypress")" >> "$GITHUB_OUTPUT"
+      - name: Look up cache
+        id: lookup
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ steps.cypress-version.outputs.version }}
+          lookup-only: true
+      - name: Install dependencies
+        if: steps.lookup.outputs.cache-hit != 'true'
+        uses: ./.github/actions/install-app
+      - if: steps.lookup.outputs.cache-hit != 'true'
+        uses: ./.github/actions/cypress-binary
+        with:
+          save: 'true'
+  changeset-validation:
+    needs: [lint-and-format, build]
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.draft == false && always() && !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+    name: Changeset validation
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install dependencies
+        uses: ./.github/actions/install-app
+      - name: Run changeset version
+        # @changesets/cli v3 exits 1 when there are no unreleased changesets;
+        # a PR without one (docs/tests/lint-only) is valid, so skip cleanly
+        run: |
+          if ls .changeset/*.md 2>/dev/null | grep -qv README; then
+            pnpm ci:version:changeset
+          else
+            echo "no changesets present — nothing to validate"
+          fi
+  cleanup:
+    needs: [test, e2e-cli, e2e-ui]
+    if: ${{ always() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    name: Cleanup caches
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/delete-build-cache
+        with:
+          node-versions: 24 26
+          token: ${{ github.token }}

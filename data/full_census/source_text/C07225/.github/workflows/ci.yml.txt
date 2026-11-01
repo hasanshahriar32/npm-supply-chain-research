@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    paths:
+      - '**.ts'
+      - '**.html'
+      - '**.scss'
+      - 'website/**'
+      - '**.mdx'
+      - '**.mjs'
+      - '**.astro'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test:ci
+
+      - name: Build
+        run: pnpm build:docs
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./coverage/ng-select/lcov.info

@@ -1,0 +1,40 @@
+name: Test
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: true
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: |
+          # Node.js v16 detects GITHUB_ACTIONS as a color supported environment
+          # https://github.com/nodejs/node/blob/v16.18.0/lib/internal/tty.js#L167
+          pnpm test
+
+          pnpm --use-node-version=20.19.4 exec tsx tests
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check

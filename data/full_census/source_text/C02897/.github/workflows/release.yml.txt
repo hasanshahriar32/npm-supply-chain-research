@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - uses: pnpm/action-setup@v6
+      - name: Install deps
+        run: pnpm install
+      - name: Build
+        run: pnpm build
+      # npm >= 11.5.1 is required for OIDC trusted publishing (token exchange).
+      # Node 22 ships with npm 10.x, which 404s on the publish PUT.
+      - name: Update npm
+        run: npm install -g npm@latest
+      - run: npm publish --provenance --access public

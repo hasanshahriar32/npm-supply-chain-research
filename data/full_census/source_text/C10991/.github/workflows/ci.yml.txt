@@ -1,0 +1,40 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, latest]
+        os: [ubuntu-latest, windows-latest]
+
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # the codecov uploader only runs on unix,
+      # frequently hangs for whatever reason,
+      # and we have no platform-specific code anyway…
+      - name: upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 'latest'
+        timeout-minutes: 1
+        continue-on-error: true
+        run: bash <(curl -s https://codecov.io/bash) -t ${{secrets.CODECOV_TOKEN}} -B ${{ github.ref }} -f coverage/coverage-final.json
+
+      # test against TypeScript 5
+      - run: npm install typescript@5
+      # aka `npm test` without the `pretest/build`
+      - run: node .build/tests/index.js
+
+      # test the minimum supported peer dependency version
+      - run: npm install typescript@4.5 rollup@3.0
+      - run: node .build/tests/index.js

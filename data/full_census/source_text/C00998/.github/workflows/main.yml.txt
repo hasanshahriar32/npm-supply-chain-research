@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    name: Test on node ${{ matrix.node_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version: ['18', '20', '22', '24']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node_version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node_version }}
+        cache: npm
+
+    - name: Install
+      run: npm ci
+
+    # `npm test` runs `npm run gen` first. The generated src/gen/*.ts files
+    # are checked in, so if regeneration changes anything, src/def/ and
+    # src/gen/ have drifted apart and the PR needs `npm run gen` committed.
+    - name: Build and test
+      run: npm test
+
+    - name: Generated types are up to date
+      run: git diff --exit-code -- src/gen/

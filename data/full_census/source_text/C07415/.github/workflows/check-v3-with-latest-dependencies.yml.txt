@@ -1,0 +1,48 @@
+name: Run the Hardhat 3 test suite with the latest dependency versions
+
+on:
+  schedule:
+    - cron: "0 0/8 * * *"
+  workflow_dispatch:
+
+jobs:
+  test-without-pnpm-lock-yaml:
+    name: Test without pnpm-lock.yaml
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        system: ["ubuntu-latest", "windows-latest"]
+    runs-on: ${{ matrix.system }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-env
+      - name: Delete pnpm-lock.yaml
+        run: "rm pnpm-lock.yaml"
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: List dependencies
+        run: pnpm list -r --depth 2
+      - name: Run build
+        # Ensure all projects are built before parallel test execution
+        run: pnpm build
+      # pnpm 11 skips creating bin symlinks whose target isn't built at install
+      # time; relink workspace bins (e.g. hardhat) now that the build output
+      # exists. See pnpm/pnpm#10524.
+      - name: Recreate workspace bin links
+        run: pnpm rebuild -r
+      - name: Run tests
+        run: pnpm test || (echo "===== Retry =====" && pnpm test)
+        env:
+          # temporary fix, see https://github.com/mochajs/mocha/issues/5452
+          NODE_OPTIONS: "--no-experimental-strip-types"
+      - name: Notify failures
+        if: failure()
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.GH_ACTION_NOTIFICATIONS_SLACK_WEBHOOK_URL }}
+          webhook-type: webhook-trigger
+          payload: |
+            {
+              "workflow_name": "${{ github.workflow }}",
+              "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }

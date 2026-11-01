@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request: ~
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test / Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 25
+          - 24
+          - 22
+          - 20
+        os:
+          - ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          check-latest: true
+      - run: npm install
+      - run: npm run lint
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          check-latest: true
+      - run: npm install
+      - run: npm run format:check
+
+  test-remote:
+    name: eslint-remote-tester
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+      - run: npm install
+      - run: npm run test:remote
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+      - run: npm install
+      - run: npm run typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+      - run: npm install
+      - run: npm run build
+      - name: Upload build results
+        uses: actions/upload-artifact@v6
+        with:
+          name: build_dist
+          path: dist
+  e2e:
+    name: E2E / Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 25
+          - '24.0.0' # minimum supported v24
+          - 24
+          - '22.13.0' # minimum supported v22
+          - 22
+          - '20.19.0' #minimum supported v20
+          - 20
+        os:
+          - ubuntu-latest
+          - windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Download build results
+        uses: actions/download-artifact@v7
+        with:
+          name: build_dist
+          path: dist
+      - run: npm install
+      - run: npm run e2e

@@ -1,0 +1,52 @@
+{
+  "name": "ukkonen",
+  "version": "2.2.0",
+  "description": "Ukkonens approximate string matching algorithm for finding edit distance similar to Levenshtein",
+  "bugs": "https://github.com/sunesimonsen/ukkonen/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunesimonsen/ukkonen"
+  },
+  "main": "index.js",
+  "types": "./types/index.d.ts",
+  "scripts": {
+    "test": "mocha",
+    "lint": "eslint . && prettier --check '**/*.{js,md,json}'",
+    "format": "prettier --write **/*.{md,js,json}",
+    "ci": "UNEXPECTED_CHECK_MAX_ITERATIONS=10000 mocha",
+    "preversion": "npm run lint && npm run test",
+    "version": "offline-github-changelog --next=${npm_package_version} > CHANGELOG.md && git add CHANGELOG.md",
+    "bench": "node bench.js"
+  },
+  "keywords": [
+    "Ukkonen",
+    "Hal",
+    "Berghel",
+    "Aproximate",
+    "string",
+    "match",
+    "ASM",
+    "EHD",
+    "Levenshtein"
+  ],
+  "author": "Sune Simonsen <sune@we-knowhow.dk>",
+  "license": "MIT",
+  "devDependencies": {
+    "leven": "3.1.0",
+    "chance-generators": "3.5.3",
+    "eslint": "8.57.1",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-mocha": "10.5.0",
+    "eslint-plugin-node": "11.1.0",
+    "mocha": "10.8.2",
+    "nanobench": "3.0.0",
+    "offline-github-changelog": "3.1.0",
+    "prettier": "3.6.2",
+    "unexpected": "13.2.1",
+    "unexpected-check": "3.2.0"
+  },
+  "engines": {
+    "node": ">=12"
+  }
+}

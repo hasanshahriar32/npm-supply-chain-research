@@ -1,0 +1,44 @@
+{
+	"name": "periscopic",
+	"description": "periscopic",
+	"version": "4.0.3",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Rich-Harris/periscopic"
+	},
+	"main": "src/index.js",
+	"module": "src/index.js",
+	"type": "module",
+	"exports": {
+		"types": "./types/index.js",
+		"default": "./src/index.js"
+	},
+	"types": "types/index.d.ts",
+	"files": [
+		"src",
+		"types"
+	],
+	"devDependencies": {
+		"@changesets/cli": "^2.31.0",
+		"acorn": "^8.10.0",
+		"dts-buddy": "^0.2.4",
+		"typescript": "^5.2.2",
+		"uvu": "^0.5.6"
+	},
+	"scripts": {
+		"test": "uvu test",
+		"prepublishOnly": "npm test && dts-buddy",
+		"changeset:version": "changeset version",
+		"changeset:publish": "changeset publish"
+	},
+	"license": "MIT",
+	"dependencies": {
+		"@types/estree": "*",
+		"is-reference": "^3.0.2",
+		"zimmerframe": "^1.0.0"
+	},
+	"packageManager": "pnpm@10.33.0",
+	"publishConfig": {
+		"access": "public"
+	}
+}

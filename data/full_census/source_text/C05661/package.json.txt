@@ -1,0 +1,148 @@
+{
+  "name": "date-and-time",
+  "version": "4.7.0",
+  "description": "The simplest, most intuitive date and time library",
+  "keywords": [
+    "date",
+    "datetime",
+    "duration",
+    "format",
+    "parse",
+    "time",
+    "timezone"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./plugin": {
+      "import": {
+        "types": "./dist/plugin.d.ts",
+        "default": "./dist/plugin.js"
+      },
+      "require": {
+        "types": "./dist/plugin.d.cts",
+        "default": "./dist/plugin.cjs"
+      }
+    },
+    "./timezone": {
+      "import": {
+        "types": "./dist/timezone.d.ts",
+        "default": "./dist/timezone.js"
+      },
+      "require": {
+        "types": "./dist/timezone.d.cts",
+        "default": "./dist/timezone.cjs"
+      }
+    },
+    "./locales/*": {
+      "import": {
+        "types": "./dist/locales/*.d.ts",
+        "default": "./dist/locales/*.js"
+      },
+      "require": {
+        "types": "./dist/locales/*.d.cts",
+        "default": "./dist/locales/*.cjs"
+      }
+    },
+    "./numerals/*": {
+      "import": {
+        "types": "./dist/numerals/*.d.ts",
+        "default": "./dist/numerals/*.js"
+      },
+      "require": {
+        "types": "./dist/numerals/*.d.cts",
+        "default": "./dist/numerals/*.cjs"
+      }
+    },
+    "./plugins/*": {
+      "import": {
+        "types": "./dist/plugins/*.d.ts",
+        "default": "./dist/plugins/*.js"
+      },
+      "require": {
+        "types": "./dist/plugins/*.d.cts",
+        "default": "./dist/plugins/*.cjs"
+      }
+    },
+    "./timezones/*": {
+      "import": {
+        "types": "./dist/timezones/*.d.ts",
+        "default": "./dist/timezones/*.js"
+      },
+      "require": {
+        "types": "./dist/timezones/*.d.cts",
+        "default": "./dist/timezones/*.cjs"
+      }
+    }
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist/"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && rollup -c",
+    "build-watch": "rollup -c --watch",
+    "build:ts": "rollup -c --config-ts",
+    "build:types": "rollup -c --config-types",
+    "docs:build": "astro build",
+    "docs:dev": "astro dev",
+    "docs:preview": "astro preview",
+    "lint": "eslint",
+    "prepublishOnly": "npm run build && vitest run tests/build",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "timezone": "tsx tools/timezone.ts",
+    "ts": "tsc --noEmit",
+    "zonename": "tsx tools/zonename.ts"
+  },
+  "author": "KNOWLEDGECODE",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://knowledgecode.github.io/date-and-time/",
+  "bugs": {
+    "url": "https://github.com/knowledgecode/date-and-time/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowledgecode/date-and-time.git"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "devDependencies": {
+    "@astrojs/starlight": "^0.42.7",
+    "@eslint/js": "^10.0.1",
+    "@rollup/plugin-alias": "^6.0.1",
+    "@rollup/plugin-terser": "^1.0.2",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "astro": "^7.4.2",
+    "eslint": "^10.13.0",
+    "glob": "^13.0.6",
+    "prettier": "^3.9.10",
+    "rollup": "^4.65.0",
+    "rollup-plugin-dts": "^6.5.1",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
+  }
+}

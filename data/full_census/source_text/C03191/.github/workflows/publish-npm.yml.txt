@@ -1,0 +1,31 @@
+name: "Publish: NPM"
+
+on:
+ release:
+   types: [published]
+
+jobs:
+ build:
+   name: "Publish: NPM"
+   runs-on: ubuntu-latest
+   permissions:
+     contents: read
+     id-token: write
+   steps:
+     - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+       with:
+         node-version: '22'
+         registry-url: 'https://registry.npmjs.org'
+     # setup-node must be called twice to correctly cache corepack-managed npm.
+     # See: https://github.com/actions/setup-node/issues/531#issuecomment-3335630863
+     - name: Enable Corepack
+       shell: bash
+       run: corepack enable npm
+     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+       with:
+         cache: npm
+     - run: npm ci
+     - run: npm publish --provenance --access public
+       env:
+         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

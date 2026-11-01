@@ -1,0 +1,35 @@
+name: Publish
+on:
+    push:
+        branches:
+            - 'main'
+            - 'next'
+    workflow_dispatch:
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+    publish:
+        permissions:
+            contents: write # to create release (changesets/action)
+            id-token: write # OpenID Connect token needed for provenance
+            pull-requests: write # to create pull request (changesets/action)
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v6
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+                  cache: 'pnpm'
+
+            - run: pnpm install --frozen-lockfile
+            - name: Create Release Pull Request or Publish
+              id: changesets
+              uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
+              with:
+                  publish: pnpm release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  RELEASE_TAG: ${{ github.ref == 'refs/heads/legacy' && '--tag legacy' || '' }}
+                  NPM_CONFIG_PROVENANCE: true

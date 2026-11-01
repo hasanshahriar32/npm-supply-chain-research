@@ -1,0 +1,111 @@
+{
+  "name": "@eggjs/logrotator",
+  "version": "4.1.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "logrotator for egg",
+  "eggPlugin": {
+    "name": "logrotator",
+    "dependencies": [
+      "schedule"
+    ],
+    "exports": {
+      "import": "./dist/esm",
+      "require": "./dist/commonjs",
+      "typescript": "./src"
+    }
+  },
+  "keywords": [
+    "egg",
+    "eggPlugin",
+    "egg-plugin",
+    "logger",
+    "logrotator"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eggjs/logrotator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eggjs/egg/issues"
+  },
+  "homepage": "https://github.com/eggjs/logrotator#readme",
+  "author": "tianyi.jiangty",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18.19.0"
+  },
+  "dependencies": {
+    "@eggjs/core": "^6.2.13",
+    "moment": "^2.30.1",
+    "utility": "^2.5.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.4",
+    "@eggjs/bin": "7",
+    "@eggjs/mock": "^6.0.6",
+    "@eggjs/tsconfig": "1",
+    "@types/mocha": "10",
+    "@types/node": "22",
+    "egg": "^4.0.5",
+    "egg-logger": "^3.6.1",
+    "husky": "9",
+    "lint-staged": "15",
+    "oxlint": "^0.16.2",
+    "prettier": "3",
+    "glob": "^11.0.1",
+    "rimraf": "6",
+    "snap-shot-it": "^7.9.10",
+    "supertest": "^6.3.3",
+    "tshy": "3",
+    "tshy-after": "1",
+    "typescript": "5"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "pretest": "npm run clean && npm run lint -- --fix",
+    "test": "egg-bin test",
+    "test:snapshot:update": "SNAPSHOT_UPDATE=1 egg-bin test",
+    "preci": "npm run clean &&  npm run lint",
+    "ci": "egg-bin cov",
+    "postci": "npm run prepublishOnly && npm run clean",
+    "clean": "rimraf dist",
+    "prepublishOnly": "tshy && tshy-after && attw --pack",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown --cache",
+    "*.{ts,js,json,md,yml}": [
+      "prettier --ignore-unknown --write",
+      "oxlint --fix"
+    ]
+  },
+  "type": "module",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "./dist/commonjs/index.d.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js"
+}

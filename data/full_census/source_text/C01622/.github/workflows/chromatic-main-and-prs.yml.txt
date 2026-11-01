@@ -1,0 +1,35 @@
+name: Chromatic Main and Active PRs only
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [ assigned, ready_for_review, review_requested ]
+
+permissions:
+  contents: read
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: chromaui/action@latest
+        with:
+          # 👇 Chromatic projectToken, refer to the manage page to obtain it.
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitOnceUploaded: true
+          onlyChanged: true
+          traceChanged: true
+          diagnostics: true
+          skip: ${{ github.event.pull_request.draft == true }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
+          path: |
+            chromatic-diagnostics.json
+            **/build-storybook.log

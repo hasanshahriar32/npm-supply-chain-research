@@ -1,0 +1,57 @@
+{
+  "name": "@heroku/http-call",
+  "description": "make http requests",
+  "version": "5.6.3",
+  "author": "Heroku",
+  "bugs": "https://github.com/heroku/http-call/issues",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "content-type": "^1.0.5",
+    "debug": "^4.4.3",
+    "is-retry-allowed": "^2.2.0",
+    "is-stream": "^2.0.1",
+    "tunnel-agent": "^0.6.0"
+  },
+  "devDependencies": {
+    "@types/content-type": "^1.1.9",
+    "@types/nock": "^10.0.3",
+    "@types/node": "22.16.5",
+    "@types/sinon": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^7.32.0",
+    "eslint-config-oclif": "^4.0.0",
+    "eslint-config-oclif-typescript": "^1.0.2",
+    "nock": "^13.5.6",
+    "rimraf": "^6.1.3",
+    "sinon": "^22.1.0",
+    "strip-ansi": "6.0.1",
+    "typescript": "4.9.5",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "homepage": "https://github.com/heroku/http-call",
+  "keywords": [
+    "http",
+    "request",
+    "rest"
+  ],
+  "license": "ISC",
+  "main": "lib/http.js",
+  "repository": "heroku/http-call",
+  "scripts": {
+    "clean": "rimraf lib",
+    "build": "npm run clean && tsc",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text-summary --coverage.reporter=lcovonly",
+    "prepare": "npm run build"
+  },
+  "types": "./lib/http.d.ts"
+}

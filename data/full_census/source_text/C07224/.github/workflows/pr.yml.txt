@@ -1,0 +1,101 @@
+name: PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: false
+          run_install: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm --silent lint
+      - name: Check code format
+        run: pnpm ng-dev format changed --check ${{ github.event.pull_request.base.sha }}
+      - name: Check commit message
+        run: pnpm ng-dev commit-message validate-range ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          cache: false
+          run_install: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm --silent build
+      - name: Run tests
+        run: pnpm --silent test:specs
+      - name: Run integration samples
+        run: pnpm --silent integration:samples
+      - name: Run integration specs
+        run: pnpm --silent integration:specs
+      - name: Run integration watch specs
+        run: pnpm --silent integration:watch:specs
+      - name: Run integration consumers
+        run: pnpm --silent integration:consumers
+
+  test_windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          filter: blob:none
+          persist-credentials: false
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm --silent build
+      - name: Run tests
+        run: pnpm --silent test:specs
+      - name: Run integration samples
+        run: pnpm --silent integration:samples
+      - name: Run integration specs
+        run: pnpm --silent integration:specs

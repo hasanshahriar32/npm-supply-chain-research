@@ -1,0 +1,33 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  gh-pages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        node-version: [24.x]
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+      - run: yarn typedoc
+      - run: yarn vitest
+      - run: yarn test:coverage
+      - run: yarn build:pages
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages

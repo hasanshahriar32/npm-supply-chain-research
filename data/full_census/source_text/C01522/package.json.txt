@@ -1,0 +1,38 @@
+{
+  "name": "root",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "packageManager": "pnpm@10.23.0",
+  "scripts": {
+    "clean": "pnpm -r clean",
+    "generate": "pnpm -r generate",
+    "build": "pnpm clean && pnpm -r build",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "lint:no-push-spread": "node scripts/no-push-spread.mjs",
+    "check-types": "pnpm -r check-types",
+    "test:browsers": "pnpm -r test:browsers",
+    "test:unit": "pnpm -r test:unit",
+    "benchmark:files": "NODE_OPTIONS='--max_old_space_size=4096 --loader=ts-node/esm' benchmark --config .benchrc.yaml",
+    "benchmark": "pnpm benchmark:files 'packages/*/test/perf/**/*.test.ts'",
+    "benchmark:local": "pnpm benchmark --local",
+    "check-readme": "pnpm -r check-readme"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@chainsafe/benchmark": "^1.2.3",
+    "@chainsafe/biomejs-config": "^0.1.0",
+    "@types/node": "^22.10.2",
+    "@vitest/browser": "~3.0.7",
+    "@vitest/coverage-v8": "~3.0.7",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.8.3",
+    "vite-plugin-node-polyfills": "^0.23.0",
+    "vitest": "~3.0.7",
+    "vitest-in-process-pool": "^2.0.0",
+    "webdriverio": "^9.2.11",
+    "@chainsafe/persistent-merkle-tree": "workspace:"
+  }
+}

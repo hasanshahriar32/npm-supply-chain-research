@@ -1,0 +1,121 @@
+name: Deno CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdc"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.mdc"
+
+permissions:
+  contents: read
+
+jobs:
+  # Check changed files to determine which package tests to run
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run-all: ${{ steps.changes.outputs.run-all }}
+      packages: ${{ steps.changes.outputs.packages }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check for changes
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # Get diff from previous commit
+          if [ "$EVENT_NAME" = "push" ]; then
+            # For push: diff from previous commit
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            # For PR: diff from base branch
+            CHANGED_FILES=$(git diff --name-only origin/"$BASE_REF"...HEAD)
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Run all tests if common, core, CI/CD files, or root files are changed
+          if echo "$CHANGED_FILES" | grep -E '^(packages/(common|core)/|\.github/|deno\.jsonc|\.gitignore|tsconfig\.json|npm/|utils/)'; then
+            echo "run-all=true" >> $GITHUB_OUTPUT
+            echo "packages=[]" >> $GITHUB_OUTPUT
+          else
+            # Only specific packages are changed
+            CHANGED_PACKAGES=$(echo "$CHANGED_FILES" | grep '^packages/' | cut -d'/' -f2 | sort -u | grep -v -E '^(common|core)$' | jq -R -s -c 'split("\n")[:-1]')
+            if [ "$CHANGED_PACKAGES" = "[]" ] || [ "$CHANGED_PACKAGES" = '[""]' ]; then
+              echo "run-all=false" >> $GITHUB_OUTPUT
+              echo "packages=[]" >> $GITHUB_OUTPUT
+            else
+              echo "run-all=false" >> $GITHUB_OUTPUT
+              echo "packages=$CHANGED_PACKAGES" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  # Job to run all tests
+  test-all:
+    needs: check-changes
+    if: needs.check-changes.outputs.run-all == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: [2.x]
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb # v2.0.3
+        with:
+          deno-version: ${{ matrix.deno-version }}
+      - name: Run deno test
+        run: |
+          deno fmt --check
+          deno task test:deno
+          deno task cov > coverage.lcov
+      - uses: codecov/codecov-action@f32b3a3741e1053eb607407145bc9619351dc93b # v2.1.0
+        if: matrix.deno-version == '2.x'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.lcov
+          flags: unittests
+      - name: Run deno publish (dry)
+        run: npx jsr publish --dry-run --allow-dirty
+
+  # Job to test only specific packages
+  test-packages:
+    needs: check-changes
+    if: needs.check-changes.outputs.run-all == 'false' && needs.check-changes.outputs.packages != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        deno-version: [2.x]
+        package: ${{ fromJson(needs.check-changes.outputs.packages) }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb # v2.0.3
+        with:
+          deno-version: ${{ matrix.deno-version }}
+      - name: Run package-specific deno test
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          deno fmt --check packages/"$PACKAGE"
+          deno task test:deno:"$PACKAGE"
+          deno task check:"$PACKAGE"
+      - name: Run deno publish (dry) for package
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: |
+          cd packages/"$PACKAGE"
+          npx jsr publish --dry-run --allow-dirty

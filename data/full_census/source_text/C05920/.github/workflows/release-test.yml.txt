@@ -1,0 +1,51 @@
+name: release-workflow-test
+
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - main
+      - next
+
+permissions:
+  contents: read
+
+jobs:
+  release-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 'lts/*'
+          cache: 'yarn'
+
+      - name: Install dependencies if needed
+        run: yarn install
+
+      - name: Publish with Verdaccio
+        run: |
+          git switch -c "pull-request"
+          npm i -g verdaccio@6.5.2 verdaccio-auth-memory@13.0.0 verdaccio-memory@10.4.3
+          nohup verdaccio --config .github/verdaccio/config.yaml &>verdaccio.log &
+          yarn verdaccio:release
+
+      - name: Run tests in vite-project-react-babel
+        run: |
+          cp ./.github/verdaccio/.yarnrc.yml ./examples/vite-project-react-babel/.yarnrc.yml
+          cd ./examples/vite-project-react-babel
+          yarn up "@lingui/*"
+          yarn messages:extract
+          yarn test
+          yarn build
+
+      - name: Print Verdaccio Log
+        if: ${{ failure() }}
+        run: cat ./verdaccio.log

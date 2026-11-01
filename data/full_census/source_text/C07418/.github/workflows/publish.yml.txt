@@ -1,0 +1,49 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - v*.*.*
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js to publish to npmjs.org
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Packages
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Test
+        run: yarn run test
+        env:
+          CI: true
+          FORCE_COLOR: 1
+
+      - name: Generate Release Body
+        run: npx extract-changelog-release > RELEASE_BODY.md
+
+      - name: Publish to NPM
+        run: npm publish ./dist
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          bodyFile: "RELEASE_BODY.md"
+          token: ${{ secrets.GITHUB_TOKEN }}

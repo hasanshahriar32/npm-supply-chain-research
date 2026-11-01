@@ -1,0 +1,53 @@
+name: 🦋 Changesets Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: 🦋 Changesets Release
+
+    if: ${{ github.repository == 'remix-run/web-std-io' }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 16
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 🔐 Setup npm auth
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+        # This action has two responsibilities. The first time the workflow runs
+        # (initial push to `main`) it will create a new branch and then PR back
+        # to `main` with the related changes for the new version. After the PR
+        # is merged, the workflow will run again and this action will publish to
+        # npm.
+      - name: 🚀 PR / Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: yarn version-bump
+          commit: "chore: Update version for release"
+          title: "chore: Update version for release"
+          publish: yarn release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

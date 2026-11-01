@@ -1,0 +1,51 @@
+name: Update snapshots
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # If renovatebot is updating Redis it'll touch these files
+      - '.github/workflows/*.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  run:
+    name: Are snapshots up to date? 🤔
+    runs-on: ubuntu-latest
+    if: github.repository == 'stipsan/ioredis-mock'
+    permissions:
+      contents: write
+      pull-requests: write
+    services:
+      redis:
+        image: redis:8.2.1
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - run: npm ci --ignore-scripts
+      - run: npm run test:e2e -- --forceExit -u
+      - run: node scripts/update-data
+      - run: npx jest --forceExit -u
+      - run: node scripts/update-compat && npx prettier --write compat.md
+      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7
+        with:
+          branch: actions/snapshots
+          commit-message: 'chore(snapshots): 🤖 ✨'
+          labels: 🤖 bot
+          title: 'chore(snapshots): 🤖 ✨'
+          token: ${{ secrets.GITHUB_TOKEN }}

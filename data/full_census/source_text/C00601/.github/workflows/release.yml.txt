@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - next
+      - version-[0-9]+.[0-9]+
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: write  # Required for changesets to push release branch
+  pull-requests: write  # Required for changesets to create release PR
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    if: github.repository == 'apollographql/federation'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Determine npm tag override for version branches
+        id: npm-tag
+        run: |
+          if [[ ! -f .changeset/pre.json ]] && [[ "${{ github.ref_name }}" =~ ^version-.+$ ]]; then
+            echo "args=-- --tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "args=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          title: "release: on branch ${{ github.ref_name }}"
+          createGithubReleases: true
+          publish: npm run build-and-publish ${{ steps.npm-tag.outputs.args }}
+          # workaround for https://github.com/changesets/action/issues/203, includes an `npm i` after running the version command
+          version: npm run changeset-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sleep for 20 seconds (arbitrary, give NPM time to populate new `latest` versions)
+        if: steps.changesets.outputs.published == 'true'
+        run: sleep 20
+        shell: bash
+
+      # While "npm publish" can use OIDC tokens, "npm dist-tag" sadly cannot, so we'll still need to
+      # regenerate a granular access token every 90 days via the npmjs.com UI and set the NPM_TOKEN
+      # secret in GitHub. The relevant npm GitHub issue is at https://github.com/npm/cli/issues/8547
+      - name: Write token to the NPM rc file (login)
+        if: steps.changesets.outputs.published == 'true'
+        # write token to the NPM rc file (npm login)
+        run: echo //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }} > ~/.npmrc
+
+      - name: Update next tags if appropriate
+        if: steps.changesets.outputs.published == 'true'
+        run: node scripts/update-next-tags.mjs

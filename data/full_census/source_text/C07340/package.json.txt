@@ -1,0 +1,73 @@
+{
+  "name": "sendmessage",
+  "version": "3.0.2",
+  "engines": {
+    "node": ">= 18.19.0"
+  },
+  "description": "Send a cross process message if message channel is connected.",
+  "scripts": {
+    "lint": "eslint --cache src --ext .ts",
+    "pretest": "npm run prepublishOnly && attw --pack",
+    "test": "npm run lint && mocha --exit -t 5000 test/*.test.js",
+    "ci": "c8 -r lcov -r text -r text-summary npm test",
+    "prepublishOnly": "tshy && tshy-after"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.1",
+    "@eggjs/tsconfig": "1",
+    "@types/mocha": "10",
+    "@types/node": "22",
+    "c8": "^10.1.2",
+    "eslint": "8",
+    "eslint-config-egg": "14",
+    "mm": "3",
+    "mocha": "^11.0.1",
+    "tshy": "^3.0.2",
+    "tshy-after": "1",
+    "typescript": "5"
+  },
+  "homepage": "https://github.com/node-modules/sendmessage",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/node-modules/sendmessage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/node-modules/sendmessage/issues"
+  },
+  "keywords": [
+    "sendmessage",
+    "send",
+    "cluster",
+    "message",
+    "channel closed"
+  ],
+  "author": "fengmk2 <fengmk2@gmail.com> (https://github.com/fengmk2)",
+  "license": "MIT",
+  "type": "module",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "./dist/commonjs/index.d.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js"
+}

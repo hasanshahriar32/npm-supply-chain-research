@@ -1,0 +1,46 @@
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+name: ci
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install node v26
+        uses: actions/setup-node@v4
+        with:
+          node-version: v26.x
+      - name: install dependencies
+        run: npm install
+      - name: check lint
+        run: make check-lint
+  test:
+    name: test node ${{ matrix.node-version }} on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        node-version:
+          - 22.x
+          - 24.x
+          - 26.x
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v7
+      - name: use node ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: install dependencies
+        run: npm install
+      - name: test
+        run: make test
+        env:
+          TEST_SKIP_IP_V6: true

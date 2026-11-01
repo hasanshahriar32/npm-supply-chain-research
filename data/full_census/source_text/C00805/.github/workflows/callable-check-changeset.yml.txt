@@ -1,0 +1,36 @@
+name: API Check
+
+on: workflow_call
+
+jobs:
+  check-api:
+    name: Check for presense of changeset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path:
+            amplify-data
+            # check out full history
+          fetch-depth: 0
+      - name: Setup node and build the repository
+        uses: ./amplify-data/.github/actions/node-and-build
+      - name: Run checks
+        working-directory: ./amplify-data
+        run: yarn changeset status --since origin/main
+      - name: API Check Instructions
+        if: failure()
+        run: |
+          echo
+          echo "Oh no!! The Changeset Check Failed!"
+          echo
+          echo "Your PR does not contain a changeset."
+          echo
+          echo "Run `yarn changeset` to add one."
+          echo 
+          echo "If this change doesn't need a release, run `yarn changeset add --empty`"
+          echo 
+          echo "Then commit and push the changes."
+          echo
+          exit 1

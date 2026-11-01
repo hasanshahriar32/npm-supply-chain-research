@@ -1,0 +1,73 @@
+name: Nightly Sync of content
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # run daily at 3am
+  workflow_dispatch:
+    inputs:
+      publish_only:
+        description: 'Publish current version to npm without syncing data'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: nightly-sync
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '26'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Collect latest releases
+        if: inputs.publish_only != true
+        run: npm run build
+
+      - name: Detect data changes
+        if: inputs.publish_only != true
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain -- data)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure git
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit data changes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git add data
+          git commit -m "feat: Nightly Sync"
+
+      - name: Bump version
+        if: steps.changes.outputs.changed == 'true'
+        run: npm version patch -m "%s"
+
+      - name: Push commits and tags
+        # Only run on the main repo and not forks
+        if: ${{ github.repository == 'chicoxyzzy/node-releases' && steps.changes.outputs.changed == 'true' }}
+        run: git push --follow-tags
+
+      - name: Publish to npm
+        # Only run on the main repo and not forks; runs on data changes OR manual publish_only
+        # Auth via npm trusted publishing (OIDC) — see id-token: write permission above
+        if: ${{ github.repository == 'chicoxyzzy/node-releases' && (steps.changes.outputs.changed == 'true' || inputs.publish_only == true) }}
+        run: npm publish --provenance --access public

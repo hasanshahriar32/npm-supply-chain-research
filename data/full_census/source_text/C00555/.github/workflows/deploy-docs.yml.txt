@@ -1,0 +1,66 @@
+name: Deploy Documentation
+
+on:
+  workflow_dispatch:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Among other things, opts out of Turborepo telemetry
+  # See https://consoledonottrack.com/
+  DO_NOT_TRACK: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
+  VERCEL_TELEMETRY_DISABLED: '1'
+  # Enables Turborepo Remote Caching.
+  TURBO_REMOTE_CACHE_SIGNATURE_KEY: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    name: Deploy Documentation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+
+      - name: Install Isolated Docs Dependencies
+        working-directory: ./docs/
+        shell: bash
+        run: pnpm install --ignore-workspace
+
+      - name: Install Vercel CLI
+        run: pnpm install -g vercel
+
+      - name: Deploy to Vercel
+        shell: bash
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_DOCS_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel pull --token="$VERCEL_TOKEN" --yes --environment=production
+          vercel build --token="$VERCEL_TOKEN" --prod
+          vercel deploy --token="$VERCEL_TOKEN" --archive=tgz --prebuilt --prod
+
+      - name: Synchronize InKeep Search Index
+        uses: inkeep/pr-commenter-action@bac203359f0328cbb89cca8f9ead7a7176f39a61 # v11
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          apiKey: ${{secrets.INKEEP_SEARCH_MANAGEMENT_API_KEY}}
+          sourceId: '${{vars.INKEEP_SEARCH_SOURCE_ID}}'

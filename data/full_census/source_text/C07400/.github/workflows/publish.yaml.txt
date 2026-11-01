@@ -1,0 +1,81 @@
+name: Publish NPM and Release (on merged PR)
+
+on:
+  pull_request:
+    types:
+      - closed
+
+jobs:
+  release:
+    if: ${{ github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'master' }}
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+
+    name: Publish on master (patch)
+    runs-on: ubuntu-latest
+    concurrency:
+      group: publish-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Detect version bump in merged PR
+        id: detect
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
+          PREV_JSON=$(git show HEAD^:package.json 2>/dev/null || true)
+          if [ -z "$PREV_JSON" ]; then
+            echo "No previous package.json found; treating as release"
+            echo "release=true" >> $GITHUB_OUTPUT
+          else
+            PREV_VERSION=$(printf "%s" "$PREV_JSON" | node -e "let s=''; process.stdin.on('data',d=>s+=d); process.stdin.on('end',()=>console.log(JSON.parse(s).version));")
+            echo "current: $VERSION, previous: $PREV_VERSION"
+            if [ "$VERSION" != "$PREV_VERSION" ]; then
+              echo "release=true" >> $GITHUB_OUTPUT
+            else
+              echo "release=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Create annotated tag from package.json and push
+        if: ${{ steps.detect.outputs.release == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config user.email "github-actions[bot]@github.com"
+          git config user.name "github-actions[bot]"
+
+          TAG="v${VERSION}"
+          echo "Creating annotated tag $TAG from current HEAD"
+          git tag -a "$TAG" -m "chore(release): $TAG"
+          git push origin "$TAG"
+
+      - name: Publish to npm (OIDC)
+        if: ${{ steps.detect.outputs.release == 'true' }}
+        run: |
+          npm publish
+
+      - name: Create GitHub release
+        if: ${{ steps.detect.outputs.release == 'true' }}
+        uses: softprops/action-gh-release@aec2ec56f94eb8180ceec724245f64ef008b89f5
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+
+      - name: No version bump detected — skipping publish
+        if: ${{ steps.detect.outputs.release != 'true' }}
+        run: |
+          echo "No package.json version bump detected in merged PR; skipping tagging and publish."

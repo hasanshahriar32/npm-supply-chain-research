@@ -1,0 +1,112 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# A new commit supersedes the previous one's jobs, so stop paying for them.
+# Only pull request runs share a group; every other run gets a group of its own
+# (`github.run_id`), because a group holds at most one pending run and a later
+# push would otherwise evict the one waiting — `cancel-in-progress` protects the
+# running run, not the queued one. `main` runs publish the coverage later
+# comparisons are measured against, and losing one would also hide a breakage
+# that is already on the default branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Cache eslint result
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .eslintcache
+          key: lint-eslint-${{ runner.os }}-node-${{ hashFiles('**/package-lock.json', '**/eslint.config.mjs') }}
+          restore-keys: lint-eslint-
+
+      - run: npm run lint
+
+  test:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x]
+        polling: ["false", "200"]
+        exclude:
+          - os: macos-latest
+            node-version: 10.x
+            polling: "200"
+          - os: macos-latest
+            node-version: 12.x
+            polling: "200"
+          - os: macos-latest
+            node-version: 14.x
+            polling: "200"
+          - os: macos-latest
+            node-version: 16.x
+            polling: "200"
+          - os: macos-latest
+            node-version: 18.x
+            polling: "200"
+          - os: macos-latest
+            node-version: 20.x
+            polling: "200"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: calculate_architecture
+        with:
+          result-encoding: string
+          script: |
+            if ('${{ matrix.os }}' === 'macos-latest' && ('${{ matrix['node-version'] }}' === '10.x' || '${{ matrix['node-version'] }}' === '12.x' || '${{ matrix['node-version'] }}' === '14.x')) {
+              return "x64"
+            } else {
+              return ''
+            }
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          architecture: ${{ steps.calculate_architecture.outputs.result }}
+          cache: "npm"
+
+      - run: |
+          npm install --save-dev jest@^27 write-file-atomic@^3 rimraf@^2
+          npm install --ignore-engines
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x' || matrix.node-version == '18.x'
+
+      - run: npm ci
+        if: matrix.node-version != '10.x' && matrix.node-version != '12.x' && matrix.node-version != '14.x' && matrix.node-version != '16.x' && matrix.node-version != '18.x'
+
+      - run: npm run test:coverage
+        env:
+          WATCHPACK_POLLING: ${{ matrix.polling }}
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          flags: integration
+          token: ${{ secrets.CODECOV_TOKEN }}

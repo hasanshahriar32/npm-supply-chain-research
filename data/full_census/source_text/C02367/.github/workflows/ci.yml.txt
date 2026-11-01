@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    uses: sxzz/workflows/.github/workflows/unit-test.yml@main
+    with:
+      build: pnpm run ci:build
+      test: pnpm exec vitest
+      lint: pnpm run lint && pnpm run knip
+      build-for-lint: true
+
+  # The RPC transport binds a native WebSocket on Bun/Deno (crossws's
+  # Bun/Deno adapters over `Bun.serve` / `Deno.serve`) and falls back to SSE
+  # for a shared foreign `node:http` server. This runs the cross-runtime smoke
+  # test under each runtime so that binding can't regress (issue #317).
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [bun, deno]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Set up Bun
+        if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+      - name: Set up Deno
+        if: matrix.runtime == 'deno'
+        uses: denoland/setup-deno@v2.0.5
+        with:
+          deno-version: v2.x
+      - run: pnpm install --frozen-lockfile
+      - name: Build devframe
+        run: pnpm --filter devframe run build
+      - name: Run the ${{ matrix.runtime }} RPC transport smoke test
+        run: pnpm run test:runtime:${{ matrix.runtime }}
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: |
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list /etc/apt/sources.list.d/microsoft-prod.list || true
+          sudo apt-get update || true
+          pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+  # coverage:
+  #   uses: sxzz/workflows/.github/workflows/coverage.yml@main
+  #   needs: unit-test
+  #   permissions:
+  #     id-token: write

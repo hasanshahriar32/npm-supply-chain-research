@@ -1,0 +1,32 @@
+name: Compressed Size
+on: [pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        node-version: [22.13.1]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+                    
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Use Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - uses: preactjs/compressed-size-action@v2
+        with:
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+          pattern: "packages/**/dist/**/*.?(c)js"

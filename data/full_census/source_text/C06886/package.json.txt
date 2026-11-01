@@ -1,0 +1,39 @@
+{
+  "name": "inquirer-prompts",
+  "author": "Martin Hansen <martin@martinhansen.no>",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "lint": "npm run --workspaces --if-present lint",
+    "pretest": "npm run build",
+    "test": "npm run --workspaces --if-present test",
+    "build": "npm run --workspaces --if-present build",
+    "pretest:standalone-package": "npm run build",
+    "test:standalone-package": "node scripts/smoke-test-standalone-package.mjs",
+    "test:legacy-package": "node scripts/smoke-test-legacy-package.mjs"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@sindresorhus/tsconfig": "^8.1.0",
+    "@types/node": "^24.13.3",
+    "@typescript-eslint/parser": "^8.68.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "prettier": "^3.9.6",
+    "sinon": "^22.1.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "volta": {
+    "node": "24.12.0"
+  }
+}

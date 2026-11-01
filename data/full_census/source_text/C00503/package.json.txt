@@ -1,0 +1,133 @@
+{
+  "name": "vite-plugin-inspect",
+  "type": "module",
+  "version": "12.1.0",
+  "packageManager": "pnpm@12.10.1",
+  "description": "Inspect the intermediate state of Vite plugins",
+  "author": "Anthony Fu <anthonyfu117@hotmail.com>",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/antfu",
+  "homepage": "https://github.com/antfu-collective/vite-plugin-inspect#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antfu-collective/vite-plugin-inspect.git"
+  },
+  "bugs": {
+    "url": "https://github.com/antfu-collective/vite-plugin-inspect/issues"
+  },
+  "keywords": [
+    "vite-plugin"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./nuxt": "./dist/nuxt.mjs",
+    "./*": "./*",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "build": "premove dist && pnpm run --sequential /^build:/",
+    "build:client": "vite build src/client",
+    "build:js": "tsdown",
+    "dev": "pnpm build:client && INSPECT_DEV=true vite src/client",
+    "dev:client": "vite build src/client --watch",
+    "prepare": "simple-git-hooks && skills-npm",
+    "watch": "tsdown --watch",
+    "lint": "eslint .",
+    "play": "pnpm -C playground run dev",
+    "play:build": "pnpm -C playground run build",
+    "test:e2e": "playwright test",
+    "typecheck": "vue-tsc --noEmit",
+    "prepublishOnly": "pnpm run build",
+    "release": "bumpp"
+  },
+  "peerDependencies": {
+    "vite": "^8.0.0-0"
+  },
+  "peerDependenciesMeta": {
+    "@nuxt/kit": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@vitejs/devtools-kit": "catalog:prod",
+    "ansis": "catalog:prod",
+    "error-stack-parser-es": "catalog:prod",
+    "obug": "catalog:prod",
+    "ohash": "catalog:frontend",
+    "open": "catalog:prod",
+    "perfect-debounce": "catalog:frontend",
+    "sirv": "catalog:prod",
+    "unplugin-utils": "catalog:prod"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:dev",
+    "@antfu/ni": "catalog:dev",
+    "@antfu/skills": "catalog:dev",
+    "@antfu/utils": "catalog:dev",
+    "@iconify/json": "catalog:dev",
+    "@nuxt/kit": "catalog:prod",
+    "@playwright/test": "catalog:dev",
+    "@types/codemirror": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@unocss/eslint-config": "catalog:dev",
+    "@unocss/eslint-plugin": "catalog:dev",
+    "@unocss/reset": "catalog:dev",
+    "@vitejs/devtools": "catalog:dev",
+    "@vitejs/plugin-vue": "catalog:dev",
+    "@vue/compiler-sfc": "catalog:dev",
+    "@vueuse/core": "catalog:frontend",
+    "@vueuse/router": "catalog:frontend",
+    "bumpp": "catalog:dev",
+    "codemirror": "catalog:frontend",
+    "codemirror-theme-vars": "catalog:frontend",
+    "comlink": "catalog:frontend",
+    "devframe": "catalog:dev",
+    "diff-match-patch-es": "catalog:frontend",
+    "echarts": "catalog:frontend",
+    "eslint": "catalog:dev",
+    "floating-vue": "catalog:frontend",
+    "fuse.js": "catalog:frontend",
+    "nano-staged": "catalog:dev",
+    "pathe": "catalog:frontend",
+    "pinia": "catalog:frontend",
+    "premove": "catalog:dev",
+    "publint": "catalog:dev",
+    "simple-git-hooks": "catalog:dev",
+    "skills-npm": "catalog:dev",
+    "splitpanes": "catalog:frontend",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:dev",
+    "unocss": "catalog:dev",
+    "unplugin-auto-import": "catalog:dev",
+    "unplugin-vue-components": "catalog:dev",
+    "vis-data": "catalog:frontend",
+    "vis-network": "catalog:frontend",
+    "vite": "catalog:dev",
+    "vitest": "catalog:dev",
+    "vue": "catalog:frontend",
+    "vue-echarts": "catalog:frontend",
+    "vue-router": "catalog:frontend",
+    "vue-tsc": "catalog:dev"
+  },
+  "resolutions": {
+    "@vitejs/devtools": "catalog:dev",
+    "@vitejs/devtools-kit": "catalog:prod",
+    "vite": "catalog:dev"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx nano-staged"
+  },
+  "nano-staged": {
+    "*.{js,ts,vue,md}": "eslint --cache --fix"
+  }
+}

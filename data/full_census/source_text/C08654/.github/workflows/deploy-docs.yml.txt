@@ -1,0 +1,50 @@
+name: Deploy docs
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "packages/async-storage/CHANGELOG.md"
+      - ".github/CONTRIBUTING.md"
+      - "README.md"
+  workflow_dispatch:
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.11
+      - name: Read docs version
+        id: version
+        run: |
+          VERSION_DOCS=$(node -p "require('./package.json').versionDocs || ''")
+          echo "versionDocs=$VERSION_DOCS" >> $GITHUB_OUTPUT
+      - name: Prepare MkDocs
+        run: |
+          pip install --no-deps -r .github/requirements.txt
+      # required for mike
+      - name: Setup git user
+        run: ./setup-ci-git-user.sh
+        working-directory: .github/scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          GITHUB_NAME: ${{ vars.GH_BOT_NAME }}
+          GITHUB_EMAIL: ${{ vars.GH_BOT_EMAIL }}
+          GIT_SET_GLOBAL_USER: true
+      # required for mike
+      - name: Setup gh-pages remote
+        run: |
+          git remote add docs https://github.com/react-native-async-storage/react-native-async-storage.github.io.git
+      - name: Fetch gh-pages
+        run: |
+          git fetch docs gh-pages
+      - name: Deploy Docs with mike
+        run: |
+          mike deploy -u -r docs ${{ steps.version.outputs.versionDocs }} latest --push
+          mike set-default -r docs latest --push

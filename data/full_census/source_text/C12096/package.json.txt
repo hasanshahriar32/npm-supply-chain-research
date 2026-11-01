@@ -1,0 +1,53 @@
+{
+  "name": "vue-jsx-monorepo",
+  "type": "module",
+  "version": "3.0.0",
+  "private": true,
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.5.0",
+      "onFail": "download"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "vue",
+    "jsx"
+  ],
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  },
+  "scripts": {
+    "dev": "pnpm -C packages/jsx-explorer run dev",
+    "build": "tsdown",
+    "build:playground": "pnpm -C packages/jsx-explorer build",
+    "test": "vitest",
+    "lint": "eslint --cache .",
+    "format": "prettier --write .",
+    "typecheck": "tsgo",
+    "release": "bumpp -r"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/core": "catalog:",
+    "@babel/plugin-syntax-typescript": "catalog:",
+    "@rolldown/plugin-babel": "catalog:",
+    "@sxzz/eslint-config": "catalog:",
+    "@sxzz/prettier-config": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vue/babel-plugin-jsx": "workspace:*",
+    "bumpp": "catalog:",
+    "eslint": "catalog:",
+    "jsdom": "catalog:",
+    "prettier": "catalog:",
+    "publint": "catalog:",
+    "tsdown": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "prettier": "@sxzz/prettier-config"
+}

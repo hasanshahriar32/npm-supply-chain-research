@@ -1,0 +1,99 @@
+name: Changesets
+
+on:
+  push:
+    branches:
+      - main
+env:
+  CI: true
+
+jobs:
+  version:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      repository-projects: write
+      deployments: write
+      packages: write
+      pull-requests: write
+
+    services:
+      prisma-next-postgres:
+        image: postgres:18.2
+        ports:
+          - '5456:5432'
+        env:
+          POSTGRES_USER: prisma
+          POSTGRES_PASSWORD: prisma
+          POSTGRES_DB: prisma_next
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: mghayes/multi-postgres:v2
+        ports:
+          - '5455:5432'
+        env:
+          POSTGRES_USER: prisma
+          POSTGRES_PASSWORD: prisma
+          POSTGRES_MULTIPLE_DATABASES: tests,drizzle
+
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: checkout code repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        id: pnpm-install
+        with:
+          run_install: false
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup turbo cache
+        uses: actions/cache@v3
+        with:
+          path: node_modules/.cache
+          key: turbo-${{ runner.os }}-18-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Creating .npmrc
+        run: |
+          cat << EOF > "$HOME/.npmrc"
+            email=michael@hayes.io
+            //registry.npmjs.org/:_authToken=$NPM_TOKEN
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create PR or Publish release
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm run ci:version
+          commit: 'chore: update versions'
+          title: 'chore: update versions'
+          publish: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

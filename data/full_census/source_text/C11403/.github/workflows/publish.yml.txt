@@ -1,0 +1,33 @@
+# Actions are pinned to full commit SHAs; see .github/dependabot.yml for why and how they are updated.
+name: Publish Package
+
+on:
+  push:
+    tags-ignore:
+      - 'dashboard-*'
+      - 'proxy-*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container: node:24
+    permissions:
+      id-token: write
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - run: npm publish --provenance
+        env:
+          POSTGRES_HOST: postgres

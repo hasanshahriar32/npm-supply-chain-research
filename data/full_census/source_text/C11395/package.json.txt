@@ -1,0 +1,60 @@
+{
+  "name": "find-my-way-ts",
+  "version": "0.1.6",
+  "description": "Crazy fast http radix based router",
+  "type": "module",
+  "packageManager": "pnpm@8.10.0",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "scripts": {
+    "build": "pnpm build-esm && pnpm build-cjs && pnpm build-annotate && build-utils pack-v2",
+    "build-esm": "tsc -b tsconfig.build.json",
+    "build-cjs": "babel build/esm --plugins @babel/transform-export-namespace-from --plugins @babel/transform-modules-commonjs --out-dir build/cjs --source-maps",
+    "build-annotate": "babel build --plugins annotate-pure-calls --out-dir build --source-maps",
+    "clean": "rimraf build dist coverage .tsbuildinfo",
+    "test": "vitest",
+    "check": "tsc -b tsconfig.json",
+    "update-version": "changeset version && pnpm install --no-frozen-lockfile"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tim-smart/find-my-way-ts.git"
+  },
+  "keywords": [
+    "http",
+    "router",
+    "radix",
+    "fast",
+    "speed"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "author": "Tomas Della Vedova - @delvedor (http://delved.org)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/delvedor/find-my-way/issues"
+  },
+  "homepage": "https://github.com/delvedor/find-my-way#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.24.7",
+    "@babel/core": "^7.24.7",
+    "@babel/plugin-transform-export-namespace-from": "^7.24.7",
+    "@babel/plugin-transform-modules-commonjs": "^7.24.7",
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.5",
+    "@effect/build-utils": "^0.7.7",
+    "@effect/language-service": "^0.1.0",
+    "@types/node": "^20.14.6",
+    "@vitest/browser": "^1.6.0",
+    "babel-plugin-annotate-pure-calls": "^0.4.0",
+    "playwright": "^1.44.1",
+    "prettier": "^3.3.2",
+    "rimraf": "^5.0.7",
+    "tsx": "^4.15.6",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

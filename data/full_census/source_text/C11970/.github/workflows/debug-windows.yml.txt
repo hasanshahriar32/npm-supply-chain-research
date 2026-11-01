@@ -1,0 +1,44 @@
+name: Debug Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      timeout_minutes:
+        description: 'SSH session timeout in minutes'
+        required: false
+        default: '30'
+
+jobs:
+  debug-windows:
+    name: Windows Debug Session
+    runs-on: windows-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@46268bd060767258de96ed93c1251119784f2ab6 # v1.16.1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      - name: Setup pnpm
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          install: true
+          require-lockfile: true
+          runtime: node@24
+          cache: true
+
+      - name: Run Initial Build
+        run: pnpm turbo run build --filter='!./workbench/*' --filter='!./docs'
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3.23
+        timeout-minutes: ${{ fromJSON(github.event.inputs.timeout_minutes) }}
+        with:
+          limit-access-to-actor: true

@@ -1,0 +1,65 @@
+{
+  "name": "shx",
+  "version": "0.4.0",
+  "description": "Portable Shell Commands for Node",
+  "bin": {
+    "shx": "src/cli.js"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "check-node-support": "node scripts/check-node-support",
+    "lint": "eslint .",
+    "posttest": "npm run lint",
+    "release:major": "shelljs-release major",
+    "release:minor": "shelljs-release minor",
+    "release:patch": "shelljs-release patch",
+    "changelog": "shelljs-changelog",
+    "test": "nyc --reporter=text --reporter=lcov mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shelljs/shx.git"
+  },
+  "keywords": [
+    "shelljs",
+    "shell",
+    "unix",
+    "bash",
+    "sh",
+    "exec",
+    "cli",
+    "zsh"
+  ],
+  "contributors": [
+    "Ari Porad <ari@ariporad.com> (http://ariporad.com/)",
+    "Levi Thomason <me@levithomason.com> (https://github.com/levithomason)",
+    "Nate Fischer <ntfschr@gmail.com>"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shelljs/shx/issues"
+  },
+  "homepage": "https://github.com/shelljs/shx#readme",
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-import-resolver-node": "0.3.7",
+    "eslint-plugin-import": "^2.31.0",
+    "js-yaml": "^4.1.0",
+    "mocha": "^11.1.0",
+    "nyc": "^17.1.0",
+    "shelljs-changelog": "^0.2.6",
+    "shelljs-plugin-open": "^0.4.0",
+    "shelljs-release": "^0.5.3",
+    "should": "^13.2.3"
+  },
+  "dependencies": {
+    "minimist": "^1.2.8",
+    "shelljs": "^0.10.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,53 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: bin/setup-rabbit.sh
+      - run: npm ci
+      - run: npx playwright install --with-deps
+
+      - name: Extract tag name
+        id: tag
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+          if [[ $TAG_NAME =~ (alpha|beta|rc) ]]; then
+            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+            # Extract the keyword (alpha, beta, or rc) to use as npm tag
+            if [[ $TAG_NAME =~ alpha ]]; then echo "NPM_TAG=alpha" >> $GITHUB_OUTPUT; fi
+            if [[ $TAG_NAME =~ beta ]]; then echo "NPM_TAG=beta" >> $GITHUB_OUTPUT; fi
+            if [[ $TAG_NAME =~ rc ]]; then echo "NPM_TAG=rc" >> $GITHUB_OUTPUT; fi
+          else
+            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+            echo "NPM_TAG=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to NPM
+        run: npm publish --tag ${{ steps.tag.outputs.NPM_TAG }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ steps.tag.outputs.IS_PRERELEASE == 'true' }}
+          body: |
+            Please refer to [Change-log.md](https://github.com/${{ github.repository }}/blob/develop/Change-log.md) for release notes.

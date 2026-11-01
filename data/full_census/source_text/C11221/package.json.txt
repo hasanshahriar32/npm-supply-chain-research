@@ -1,0 +1,47 @@
+{
+  "name": "kendo-icons",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/font-icons",
+    "packages/svg-icons"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "build": "npm run build --workspaces",
+    "eslint": "eslint \"**/*.js\"",
+    "migrate": "node scripts/migrate-icons.js",
+    "update-icons": "node scripts/update-icons.js",
+    "prepare-packages": "npm run build --workspaces",
+    "dev": "node scripts/dev.mjs",
+    "serve": "npx http-server",
+    "update": "npx npm-check-updates --upgrade",
+    "setup": "npm install"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "@commitlint/core": "^21.0.1",
+    "@eslint/js": "^10.0.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "ansi-colors": "^4.1.1",
+    "chokidar": "^5.0.0",
+    "eslint": "^10.4.0",
+    "fs-extra": "^11.1.1",
+    "glob": "^13.0.0",
+    "globals": "^17.6.0",
+    "http-server": "^14.1.0",
+    "husky": "^9.0.7",
+    "lerna": "^10.0.1",
+    "lodash": "^4.17.21",
+    "sass": "^1.97.1",
+    "svg-parser": "^2.0.4",
+    "svg2ttf": "^6.0.3",
+    "svgo": "^4.0.0",
+    "svgpath": "^2.5.0",
+    "potrace-wasm": "^1.0.4"
+  },
+  "overrides": {
+    "typescript": "~5.8.0"
+  }
+}

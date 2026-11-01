@@ -1,0 +1,65 @@
+name: Pull request
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6 # checkout visx + this commit
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          check-latest: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/cache@v4.3.0
+        id: yarn-cache
+        with:
+          path: .yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Ensure TS references are up to date
+        run: yarn type:update-refs && git diff --exit-code
+
+      - name: Ensure we have no ESM-only dependencies
+        run: yarn vendor-check
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Run tests
+        run: yarn test
+        env:
+          CI: true
+
+      - name: Generate docs
+        run: yarn docs:generate
+
+      - name: Run lint
+        run: yarn lint
+
+      - name: Build visx site without failure
+        run: yarn build
+        working-directory: './packages/visx-demo/'
+
+      # @TODO
+      # this fails on forks, we need to update workflow event type to `pull_request_target`
+      # but this needs security review
+      # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target
+      - name: Report package sizes
+        run: yarn build:sizes && yarn check:sizes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: $GITHUB_REPOSITORY
+          GITHUB_ACTOR: $GITHUB_ACTOR

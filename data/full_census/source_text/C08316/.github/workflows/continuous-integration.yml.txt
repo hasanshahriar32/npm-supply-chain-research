@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # schedule:
+  #   - cron: "0 23 * * 6"
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - "ubuntu-latest"
+          - "macos-latest"
+          - "windows-latest"
+        runtime:
+          - ["Node.js", "24"]
+          - ["Node.js", "22"]
+          - ["Node.js", "20"]
+          - ["Node.js", "18"]
+          - ["Bun", "latest"]
+        # exclude:
+        #   - os: "macos-latest"
+        #     node_version: "12"
+    name: ${{matrix.runtime[0]}} ${{ matrix.runtime[1] }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    env:
+      YARN_ENABLE_IMMUTABLE_INSTALLS: false
+      TEST_RUNTIME: ${{matrix.runtime[0]}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        if: ${{matrix.runtime[0] == 'Node.js'}}
+        with:
+          node-version: ${{ matrix.runtime[1] }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        if: ${{matrix.runtime[0] == 'Bun'}}
+        with:
+          bun-version: ${{ matrix.runtime[1] }}
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Run Test (${{matrix.runtime[0]}})
+        if: ${{matrix.runtime[0] == 'Node.js'}}
+        run: yarn test-coverage
+
+      - name: Run Test (${{matrix.runtime[0]}})
+        if: ${{matrix.runtime[0] == 'Bun'}}
+        run: bun test ./test.js --coverage --coverage-reporter=lcov --coverage-reporter=text
+
+      - uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          disable_search: true
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      YARN_ENABLE_IMMUTABLE_INSTALLS: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Run Lint
+        run: yarn lint

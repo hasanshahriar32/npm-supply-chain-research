@@ -1,0 +1,88 @@
+{
+  "name": "properties-reader",
+  "description": "Properties file reader for Node.js",
+  "version": "3.0.1",
+  "author": {
+    "name": "Steve King",
+    "email": "steve@mydev.co"
+  },
+  "contributors": [
+    {
+      "name": "Steve King",
+      "email": "steve@mydev.co"
+    },
+    {
+      "name": "Aureliano Bergese",
+      "email": "onailerua@hotmail.coom"
+    }
+  ],
+  "dependencies": {
+    "@kwsites/file-exists": "^1.1.1",
+    "mkdirp": "^3.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.13",
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
+    "@swc/core": "^1.15.4",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.0.1",
+    "jest": "^30.2.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "properties",
+    "ini",
+    "parser"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/steveukx/properties"
+  },
+  "publish": {
+    "main": "dist/cjs/index.cjs",
+    "module": "dist/esm/index.mjs",
+    "types": "./dist/types/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "default": "./dist/esm/index.mjs",
+          "types": "./dist/types/index.d.mts"
+        },
+        "require": {
+          "default": "./dist/cjs/index.cjs",
+          "types": "./dist/types/index.d.ts"
+        },
+        "types": "./dist/types/index.d.ts"
+      }
+    }
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:pkg": "node .ci/package-json.mjs",
+    "clean": "git clean -fxd coverage dist",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "prepare": "npm run build",
+    "prepublishOnly": "yarn build && yarn build:pkg",
+    "preversion": "npm test",
+    "postversion": "npm publish && git push && git push --tags",
+    "test": "jest --coverage"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/steveukx/properties?sponsor=1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "packageManager": "yarn@4.12.0"
+}

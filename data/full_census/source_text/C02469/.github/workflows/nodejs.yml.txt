@@ -1,0 +1,39 @@
+name: node.js
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: '[${{ matrix.os }}] node.js v${{ matrix.node-version }}'
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        node-version: [18, 20]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm ci
+
+      - run: npm run prettier
+
+      - run: npm run build
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - if: matrix.os != 'windows-latest'
+        run: npm run test:cov

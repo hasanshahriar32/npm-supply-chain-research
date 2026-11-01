@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 3 * * *' # daily, at 3am
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 14.x
+      - run: yarn --ignore-engines
+      - run: yarn lint
+      - run: yarn tsd
+
+  test:
+    name: Test - ${{ matrix.os }}/node@${{ matrix.node-version }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # different Node.js versions (os defaults to ubuntu-latest)
+        os: [ ubuntu-latest ]
+        node-version: [ 10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x, 26.x ]
+        include:
+          # different platforms, always the latest Node.js release
+          - { os: windows-latest, node-version: latest }
+          - { os: macos-latest, node-version: latest }
+
+    runs-on: ${{ matrix.os }}
+    env:
+      coverage-filename: ./coverage-final.${{ matrix.os }}_${{ matrix.node-version }}.json
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: yarn --ignore-engines
+      - name: Test
+        shell: bash
+        run: |
+          # webpack <= 4 uses the md4 hash, which OpenSSL 3 (Node.js >= 17) forbids by default
+          if [ "$(node -p "Number(process.version.slice(1).split('.')[0]) >= 17")" = "true" ]; then
+            echo "Node.js >= 17 detected: enabling --openssl-legacy-provider"
+            export NODE_OPTIONS=--openssl-legacy-provider
+          fi
+          yarn test:coverage
+      - name: Unify different platform paths in coverage file
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          node -e "
+            const cwdForReplace = process.cwd().replace(/\\\\/g, '\\\\\\\\');
+            const file = fs.readFileSync('./coverage/coverage-final.json', {encoding: 'utf8'});
+            const replaceBase = file.split(cwdForReplace).join('.cwd').replace(/\\\\\\\\/g, '/');
+            fs.writeFileSync(process.env['coverage-filename'], replaceBase);
+          "
+      - name: Save current coverage to artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverages-${{ matrix.os }}-${{ matrix.node-version }}
+          path: ${{ env.coverage-filename }}
+          retention-days: 1
+          if-no-files-found: warn
+
+  coverage:
+    name: Coverage
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 16.x
+      - name: Download all coverage files from previous job
+        uses: actions/download-artifact@v8
+        with:
+          pattern: coverages-*
+          path: ./coverages
+          merge-multiple: true
+      - run: ls -laR ./coverages
+      - name: Normalize paths to absolute form
+        run: sed -i "s|\.cwd|${{ github.workspace }}|g" *
+        working-directory: ./coverages
+      - run: npx nyc merge ./coverages ./coverage/coverage-final.json
+      - run: >-
+          npx nyc report
+          --check-coverage true
+          --statements 100
+          --branches 98.2
+          --functions 100
+          --lines 100
+          -t ./coverage
+          --report-dir ./coverage
+          --reporter=html --reporter=lcov
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: coverages
+          path: ./**/coverage/
+          if-no-files-found: warn
+      - uses: coverallsapp/github-action@v2
+        if: ${{ always() }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,36 @@
+name: Publish and release
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - release-triggered
+
+# Setup npm trusted publishing
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_VERSION: 24
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: "release"
+        id: publish
+        run: script/ci/release.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

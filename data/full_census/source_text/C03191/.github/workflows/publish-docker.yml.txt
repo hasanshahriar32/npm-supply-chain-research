@@ -1,0 +1,57 @@
+name: "Publish: Docker"
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: "Publish: Docker"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Extract version from release tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Check if version is >= 2.x
+        id: version_check
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          if [[ $VERSION =~ ^([2-9]|[0-9]{2,})\. ]]; then
+            echo "docker_support=true" >> $GITHUB_OUTPUT
+          else
+            echo "docker_support=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.version_check.outputs.docker_support == 'true'
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Log in to Docker Hub
+        if: steps.version_check.outputs.docker_support == 'true'
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: faisalman
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build
+        if: steps.version_check.outputs.docker_support == 'true'
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            faisalman/ua-parser-js:${{ steps.version.outputs.VERSION }}
+            faisalman/ua-parser-js:latest
+          cache-from: type=registry,ref=faisalman/ua-parser-js:buildcache
+          cache-to: type=registry,ref=faisalman/ua-parser-js:buildcache,mode=max

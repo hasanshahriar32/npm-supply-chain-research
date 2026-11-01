@@ -1,0 +1,128 @@
+name: Release
+permissions:
+  contents: write
+  id-token: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        required: false
+        description: '[Optional] Override semantic versioning with explict version (allowed values: "patch", "minor", "major", or explicit version)'
+        default: ''
+      dist_tag:
+        description: 'NPM dist-tag to publish under; delete to publish without an explicit dist-tag'
+        required: false
+        default: 'latest'
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"
+
+jobs:
+  pre-release-ci:
+    uses: ./.github/workflows/shared-ci.yml
+
+  # Once all tests have passed, run semantic versioning
+  version:
+    runs-on: ubuntu-latest
+    needs: [pre-release-ci]
+    environment: release
+    steps:
+      - name: Require a branch
+        if: github.ref_type != 'branch'
+        run: |
+          echo "::error::Dispatch this workflow from a branch (got ${{ github.ref_type }} '${{ github.ref_name }}'). To release a specific commit, point a branch at it first."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+          persist-credentials: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --unsafe-perm
+
+      - name: Configure AWS Credentials for Release
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::587316601012:role/GitHub-CI-CI-Bot-Credential-Access-Role-us-west-2
+          role-session-name: CI_Bot_Release
+
+      # Use AWS Secrets Manager GHA to retrieve CI Bot Creds
+      - name: Get CI Bot Creds Secret
+        uses: aws-actions/aws-secretsmanager-get-secrets@v2
+        with:
+          secret-ids: Github/aws-crypto-tools-ci-bot
+          parse-json-secrets: true
+
+      # Log in as the CI Bot
+      - name: Log in as CI Bot
+        run: |
+          echo ${{ env.GITHUB_AWS_CRYPTO_TOOLS_CI_BOT_ESDK_RELEASE_TOKEN }} > token.txt
+          gh auth login --with-token < token.txt
+          rm token.txt
+          gh auth status
+          gh auth setup-git
+
+      - name: Configure git
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config --global user.name "aws-crypto-tools-ci-bot"
+          git config --global user.email "no-reply@noemail.local"
+          git checkout "$BRANCH"
+
+      - name: Version packages
+        env:
+          VERSION_BUMP: ${{ github.event.inputs.version_bump }}
+        run: |
+          # Generate new version and CHANGELOG entry and push it
+          npx lerna version --conventional-commits --git-remote origin --yes ${VERSION_BUMP:+$VERSION_BUMP --force-publish}
+          # Log the commit for posterity
+          git log -n 1
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [pre-release-ci, version]
+    environment: release
+    steps:
+      # Include the version-bump commit the version job pushed
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm
+        run: npm install -g npm@latest
+      - run: npm ci
+      - run: npm run build --if-present
+      - name: Publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
+          DIST_TAG: ${{ github.event.inputs.dist_tag }}
+        run: |
+          if [ -n "$DIST_TAG" ]; then
+            npx lerna publish from-package --yes --concurrency 1 --dist-tag "$DIST_TAG"
+          else
+            npx lerna publish from-package --yes --concurrency 1
+          fi
+
+  # Once publishing is complete, validate that the published packages are useable
+  validate:
+    uses: ./.github/workflows/shared-ci.yml
+    needs: [publish]
+    with:
+      test-published-packages: true

@@ -1,0 +1,63 @@
+{
+  "name": "oxc-walker",
+  "version": "1.1.1",
+  "description": "",
+  "license": "MIT",
+  "repository": "oxc-project/oxc-walker",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "vp pack src/index.ts --dts",
+    "dev": "vp test dev",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "prepare": "vp config",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm test",
+    "test": "pnpm test:unit && pnpm test:types",
+    "test:unit": "vp test",
+    "test:types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@oxc-project/types": "0.154.0",
+    "@types/node": "24.10.3",
+    "@vitest/coverage-v8": "5.0.1",
+    "@vue/compiler-sfc": "3.5.43",
+    "knip": "^6.0.0",
+    "oxc-parser": "0.154.0",
+    "typescript": "7.0.2",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "@oxc-project/types": ">=0.98.0",
+    "oxc-parser": ">=0.98.0",
+    "rolldown": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@oxc-project/types": {
+      "optional": true
+    },
+    "oxc-parser": {
+      "optional": true
+    },
+    "rolldown": {
+      "optional": true
+    }
+  },
+  "resolutions": {
+    "oxc-walker": "link:."
+  },
+  "packageManager": "pnpm@11.24.0"
+}

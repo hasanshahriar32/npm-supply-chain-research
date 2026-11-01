@@ -1,0 +1,30 @@
+name: Publish Pull Requests with pkg.pr.new
+
+permissions:
+  pull-requests: write
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+
+jobs:
+  publish:
+    if: >
+      github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger: preview')
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version: lts/*
+
+      - name: Install project dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build package
+        run: pnpm run build
+      - name: Publish to pkg.pr.new
+        # todo: add --compact once repository field has been fixed
+        run: pnpm exec pkg-pr-new publish --no-template

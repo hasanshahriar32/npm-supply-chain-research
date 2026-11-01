@@ -1,0 +1,39 @@
+{
+    "private": true,
+    "name": "@qdrant/monorepo",
+    "version": "0.0.0",
+    "engines": {
+        "node": ">=22.13.0",
+        "pnpm": ">=11.9.0"
+    },
+    "packageManager": "pnpm@11.9.0",
+    "scripts": {
+        "prepare": "node scripts/prepare.cjs && pnpm -r build",
+        "ci:version": "pnpm changeset version && pnpm install --no-frozen-lockfile && git add .",
+        "ci:release": "node scripts/prepublish.mjs && pnpm changeset publish"
+    },
+    "lint-staged": {
+        "*.ts": [
+            "prettier --list-different",
+            "eslint"
+        ],
+        "*.{md,yaml}": "prettier --list-different"
+    },
+    "devDependencies": {
+        "@eslint/js": "10.0.1",
+        "@rollup/plugin-node-resolve": "^16.0.3",
+        "@rollup/plugin-terser": "^1.0.0",
+        "@types/node": "^24.19.2",
+        "eslint": "^10.13.0",
+        "husky": "^9.1.7",
+        "is-ci": "^4.1.0",
+        "knip": "^6.42.0",
+        "lint-staged": "^17.6.0",
+        "prettier": "^3.9.10",
+        "rimraf": "^6.1.3",
+        "rollup": "^4.64.10",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "8.70.0"
+    }
+}

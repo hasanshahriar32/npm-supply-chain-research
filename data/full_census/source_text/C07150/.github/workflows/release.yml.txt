@@ -1,0 +1,149 @@
+name: Release
+
+run-name: |
+  ${{ (inputs.dryrun && 'Dry run')
+   || format('Release: {0}', (inputs.version == 'custom' && inputs.custom) || inputs.version) }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dryrun:
+        description: 'Dry run (no npm publish)'
+        required: false
+        type: boolean
+        default: true
+      version:
+        description: 'Version component to update (or "custom" to provide exact version)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - prepatch
+          - preminor
+          - premajor
+          - prerelease
+          - custom
+      custom:
+        description: 'Custom version'
+        required: false
+        default: ''
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      dryrun: ${{ steps.dryrun.outputs.dryrun }}
+      publish: ${{ steps.publish.outputs.publish }}
+      ref: ${{ steps.tag.outputs.tag || github.event.repository.default_branch }}
+      tag: ${{ steps.tag.outputs.tag || '' }}
+    steps:
+      - name: Validate Workflow Inputs
+        if: ${{ inputs.version == 'custom' && inputs.custom == '' }}
+        shell: bash
+        run: |
+          echo '::error::No custom version number provided'
+          exit 1
+      - id: dryrun
+        name: Validate Dry Run Event
+        if: ${{ inputs.dryrun }}
+        shell: bash
+        run: echo dryrun=true >> "$GITHUB_OUTPUT"
+      - id: publish
+        name: Validate Publish Event
+        if: ${{ !inputs.dryrun }}
+        shell: bash
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [[ -z $NPM_TOKEN ]]; then
+            echo "::error::Secret NPM_TOKEN is not defined for this GitHub repo."
+            echo "::error::To publish to npm, this action requires:"
+            echo "::error:: • an npm access token;"
+            echo "::error:: • with Read-Write access to this project's npm packages;"
+            echo "::error:: • stored as a repo secret named NPM_TOKEN."
+            echo "::error::See https://docs.npmjs.com/about-access-tokens for info about creating npm tokens."
+            echo "::error::See https://docs.github.com/en/actions/security-guides/using-secrets-in-github-actions for info about how to store GitHub repo secrets."
+            exit 1
+          fi
+          echo publish=true >> "$GITHUB_OUTPUT"
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      - name: Diagnostics
+        shell: bash
+        run: |
+          git log -10
+      - name: Set Environment Variables
+        uses: falti/dotenv-action@v1
+        with:
+          path: ./.github/.env
+          export-variables: true
+          keys-case: bypass
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: ${{ env.NPM_REGISTRY }}
+          cache: npm
+      - name: Install Dependencies
+        shell: bash
+        run: npm ci --workspaces
+      - name: Tag Release
+        if: ${{ !inputs.dryrun }}
+        id: tag
+        shell: bash
+        run: |
+          git config --global user.name $ACTIONS_USER
+          git config --global user.email $ACTIONS_EMAIL
+          npm version -m 'v%s' '${{ (inputs.version == 'custom' && inputs.custom) || inputs.version }}'
+          git push --follow-tags
+          echo tag=$(git describe --abbrev=0) >> "$GITHUB_OUTPUT"
+      - name: Diagnostics
+        if: ${{ !inputs.dryrun }}
+        shell: bash
+        run: git tag --sort=-taggerdate
+
+  publish:
+    name: Publish
+    if: ${{ needs.setup.outputs.publish }}
+    needs: [setup]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ needs.setup.outputs.ref }}
+      - name: Diagnostics
+        shell: bash
+        run: git tag --sort=-taggerdate
+      - name: Diagnostics
+        shell: bash
+        run: |
+          echo 'needs.setup.outputs.tag=${{ needs.setup.outputs.tag }}'
+          git log -10
+      - name: Set Environment Variables
+        uses: falti/dotenv-action@v1
+        with:
+          path: ./.github/.env
+          export-variables: true
+          keys-case: bypass
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+          registry-url: ${{ env.NPM_REGISTRY }}
+          cache: npm
+      - name: Install Dependencies
+        shell: bash
+        run: npm ci --workspaces
+      - name: Publish packages
+        shell: bash
+        run: npm publish --workspaces --access public --provenance

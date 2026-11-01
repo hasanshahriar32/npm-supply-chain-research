@@ -1,0 +1,28 @@
+name: Tidelift Alignment
+on:
+  push:
+    paths:
+      - '.github/workflows/tidelift-alignment.yml'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Run Tidelift to ensure approved open source packages are in use
+    runs-on: ubuntu-latest
+    if: github.repository == 'Automattic/mongoose'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Alignment
+        uses: tidelift/alignment-action@8d7700fe795fc01179c1f9fa05b72a089873027d # main
+        env:
+          TIDELIFT_API_KEY: ${{ secrets.TIDELIFT_API_KEY }}
+          TIDELIFT_ORGANIZATION: ${{ secrets.TIDELIFT_ORGANIZATION }}
+          TIDELIFT_PROJECT: ${{ secrets.TIDELIFT_PROJECT }}

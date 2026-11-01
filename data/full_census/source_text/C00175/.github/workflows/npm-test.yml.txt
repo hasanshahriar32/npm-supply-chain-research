@@ -1,0 +1,72 @@
+# #
+#   @parent     : github workflow
+#   @desc       : run npm tests
+#   @author     : Aetherinox
+#   @url        : https://github.com/Aetherinox
+# #
+
+name: "🔧 Tests › NPM Package"
+run-name: "🔧 Tests › NPM Package"
+
+# #
+#   triggers
+# #
+
+on:
+  push:
+  pull_request:
+
+# #
+#   jobs
+# #
+
+jobs:
+    build:
+        name: >-
+          📦 Tests › Initialize
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20.x, 21.x, 22.x, 23.x, 24.x]
+
+        steps:
+            - name: "✅ Start"
+              id: task_initialize_start
+              run: |
+                    echo "Starting build"
+
+            # #
+            #   Job > Initialize > Checkout
+            # #
+
+            - name: "☑️ Checkout"
+              id: task_initialize_checkout
+              uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+
+            # #
+            #   Job > Use NodeJS
+            # #
+
+            - name: "⚙️ Setup Node"
+              id: task_initialize_node_setup
+              uses: actions/setup-node@v4
+              with:
+                node-version: ${{ matrix.node-version }}
+
+            # #
+            #   Job > Npm > Install Dependencies
+            # #
+
+            - name: "⚙️ Install Dependencies"
+              id: task_initialize_npm_deps
+              run: npm ci
+
+            # #
+            #   Job > Npm > Run Tests
+            # #
+
+            - name: "🪪 Run Tests"
+              id: task_initialize_npm_test
+              run: npm test

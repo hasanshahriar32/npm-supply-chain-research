@@ -1,0 +1,35 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    ci:
+        name: "Test: Node ${{ matrix.node-version }} - ESLint ${{ matrix.eslint-version }}"
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                eslint-version: [9.x]
+                node-version: [22.x, 20.x]
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install
+              run: npm ci
+
+            - name: Use ESLint ${{ matrix.eslint-version }}
+              run: npm install eslint@${{ matrix.eslint-version }}
+
+            - name: Lint
+              run: npm run lint
+
+            - name: Test
+              run: npm run test

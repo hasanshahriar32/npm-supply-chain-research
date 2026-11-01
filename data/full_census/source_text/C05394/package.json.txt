@@ -1,0 +1,44 @@
+{
+  "name": "streamparser-json",
+  "description": "Streaming JSON parser in Javascript for Node.js, Deno and the browser",
+  "version": "0.0.26",
+  "type": "module",
+  "author": "Juanjo Diaz <juanjo.diazmo@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juanjoDiaz/streamparser-json.git"
+  },
+  "homepage": "https://github.com/juanjoDiaz/streamparser-json#readme",
+  "bugs": "https://github.com/juanjoDiaz/streamparser-json/issues",
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.9",
+    "@vitest/coverage-v8": "^4.1.11",
+    "typescript": "~7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "build:jsr": "npm run build:jsr -ws --if-present",
+    "build": "npm run build -ws --if-present",
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
+    "test:cjs": "node packages/plainjs/test/CommonJS.cjs && node packages/node/test/CommonJS.cjs && node packages/whatwg/test/CommonJS.cjs",
+    "test": "npm run test:cjs && vitest run",
+    "test-with-coverage": "npm test -- --coverage",
+    "test:performance": "npm run test:performance -ws --if-present",
+    "test:pack": "node scripts/verify-tarball.mjs",
+    "benchmark": "npm run benchmark -w packages/performance"
+  },
+  "license": "MIT",
+  "tags": [
+    "json",
+    "stream"
+  ],
+  "workspaces": [
+    "packages/plainjs",
+    "packages/node",
+    "packages/whatwg",
+    "packages/performance"
+  ]
+}

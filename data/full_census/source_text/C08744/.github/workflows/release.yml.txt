@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+      - next
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+  NEXT_TELEMETRY_DISABLED: '1'
+  ASTRO_TELEMETRY_DISABLED: '1'
+  NODE_OPTIONS: '--no-warnings'
+  FORCE_COLOR: 1
+
+jobs:
+  release:
+    name: 'Release'
+    if: github.repository == 'rehype-pretty/rehype-pretty-code' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ['ubuntu-latest']
+    permissions:
+      issues: write
+      actions: write
+      packages: write
+      contents: write
+      id-token: write
+      pull-requests: write
+      repository-projects: write
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Get pnpm Version'
+        id: pnpm-version
+        run: |
+          PNPM_VERSION=$(cat package.json | jq --raw-output '.packageManager' | awk -F'@' '{print $2}')
+          echo "PNPM_VERSION=$PNPM_VERSION" >> $GITHUB_OUTPUT
+
+      - name: 'Setup pnpm'
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ steps.pnpm-version.outputs.PNPM_VERSION }}
+
+      - name: 'Setup Node.js'
+        uses: actions/setup-node@v4
+        with:
+          cache: 'pnpm'
+          # Required for npm OIDC trusted publishing (npm >= 11.5.1), while staying on Node 24.
+          node-version: '^24.14.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: 'Install Dependencies'
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for unreleased changesets
+        id: has-changesets
+        uses: andstor/file-existence-action@v3
+        with:
+          files: ".changeset/!(README).md"
+
+      - name: 'Build Packages'
+        if: steps.has-changesets.outputs.files_exists == 'true'
+        run: |
+          pnpm lint && pnpm format
+          pnpm typecheck
+          pnpm test
+          pnpm build
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # Note: pnpm install after versioning is necessary to refresh lockfile
+          version: pnpm dlx bun@latest ./scripts/changeset-update-version.ts
+          publish: pnpm changeset:publish
+          commit: "[ci] release"
+          title: "[ci] release"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Workaround for changesets/action requiring this var to be set.
+          # OIDC trusted publishing does not use an npm token secret.
+          NPM_TOKEN: ""

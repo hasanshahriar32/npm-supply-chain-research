@@ -1,0 +1,149 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Cancel superseded runs on a PR (a new push obsoletes the in-flight one).
+# Pushes to main are never canceled in-flight — though GitHub keeps only the
+# newest PENDING run per group, so rapid pushes can skip an intermediate
+# commit's run.
+concurrency:
+  # Keyed by PR number (not head_ref): two different fork PRs can share a
+  # head branch name (most commonly `main`), and a name-keyed group would let
+  # one contributor's push cancel or queue behind another's unrelated run.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Turbo Remote Cache: first-party PRs can read shared artifacts, but only
+# trusted push runs can write them. Fork PRs use the local cache only.
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  TURBO_CACHE: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'local:rw,remote:r' || github.event_name == 'pull_request' && 'local:rw' || 'local:rw,remote:rw' }}
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    # Fold the Node version AND the OS into turbo's `test` task hash
+    # (turbo.json) so a cached result from one matrix leg is never replayed for
+    # another — turbo does not hash the platform by default, so without the OS
+    # dimension the Windows/macOS legs (same Node as an ubuntu leg) would hit
+    # the remote cache and replay ubuntu's test logs instead of running.
+    env:
+      MATRIX_NODE_VERSION: ${{ matrix.node-version }}
+      MATRIX_OS: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node-version: ["20.19.0", "22.18.0", "24", "25", "26"]
+        include:
+          - os: windows-latest
+            node-version: "22.18.0"
+          - os: blacksmith-6vcpu-macos-latest
+            node-version: "22.18.0"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Run tests
+        if: ${{ matrix.os != 'windows-latest' && matrix.node-version != '20.19.0' }}
+        run: pnpm test
+
+      - name: Run Node 20 tests serially
+        if: ${{ matrix.node-version == '20.19.0' }}
+        run: pnpm test --concurrency=1
+
+      - name: Run Windows tests serially
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: pnpm test --concurrency=1
+
+      # lint + typecheck run as dedicated jobs in code-quality.yml; don't pay for
+      # them again here.
+      - name: Check formatting
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == '22.18.0' }}
+        shell: bash
+        run: |
+          format_output_file="$(mktemp)"
+
+          set +e
+          pnpm format:check 2>&1 | tee "$format_output_file"
+          format_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$format_status" -ne 0 ]; then
+            while IFS= read -r format_line; do
+              format_file="${format_line%% (*}"
+
+              if [ "$format_file" = "$format_line" ] || [ ! -f "$format_file" ]; then
+                continue
+              fi
+
+              format_annotation_file="${format_file//'%'/'%25'}"
+              format_annotation_file="${format_annotation_file//$'\r'/'%0D'}"
+              format_annotation_file="${format_annotation_file//$'\n'/'%0A'}"
+              format_annotation_file="${format_annotation_file//':'/'%3A'}"
+              format_annotation_file="${format_annotation_file//','/'%2C'}"
+              echo "::error file=$format_annotation_file::File is not formatted. Run pnpm format."
+            done < "$format_output_file"
+          fi
+
+          rm -f "$format_output_file"
+          exit "$format_status"
+
+      - name: Smoke test built CLI
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == '22.18.0' }}
+        run: |
+          cd packages/react-doctor
+          pnpm build
+          BUILT_VERSION=$(node bin/react-doctor.js --version)
+          echo "Built CLI reports version: $BUILT_VERSION"
+          if [ -z "$BUILT_VERSION" ] || [ "$BUILT_VERSION" = "0.0.0" ]; then
+            echo "Built CLI version is missing or 0.0.0; build env did not inject VERSION"
+            exit 1
+          fi
+
+      - name: Smoke test JSON report shape
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == '22.18.0' }}
+        run: pnpm smoke:json-report
+
+      # Regression guard for #629: a published package's built output must not
+      # import a package that isn't in its `dependencies` (such phantom imports
+      # only resolve when a sibling dependency happens to supply them, and crash
+      # consumers on strict installs). Builds every package, then audits dist.
+      - name: Check published packages declare their runtime dependencies
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == '22.18.0' }}
+        run: |
+          pnpm build
+          pnpm check:published-deps
+
+      - name: Smoke test packed CLI install
+        if: ${{ matrix.node-version == '22.18.0' && (matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest') }}
+        run: |
+          pnpm build
+          pnpm smoke:packed-cli-install
+
+      # Allocates a real pseudo-terminal (`pty.openpty()`) so the CLI sees an
+      # interactive TTY and renders the multiselect prompt, then asserts the
+      # process stays alive waiting for input instead of exiting by itself
+      # (regression guard for #576: unref'd stdin killed interactive prompts).
+      - name: Smoke test interactive TTY prompt
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == '22.18.0' }}
+        run: pnpm smoke:tty-prompt

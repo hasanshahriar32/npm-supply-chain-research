@@ -1,0 +1,52 @@
+name: Tests
+
+on:
+    push:
+        branches:
+            - master
+    pull_request:
+        branches:
+            - master
+
+jobs:
+    nodejs:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [18.x, 22.x]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Node.js specs ${{ matrix.node-version }}
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - run: npm i
+            - run: npm run build
+            - run: npm run test:specs
+    format:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [22.x]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Type checks ${{ matrix.node-version }}
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - run: npm i
+            - run: npm run test:format
+    types:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [22.x]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Type checks ${{ matrix.node-version }}
+              uses: actions/setup-node@v1
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - run: npm i
+            - run: npm run build
+            - run: npm run test:types

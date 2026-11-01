@@ -1,0 +1,223 @@
+name: Test
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ['main', 'master']
+  pull_request:
+
+jobs:
+  nodejs:
+    runs-on: ubuntu-latest
+    name: 'Node.js ${{ matrix.node-version }}'
+
+    strategy:
+      matrix:
+        node-version: [20.19.0, 20.x, 22.12.0, 22.x, 24.x, 25.x]
+
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm run test
+
+  jsvu:
+    runs-on: ubuntu-22.04
+    name: '${{ matrix.engine }} (barebone)'
+
+    strategy:
+      matrix:
+        engine: [hermes, v8, javascriptcore, spidermonkey, quickjs, xs, graaljs]
+
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.jsvu
+          key: barebone-jsvu-${{ matrix.engine }}-${{ runner.os }}
+      - run: node --run jsvu -- --os=linux64 --engines="${{ matrix.engine }}"
+      - run: EXODUS_TEST_DROP_NETWORK=1 node --run "test:${{ matrix.engine }}"
+
+  workerd:
+    runs-on: ubuntu-latest
+    name: 'Test on workerd'
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - run: node --run test:workerd
+
+  servo:
+    runs-on: ubuntu-latest
+    name: 'Servo ${{ matrix.servo-version }}'
+
+    strategy:
+      matrix:
+        servo-version: [0.0.4]
+
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: wget "https://github.com/servo/servo/releases/download/v${{ matrix.servo-version }}/servo-x86_64-linux-gnu.tar.gz"
+      - run: tar -xf servo-x86_64-linux-gnu.tar.gz
+      - run: sudo ln -s "$GITHUB_WORKSPACE/servo/servo" /usr/bin/
+      - run: sudo apt update
+      - run: sudo apt install gstreamer1.0-plugins-bad
+      - run: pnpm i --frozen-lockfile
+      - run: node --run test:servo:bundle
+
+  playwright:
+    runs-on: ubuntu-22.04
+    name: '${{ matrix.browser }} (playwright)'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - run: node --run playwright -- install --with-deps "${{ matrix.browser }}"
+      - run: node --run "test:${{ matrix.browser }}:playwright"
+
+  puppeteer:
+    runs-on: ubuntu-22.04
+    name: '${{ matrix.browser }} (puppeteer)'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ['chrome', 'firefox']
+
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - run: node --run "test:${{ matrix.browser }}:puppeteer"
+
+  electron:
+    runs-on: ubuntu-22.04
+    name: 'Electron'
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - run: pnpm i --frozen-lockfile
+      - run: node --run test:electron:as-node
+      - run: xvfb-run node --run test:electron:bundle
+
+  bun:
+    runs-on: ubuntu-22.04
+    name: 'Bun'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76
+        with:
+          bun-version: '1.3.13'
+      - run: pnpm i --frozen-lockfile
+      - run: node --run test:bun
+
+  deno:
+    runs-on: ubuntu-22.04
+    name: 'Deno ${{ matrix.deno-version }}'
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        deno-version: ['v2.6.0', 'v2.7.14']
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+      - uses: denoland/setup-deno@909cc5acb0fdd60627fb858598759246509fa755
+        with:
+          deno-version: ${{ matrix.deno-version }}
+      - run: pnpm i --frozen-lockfile
+      - run: node --run test:deno
+
+  windows:
+    runs-on: windows-latest
+    name: 'Windows with Node.js ${{ matrix.node-version }}'
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.19.0, 20.x, 22.12.0, 22.x, 24.x, 25.x]
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+        with:
+          run_install: false
+      - run: pnpm env use -g ${{ matrix.node-version }}
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm run test

@@ -1,0 +1,152 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Generate GitHub App token
+        id: generate-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Pin npm CLI (OIDC trusted publisher requires npm >= 11.5.1)
+        # actions/setup-node ships Node 22 with npm 10.9.x, which has no OIDC
+        # trusted-publisher code path. Without npm >= 11.5.1 the publish falls
+        # back to the .npmrc placeholder token written by setup-node and the
+        # registry returns 404. No NPM_TOKEN is configured on this repo by
+        # design — auth is OIDC only. Do not remove without restoring a token.
+        run: npm install -g npm@11.5.2
+
+      - name: Determine version
+        id: version
+        env:
+          RELEASE_CREATED: ${{ steps.release.outputs.release_created }}
+          RELEASE_VERSION: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
+          PR_HEAD_BRANCH: ${{ steps.release.outputs.pr && fromJSON(steps.release.outputs.pr).headBranchName }}
+        run: |
+          set -euo pipefail
+
+          if [ "$RELEASE_CREATED" == "true" ]; then
+            VERSION="$RELEASE_VERSION"
+            TAG="latest"
+
+            # For release branches, check if this is the latest release branch
+            if [[ "$GITHUB_REF" == refs/heads/release/* ]]; then
+              LATEST_BRANCH=$(git branch -r --list 'origin/release/*' --sort=-v:refname | head -n 1 | tr -d ' ')
+              CURRENT_BRANCH="origin/${GITHUB_REF#refs/heads/}"
+              if [ "$LATEST_BRANCH" != "$CURRENT_BRANCH" ]; then
+                TAG="patched"
+              fi
+            fi
+          else
+            # RC only on main
+            if [[ "$GITHUB_REF" != refs/heads/main ]]; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            if [ -z "$PR_HEAD_BRANCH" ]; then
+              # No pending release PR — skip to avoid version conflicts
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            # Validate branch name to prevent git ref injection
+            if [[ ! "$PR_HEAD_BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]] || \
+               [[ "$PR_HEAD_BRANCH" =~ \.\.|//|@\{|^-|/$ ]]; then
+              echo "Invalid PR_HEAD_BRANCH: $PR_HEAD_BRANCH"
+              exit 1
+            fi
+
+            git fetch origin "refs/heads/$PR_HEAD_BRANCH"
+            NEXT_VERSION=$(git show "FETCH_HEAD:package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
+
+            # Validate strict semver before use
+            if [[ ! "$NEXT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Invalid version in PR branch package.json: $NEXT_VERSION"
+              exit 1
+            fi
+
+            VERSION="${NEXT_VERSION}-rc.${{ github.run_number }}"
+            TAG="rc"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build
+        if: ${{ steps.version.outputs.skip != 'true' }}
+        run: |
+          set -euo pipefail
+          echo "export const VERSION = '${{ steps.version.outputs.version }}';" > src/version.ts
+          pnpm install --frozen-lockfile
+          pnpm build
+          npm version "${{ steps.version.outputs.version }}" --no-git-tag-version --allow-same-version
+
+      - name: Publish
+        if: ${{ steps.version.outputs.skip != 'true' }}
+        run: |
+          set -euo pipefail
+          NPM_VIEW_STDERR=$(mktemp)
+          EXISTING=$(npm view "@supabase/ssr@${{ steps.version.outputs.version }}" version 2>"$NPM_VIEW_STDERR") || STATUS=$?
+          if [ -n "$EXISTING" ]; then
+            echo "Version ${{ steps.version.outputs.version }} already published on npm, skipping."
+            rm -f "$NPM_VIEW_STDERR"
+            exit 0
+          elif [ "${STATUS:-0}" -ne 0 ] && ! grep -qiE 'E404|not found' "$NPM_VIEW_STDERR"; then
+            echo "npm view failed unexpectedly:"
+            cat "$NPM_VIEW_STDERR"
+            rm -f "$NPM_VIEW_STDERR"
+            exit 1
+          fi
+          rm -f "$NPM_VIEW_STDERR"
+
+          npm publish --provenance --tag "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub pre-release
+        if: ${{ steps.version.outputs.tag == 'rc' }}
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "v${{ steps.version.outputs.version }}" \
+            --generate-notes \
+            --prerelease

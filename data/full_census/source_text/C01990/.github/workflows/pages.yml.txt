@@ -1,0 +1,59 @@
+name: Deploy website
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build website
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to check out the website source.
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # full history so page "Last updated" dates come from git
+          filter: blob:none # skip old file contents; git log only needs commits and trees
+
+      - name: Install pnpm
+        uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          runtime: node@24
+          cache: false
+
+      - name: Install cssnano dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install website dependencies
+        run: pnpm -C site install --frozen-lockfile
+
+      - name: Build website
+        run: pnpm -C site build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: site/dist
+
+  deploy:
+    name: Deploy website
+    needs: build
+    runs-on: ubuntu-slim
+    permissions:
+      pages: write # Required to publish the generated artifact to GitHub Pages.
+      id-token: write # Required to authenticate with GitHub Pages via OIDC.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

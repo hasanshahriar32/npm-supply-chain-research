@@ -1,0 +1,53 @@
+name: build
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [8, 10, 12, 14, 16, 18, 20, 22]
+    steps:
+      - uses: Brightspace/third-party-actions@actions/checkout
+
+      - uses: Brightspace/setup-node@main
+        with:
+          node-version: ${{ matrix.node }}
+          d2l-registry-token: ${{ secrets.D2L_PACKAGE_REGISTRY_AUTH_TOKEN }}
+
+      - run: npm install
+      - run: npm test
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: test
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: Brightspace/third-party-actions@actions/checkout
+
+      - uses: Brightspace/setup-node@main
+        with:
+          node-version: 22
+          d2l-registry-token: ${{ secrets.D2L_PACKAGE_REGISTRY_AUTH_TOKEN }}
+
+      - run: npm install
+      - run: |
+          npm config set '//registry.npmjs.org/:_authToken=${NPM_TOKEN}'
+          npm publish --provenance --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+

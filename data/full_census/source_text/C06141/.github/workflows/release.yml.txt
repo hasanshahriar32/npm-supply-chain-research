@@ -1,0 +1,101 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_and_release:
+    name: Build and release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # fetch full history, so changelog can be generated
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Types tests
+        run: pnpm test-types
+
+      - name: Configure Git user
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+      - name: Create release
+        id: create_release
+        run: |
+          pnpm release
+          echo ::set-output name=tag_name::$(git describe HEAD --abbrev=0)
+
+      - name: Generate docs website
+        run: pnpm generate-docs
+      - name: Commit docs website
+        run: |
+          git add docs
+          git diff-index --quiet HEAD || git commit -m 'docs: update docs website'
+
+      - name: Copy README and LICENSE to packages
+        run: |
+          cp README.md packages/aws-sdk-client-mock/README.md
+          cp LICENSE packages/aws-sdk-client-mock/
+          cp LICENSE packages/aws-sdk-client-mock-jest/
+
+      - name: E2E tests
+        run: |
+          pnpm verdaccio &
+          pnpm config set '//localhost:4873/:_authToken' "fake"
+          pnpm local-publish
+          pnpm test-e2e
+
+      - name: Set publishing config
+        run: pnpm config set '//registry.npmjs.org/:_authToken' "${NODE_AUTH_TOKEN}"
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+      - name: Publish to npm
+        run: pnpm do-publish --no-git-checks
+
+      - uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tags: true
+
+      - name: Generate Release body
+        run: pnpm extract-changelog-release > RELEASE_BODY.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.create_release.outputs.tag_name }}
+          body_path: RELEASE_BODY.md

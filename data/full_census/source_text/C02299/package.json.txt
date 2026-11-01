@@ -1,0 +1,49 @@
+{
+  "name": "module-definition",
+  "version": "7.0.0",
+  "description": "Determines if a file is using a CommonJS or AMD module definition",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "bin": {
+    "module-definition": "bin/cli.js"
+  },
+  "files": [
+    "bin/cli.js",
+    "index.js"
+  ],
+  "scripts": {
+    "lint": "xo",
+    "fix": "xo --fix",
+    "vitest": "vitest",
+    "test": "npm run lint && vitest run",
+    "test:ci": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dependents/module-definition.git"
+  },
+  "keywords": [],
+  "author": "Joel Kemp <joel@mrjoelkemp.com> (https://mrjoelkemp.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dependents/module-definition/issues"
+  },
+  "homepage": "https://github.com/dependents/module-definition",
+  "engines": {
+    "node": ">=20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "ast-module-types": "^7.0.0",
+    "commander": "^14.0.3",
+    "node-source-walk": "^8.0.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "memfs": "^4.66.1",
+    "unionfs": "^4.6.0",
+    "vitest": "^4.1.10",
+    "xo": "^2.0.2"
+  }
+}

@@ -1,0 +1,77 @@
+name: Refresh static assets
+
+on:
+  schedule:
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+env:
+  package_dir: "/"
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  refresh-static-assets:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install environment
+        run: npm ci
+
+      - name: Run refresh-static.ts
+        id: refresh-static-script
+        run: |
+          npm run refresh-static
+          git diff --compact-summary
+
+      - name: check for diff
+        if: steps.refresh-static-script.outcome == 'success'
+        id: check-for-diff
+        run: |
+          if [[ -n "$(git diff)" ]]; then
+            echo "changes-available=TRUE" >> $GITHUB_OUTPUT
+          else
+            echo "changes-available=FALSE" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push changes to main
+        if: steps.check-for-diff.outputs.changes-available == 'TRUE'
+        id: push-to-main
+        run: |
+          echo "changes have occurred, committing to main"
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m 'Updating static site'
+          git push origin main
+
+      - name: Setup Pages
+        id: setup-pages
+        if: steps.push-to-main.outcome == 'success'
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        if: steps.setup-pages.outcome == 'success'
+        id: upload
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload contents of static folder
+          path: "./static/"
+
+      - name: Deploy to GitHub Pages
+        if: steps.upload.outcome == 'success'
+        id: deploy
+        uses: actions/deploy-pages@v4

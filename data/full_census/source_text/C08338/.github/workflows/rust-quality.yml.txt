@@ -1,0 +1,250 @@
+name: rust-quality
+on:
+  pull_request:
+  push:
+    branches: [main, slate]
+  schedule:
+    - cron: "43 3 * * *"
+concurrency:
+  # A newer push to the same PR supersedes the run in progress; a push
+  # to a branch or a scheduled run is its own group and runs to
+  # completion (each commit on slate keeps its own verdict).
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  QUALITY_EVENT_NAME: ${{ github.event_name }}
+  QUALITY_HEAD_SHA: ${{ github.sha }}
+  QUALITY_BEFORE_SHA: ${{ github.event.before }}
+  QUALITY_BASE_REF: origin/${{ github.base_ref || github.ref_name }}
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pinned dependency tools
+        run: |
+          set -euo pipefail
+          for tool in cargo-machete cargo-deny; do
+            version=$(python3 -c 'import sys,tomllib; print(tomllib.load(open("quality-tools.toml","rb"))["tools"][sys.argv[1]])' "$tool")
+            cargo install "$tool" --locked --version "=$version"
+          done
+          python3 scripts/install-actionlint.py
+          echo "$PWD/target/quality-tools/bin" >> "$GITHUB_PATH"
+      - name: Common quality entry point
+        run: scripts/quality.sh
+      - name: Real compiler boundary fixtures
+        run: python3 scripts/quality/compiler_fixtures.py --out /tmp/quality-compiler
+      - name: Generated codec and actual handoff state tests
+        run: scripts/test-leg.sh target/legs/quality.log --min 15 -- --locked --release --lib quality_
+  invariant-tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install dated nightly and pinned verification tools
+        run: |
+          set -euo pipefail
+          nightly=$(python3 -c 'import tomllib; print(tomllib.load(open("quality-tools.toml","rb"))["nightly"])')
+          rustup toolchain install "$nightly" --profile minimal --component miri --component rust-src
+          for tool in cargo-fuzz; do
+            version=$(python3 -c 'import sys,tomllib; print(tomllib.load(open("quality-tools.toml","rb"))["tools"][sys.argv[1]])' "$tool")
+            cargo install "$tool" --locked --version "=$version"
+          done
+      - name: Select the UTC-day mutation rotation
+        if: github.event_name == 'schedule'
+        run: echo "QUALITY_SCHEDULE_SLOT=$(($(date -u +%s) / 86400))" >> "$GITHUB_ENV"
+      - name: Preserve actual PR diff and select checks
+        run: |
+          cargo build --locked -p streams-quality-syntax
+          python3 scripts/quality/verification_plan.py --out target/quality-plan
+          python3 - <<'PY'
+          import json, os
+          plan = json.load(open('target/quality-plan/plan.json'))
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for name in ['miri', 'properties_fuzz', 'mutants']:
+                  output.write(f'CHECK_{name.upper()}={str(plan[name]).lower()}\n')
+          PY
+      - name: Saved production-decoder corpus
+        if: env.CHECK_PROPERTIES_FUZZ == 'true' || github.event_name == 'schedule'
+        run: scripts/quality/nightly.sh corpus
+      - name: Bounded nightly fuzzing
+        if: github.event_name == 'schedule'
+        run: scripts/quality/nightly.sh fuzz
+      - name: Compatible retained-buffer tests under Miri
+        if: env.CHECK_MIRI == 'true'
+        run: scripts/quality/nightly.sh miri
+  mutants-plan:
+    runs-on: ubuntu-24.04
+    # The mutants job's width for this run (round 7 D2.1, decided by the
+    # lead under the owner's delegation): one job per 110 measured mutants
+    # of the selection, at least 8 and at most 48; the nightly rotation
+    # stays at 8 (scripts/quality/mutants_width.py, pinned by
+    # test_mutants_width.py).
+    timeout-minutes: 30
+    outputs:
+      width: ${{ steps.width.outputs.width }}
+      shards: ${{ steps.width.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Select the UTC-day mutation rotation
+        if: github.event_name == 'schedule'
+        run: echo "QUALITY_SCHEDULE_SLOT=$(($(date -u +%s) / 86400))" >> "$GITHUB_ENV"
+      - name: Plan the mutants job's width
+        id: width
+        run: |
+          cargo build --locked -p streams-quality-syntax
+          python3 scripts/quality/verification_plan.py --out target/quality-plan
+          python3 scripts/quality/mutants_width.py --plan target/quality-plan/plan.json
+  mutants:
+    runs-on: ubuntu-24.04
+    needs: mutants-plan
+    # The mutation leg, dealt over `mutants-plan`'s width of jobs: each
+    # lists and tests every width-th mutant of every selected owner
+    # (round-robin, cargo-mutants --shard), so together they test the same
+    # selection with the same tests and timeouts, each mutant once. As one
+    # job inside invariant-tools it exceeded that job's 240 min on a push
+    # across the fleet owners (f780ad64: about 120 mutants, cancelled at
+    # 4 h); four jobs of 240 min could not finish a push selecting 681-919
+    # mutants (owner decision of 2026-10-08: eight jobs of 360 min,
+    # GitHub's hosted maximum); a push selecting more takes more jobs
+    # (round 7 D2.1).
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.mutants-plan.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pinned cargo-mutants
+        run: |
+          set -euo pipefail
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open("quality-tools.toml","rb"))["tools"]["cargo-mutants"])')
+          cargo install cargo-mutants --locked --version "=$version"
+      - name: Select the UTC-day mutation rotation
+        if: github.event_name == 'schedule'
+        run: echo "QUALITY_SCHEDULE_SLOT=$(($(date -u +%s) / 86400))" >> "$GITHUB_ENV"
+      - name: Preserve actual PR diff and select checks
+        run: |
+          cargo build --locked -p streams-quality-syntax
+          python3 scripts/quality/verification_plan.py --out target/quality-plan
+          python3 - <<'PY'
+          import json, os
+          plan = json.load(open('target/quality-plan/plan.json'))
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              for name in ['miri', 'properties_fuzz', 'mutants']:
+                  output.write(f'CHECK_{name.upper()}={str(plan[name]).lower()}\n')
+          PY
+      - name: Diff-scoped read-owner mutants, this job's share
+        if: env.CHECK_MUTANTS == 'true'
+        # rust-cache exports CARGO_INCREMENTAL=0 to every later step, which
+        # overrides the incremental build [profile.quality] declares: each
+        # mutant was a full rebuild (127-222 s against 25-65 s locally).
+        # Same mutants, tests and timeouts; only the rebuild is incremental.
+        # The runner caps each test process at 10 GiB of writable data
+        # (RLIMIT_DATA): a mutant that allocates without end aborts in
+        # seconds ("memory allocation of N bytes failed", SIGABRT) instead
+        # of exhausting the 16 GiB runner, as five shards of the 2026-10-09
+        # rotation (run 37881618221) did in owner billing. Cargo's runner
+        # wraps only the test binaries: rustc, cargo and cargo-mutants are
+        # uncapped. The unmutated baseline runs under the same cap, so a cap
+        # too tight for an owner fails its baseline (exit 4), never a mutant
+        # silently; the driver lists a caught mutant whose test process died
+        # by a signal ("(signal: " in cargo's account, or "memory allocation
+        # of") as incomplete. cargo prints the runner in every mutant log's
+        # test phase (Running `prlimit --data=... -- <test binary>`), so any
+        # mutation run shows the cap is in effect. Local runs are uncapped.
+        env:
+          CARGO_INCREMENTAL: "1"
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUNNER: prlimit --data=10737418240:10737418240 --
+          QUALITY_MUTANT_SHARD: ${{ matrix.shard }}/${{ needs.mutants-plan.outputs.width }}
+        run: scripts/quality/mutations.sh
+  formal:
+    runs-on: ubuntu-24.04
+    # The receipts record 24 obligations at about 6.1 h of serial check time
+    # on a loaded laptop (Kani 1.3 h, TLC 4.8 h); on these runners TLC takes
+    # roughly 0.6x its local time and Kani about the same. The longest single
+    # check is TLA-019/fork-baseline-legacy (about 1530 s locally); the longest
+    # obligation, TLA-002 (39 checks, about 66 min locally and 39 min here),
+    # bounds the slowest shard. Every obligation has one fixed shard:
+    # scripts/quality/formal_shards.py deals the whole manifest out longest
+    # first by each receipt's recorded seconds (an hour for an obligation
+    # without one) and fails unless each lands in exactly one shard, so no
+    # job's selection can drop one. Each shard then runs the part of its share
+    # the diff affects (all of it on a schedule). A full run takes about
+    # 40-50 min on its slowest shard, where splitting by position in the
+    # sorted IDs took 72-90 min.
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pinned TLC and Kani
+        run: python3 scripts/install-formal-tools.py
+      - name: The driver rejects incomplete, misconfigured and empty runs
+        run: python3 scripts/quality/formal.py self-test
+      - name: This shard's obligations the change can affect (all of them on a schedule)
+        env:
+          FORMAL_SHARD: ${{ matrix.shard }}
+          FORMAL_SHARDS: 6
+        run: |
+          set -euo pipefail
+          # The shard's fixed share of the whole manifest, longest first. The
+          # selector's output is assigned, not read through a process
+          # substitution, so a failing selector fails the step instead of
+          # emptying the shard.
+          shard=$(python3 scripts/quality/formal_shards.py --shards "$FORMAL_SHARDS" --shard "$FORMAL_SHARD" --all)
+          if [[ -z "$shard" ]]; then
+            echo "FORMAL_OK: shard $FORMAL_SHARD holds no obligation"
+            exit 0
+          fi
+          args=()
+          while IFS= read -r id; do args+=(--id "$id"); done <<< "$shard"
+          echo "shard $FORMAL_SHARD of $FORMAL_SHARDS runs: $(tr '\n' ' ' <<< "$shard")"
+          if [[ "$QUALITY_EVENT_NAME" == schedule ]]; then
+            python3 scripts/quality/formal.py run "${args[@]}"
+          else
+            # The driver selects what the diff affects and intersects it with
+            # this shard's --id list (FORMAL_OK when nothing is left).
+            base=$(python3 -c 'import sys; sys.path.insert(0, "scripts/quality"); import common; print(common.verification_comparison().comparison_revision)')
+            python3 scripts/quality/formal.py run --changed-from "$base" "${args[@]}"
+          fi

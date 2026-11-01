@@ -1,0 +1,74 @@
+# Actions are pinned to full commit SHAs; see .github/dependabot.yml for why and how they are updated.
+on:
+  push:
+    branches: [master]
+    tags-ignore: ['**']
+    paths:
+      - 'packages/dashboard/**'
+      - 'src/**'
+      - '.github/workflows/dashboard.yml'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'packages/dashboard/**'
+      - 'src/**'
+      - '.github/workflows/dashboard.yml'
+
+name: Dashboard CI
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: node:24
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24
+        cache: npm
+        cache-dependency-path: |
+          package-lock.json
+          packages/dashboard/package-lock.json
+
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Install dashboard dependencies
+      run: npm ci
+      working-directory: packages/dashboard
+
+    - name: Typecheck
+      run: npm run typecheck
+      working-directory: packages/dashboard
+
+    - name: Frontend tests with coverage
+      run: npm run cover:frontend
+      working-directory: packages/dashboard
+
+    - name: Server tests with coverage
+      run: npm run cover:server
+      working-directory: packages/dashboard
+      env:
+        DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
+
+    # The build is the only thing that runs `scripts/build-server.ts`, which
+    # resolves the `~pro-server` alias and so has real logic in it. Nothing above
+    # touches it: a break there would otherwise surface in `prepublishOnly`,
+    # mid-release, rather than on the pull request that caused it.
+    - name: Build
+      run: npm run build
+      working-directory: packages/dashboard

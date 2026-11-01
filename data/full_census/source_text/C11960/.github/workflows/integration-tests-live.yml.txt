@@ -1,0 +1,71 @@
+name: Playwright Live Tests
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+  POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+  EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ".node-version"
+          cache: "pnpm"
+
+      - uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # This will use the cache for browsers. But it will reinstall system deps, which can't be cached
+      # https://github.com/microsoft/playwright/issues/20603#issuecomment-1416243810
+      # Using ./test/next... is mandatory so we are not subject to playwright surprise updates
+      - run: ./test/next/node_modules/.bin/playwright install --with-deps
+
+      # https://github.com/patrickedqvist/wait-for-vercel-preview
+      # this allows to use action cache, which is not possible when using deployment_status otherwise
+      # see https://github.com/actions/cache/issues/319
+      - name: Wait for Vercel Preview
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.3
+        id: waitForVercelPreview
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          vercel_protection_bypass_header: ${{ secrets.VERCEL_PROTECTION_BYPASS_HEADER }}
+          max_timeout: 600
+
+      - name: Run Playwright tests on ${{ steps.waitForVercelPreview.outputs.url }}
+        working-directory: test/next
+        run: pnpm exec playwright test
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: ${{ steps.waitForVercelPreview.outputs.url }}
+          BLOB_UPLOAD_SECRET: ${{ secrets.BLOB_UPLOAD_SECRET }}
+          VERCEL_PROTECTION_BYPASS_HEADER: ${{ secrets.VERCEL_PROTECTION_BYPASS_HEADER }}
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: test/next/test-results
+          retention-days: 30

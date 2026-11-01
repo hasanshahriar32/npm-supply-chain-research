@@ -1,0 +1,61 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Check generated docs
+        run: pnpm run docs && git diff --exit-code -- README.md README.zh-Hans.md
+
+      - name: Typecheck
+        run: pnpm run typecheck && pnpm run dev:typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Publint
+        run: pnpm run publint
+
+      - name: Install Playwright
+        run: pnpm run test:setup
+
+      - name: Test
+        run: pnpm run test:coverage
+
+      - name: Upload coverage to Codecov
+        if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          disable_search: true
+
+      - name: Publish the commit
+        run: pnpm dlx pkg-pr-new publish --compact

@@ -1,0 +1,70 @@
+{
+  "name": "json-schema-faker",
+  "version": "0.6.3",
+  "description": "Generate valid JSON data from JSON Schema definitions",
+  "keywords": [
+    "json",
+    "json-schema",
+    "faker",
+    "mock",
+    "generator",
+    "fake-data",
+    "test-data",
+    "json-schema-faker"
+  ],
+  "author": "Alvaro Cabrera <pateketrueke@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/json-schema-faker/json-schema-faker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/json-schema-faker/json-schema-faker/issues"
+  },
+  "homepage": "https://json-schema-faker.js.org/",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "jsf": "./dist/bin/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir=./dist --target=node --minify --sourcemap --external:@faker-js/faker --external:chance && tsc -p tsconfig.build.json",
+    "build:playground": "bun build ./src/browser.ts --outfile=./public/jsf.bundle.js --target=browser --minify --format=iife --external:@faker-js/faker --external:chance",
+    "build:clean": "rm -rf dist && bun run build",
+    "build:cli": "bun build ./bin/cli.ts --outdir=./dist/bin --target=node --external:@faker-js/faker --external:chance",
+    "build:bin": "bun run build:bin:linux && bun run build:bin:darwin && bun run build:bin:windows",
+    "build:bin:linux": "bun build --compile --target=bun-linux-x64 --outfile=dist/bin/jsf-linux-x64 bin/cli.ts && bun build --compile --target=bun-linux-arm64 --outfile=dist/bin/jsf-linux-arm64 bin/cli.ts",
+    "build:bin:darwin": "bun build --compile --target=bun-darwin-x64 --outfile=dist/bin/jsf-darwin-x64 bin/cli.ts && bun build --compile --target=bun-darwin-arm64 --outfile=dist/bin/jsf-darwin-arm64 bin/cli.ts",
+    "build:bin:windows": "bun build --compile --target=bun-windows-x64 --outfile=dist/bin/jsf-windows-x64.exe bin/cli.ts",
+    "prepublishOnly": "bun run build:clean && bun run build:cli && bun test",
+    "test": "bun test",
+    "test:all": "NO_SKIP=1 bun test",
+    "test:coverage": "mkdir -p coverage && bun test --coverage --coverage-reporter=text --coverage-reporter=lcov",
+    "test:coverage:all": "mkdir -p coverage && NO_SKIP=1 bun test --coverage --coverage-reporter=text --coverage-reporter=lcov",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.3.0",
+    "@types/bun": "^1.2.0",
+    "ajv": "^8.17.0",
+    "ajv-formats": "^3.0.0",
+    "chance": "^1.1.13",
+    "mockjs": "^1.1.0",
+    "typescript": "^5.7.0",
+    "yaml": "^2.8.2"
+  }
+}

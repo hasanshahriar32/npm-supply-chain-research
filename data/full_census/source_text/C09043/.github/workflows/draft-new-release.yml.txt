@@ -1,0 +1,437 @@
+name: Draft a new release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ticket_id:
+        description: Release ticket ID (Ex:- SDK-1234)
+        required: true
+      slack_message_link:
+        description: Slack message URL of the release
+        required: true
+        
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_OPTIONS: '--no-warnings'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-actor:
+    permissions:
+      contents: read
+    # Only allow to draft a new release from develop and hotfix branches
+    if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/hotfix/')
+    uses: ./.github/workflows/validate-actor.yml
+    with:
+      team_names: 'sdk_team,integrations'
+    secrets:
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  draft-new-release:
+    needs: validate-actor
+    name: Draft a new release
+    runs-on: arc-amd64
+    permissions:
+      contents: read # to checkout repository code
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          permission-contents: write # to create commits, tags, and push branches
+          permission-pull-requests: write # to create and update PRs
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Validate re-run actor
+        uses: ./.github/actions/assert-rerun-actor
+        with:
+          app_id: ${{ vars.RELEASE_APP_ID }}
+          private_key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          team_names: 'sdk_team,integrations'
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Setup workspace
+        env:
+          HUSKY: 0
+        run: |
+          npm run setup:deps
+
+      # In order to make a commit, we need to initialize a user.
+      # You may choose to write something less generic here if you want, it doesn't matter functionality wise.
+      - name: Initialize mandatory git config
+        run: |
+          git config user.name "GitHub actions"
+          git config user.email noreply@github.com
+
+      # Calculate the next release version based on conventional semantic release
+      - name: Create release branch
+        id: create-release
+        env:
+          HUSKY: 0
+          RELEASE_TICKET_ID: ${{ github.event.inputs.release_ticket_id }}
+        run: |
+          source_branch_name=${GITHUB_REF#refs/heads/}
+          release_type=release
+          grep -q "hotfix/" <<< "${GITHUB_REF}" && release_type=hotfix-release
+          git fetch origin main
+          git fetch --tags origin
+          git merge origin/main
+          current_version=$(jq -r .version package.json)
+
+          npm run bump-version:monorepo
+          new_version=$(jq -r .version package.json)
+          git reset --hard
+
+          branch_name="${release_type}/${new_version}-${RELEASE_TICKET_ID}"
+
+          echo "Source branch for new release is $source_branch_name"
+          echo "Current version is $current_version"
+          echo "Release type is $release_type"
+          echo "New version is $new_version"
+          echo "New release branch name is $branch_name"
+          git checkout -b "$branch_name"
+
+          echo "source_branch_name=$source_branch_name" >> $GITHUB_OUTPUT
+          echo "branch_name=$branch_name" >> $GITHUB_OUTPUT
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+          echo "CURRENT_VERSION_VALUE=$current_version" >> $GITHUB_ENV
+          echo "NEW_VERSION_VALUE=$new_version" >> $GITHUB_ENV
+
+      - name: Create release branch on remote
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          BRANCH_NAME: ${{ steps.create-release.outputs.branch_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # The signed-commit action requires the branch to exist on the remote.
+          # Idempotent: update ref if it exists, create if it doesn't.
+          sha=$(git rev-parse HEAD)
+          if gh api "repos/${REPO}/git/ref/heads/${BRANCH_NAME}" >/dev/null 2>&1; then
+            gh api "repos/${REPO}/git/refs/heads/${BRANCH_NAME}" \
+              --method PATCH \
+              -f "sha=${sha}" \
+              -F "force=true"
+          else
+            gh api "repos/${REPO}/git/refs" \
+              --method POST \
+              -f "ref=refs/heads/${BRANCH_NAME}" \
+              -f "sha=${sha}"
+          fi
+
+      - name: Update changelog & bump version
+        id: finish-release
+        env:
+          HUSKY: 0
+          BASE_BRANCH: ${{ steps.create-release.outputs.branch_name }}
+        run: |
+          echo "Current version: $CURRENT_VERSION_VALUE"
+          echo "New version: $NEW_VERSION_VALUE"
+          git fetch --no-tags --prune --depth=100 origin main
+          npm run release -- --skipCommit=true
+          ./scripts/sync-tags-in-nx-projects.sh
+          ./scripts/generate-last-release-changelog.sh
+          npm run bump-version:monorepo
+          npx replace $CURRENT_VERSION_VALUE $NEW_VERSION_VALUE sonar-project.properties
+          npm install
+
+      - name: Create verified commit and push changes to release branch
+        uses: ryancyq/github-signed-commit@cb9b21ee83578fe8e26a9eda530015aedf0c7c5b # v1.4.1
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        with:
+          branch-name: ${{ steps.create-release.outputs.branch_name }}
+          commit-message: 'chore: update versions and generate release changelog'
+          files: |
+            .
+
+      # jscutlery runs with --skipCommit=true, so it writes version/changelog files
+      # without creating release commits, but it still creates local tags at the
+      # current HEAD. Those local tags are not pushed. The signed-commit action above
+      # packages all file changes into one verified commit on the release branch. This
+      # step then creates annotated tag objects (via the Git Data API) for each bumped
+      # package at that commit, and points tag refs at them.
+      #
+      # Tag objects are unsigned. GitHub's Git Data API for `POST /git/tags` does not
+      # accept a signature in its payload; producing a signed tag would require running
+      # `git tag -s` locally with a signing key provisioned as a workflow secret, which
+      # is out of scope. Accepted tradeoff: tag objects show "Unverified" while the
+      # target commit remains verified. Same behavior as the monorepo v<version> tag
+      # in publish-new-release.yml.
+      #
+      # Affected-package filter: a package gets a new tag only if its package.json
+      # `version` differs between the release branch HEAD and origin/main. Unchanged
+      # packages are skipped.
+      #
+      # Idempotence: if the tag already exists on origin, dereference it and only skip
+      # when it already points at the current release_sha. If it points elsewhere, fail
+      # loudly so we don't quietly leave a mispointed tag in place (that class of bug is
+      # exactly what caused the cc04066f-vs-bc75c04 mismatch in the previous release).
+      - name: Push release tags to release branch HEAD
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          BRANCH_NAME: ${{ steps.create-release.outputs.branch_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          git fetch origin "$BRANCH_NAME"
+          git fetch --no-tags origin main
+          release_sha=$(git rev-parse "origin/$BRANCH_NAME")
+          echo "Release branch HEAD: $release_sha"
+
+          for pj in packages/*/project.json; do
+            pkg_dir=$(dirname "$pj")
+            current_package=$(git show "origin/${BRANCH_NAME}:${pkg_dir}/package.json" 2>/dev/null || echo "")
+            current_version=$(printf '%s' "$current_package" | jq -r '.version // empty' 2>/dev/null || echo "")
+            prev_version=$(git show "origin/main:${pkg_dir}/package.json" 2>/dev/null | jq -r '.version // empty' 2>/dev/null || echo "")
+
+            if [ -z "$current_package" ] || [ -z "$current_version" ]; then
+              echo "::error::Unable to read package metadata for ${pkg_dir}; refusing to create a release tag"
+              exit 1
+            fi
+
+            tag=$(printf '%s' "$current_package" | node ./scripts/get-release-version-tag.js "$pj")
+            [ -z "$tag" ] && continue
+
+            if [ -n "$prev_version" ] && [ "$current_version" = "$prev_version" ]; then
+              echo "Skipping ${tag} — version unchanged vs origin/main"
+              continue
+            fi
+
+            encoded=$(printf '%s' "$tag" | jq -sRr @uri)
+            if existing_ref=$(gh api "repos/${REPO}/git/ref/tags/${encoded}" 2>/dev/null); then
+              existing_type=$(printf '%s' "$existing_ref" | jq -r '.object.type')
+              existing_obj=$(printf '%s' "$existing_ref" | jq -r '.object.sha')
+              if [ "$existing_type" = "tag" ]; then
+                existing_commit=$(gh api "repos/${REPO}/git/tags/${existing_obj}" --jq '.object.sha')
+              else
+                existing_commit="$existing_obj"
+              fi
+              if [ "$existing_commit" = "$release_sha" ]; then
+                echo "Tag ${tag} already points at ${release_sha}, skipping"
+                continue
+              fi
+              echo "::error::Tag ${tag} exists on origin but points at ${existing_commit} (expected ${release_sha})"
+              exit 1
+            fi
+
+            echo "Creating annotated tag ${tag} -> ${release_sha}"
+
+            pkg_scope="${tag%@*}"
+            pkg_version="${tag##*@}"
+
+            tag_obj_sha=$(gh api --method POST "repos/${REPO}/git/tags" \
+              -f "tag=${tag}" \
+              -f "message=chore(${pkg_scope}): release version ${pkg_version}" \
+              -f "object=${release_sha}" \
+              -f "type=commit" \
+              --jq '.sha')
+
+            gh api --method POST "repos/${REPO}/git/refs" \
+              -f "ref=refs/tags/${tag}" \
+              -f "sha=${tag_obj_sha}"
+          done
+
+      # Re-derives the bumped set independently and checks the remote, so a skipped or
+      # failed tag never reaches the release PR unnoticed. The monorepo v<version> tag
+      # is created at publish time, so it is not expected here.
+      - name: Verify release tags on remote
+        env:
+          BRANCH_NAME: ${{ steps.create-release.outputs.branch_name }}
+        run: |
+          ./scripts/verify-release-tags.sh "origin/${BRANCH_NAME}" origin/main
+
+      - name: Generate packages versions table
+        id: packages-versions
+        run: |
+          chmod +x ./scripts/collect-packages-versions.sh
+          ./scripts/collect-packages-versions.sh > packages_versions.md
+
+      - name: Create pull request into main
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          BRANCH_NAME: ${{ steps.create-release.outputs.branch_name }}
+          RELEASE_TICKET_ID: ${{ github.event.inputs.release_ticket_id }}
+        run: |
+          pr_title="chore(release): merge ${BRANCH_NAME} into main [${RELEASE_TICKET_ID}]"
+
+          # Create PR body with proper formatting
+          cat > pr_body.md << EOF
+          :crown: **Automated Release PR**
+
+          This pull request was created automatically by the GitHub Actions workflow. It merges the release branch (\`${BRANCH_NAME}\`) into the \`main\` branch.
+
+          This ensures that the latest release branch changes are incorporated into the \`main\` branch for production.
+
+          ### Details
+          - **Monorepo Release Version**: v${{ env.NEW_VERSION_VALUE }}
+          - **Release Branch**: \`${BRANCH_NAME}\`
+          - **Related Ticket**: [${RELEASE_TICKET_ID}](https://linear.app/rudderstack/issue/${RELEASE_TICKET_ID})
+
+          ### Version updates
+
+          $(cat packages_versions.md)
+
+          ---
+          Please review and merge when ready. :rocket:
+          EOF
+
+          # Create the PR using GitHub CLI and capture the URL
+          pr_url=$(gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "$pr_title" \
+            --body-file pr_body.md)
+
+          echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
+
+      - name: Extract Slack channel and thread info
+        id: slack-info
+        continue-on-error: true
+        env:
+          SLACK_MESSAGE_LINK: ${{ github.event.inputs.slack_message_link }}
+        run: |
+          link="${SLACK_MESSAGE_LINK}"
+          
+          # Extract channel ID from the link (after /archives/ and before the next /)
+          channel_id=$(echo "$link" | sed -n 's|.*\/archives\/\([^\/]*\)\/.*|\1|p')
+          
+          # Check if thread_ts parameter exists in URL (for messages within a thread)
+          if echo "$link" | grep -q "thread_ts="; then
+            # Extract thread_ts parameter value
+            thread_ts=$(echo "$link" | sed -n 's|.*thread_ts=\([0-9]*\.[0-9]*\).*|\1|p')
+            echo "Using thread_ts from URL parameter: $thread_ts"
+          else
+            # Extract timestamp from /p part and convert to timestamp format (for parent messages)
+            thread_ts=$(echo "$link" | sed -n 's|.*\/p\([0-9]*\).*|\1|p')
+            
+            # Convert from Slack link format (p1640995200123456) to timestamp format (1640995200.123456)
+            if [ ${#thread_ts} -eq 16 ]; then
+              # Split into seconds and microseconds parts
+              seconds=${thread_ts:0:10}
+              microseconds=${thread_ts:10:6}
+              thread_ts="${seconds}.${microseconds}"
+            fi
+            echo "Using timestamp from /p part: $thread_ts"
+          fi
+          
+          echo "Extracted channel ID: $channel_id"
+          echo "Final thread timestamp: $thread_ts"
+          
+          echo "channel_id=$channel_id" >> $GITHUB_OUTPUT
+          echo "thread_ts=$thread_ts" >> $GITHUB_OUTPUT
+
+      - name: Create release info artifact
+        if: ${{ steps.slack-info.outputs.thread_ts != '' && steps.slack-info.outputs.channel_id != '' }}
+        env:
+          CHANNEL_ID: ${{ steps.slack-info.outputs.channel_id }}
+          THREAD_TS: ${{ steps.slack-info.outputs.thread_ts }}
+          PR_URL: ${{ steps.create-pr.outputs.pr_url }}
+          NEW_VERSION_VALUE: ${{ env.NEW_VERSION_VALUE }}
+          RELEASE_BRANCH: ${{ steps.create-release.outputs.branch_name }}
+          RELEASE_TICKET_ID: ${{ github.event.inputs.release_ticket_id }}
+        run: |
+          # Create directory for artifact
+          mkdir -p release-info
+
+          # Create JSON file with release information using jq for safe construction
+          jq -n \
+            --arg channel_id "$CHANNEL_ID" \
+            --arg thread_ts "$THREAD_TS" \
+            --arg pr_url "$PR_URL" \
+            --arg release_version "$NEW_VERSION_VALUE" \
+            --arg release_branch "$RELEASE_BRANCH" \
+            --arg release_ticket_id "$RELEASE_TICKET_ID" \
+            --arg created_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{
+              channel_id: $channel_id,
+              thread_ts: $thread_ts,
+              pr_url: $pr_url,
+              release_version: $release_version,
+              release_branch: $release_branch,
+              release_ticket_id: $release_ticket_id,
+              created_at: $created_at
+            }' > release-info/release-info.json
+
+          echo "Created release info artifact:"
+          cat release-info/release-info.json
+
+      - name: Upload release info artifact
+        if: ${{ steps.slack-info.outputs.thread_ts != '' && steps.slack-info.outputs.channel_id != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-info-v${{ env.NEW_VERSION_VALUE }}-${{ github.event.inputs.release_ticket_id }}
+          path: release-info/
+          retention-days: 30
+
+      - name: Reply in Slack thread
+        if: ${{ steps.slack-info.outputs.thread_ts != '' && steps.slack-info.outputs.channel_id != '' }}
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
+        continue-on-error: true
+        with:
+          method: chat.postMessage
+          payload-templated: true
+          retries: rapid
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            {
+              "channel": "${{ steps.slack-info.outputs.channel_id }}",
+              "thread_ts": "${{ steps.slack-info.outputs.thread_ts }}",
+              "text": ":rocket: Release PR created: <${{ steps.create-pr.outputs.pr_url }}|${{ steps.create-pr.outputs.pr_url }}>\nCC: <!subteam^S0555JBV36D> <!subteam^S03SW7DM8P3> <!subteam^S03SHJ20350>",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":rocket: *Release PR Created*: \n<${{ steps.create-pr.outputs.pr_url }}|${{ steps.create-pr.outputs.pr_url }}>\n\n*Monorepo Version:* v${{ env.NEW_VERSION_VALUE }}\n*Release Branch:* `${{ steps.create-release.outputs.branch_name }}`\n\n:point_right: Review and merge when ready!\nCC: <!subteam^S0555JBV36D> <!subteam^S03SW7DM8P3> <!subteam^S03SHJ20350>"
+                  }
+                }
+              ]
+            }
+
+      - name: Delete hotfix release base branch
+        continue-on-error: true
+        if: startsWith(github.ref_name, 'hotfix/')
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          BRANCH_TO_DELETE: ${{ github.ref_name }}
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          script: |
+            const branchToDelete = process.env.BRANCH_TO_DELETE;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const ref = `heads/${branchToDelete}`;
+
+            try {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref
+              });
+              console.log(`Branch ${branchToDelete} deleted successfully.`);
+            } catch (error) {
+              console.error(`Error deleting branch ${branchToDelete}:`, error);
+              process.exit(1); // Fail the workflow if branch deletion fails
+            }

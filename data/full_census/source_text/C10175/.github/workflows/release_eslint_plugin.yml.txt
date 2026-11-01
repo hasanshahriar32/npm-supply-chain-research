@@ -1,0 +1,81 @@
+name: Release eslint-plugin-sonarjs
+
+# Workflow runs when manually triggered using the UI or API.
+on:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      release_version:
+        description: 'Version (semver)'
+        required: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  publish:
+    permissions:
+      id-token: write # required for GitHub OIDC and SonarSource/vault-action-wrapper
+      contents: write # required by config-maven
+    runs-on: github-ubuntu-latest-s # npm Trusted Publishers require a GitHub-hosted runner
+    environment: release
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.release_version }}
+      NPM_REPOSITORY: "sonarsource-npm-public"
+      SCOPE: ""
+      PACKAGE: "eslint-plugin-sonarjs"
+    steps:
+      - name: Vault
+        id: secrets
+        uses: SonarSource/vault-action-wrapper@v3
+        with:
+          secrets:
+            development/kv/data/repox url | repox_url;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-qa-deployer access_token  | qa_deployer_access_token;
+            development/artifactory/token/{REPO_OWNER_NAME_DASH}-promoter access_token  | promoter_access_token;
+            development/github/token/{REPO_OWNER_NAME_DASH}-rspec token | RSPEC_GITHUB_TOKEN;
+      - name: Setup JFrog for deploy
+        uses: SonarSource/jfrog-setup-wrapper@v3
+        with:
+          jfrogAccessToken: ${{ fromJSON(steps.secrets.outputs.vault).qa_deployer_access_token }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
+        with:
+          version: 2026.9.18
+      - name: Configure Maven
+        uses: SonarSource/ci-github-actions/config-maven@v2
+        with:
+          repox-url: https://repox.jfrog.io
+          artifactory-reader-role: private-reader
+          disable-caching: 'true'
+      - name: Publish npm package
+        env:
+          GITHUB_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).RSPEC_GITHUB_TOKEN }}
+        run: |
+          jfrog rt npm-config --repo-resolve npm --repo-deploy sonarsource-npm-public-qa
+          jfrog rt npm-ci
+          npm run eslint-plugin:compile
+          cd lib
+          npm version $RELEASE_TAG --no-git-tag-version
+          npm publish --provenance
+          jfrog rt npm-publish --build-name=eslint-plugin-sonarjs --build-number=${{ github.event.inputs.release_version }}
+          jfrog rt build-publish eslint-plugin-sonarjs ${{ github.event.inputs.release_version }}
+      - name: Promote npm package
+        env:
+          REPOX_URL: ${{ fromJSON(steps.secrets.outputs.vault).repox_url }}
+          PROMOTE_ACCESS_TOKEN: ${{ fromJSON(steps.secrets.outputs.vault).promoter_access_token }}
+        run: |
+          jfrog config add repox --artifactory-url $REPOX_URL --access-token $PROMOTE_ACCESS_TOKEN
+          jfrog config use repox
+          jfrog rt bpr --status it-passed $PACKAGE $RELEASE_TAG sonarsource-npm-public-builds
+          jfrog rt bpr --status released $PACKAGE $RELEASE_TAG sonarsource-npm-public-releases
+
+  update_changelog:
+    name: Update Changelog
+    needs: publish
+    uses: ./.github/workflows/update-eslint-plugin-changelog.yml
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      version: ${{ github.event.inputs.release_version }}

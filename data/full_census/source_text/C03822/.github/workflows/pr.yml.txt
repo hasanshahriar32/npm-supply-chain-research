@@ -1,0 +1,123 @@
+name: pr
+on:
+  pull_request: {}
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm check:format
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm check:lint
+  publint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm check:publint
+  types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm check:types
+  check-generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - run: pnpm gen:graffle
+      - name: Check generated files are up-to-date
+        run: git diff --exit-code src/extensions/SchemaErrors/__tests__/fixture/graffle/
+      - run: pnpm examples:gen:graffle
+      - name: Check examples generated files are up-to-date
+        run: git diff --exit-code examples/
+  types-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: Generate test types
+        working-directory: examples
+        run: pnpm gen:types
+      - run: pnpm check:types
+        working-directory: examples
+  # While we do not deploy website for PRs we still want to know that it can be built.
+  # This catches issues before merging such as broken twoslash examples.
+  website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: Load Types Cache
+        id: load-types-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: website/.vitepress/cache/types
+          key: v1-vitepress-types-cache-${{ github.run_id }}
+          restore-keys: |
+            v1-vitepress-types-cache-
+      - name: Build Website
+        working-directory: website
+        run:  pnpm build
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+      - name: Save Types Cache
+        uses: actions/cache/save@v4
+        with:
+          path: website/.vitepress/cache/types
+          key: ${{ steps.load-types-cache.outputs.cache-primary-key }}
+  test-unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24]
+        environment: [jsdom, node]
+    name: test unit Node ${{ matrix.node }} @env ${{matrix.environment}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - run: pnpm build
+      - run: pnpm test:unit -- --environment ${{ matrix.environment }}
+  test-examples:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24]
+        environment: [jsdom, node]
+    name: test examples Node ${{ matrix.node }} @env ${{matrix.environment}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - run: pnpm build
+      - run: pnpm test -- --environment ${{ matrix.environment }}
+        working-directory: examples
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24]
+        environment: [node]
+    name: test e2e usingNode ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - run: pnpm build
+      - run: pnpm test:e2e

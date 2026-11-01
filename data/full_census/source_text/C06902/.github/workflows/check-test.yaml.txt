@@ -1,0 +1,200 @@
+# This action runs lint checks and tests against the code.
+name: Check and Test
+
+on:
+  pull_request:
+
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read # we just need to checkout the repo
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check-and-test:
+    name: Check and Test
+
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Tests are split across hosts into groups by package (see
+        # compute-test-group.mjs). When changing the group count, keep
+        # TOTAL_GROUPS below in sync with the number of list entries here.
+        group: [1, 2, 3, 4]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      TOTAL_GROUPS: 4
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Sets env vars
+        if: github.event_name == 'pull_request'
+        run: echo "SINCE_REF=remotes/origin/main" >> $GITHUB_ENV
+        shell: bash
+
+      # On main we run all the checks with changes since the last commit
+      - name: Sets env vars (main)
+        if: github.event_name != 'pull_request'
+        run: echo "SINCE_REF=HEAD~1" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Install Deps Ubuntu
+        if: ${{ runner.os == 'Linux' }}
+        run: sudo apt-get -y update && sudo apt-get -y install libkrb5-dev libsecret-1-dev net-tools libstdc++6 gnome-keyring
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.21.1
+          cache: "npm"
+
+      - name: Install npm
+        run: npm install -g npm@11.16.0
+
+      - name: Use python@3.11
+        # Default Python (3.12) doesn't have support for distutils
+        # https://github.com/nodejs/node-gyp/issues/2869
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          # Dependencies are included when installing as npm workspaces will
+          # hoist every package in the repo and it's important that the
+          # dependencies of packages we are planning to test are also prepared
+          npm run bootstrap-ci -- --scope @mongodb-js/monorepo-tools --stream --include-dependencies
+          npm run bootstrap-ci -- --stream --include-dependencies
+
+          # saslprep source code may have been modified by bootstrapping,
+          # depending on the OS, so undo that change if it has happened
+          # (since it can influence subsequent lerna invocations)
+          git checkout -- packages/saslprep/src/code-points-data.ts
+        shell: bash
+
+      # Electron >= 42 no longer downloads its binary on postinstall
+      - name: Download Electron binary
+        run: npx install-electron --no
+        shell: bash
+
+      - name: Configure Electron sandbox
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
+      - name: Info
+        run: |
+          LERNA_VERSION=$(npm ls lerna --json | jq -r .dependencies.lerna.version)
+          echo "Packages changed since: ${SINCE_REF}"
+          npx lerna@${LERNA_VERSION} ls --all --since ${SINCE_REF}
+        shell: bash
+
+      # Checks are not split into groups; run them once per OS on the first group.
+      - name: Run Checks
+        if: ${{ matrix.group == 1 }}
+        run: npm run check-ci -- --stream
+        shell: bash
+
+      # Downloading and extracting MongoDB server binaries is slow on Windows,
+      # so we cache them between runs.
+      #
+      # Cache directories are named after the requested version range ('8.x',
+      # '*'), not the version it resolved to, so a cache entry pins tests to
+      # whichever release was current when it was written. Including the ISO
+      # week in the key rotates that weekly, keeping us at most a week behind.
+      # Bump `v1` to force a refresh.
+      - name: Compute cache week
+        if: ${{ runner.os == 'Windows' }}
+        id: cache-week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Cache MongoDB binaries
+        if: ${{ runner.os == 'Windows' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/mongodb-binaries
+          key: v1-mongodb-binaries-${{ runner.os }}-${{ steps.cache-week.outputs.week }}
+
+      - name: Set MongoDB binaries download dir
+        if: ${{ runner.os == 'Windows' }}
+        run: echo "MONGODB_RUNNER_DOWNLOAD_DIR=${RUNNER_TEMP}/mongodb-binaries" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Run Tests
+        run: |
+          scopes=$(node .github/scripts/compute-test-group.mjs "${{ matrix.group }}" "${TOTAL_GROUPS}")
+          echo "Testing group ${{ matrix.group }}/${TOTAL_GROUPS} with: ${scopes}"
+          npm run test-ci -- --stream ${scopes}
+        shell: bash
+
+      # Each group uploads coverage for the packages it tested; the parallel
+      # build is finalized once by the separate coverage-finalize job below.
+      - name: Report Coverage
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          curl -L https://coveralls.io/coveralls-linux.tar.gz | tar -xz -C /usr/local/bin
+          coverage_reports=(packages/*/coverage/lcov.info)
+          for report in "${coverage_reports[@]}"; do
+            echo "Processing report: $report"
+            flag_name=$(sed -E 's/packages\/([^\/]*)\/coverage\/lcov.info/\1/g' <<<$report)
+            coveralls report --base-path . --job-flag=$flag_name $report --parallel --no-logo
+          done
+        env:
+          COVERALLS_GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          COVERALLS_REPO_TOKEN: ${{ github.token }}
+          COVERALLS_GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  # Signals to Coveralls that all parallel coverage uploads from the grouped
+  # check-and-test jobs are complete.
+  coverage-finalize:
+    name: Finalize Coverage
+    needs: check-and-test
+    if: ${{ always() && needs.check-and-test.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize Coveralls parallel build
+        run: |
+          curl -L https://coveralls.io/coveralls-linux.tar.gz | tar -xz -C /usr/local/bin
+          coveralls done
+        env:
+          COVERALLS_GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+          COVERALLS_REPO_TOKEN: ${{ github.token }}
+          COVERALLS_GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.21.1
+
+      - name: Run Lint
+        run: node .github/scripts/lint-pkg.mjs

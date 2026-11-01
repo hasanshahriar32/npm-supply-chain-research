@@ -1,0 +1,324 @@
+name: Check XZ Updates
+on:
+  schedule:
+    # Daily at 3 AM UTC (checks for new XZ releases)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Create PR if new version found'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: check-xz-updates
+  cancel-in-progress: false
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      has_update: ${{ steps.check.outputs.new_version }}
+      latest_version: ${{ steps.check.outputs.latest }}
+      check_status: ${{ steps.check.outputs.status }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for new XZ version
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get and validate the current version before publishing it as an output.
+          if ! CURRENT=$(jq -ser '
+            if length == 1 then
+              .[0].version
+              | select(type == "string")
+              | select(test("^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\z"))
+            else
+              error("expected exactly one JSON document")
+            end
+          ' xz-version.json); then
+            if ! jq -Rs '.' xz-version.json > "$RUNNER_TEMP/xz-rejected-current"; then
+              printf '%s\n' '"<unreadable>"' > "$RUNNER_TEMP/xz-rejected-current"
+            fi
+            echo "⚠️ Rejected unsupported pinned XZ version; see the summary" >&2
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "status=unsupported_current_tag" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "Current XZ version: $CURRENT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          IFS=. read -r CURRENT_MAJOR CURRENT_MINOR CURRENT_PATCH <<< "${CURRENT#v}"
+
+          # Get latest version via gh CLI (authenticated, no rate limit issues)
+          LATEST=$(gh release view --repo tukaani-project/xz --json tagName -q '.tagName' 2>/dev/null || true)
+
+          # A failed lookup is often transient, so retry once before failing.
+          if [ -z "$LATEST" ]; then
+            echo "⚠️ Could not determine latest XZ version; retrying once"
+            sleep 2
+            LATEST=$(gh release view --repo tukaani-project/xz --json tagName -q '.tagName' 2>/dev/null || true)
+          fi
+
+          # Guard against empty responses (no releases, API error)
+          if [ -z "$LATEST" ]; then
+            echo "⚠️ Could not determine latest XZ version after retry" >&2
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "status=unavailable" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          if [[ ! "$LATEST" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "⚠️ Rejected unsupported latest XZ version: $LATEST" >&2
+            printf '%s' "$LATEST" > "$RUNNER_TEMP/xz-rejected-tag"
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "status=unsupported_tag" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          IFS=. read -r LATEST_MAJOR LATEST_MINOR LATEST_PATCH <<< "${LATEST#v}"
+
+          compare_decimal() {
+            local left right
+            left=$1
+            right=$2
+
+            if (( ${#left} > ${#right} )); then
+              printf '%s\n' greater
+            elif (( ${#left} < ${#right} )); then
+              printf '%s\n' less
+            elif [[ "$left" > "$right" ]]; then
+              printf '%s\n' greater
+            elif [[ "$left" < "$right" ]]; then
+              printf '%s\n' less
+            else
+              printf '%s\n' equal
+            fi
+          }
+
+          compare_versions() {
+            local comparison
+            local -a latest_components=("$LATEST_MAJOR" "$LATEST_MINOR" "$LATEST_PATCH")
+            local -a current_components=("$CURRENT_MAJOR" "$CURRENT_MINOR" "$CURRENT_PATCH")
+
+            for index in 0 1 2; do
+              comparison=$(compare_decimal "${latest_components[index]}" "${current_components[index]}")
+              if [ "$comparison" != equal ]; then
+                printf '%s\n' "$comparison"
+                return
+              fi
+            done
+
+            printf '%s\n' equal
+          }
+
+          # Set outputs
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Latest XZ version: $LATEST"
+
+          VERSION_COMPARISON=$(compare_versions)
+          if [ "$VERSION_COMPARISON" == greater ]; then
+            echo "new_version=true" >> "$GITHUB_OUTPUT"
+            echo "status=complete" >> "$GITHUB_OUTPUT"
+            echo "🆕 New XZ version available: $LATEST (current: $CURRENT)"
+          elif [ "$VERSION_COMPARISON" == equal ]; then
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "status=complete" >> "$GITHUB_OUTPUT"
+            echo "✅ Already on latest version: $LATEST"
+          else
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "status=current_ahead" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Pinned XZ version $CURRENT is ahead of upstream latest version $LATEST" >&2
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        if: steps.check.outputs.new_version == 'true'
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+      - name: Setup Node.js
+        if: steps.check.outputs.new_version == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Test with latest XZ version
+        if: steps.check.outputs.new_version == 'true'
+        id: test
+        run: |
+          echo "Testing with XZ $XZ_VERSION"
+
+          # Test installation with new version (USE_GLOBAL=false forces build from source)
+          pnpm install --frozen-lockfile
+
+          # Run build and tests
+          pnpm run build && pnpm -r --filter './packages/*' run build
+          pnpm run type-check
+          # Only run root tests (no WASM, no workspace packages) — testing native XZ compatibility
+          pnpm exec vitest run --exclude 'test/wasm/**'
+
+          echo "✅ Tests passed with XZ $XZ_VERSION"
+          echo "test_passed=true" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XZ_VERSION: ${{ steps.check.outputs.latest }}
+          USE_GLOBAL: 'false'  # Force build from source to test new XZ version
+          RUNTIME_LINK: 'static'  # Match prebuild configuration for stability
+        continue-on-error: true
+
+      - name: Update xz-version.json
+        if: steps.check.outputs.new_version == 'true' && steps.test.outputs.test_passed == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name == 'schedule')
+        env:
+          LATEST_VERSION: ${{ steps.check.outputs.latest }}
+        run: |
+          # Update the version file
+          jq --arg version "$LATEST_VERSION" \
+             --arg date "$(date -I)" \
+             '.version = $version | .changelog = "https://github.com/tukaani-project/xz/releases/tag/" + ($version | @uri) | .last_checked = $date | .comment = "Stable version tested and validated for production. Auto-updated by GitHub Actions."' \
+             xz-version.json > tmp.json && mv tmp.json xz-version.json
+
+          echo "Updated xz-version.json to $LATEST_VERSION"
+
+      - name: Create Pull Request
+        id: create-pr
+        if: steps.check.outputs.new_version == 'true' && steps.test.outputs.test_passed == 'true' && (github.event.inputs.create_pr == 'true' || github.event_name == 'schedule')
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sign-commits: true
+          add-paths: xz-version.json
+          commit-message: "feat: update XZ to ${{ steps.check.outputs.latest }}"
+          title: "🆙 Update XZ Utils to ${{ steps.check.outputs.latest }}"
+          body: |
+            ## XZ Utils Update Available
+
+            A new version of XZ Utils is available and has been tested successfully.
+
+            - **Current version**: `${{ steps.check.outputs.current }}`
+            - **New version**: `${{ steps.check.outputs.latest }}`
+
+            ### Changes
+            - Updated `xz-version.json` to use XZ ${{ steps.check.outputs.latest }}
+            - Automated tests passed successfully
+
+            ### Release Notes
+            [View release notes for ${{ steps.check.outputs.latest }}](https://github.com/tukaani-project/xz/releases/tag/${{ steps.check.outputs.latest }})
+
+            ### Testing
+            ✅ Installation test passed
+            ✅ Build test passed
+            ✅ Type check passed
+            ✅ Unit tests passed
+
+            ---
+            🤖 This PR was created automatically by the XZ update checker workflow.
+          branch: update-xz-${{ steps.check.outputs.latest }}
+          labels: |
+            enhancement
+            dependencies
+            automated
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-number && steps.create-pr.outputs.pull-request-commits-verified == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash
+
+      - name: Fail when created head commit is unverified
+        if: steps.create-pr.outputs.pull-request-number && steps.create-pr.outputs.pull-request-commits-verified != 'true'
+        env:
+          PR_NUMBER: ${{ steps.create-pr.outputs.pull-request-number }}
+          COMMITS_VERIFIED: ${{ steps.create-pr.outputs.pull-request-commits-verified }}
+        run: |
+          echo "Created PR #$PR_NUMBER has an unverified head commit (pull-request-commits-verified=$COMMITS_VERIFIED)." >&2
+          exit 1
+
+      - name: Create issue on test failure
+        if: steps.check.outputs.new_version == 'true' && steps.test.outputs.test_passed != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          CURRENT_VERSION: ${{ steps.check.outputs.current }}
+          LATEST_VERSION: ${{ steps.check.outputs.latest }}
+        with:
+          script: |
+            const currentVersion = process.env.CURRENT_VERSION;
+            const latestVersion = process.env.LATEST_VERSION;
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `❌ XZ ${latestVersion} Update Failed`,
+              body: `A new version of XZ Utils is available but the automated tests failed.
+
+              - **Current version**: \`${currentVersion}\`
+              - **New version**: \`${latestVersion}\`
+
+              The automated tests failed, so this update requires manual review.
+
+              [View release notes](${{ github.server_url }}/tukaani-project/xz/releases/tag/${latestVersion})
+              [View failed workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+              Please investigate the compatibility issues before updating manually.`,
+              labels: ['bug', 'dependencies', 'needs-investigation']
+            })
+
+      - name: Create summary
+        if: always()
+        env:
+          CURRENT_VERSION: ${{ steps.check.outputs.current }}
+          LATEST_VERSION: ${{ steps.check.outputs.latest }}
+          CHECK_STATUS: ${{ steps.check.outputs.status }}
+        run: |
+          echo "## XZ Update Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Current version: $CURRENT_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Latest version: $LATEST_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- Check status: $CHECK_STATUS" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$CHECK_STATUS" == "complete" ]; then
+            if [ "${{ steps.check.outputs.new_version }}" == "true" ]; then
+              echo "- Status: 🆕 Update available" >> $GITHUB_STEP_SUMMARY
+              if [ "${{ steps.test.outputs.test_passed }}" == "true" ]; then
+                echo "- Tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+                echo "- Action: PR created for update" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "- Tests: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+                echo "- Action: Issue created for manual review" >> $GITHUB_STEP_SUMMARY
+              fi
+            else
+              echo "- Status: ✅ Up to date" >> $GITHUB_STEP_SUMMARY
+              echo "- Action: No action needed" >> $GITHUB_STEP_SUMMARY
+            fi
+          elif [ "$CHECK_STATUS" == "unavailable" ]; then
+            echo "- Status: ⚠️ Upstream release lookup unavailable after retry" >> $GITHUB_STEP_SUMMARY
+            echo "- Action: Check failed; maintainer attention required" >> $GITHUB_STEP_SUMMARY
+          elif [ "$CHECK_STATUS" == "unsupported_tag" ]; then
+            REJECTED_LATEST=$(<"$RUNNER_TEMP/xz-rejected-tag")
+            printf '%s\n' "- Status: ⚠️ Unsupported upstream tag rejected: $REJECTED_LATEST" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Action: Check failed; widen the allowlist if this tag is supported" >> $GITHUB_STEP_SUMMARY
+          elif [ "$CHECK_STATUS" == "unsupported_current_tag" ]; then
+            REJECTED_CURRENT=$(<"$RUNNER_TEMP/xz-rejected-current")
+            printf '%s\n' "- Status: ⚠️ Unsupported pinned XZ version rejected: $REJECTED_CURRENT" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Action: Check failed; correct xz-version.json" >> $GITHUB_STEP_SUMMARY
+          elif [ "$CHECK_STATUS" == "current_ahead" ]; then
+            echo "- Status: ⚠️ Pinned XZ version $CURRENT_VERSION is ahead of upstream latest version $LATEST_VERSION" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Action: Check failed; investigate the upstream release metadata or pin" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Status: ⚠️ Check did not publish a recognized status" >> $GITHUB_STEP_SUMMARY
+            echo "- Action: Check failed; maintainer attention required" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail after reporting candidate test failure
+        if: ${{ !cancelled() && steps.test.outcome == 'failure' }}
+        run: |
+          echo "Candidate XZ compatibility tests failed; see the issue and summary." >&2
+          exit 1

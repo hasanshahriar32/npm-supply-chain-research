@@ -1,0 +1,134 @@
+{
+  "name": "qunit",
+  "title": "QUnit",
+  "description": "The powerful, easy-to-use testing framework.",
+  "version": "3.0.0",
+  "homepage": "https://qunitjs.com",
+  "author": {
+    "name": "OpenJS Foundation and other contributors",
+    "url": "https://github.com/qunitjs/qunit/blob/main/AUTHORS.txt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/qunitjs/qunit.git"
+  },
+  "keywords": [
+    "testing",
+    "unit",
+    "assert",
+    "assertion",
+    "tap",
+    "tape",
+    "karma",
+    "jquery"
+  ],
+  "bugs": {
+    "url": "https://github.com/qunitjs/qunit/issues"
+  },
+  "license": "MIT",
+  "bin": {
+    "qunit": "bin/qunit.js"
+  },
+  "files": [
+    "bin/",
+    "src/cli/",
+    "qunit/",
+    "LICENSE.txt"
+  ],
+  "main": "qunit/qunit.js",
+  "exports": {
+    ".": {
+      "node": {
+        "import": "./qunit/esm/qunit-wrapper-nodejs-module.js",
+        "default": "./qunit/qunit.js"
+      },
+      "module": {
+        "import": "./qunit/esm/qunit.module.js",
+        "default": "./qunit/qunit-wrapper-bundler-require.js"
+      },
+      "import": "./qunit/esm/qunit.module.js",
+      "default": "./qunit/qunit.js"
+    },
+    "./qunit/qunit.css": "./qunit/qunit.css"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "12.1.0",
+    "node-watch": "0.7.4",
+    "tiny-glob": "0.2.9"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/plugin-external-helpers": "7.29.7",
+    "@babel/preset-env": "7.29.7",
+    "@babel/compat-data": "7.29.7",
+    "@qunitjs/browserstack-runner": "0.9.5-qunitjs.2",
+    "@rollup/plugin-babel": "6.1.0",
+    "@rollup/plugin-commonjs": "29.0.3",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/plugin-replace": "6.0.3",
+    "benchmark": "2.1.4",
+    "eslint": "^8.57.0",
+    "eslint-config-semistandard": "^17.0.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-compat": "^6.0.0",
+    "eslint-plugin-html": "^8.1.1",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-json-es": "^1.6.0",
+    "eslint-plugin-markdown": "^5.1.0",
+    "eslint-plugin-n": "^15.0.0",
+    "eslint-plugin-promise": "^6.2.0",
+    "eslint-plugin-qunit": "^8.1.1",
+    "fixturify": "^3.0.0",
+    "fuzzysort": "1.2.1",
+    "grunt": "1.6.3",
+    "grunt-contrib-connect": "5.0.1",
+    "grunt-contrib-copy": "1.0.0",
+    "grunt-contrib-qunit": "^10.1.1 || ^11.0.0",
+    "grunt-search": "0.1.8",
+    "kleur": "4.1.5",
+    "npm-reporter": "file:./test/cli/fixtures/npm-reporter",
+    "nyc": "^17.0.0",
+    "proxyquire": "2.1.3",
+    "requirejs": "2.3.7",
+    "rollup": "4.63.4",
+    "tap-min": "3.0.0",
+    "tap-parser": "^16.0.1"
+  },
+  "allowScripts": {
+    "puppeteer": true
+  },
+  "scripts": {
+    "build": "rollup -c && grunt copy",
+    "build-coverage": "rollup -c --environment BUILD_TARGET:coverage && grunt copy",
+    "build-dev": "node build/dev.js",
+    "benchmark": "npm install --silent --no-audit --prefix test/benchmark/ && node test/benchmark/micro.js",
+    "lint": "eslint --cache .",
+    "lint-fix": "eslint --cache --fix .",
+    "test-main": "grunt test",
+    "test-cli": "node bin/qunit.js test/main/ test/cli/*.js",
+    "test": "npm run lint && npm run build && npm run test-main && npm run test-cli",
+    "test-nolint": "npm run build && npm run test-main && npm run test-cli",
+    "test-demos": "npm run build && node bin/qunit.js demos/*.{mjs,js}",
+    "browserstack": "browserstack-runner -v",
+    "authors": "(echo 'Authors ordered by first contribution\n' && git log --format='%aN <%aE>' --no-merges --reverse | awk '!seen[$0]++') | tee AUTHORS.txt",
+    "coverage": "npm run build-coverage && npm run coverage-cli && npm run coverage-main && nyc report",
+    "coverage-cli": "nyc --use-spawn-wrap --silent bin/qunit.js test/cli/*.js",
+    "coverage-main": "nyc instrument --in-place qunit/ && grunt connect:base qunit"
+  },
+  "nyc": {
+    "include": [
+      "bin/**",
+      "qunit/**",
+      "src/**"
+    ],
+    "reporter": [
+      "text",
+      "html",
+      "clover"
+    ],
+    "report-dir": "coverage"
+  }
+}

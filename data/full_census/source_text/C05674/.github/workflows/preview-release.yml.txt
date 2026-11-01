@@ -1,0 +1,38 @@
+name: Preview release
+on:
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    types: [labeled]
+
+jobs:
+  check:
+    if: ${{ github.event.review.state == 'approved' || contains(github.event.pull_request.labels.*.name, 'ready-for-preview') }}
+    runs-on: ubuntu-latest
+    outputs:
+      has-permissions: ${{ steps.checkPermissions.outputs.require-result }}
+    steps:
+      - name: Check permissions
+        id: checkPermissions
+        uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2.4.0
+        with:
+          require: "write"
+
+  publish:
+    needs: check
+    if: needs.check.outputs.has-permissions == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@24
+          cache: true
+
+      - name: Build Package
+        run: pnpm build
+
+      - run: pnpm dlx pkg-pr-new publish

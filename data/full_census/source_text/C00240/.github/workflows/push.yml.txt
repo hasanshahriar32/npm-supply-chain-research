@@ -1,0 +1,145 @@
+name: Push
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: push-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Needed for git push operations
+      id-token: write       # Required for OIDC trusted publishing
+      pull-requests: write  # Needed to post release comments on PRs
+    steps:
+      - uses: actions/checkout@v6 # checkout visx + this commit
+        with:
+          # pulls all commits (needed for lerna to correctly release only changed packages)
+          fetch-depth: '0'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          check-latest: true
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - uses: actions/cache@v4.3.0
+        id: yarn-cache
+        with:
+          path: .yarn/cache
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Generate docs
+        run: yarn docs:generate
+
+      - name: Check current HEAD is latest master
+        id: latest-master
+        if: github.repository_owner == 'airbnb'
+        run: |
+          latest_sha="$(git ls-remote origin refs/heads/master | awk '{print $1}')"
+          head_sha="$(git rev-parse HEAD)"
+          if [ "$latest_sha" = "$head_sha" ]; then
+            echo "is_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_latest=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping mutable steps because origin/master is at $latest_sha and this run is at $head_sha."
+          fi
+
+      - name: Commit package sizes
+        if: github.repository_owner == 'airbnb' && steps.latest-master.outputs.is_latest == 'true'
+        # note: `git diff-index --quiet HEAD`
+        #       has exit code 0 if there are no changes vs HEAD, else there is something to commit
+        run: |
+          yarn build:sizes
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          if git diff-index --quiet HEAD; then
+            echo "No package size changes to commit."
+          else
+            git commit -m "build(${GITHUB_SHA}): auto-commit package sizes"
+            latest_sha="$(git ls-remote origin refs/heads/master | awk '{print $1}')"
+            if [ "$latest_sha" != "$GITHUB_SHA" ]; then
+              echo "Skipping package size push because origin/master advanced to $latest_sha."
+              exit 0
+            fi
+            if ! git push; then
+              latest_sha="$(git ls-remote origin refs/heads/master | awk '{print $1}')"
+              if [ "$latest_sha" != "$GITHUB_SHA" ]; then
+                echo "Skipping package size push because origin/master advanced to $latest_sha."
+                exit 0
+              fi
+              exit 1
+            fi
+          fi
+
+      - name: Release
+        if: github.repository_owner == 'airbnb' && steps.latest-master.outputs.is_latest == 'true'
+        # the following configurations are needed for lerna to
+        #   - have git credentials for committing tags
+        #   - use OIDC trusted publishing for npm (no token required)
+        run: |
+          latest_sha="$(git ls-remote origin refs/heads/master | awk '{print $1}')"
+          head_sha="$(git rev-parse HEAD)"
+          if [ "$latest_sha" != "$head_sha" ]; then
+            echo "Skipping release because origin/master is at $latest_sha and this run is at $head_sha."
+            exit 0
+          fi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          yarn build:release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and deploy gallery
+        if: github.repository_owner == 'airbnb' && steps.latest-master.outputs.is_latest == 'true'
+        # below we
+        # - setup git credentials provided via actions/checkout@v6
+        # - initialize gh-pages-branch as an orphan branch so we don't build history
+        # - checkout the current commit and create gh-pages-root-dir/ as a new worktree
+        #   - outside that directory HEAD is detached at $GITHUB_SHA
+        #   - within that directory we are on the gh-pages-branch we just initialized
+        #     *worktree initialization should be in a root dir, otherwise the worktree inherits nested directories
+        # - build the static next.js site and copy the output into gh-pages-root-dir/
+        #   - we can't output directly into gh-pages-root-dir/ because next wipes the folder including .git
+        # - commit the demo site within gh-pages-root-dir/ onto the gh-pages-branch
+        # - push gh-pages-branch to visx as gh-pages. we overwrite history every time so it must be forced
+        run: |
+          latest_sha="$(git ls-remote origin refs/heads/master | awk '{print $1}')"
+          head_sha="$(git rev-parse HEAD)"
+          if [ "$latest_sha" != "$head_sha" ]; then
+            echo "Skipping gallery deploy because origin/master is at $latest_sha and this run is at $head_sha."
+            exit 0
+          fi
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout --orphan gh-pages-branch
+          git reset --hard
+          touch .nojekyll
+          git add .nojekyll
+          git commit -m "bot(${GITHUB_SHA}): initialize gh-pages branch"
+          git checkout "$GITHUB_SHA"
+          git worktree add gh-pages-root-dir gh-pages-branch
+          cd ./packages/visx-demo/
+          yarn build
+          mv -v out/* ../../gh-pages-root-dir/
+          cd ../../gh-pages-root-dir/
+          touch CNAME
+          echo "visx.airbnb.tech" > CNAME
+          git add .
+          git commit -m "bot(${GITHUB_SHA}): build gh-pages"
+          git push -f "https://$GITHUB_ACTOR:$GITHUB_TOKEN@github.com/$GITHUB_REPOSITORY.git" HEAD:gh-pages

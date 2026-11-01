@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    # `changesets/action` v2 pushes through the GitHub API, which first creates a transient
+    # `changesets-ghcommit-temp/<branch>` ref; CI on that ref only produces runs that cancel each
+    # other and cancelled checks attached to the real commit
+    branches-ignore:
+      - 'changesets-ghcommit-temp/**'
+    # a push filter that only sets `branches-ignore` also stops running for tags
+    tags:
+      - '**'
+  pull_request: {}
+
+concurrency:
+  # give each main commit its own group, so a later push can neither cancel nor replace its run
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ci:
+    name: Lint and Test with Node.js ${{ matrix.node }} on ${{ matrix.os }}
+    strategy:
+      matrix:
+        bun:
+          - latest
+        node:
+          - 18
+          - 18.18
+          - 20
+          - 22
+          - 24
+          - 26
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+
+      - name: Setup Bun ${{ matrix.bun }}
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: ${{ matrix.bun }}
+
+      - name: Install Dependencies
+        run: |
+          yarn --immutable
+          cd test/fixtures/yarn-pnp
+          yarn --immutable
+          cd ../bun
+          bun i --frozen-lockfile
+
+      - name: Park the prepare script for the downgrade
+        if: ${{ matrix.node < 22 }}
+        # bash keeps the jq redirect byte-exact; PowerShell would rewrite the line endings
+        shell: bash
+        run: |
+          # `yarn add` below fires the `prepare` lifecycle, and `yarn-berry-deduplicate` then rewrites
+          # `resolutions` in package.json with its own serializer: it cannot spawn `yarn` on Windows
+          # and it loops on CI's immutable installs. Park the script under another name, keeping its
+          # position, so the lifecycle is skipped; the next step restores it after the downgrade.
+          jq -b '.scripts |= with_entries(if .key == "prepare" then .key = "x-synckit-prepare" else . end)' package.json > package.json.next
+          mv package.json.next package.json
+
+      - name: Downgrade dependencies for Node.js < 22
+        if: ${{ matrix.node < 22 }}
+        run: yarn add -D concurrently@9 tsdown@0.12.0
+
+      - name: Restore the prepare script
+        if: ${{ matrix.node < 22 }}
+        # bash keeps the jq redirect byte-exact; PowerShell would rewrite the line endings
+        shell: bash
+        run: |
+          # the native `tsc` bin is an extensionless ES module entry that Node.js < 18.19 cannot run,
+          # so build with the 6.x CLI there; the same pass restores `prepare` in place
+          jq -b --argjson older "$(node -p 'const [a,b]=process.versions.node.split(".").map(Number); a<18||(a===18&&b<19)')" 'if $older then .scripts["build:tsc"]="tsc6 -p src" | .scripts["lint:tsc"]="tsc6 --noEmit" else . end | .scripts |= with_entries(if .key == "x-synckit-prepare" then .key = "prepare" else . end)' package.json > package.json.next
+          mv package.json.next package.json
+
+      - name: Build and Test
+        run: |
+          yarn build
+          yarn test
+        env:
+          SYNCKIT_TIMEOUT: 10000
+
+      - name: Lint
+        run: yarn lint
+        if: ${{ matrix.node >= 20 }}
+        env:
+          PARSER_NO_WATCH: true
+
+      - name: Benchmark
+        run: yarn benchmark
+
+      - name: Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run codacy-coverage-reporter
+        # bad Windows -- https://github.com/codacy/codacy-coverage-reporter-action/issues/91
+        if: ${{ !github.event.pull_request.head.repo.fork && matrix.os != 'windows-latest' }}
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1.3.0
+        continue-on-error: true
+        with:
+          api-token: ${{ secrets.CODACY_API_TOKEN }}

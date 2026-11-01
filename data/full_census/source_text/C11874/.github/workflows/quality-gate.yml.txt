@@ -1,0 +1,56 @@
+name: Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare repository
+        run: git fetch --unshallow --tags
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Cache node modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: pnpm-deps-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-deps-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm install --frozen-lockfile
+
+      - name: Create Build
+        run: pnpm build
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: |
+            dist
+
+      - name: Run linting
+        run: pnpm lint
+
+      - name: Run unit tests
+        run: pnpm unit
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v7
+        with:
+          start: pnpm start:ci
+          record: true
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}

@@ -1,0 +1,81 @@
+{
+  "name": "npm-package-json-lint",
+  "version": "0.0.0",
+  "description": "Configurable linter for package.json files.",
+  "keywords": [
+    "lint",
+    "linter",
+    "package.json",
+    "audit",
+    "auditor",
+    "npm-package-json-lint"
+  ],
+  "homepage": "https://github.com/tclindner/npm-package-json-lint",
+  "bugs": {
+    "url": "https://github.com/tclindner/npm-package-json-lint/issues"
+  },
+  "author": "Thomas Lindner",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tclindner/npm-package-json-lint.git"
+  },
+  "bin": {
+    "npmPkgJsonLint": "dist/cli.js"
+  },
+  "files": [
+    "CONTRIBUTING.md",
+    "dist"
+  ],
+  "main": "dist/api.js",
+  "types": "dist/api.d.ts",
+  "scripts": {
+    "build": "tsdown",
+    "eslint": "eslint .",
+    "npmpackagejsonlint": "node dist/cli.js ./package.json",
+    "lint": "npm run eslint && npm run npmpackagejsonlint",
+    "test": "npm run build && jest",
+    "test:ci": "jest --runInBand"
+  },
+  "dependencies": {
+    "chalk": "4.1.2",
+    "cosmiconfig": "10.0.1",
+    "debug": "4.4.3",
+    "globby": "11.1.0",
+    "ignore": "7.0.14",
+    "jsonc-parser": "3.3.1",
+    "meow": "9.0.0",
+    "minimatch": "11.0.2",
+    "semver": "7.8.5",
+    "strip-json-comments": "3.1.1",
+    "type-fest": "5.10.0",
+    "validate-npm-package-name": "8.0.0"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "ajv-errors": "3.0.0",
+    "@eslint/js": "10.0.1",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.6.5",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-config-tc": "28.0.3",
+    "eslint-config-typescript-tc": "12.1.0",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-jest": "29.17.0",
+    "eslint-plugin-prettier": "5.5.7",
+    "eslint-plugin-unicorn": "78.0.0",
+    "globals": "17.13.0",
+    "jest": "30.5.2",
+    "npm-package-json-lint-config-default": "10.0.0",
+    "prettier": "3.9.10",
+    "ts-jest": "29.4.15",
+    "tsdown": "0.23.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.2"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,88 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test
+    if: github.head_ref == 'changeset-release/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          lfs: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".node-version"
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo Test
+        run: cargo test --manifest-path crates/Cargo.toml -p blazediff -p blazediff-shared -p blazediff-ssim -p blazediff-interpret -p blazediff-milo
+
+      # The PyO3 bindings are behind a feature the line above doesn't enable.
+      # `check` rather than `test` because it doesn't link: pyo3's
+      # extension-module leaves the CPython symbols to be resolved by the
+      # interpreter, which only the maturin-built wheel below provides.
+      - name: Cargo Check (python bindings)
+        run: |
+          for crate in blazediff blazediff-ssim blazediff-interpret blazediff-milo; do
+            cargo check --manifest-path crates/Cargo.toml -p "$crate" --features python
+          done
+
+      - uses: astral-sh/setup-uv@v5
+
+      - uses: cargo-bins/cargo-binstall@main
+
+      # Pinned to the version build-artifacts.yml ships the released wheels
+      # with, so what this imports is what users get.
+      - name: Install maturin
+        run: cargo binstall -y --disable-strategies compile maturin@1.15.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Builds each wheel for the host and imports it — the only step that
+      # proves a #[pymodule] actually registers what it promises.
+      - name: Python Test
+        run: pnpm test:python
+
+      - name: Build
+        run: pnpm build
+      
+      - name: Install Octave
+        uses: MATPOWER/action-install-octave-linux@v1
+        with:
+          ipopt-libs: true
+      
+      - name: Install Octave Image Package
+        run: octave --eval "pkg install -forge image"
+
+      - name: Test
+        run: pnpm test
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Deno Test
+        run: pnpm run deno:test

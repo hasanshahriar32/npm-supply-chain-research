@@ -1,0 +1,165 @@
+name: Test
+
+env:
+  COVERAGE_NODE_VERSION: &coverage-node-version '24'
+
+on:
+  push:
+    branches:
+      - master
+      - next
+  pull_request:
+    branches:
+      - master
+      - next
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Rollup requires Node.js >=18
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Build package
+        run: npm run build
+
+      - name: Save build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-package
+          path: ./dist/ # build output
+          retention-days: 1 # keep the artifact for 1 day
+
+  test:
+    name: Test LTS
+    needs: build
+    strategy:
+      fail-fast: false # doesn't stop on first failure
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [ 18, 20, 22, 24, 26 ]
+        include:
+          - os: ubuntu-latest
+            node-version: *coverage-node-version
+            coverage: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download built package
+        uses: actions/download-artifact@v4
+        with:
+          name: built-package
+          path: ./dist/
+
+      - name: Install dependencies (without rebuilding)
+        run: npm install --ignore-scripts
+
+      - name: Run color support checker
+        run: npm run color-checker
+
+      - name: Run tests
+        if: matrix.coverage != true
+        run: npx vitest
+        env:
+          NODE_OPTIONS: --unhandled-rejections=strict
+
+      - name: Run tests with coverage
+        if: matrix.coverage == true
+        run: npx vitest --coverage
+        env:
+          NODE_OPTIONS: --unhandled-rejections=strict
+
+      - name: Upload coverage reports to Codecov
+        if: matrix.coverage == true
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: webdiscus/ansis
+
+  legacy-node-compatibility:
+    name: Test legacy
+    needs: build
+    strategy:
+      fail-fast: false # doesn't stop on first failure
+      matrix:
+        os: [ ubuntu-latest ]
+        node-version: [ 14, 16 ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Debug CI environment
+      - name: Show environment (env)
+        run: |
+          echo "== env =="
+          env | sort
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download built package
+        uses: actions/download-artifact@v4
+        with:
+          name: built-package
+          path: ./dist/
+
+      - name: Prepare package.json for Node.js v14 - v16
+        run: cp -f package.test-node14.json package.json
+
+      - name: Install dependencies (without rebuilding)
+        run: npm install -f # --force option is required to install tsup dependencies
+
+      - name: Run tests
+        run: npx vitest
+        env:
+          NODE_OPTIONS: --unhandled-rejections=strict
+
+  deno:
+    name: Test Deno
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        deno-version: [ 2.3.x, 2.9.x ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Deno ${{ matrix.deno-version }}
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: ${{ matrix.deno-version }}
+
+      - name: Run Deno tests
+        run: deno test --config=deno.json --allow-env

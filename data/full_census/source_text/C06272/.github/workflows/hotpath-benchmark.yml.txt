@@ -1,0 +1,138 @@
+name: hotpath benchmark
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "rust/**"
+      - "hotpath/**"
+      - ".github/workflows/hotpath-benchmark.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: hotpath benchmark (push)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # the upload authenticates with the job's OIDC token
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/mlt-setup-rust
+
+      - name: Cache benchmark tiles
+        id: cache-tiles
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with: { path: '/tmp/benchmark-tiles', key: 'hotpath-tiles-protomaps-z6-v1' }
+
+      - name: Download benchmark tiles
+        if: steps.cache-tiles.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just rust::download-benchmark-tiles
+
+      - name: Run benchmarks and upload reports
+        working-directory: rust
+        env:
+          HOTPATH_UPLOAD: fail-on-error
+          HOTPATH_USER_METADATA: runner=${{ runner.os }}-${{ runner.arch }},toolchain=stable,profile=release
+          HOTPATH_OUTPUT_FORMAT: none
+        run: |
+          set -euo pipefail
+          bench() {
+            local name=$1
+            shift
+            HOTPATH_BENCHMARK=$name cargo run -q --release -p mlt --features hotpath,hotpath-alloc,hotpath-cloud -- \
+              convert "$@" 2>&1 | tee "$name.log"
+            grep -q '^hotpath: uploaded report ' "$name.log"
+          }
+          bench mlt-convert /tmp/benchmark-tiles/ /tmp/mlt-out/
+          bench mlt-convert-v2 --mlt-version 2 /tmp/benchmark-tiles/ /tmp/mlt-v2-out/
+          bench mlt-decode-v1 --to mvt /tmp/mlt-out/ /tmp/mvt-from-v1/
+          bench mlt-decode-v2 --to mvt /tmp/mlt-v2-out/ /tmp/mvt-from-v2/
+
+  report:
+    name: hotpath benchmark (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The pull request's head commit, not the default merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: ./.github/actions/mlt-setup-rust
+
+      - name: Cache benchmark tiles
+        id: cache-tiles
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with: { path: '/tmp/benchmark-tiles', key: 'hotpath-tiles-protomaps-z6-v1' }
+
+      - name: Download benchmark tiles
+        if: steps.cache-tiles.outputs.cache-hit != 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: just rust::download-benchmark-tiles
+
+      - name: Run benchmarks and write reports
+        working-directory: rust
+        env:
+          HOTPATH_USER_METADATA: runner=${{ runner.os }}-${{ runner.arch }},toolchain=stable,profile=release
+          HOTPATH_OUTPUT_FORMAT: json
+          REPORT_DIR: ${{ github.workspace }}/hotpath-reports
+        run: |
+          set -euo pipefail
+          mkdir -p "$REPORT_DIR"
+          bench() {
+            local name=$1
+            shift
+            HOTPATH_BENCHMARK=$name HOTPATH_OUTPUT_PATH="$REPORT_DIR/$name.json" \
+              cargo run -q --release -p mlt --features hotpath,hotpath-alloc,hotpath-cloud -- convert "$@"
+            test -s "$REPORT_DIR/$name.json"
+          }
+          bench mlt-convert /tmp/benchmark-tiles/ /tmp/mlt-out/
+          bench mlt-convert-v2 --mlt-version 2 /tmp/benchmark-tiles/ /tmp/mlt-v2-out/
+          bench mlt-decode-v1 --to mvt /tmp/mlt-out/ /tmp/mvt-from-v1/
+          bench mlt-decode-v2 --to mvt /tmp/mlt-v2-out/ /tmp/mvt-from-v2/
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hotpath-report
+          path: hotpath-reports/
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Head per-tile sizes
+        run: |
+          mkdir -p /tmp/size-metrics
+          just rust::compress-db-statistics /tmp/mlt-out /tmp/size-metrics/head_sizes.db
+
+      - name: Checkout base
+        run: git checkout ${{ github.event.pull_request.base.sha }}
+
+      - name: Base convert
+        working-directory: rust
+        run: cargo run -q --release -p mlt -- convert /tmp/benchmark-tiles/ /tmp/mlt-base-out/
+
+      - name: Base per-tile sizes
+        run: just rust::compress-db-statistics /tmp/mlt-base-out /tmp/size-metrics/base_sizes.db
+
+      - name: Save PR metadata
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: echo "$PR_NUMBER" > /tmp/size-metrics/pr_number.txt
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: size-metrics
+          path: /tmp/size-metrics/
+          retention-days: 1
+          if-no-files-found: error

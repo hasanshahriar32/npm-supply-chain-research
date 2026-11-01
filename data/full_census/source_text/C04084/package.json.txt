@@ -1,0 +1,74 @@
+{
+  "name": "hdr-histogram-js",
+  "version": "4.0.0",
+  "description": "TypeScript port of HdrHistogram",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "browser": "dist/hdrhistogram.umd.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "keywords": [
+    "hdr-histogram",
+    "hdr-histogram-js",
+    "percentiles",
+    "monitoring",
+    "latency",
+    "performance"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.build.json --skipLibCheck",
+    "test": "vitest run",
+    "bench": "vitest bench --reporter=verbose",
+    "stryker": "stryker run",
+    "build": "tsdown",
+    "prepublishOnly": "npm run build",
+    "prettier": "prettier --parser typescript -l src/**/*.ts",
+    "prettier:fix": "prettier --write --parser typescript -l src/**/*.ts",
+    "astest": "as-test",
+    "astest:ci": "as-test --mode table",
+    "asbuild:untouched": "asc assembly/index.ts -o build/untouched.wasm -t build/untouched.wat --sourceMap --debug --exportRuntime",
+    "asbuild:optimized": "asc assembly/index.ts -o build/optimized.wasm -t build/optimized.wat --sourceMap -O3 --noAssert --exportRuntime --runtime minimal",
+    "asbuild:base64": "echo \"/** @internal */\\nexport const BINARY = \\\"$(node ./base64.js build/optimized.wasm)\\\";\" > src/wasm/generated-wasm.ts",
+    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized && npm run asbuild:base64"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HdrHistogram/HdrHistogramJS.git"
+  },
+  "author": "Alexandre Victoor",
+  "license": "BSD-2-Clause",
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/node": "^22.0.0",
+    "assemblyscript": "^0.27.32",
+    "assemblyscript-unittest-framework": "^2.0.0",
+    "fast-check": "^4.6.0",
+    "node-notifier": ">=8.0.1",
+    "prettier": "^3.8.2",
+    "ts-node": "^10.9.2",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5",
+    "yargs": "^18.0.0"
+  },
+  "files": [
+    "dist"
+  ]
+}

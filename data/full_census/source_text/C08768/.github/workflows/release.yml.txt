@@ -1,0 +1,56 @@
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Dry run? (y/N)'
+        required: true
+        default: 'y'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: github.ref_name == 'master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: true
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git user
+        run: |
+          git config --global user.name "$GITHUB_ACTOR"
+          git config --global user.email "GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: npm install --prefer-offline
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Release (dry run)
+        if: contains(github.event.inputs.dry, 'y')
+        run: npx lerna version --no-git-tag-version --no-push --yes --loglevel=verbose
+
+      - name: Release
+        if: contains(github.event.inputs.dry, 'N')
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ github.token }}

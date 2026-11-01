@@ -1,0 +1,52 @@
+name: Release monorepo packages to GitHub Package Registry
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Release monorepo packages"]
+    types:
+      - completed
+    branches: [main, release/1.11.x]
+
+env:
+  CPU_CORES: 2
+  LERNA_CONCURRENCY: 4
+  LERNA_TEST_CONCURRENCY: 2
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Release to GitHub Package Registry
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      HUSKY: 0 # disabled husky and lint staged; https://typicode.github.io/husky/#/?id=with-env-variables
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          token: ${{ secrets.SWAGGER_BOT_GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com/
+          scope: "@swagger-api"
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - name: Install monorepo dependencies
+        run: npm ci --engine-strict=false
+      - name: Build monorepo
+        run: npm run build
+      - name: Check TypeScript types
+        run: npm run typescript:check-types
+      - name: Execute tests in monorepo
+        run: npm run test
+      - name: Publish monorepo npm packages
+        run: npx lerna publish from-package --no-private --yes --no-git-reset --registry=https://npm.pkg.github.com
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.SWAGGER_BOT_GITHUB_TOKEN }}

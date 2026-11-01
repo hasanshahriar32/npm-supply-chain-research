@@ -1,0 +1,97 @@
+name: Publish to NPM
+on:
+  workflow_dispatch:
+    inputs:
+      major:
+        description: 'Major'
+        type: boolean
+        default: false
+      minor:
+        description: 'Minor'
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: write
+  issues: write
+
+jobs:
+  publish_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PAT_GITHUB }}
+      - name: Setup Git config
+        run: |
+          git config --local user.email 'hello@rive.app'
+          git config --local user.name ${{ github.actor }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+      - name: Install Modules
+        run: npm install
+      - name: Run type check
+        run: npm run types:check
+      - name: Run Linter
+        run: npm run lint
+      - name: Run Tests
+        run: npm test
+      - if: ${{ inputs.major == true }}
+        name: Major Release - Bump version number, update changelog, push and tag
+        run: npm run release:major
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: ${{inputs.major == false && inputs.minor == true}}
+        name: Minor release - Bump version number, update changelog, push and tag
+        run: npm run release:minor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: ${{inputs.major == false && inputs.minor == false}}
+        name: Patch release - Bump version number, update changelog, push and tag
+        run: npm run release:patch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify packages are available on npm
+        run: |
+          for i in $(seq 1 10); do
+            missing=0
+            for pkg_json in npm/*/package.json; do
+              PKG=$(node -p "require('./${pkg_json}').name")
+              VERSION=$(node -p "require('./${pkg_json}').version")
+              if npm view "$PKG@$VERSION" version > /dev/null 2>&1; then
+                echo "$PKG@$VERSION is live on npm"
+              else
+                echo "$PKG@$VERSION not visible on npm yet"
+                missing=1
+              fi
+            done
+            if [ "$missing" -eq 0 ]; then
+              echo "All packages are live on npm"
+              exit 0
+            fi
+            echo "Retrying in 30s ($i/10)"
+            sleep 30
+          done
+          echo "One or more packages did not appear on npm"
+          exit 1
+
+      - name: File issue on publish failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Publish workflow failed for v${VERSION}" \
+            --body "The publish workflow for \`v${VERSION}\` failed; check if the packages are fully available on npm.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          cc @zplata"

@@ -1,0 +1,26 @@
+name: CI Checks
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js 25
+        uses: actions/setup-node@v6
+        with:
+          node-version: '25'
+          cache: npm
+      - name: NPM install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Check types
+        run: npm run check-types
+      - name: Run tests on Node.js 25
+        run: npm test

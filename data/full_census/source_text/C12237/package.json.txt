@@ -1,0 +1,41 @@
+{
+  "private": true,
+  "homepage": "https://github.com/webfansplz/vite-plugin-vue-inspector#readme",
+  "bugs": {
+    "url": "https://github.com/webfansplz/vite-plugin-vue-inspector/issues"
+  },
+  "license": "MIT",
+  "author": "webfansplz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webfansplz/vite-plugin-vue-inspector.git"
+  },
+  "workspaces": [
+    "packages/*",
+    "packages/playground/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "play:nuxt": "vp run --filter ./packages/playground/nuxt dev",
+    "play:vue": "vp run --filter ./packages/playground/vue dev",
+    "lint": "vp check",
+    "dev": "vp pack --watch",
+    "build": "vp pack",
+    "release": "bumpp packages/core/package.json"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:dev",
+    "@vitejs/devtools-kit": "catalog:dev",
+    "bumpp": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:dev",
+    "vite": "catalog:dev",
+    "vite-plus": "catalog:dev",
+    "vue": "catalog:dev",
+    "vue-tsc": "catalog:dev"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@10.30.3"
+}

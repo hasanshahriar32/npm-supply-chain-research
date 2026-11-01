@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release-created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          release-type: node
+          package-name: '@expo/react-native-action-sheet'
+
+  deploy:
+    needs: [release-please]
+    if: needs.release-please.outputs.release-created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🗂️ Checkout
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '14'
+          cache: 'yarn'
+
+      - name: 🧱 Build
+        run: yarn
+
+      - name: 🚀 Deploy
+        uses: JS-DevTools/npm-publish@v2
+        with:
+          token: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,62 @@
+name: publish pull request
+on:
+  issue_comment:
+    types: [created]
+
+env:
+  TURBO_TOKEN: ${{ secrets.VERCEL_STORYBOOK_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  publish_comment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    if: ${{ github.event.issue.pull_request && github.event.comment.body == '/publish' && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR') }}
+    steps:
+      - name: get pr information
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        id: pr
+        with:
+          script: |
+            const request = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            }
+            core.info(`Getting PR #${request.pull_number} from ${request.owner}/${request.repo}`)
+            try {
+              const result = await github.rest.pulls.get(request)
+              core.info(`Got PR: ${JSON.stringify(result.data)}`)
+              if (result.data.head.repo.full_name !== 'remirror/remirror') {
+                throw new Error(`this workflow is only allowed on the "remirror" repository`)
+              }
+              return result.data
+            } catch (err) {
+              core.setFailed(`Request failed with error ${err}`)
+            }
+
+      - name: checkout code repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ fromJSON(steps.pr.outputs.result).head.ref }}
+          fetch-depth: 0
+
+      - name: install and audit
+        uses: ./support/actions/pnpm
+
+      - name: build project
+        run: pnpm build
+
+      - name: mutate package.json files
+        uses: ./support/actions/pr
+        id: mutate
+        with:
+          giphyKey: ${{ secrets.GIPHY_API_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: publish pr
+        run: |
+          pnpm publish -r --no-git-checks --tag ${{ steps.mutate.outputs.tag }}

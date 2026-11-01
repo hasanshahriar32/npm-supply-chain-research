@@ -1,0 +1,94 @@
+{
+  "name": "ngx-quill",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "build:prod": "npm run build -- --configuration production && npm run cp:readme && npm run cp:license",
+    "test": "vitest run --config ./projects/ngx-quill/vite.config.mts",
+    "lint": "eslint && npx tsc --noEmit",
+    "e2e": "ng e2e",
+    "cp:readme": "cp ./README.md ./dist/ngx-quill",
+    "cp:license": "cp ./LICENSE.txt ./dist/ngx-quill"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Bengt Weiße"
+  },
+  "description": "An angular component for the easy use of the QuillJS richt text editor.",
+  "bugs": "https://github.com/KillerCodeMonkey/ngx-quill/issues",
+  "homepage": "https://github.com/KillerCodeMonkey/ngx-quill",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KillerCodeMonkey/ngx-quill"
+  },
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || ^26.0.0"
+  },
+  "keywords": [
+    "editor",
+    "rich text",
+    "wysiwyg",
+    "angular",
+    "directive",
+    "component",
+    "quill",
+    "quilljs",
+    "angular",
+    "ng",
+    "ngx",
+    "text editor"
+  ],
+  "dependencies": {
+    "@angular/common": "^22.1.7",
+    "@angular/compiler": "^22.1.7",
+    "@angular/core": "^22.1.7",
+    "@angular/forms": "^22.1.7",
+    "@angular/platform-browser": "^22.1.7",
+    "@angular/router": "^22.1.7",
+    "quill": "^2.0.3",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@analogjs/vite-plugin-angular": "^2.7.2",
+    "@analogjs/vitest-angular": "^2.7.2",
+    "@angular/build": "^22.1.8",
+    "@angular/cli": "^22.1.8",
+    "@angular/compiler-cli": "^22.1.7",
+    "@angular/language-service": "^22.1.7",
+    "@angular/localize": "^22.1.7",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^2.1.0",
+    "@oxc-project/runtime": "^0.151.0",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "~24.0.0",
+    "@vitest/browser": "^5.0.1",
+    "@vitest/browser-playwright": "^5.0.1",
+    "angular-eslint": "^22.5.0",
+    "bufferutil": "^4.1.0",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "ng-packagr": "^22.2.0",
+    "playwright": "^1.63.0",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
+  },
+  "overrides": {
+    "@analogjs/vitest-angular": {
+      "vitest": "$vitest"
+    },
+    "@vitest/eslint-plugin": {
+      "vitest": "$vitest"
+    }
+  },
+  "contributors": [
+    {
+      "name": "Bengt Weiße"
+    }
+  ],
+  "version": "0.0.0",
+  "volta": {
+    "node": "24.16.0"
+  }
+}

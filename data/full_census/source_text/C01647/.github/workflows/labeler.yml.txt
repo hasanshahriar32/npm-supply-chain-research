@@ -1,0 +1,29 @@
+name: Labeler
+
+# Untrusted trigger half of the labeler. Runs in the PR (incl. fork) context with a
+# read-only token and no secrets. It only records the PR number to an artifact; the
+# privileged labeling happens in labeler-apply.yml on workflow_run. This avoids
+# pull_request_target (see SDK-80 / Monorepo Supply-Chain Hardening).
+
+on:
+  - pull_request
+
+permissions: {}
+
+jobs:
+  collect:
+    name: Collect PR metadata
+    timeout-minutes: ${{ vars.TIMEOUT_MINUTES_SHORT && fromJSON(vars.TIMEOUT_MINUTES_SHORT) || 3 }}
+    runs-on: ${{ vars.RUNNER_NORMAL || 'ubuntu-latest' }}
+    steps:
+      - name: Save PR number
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p ./pr
+          echo "$PR_NUMBER" > ./pr/number
+      - uses: actions/upload-artifact@v4.6.2
+        with:
+          name: pr-number
+          path: ./pr/
+          retention-days: 1

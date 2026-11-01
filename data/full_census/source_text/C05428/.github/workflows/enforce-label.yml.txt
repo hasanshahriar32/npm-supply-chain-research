@@ -1,0 +1,18 @@
+name: Enforce PR label
+
+#####
+# This workflow is triggered by pull_request_target event.
+# Never checkout the PR and run ANY local code on it.
+#####
+
+on: # zizmor: ignore[dangerous-triggers] safe label enforcement; no checkout or code execution
+  pull_request_target:
+    types: [labeled, unlabeled, opened, edited, synchronize]
+jobs:
+  enforce-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: enforce-triage-label
+        uses: jupyterlab/maintainer-tools/.github/actions/enforce-label@b9d5c28489f8b460cef48868f303b97c20f8fe1b # v1.1.2

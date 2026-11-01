@@ -1,0 +1,53 @@
+---
+name: Publish to npmjs.com
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions: {}
+
+jobs:
+  publish:
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Use Node.js 26
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26.x
+      - name: Verify release secrets
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          fail() {
+            echo "::error::$1"
+            echo "::error::Fix: see '$2' in RELEASING.md"
+            exit 1
+          }
+
+          # NPM token check
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            fail "No secret key available after import."
+          fi
+
+          # Tag check
+          package_version=$(node -e "console.log(require('./package.json').version)")
+          tag=$(git describe --tags)
+          expected="v$package_version"
+
+          if [ "$expected" != "$tag" ]; then
+            fail "Tag and package.json version don't match. '$tag' vs '$expected'"
+          fi
+
+      - run: npm i
+      - run: npm test
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

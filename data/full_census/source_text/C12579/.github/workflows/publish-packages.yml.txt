@@ -1,0 +1,214 @@
+name: Publish Packages
+
+on:
+  # Dispatch against the release tag, not a branch. The ref selects both
+  # the source that gets published and the workflow that publishes it.
+  workflow_dispatch:
+    inputs:
+      skip-audit:
+        description: "Skip the dependency audit (accepted risk). Leave unchecked normally."
+        type: boolean
+        required: false
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: "publish"
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION_TARGET: "24"
+  TURBO_TELEMETRY_DISABLED: 1
+
+jobs:
+  dry-run:
+    environment: general
+    name: Dry Run (Packages)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify dispatched from a release tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # The dispatch dropdown pre-selects the default branch, so reject
+          # anything that is not a vX.Y.Z tag rather than publishing main.
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error::Publish must be dispatched against a release tag, got $REF_TYPE '$REF_NAME'"
+            exit 1
+          fi
+
+          if [[ ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Not a release tag: $REF_NAME"
+            exit 1
+          fi
+
+          PKG_VERSION="v$(jq -r '.version' packages/otplib/package.json)"
+          if [ "$PKG_VERSION" != "$REF_NAME" ]; then
+            echo "::error::Tag $REF_NAME does not match packages/otplib/package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION_TARGET }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Production tree only: dev tooling does not ship in the published packages.
+      - name: Audit production dependencies
+        if: ${{ !inputs.skip-audit }}
+        run: pnpm run audit
+
+      - name: Build packages
+        run: pnpm run build
+
+      # pnpm publish --dry-run lists only name@version, so print each
+      # tarball's files to review what the publish job will upload.
+      - name: List package contents
+        run: pnpm -r --filter "./packages/*" pack --dry-run
+
+      - name: Dry run publish
+        run: pnpm run release:packages-dry-run
+
+  publish:
+    environment: production
+    name: Publish (Packages)
+    runs-on: ubuntu-latest
+    needs: dry-run
+    permissions:
+      contents: write # Create GitHub Release
+      actions: write # Trigger smoke test workflow
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify dispatched from a release tag
+        id: version
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          # The dispatch dropdown pre-selects the default branch, so reject
+          # anything that is not a vX.Y.Z tag rather than publishing main.
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error::Publish must be dispatched against a release tag, got $REF_TYPE '$REF_NAME'"
+            exit 1
+          fi
+
+          if [[ ! "$REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::Not a release tag: $REF_NAME"
+            exit 1
+          fi
+
+          PKG_VERSION="v$(jq -r '.version' packages/otplib/package.json)"
+          if [ "$PKG_VERSION" != "$REF_NAME" ]; then
+            echo "::error::Tag $REF_NAME does not match packages/otplib/package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
+          echo "version=${REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION_TARGET }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm run build
+
+      # Auth is via npm trusted publishing (OIDC): id-token: write above lets
+      # pnpm exchange the workflow's OIDC token for a short-lived publish
+      # token, so no NPM_TOKEN secret is required. pnpm 11 no longer reads
+      # npm_config_* environment variables, so provenance is requested with an
+      # explicit --provenance flag in the release script.
+      - name: Publish to npm
+        run: pnpm run release:packages
+
+      - name: Trigger smoke tests
+        if: success()
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'smoke-test-packages.yml',
+              ref: 'main',
+              inputs: { version: '${{ steps.version.outputs.version }}' }
+            })
+
+      # pnpm pack, unlike npm pack, rewrites workspace: and catalog: specifiers
+      # to real ranges, so the attached tarballs match what was published.
+      - name: Pack release artifacts
+        run: |
+          mkdir -p release-artifacts
+          pnpm -r --filter "./packages/*" pack --pack-destination ${{ github.workspace }}/release-artifacts
+
+      - name: Create GitHub Release
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="v${{ steps.version.outputs.version }}"
+
+          # Check if release already exists
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "Release $VERSION already exists. Skipping publish."
+            exit 0
+          fi
+
+          # Fetch only tags to ensure we can sort them
+          git fetch origin '+refs/tags/*:refs/tags/*'
+
+          # Find the previous latest tag:
+          # 1. List all tags matching vX.X.X
+          # 2. Sort by version descending (v14 > v13 > v2)
+          # 3. Filter out the current version (tagged when the release PR merged)
+          # 4. Take the first result
+          PREV_TAG=$(git tag -l "v*.*.*" --sort=-v:refname | grep -v "^${VERSION}$" | head -n 1)
+
+          echo "Current Version: $VERSION"
+          echo "Previous Version: $PREV_TAG"
+
+          # The tag already exists (created by tag-release.yml), so gh attaches
+          # the release to it rather than creating it at main's current HEAD.
+          if [ -n "$PREV_TAG" ]; then
+            echo "Creating release with notes from $PREV_TAG..."
+            gh release create "$VERSION" \
+              --title "v${{ steps.version.outputs.version }}" \
+              --generate-notes \
+              --notes-start-tag "$PREV_TAG" \
+              release-artifacts/*.tgz
+          else
+            echo "No previous tag found. Creating initial release..."
+            gh release create "$VERSION" \
+              --title "v${{ steps.version.outputs.version }}" \
+              --generate-notes \
+              release-artifacts/*.tgz
+          fi

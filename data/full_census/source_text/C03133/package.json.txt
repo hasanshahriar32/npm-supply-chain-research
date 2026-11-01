@@ -1,0 +1,52 @@
+{
+  "name": "eslint-snapshot-test",
+  "version": "3.2.0",
+  "description": "Provide snapshot test for eslint rule",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "repository": "https://github.com/fa93hws/eslint-snapshot-test.git",
+  "author": "wjun0912@gmail.com",
+  "license": "MIT",
+  "scripts": {
+    "clean:build": "rimraf dist",
+    "clean:cache": "rimraf cache",
+    "build": "yarn clean:build && tsc --project tsconfig.build.json",
+    "test": "jest --ci",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:cache": "yarn lint --cache --cache-location \"cache/eslint.json\"",
+    "lint:types": "tsc --project tsconfig.check.json",
+    "format:prettier": "prettier --check \"src/**/*.ts\"",
+    "codecov": "codecov"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.22",
+    "@types/lodash.merge": "^4.6.6",
+    "@types/node": "^12.12.7",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@typescript-eslint/parser": "^5.42.1",
+    "@typescript-eslint/typescript-estree": "^5.42.1",
+    "@typescript-eslint/utils": "^5.42.1",
+    "codecov": "^3.6.1",
+    "eslint": "^8.26.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-prettier": "^6.7.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jest": "^23.0.4",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1",
+    "remove": "^0.1.5",
+    "rimraf": "^3.0.0",
+    "ts-jest": "^26.5.5",
+    "typescript": "^4.8.4"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/utils": ">4.0.0"
+  },
+  "dependencies": {
+    "lodash.merge": "^4.6.2"
+  },
+  "keywords": [
+    "eslint",
+    "snapshot-test"
+  ]
+}

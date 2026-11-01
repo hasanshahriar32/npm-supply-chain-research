@@ -1,0 +1,110 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [main, v3]
+  pull_request:
+    branches: [main, v3]
+  workflow_call:
+
+env:
+  EMCC_VERSION: "6.0.0"
+  EMCC_FASTCOMP_VERSION: "1.40.1-fastcomp"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18, latest]
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd ./emsdk
+          ./emsdk install ${{ env.EMCC_VERSION }}
+          ./emsdk activate ${{ env.EMCC_VERSION }}
+          ./upstream/emscripten/emcc -v
+
+      - name: Install Emscripten Fastcomp
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git emsdk-fastcomp --branch 3.1.29
+          cd ./emsdk-fastcomp
+          ./emsdk install ${{ env.EMCC_FASTCOMP_VERSION }}
+          ./emsdk activate ${{ env.EMCC_FASTCOMP_VERSION }}
+          ./fastcomp/emscripten/emcc -v
+
+      - name: npm Install
+        run: npm install
+
+      - name: Setup Chomp
+        uses: guybedford/chomp-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compile to Wasm & Test
+        env:
+          EMSDK_PATH: './emsdk'
+          EMSDK_FASTCOMP_PATH: './emsdk-fastcomp'
+        run: chomp test
+
+      - name: Legacy Browser Test (Firefox 67)
+        if: matrix.node == 18
+        run: |
+          sudo apt-get install -y libdbus-glib-1-2 libxt6 >/dev/null
+          curl -sL https://archive.mozilla.org/pub/firefox/releases/67.0.4/linux-x86_64/en-US/firefox-67.0.4.tar.bz2 | tar xj
+          curl -sL https://github.com/mozilla/geckodriver/releases/download/v0.26.0/geckodriver-v0.26.0-linux64.tar.gz | tar xz
+          FIREFOX_BIN=$PWD/firefox/firefox GECKODRIVER=$PWD/geckodriver node build/test-legacy-browser.mjs
+
+      - name: Footprint
+        env:
+          EMSDK_PATH: './emsdk'
+          EMSDK_FASTCOMP_PATH: './emsdk-fastcomp'
+        run: chomp footprint
+
+      - name: Benchmark Wasm
+        env:
+          EMSDK_PATH: './emsdk'
+          EMSDK_FASTCOMP_PATH: './emsdk-fastcomp'
+        run: chomp bench
+
+  fuzz:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+
+      - name: Use Node.js latest
+        uses: actions/setup-node@v4
+        with:
+          node-version: latest
+
+      - name: Install Emscripten
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git
+          cd ./emsdk
+          ./emsdk install ${{ env.EMCC_VERSION }}
+          ./emsdk activate ${{ env.EMCC_VERSION }}
+
+      - name: npm Install
+        run: npm install
+
+      - name: Setup Chomp
+        uses: guybedford/chomp-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fuzz TypeScript Lexing
+        env:
+          EMSDK_PATH: './emsdk'
+        run: chomp test:fuzz

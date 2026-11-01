@@ -1,0 +1,43 @@
+name: Deploy PostCSS Preset Env
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'main'
+    paths:
+      -  'sites/package-lock.json'
+      -  'sites/postcss-preset-env/**'
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Request Netlify Webhook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 26
+
+      - name: npm ci
+        run: |
+          cd sites/postcss-preset-env
+          npm ci --ignore-scripts
+
+      - name: build
+        run: |
+          cd sites/postcss-preset-env
+          npm run build
+
+      - name: trigger deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.PRESET_ENV_DEPLOY_HOOK }}
+        run: curl -X POST -d {} $DEPLOY_HOOK

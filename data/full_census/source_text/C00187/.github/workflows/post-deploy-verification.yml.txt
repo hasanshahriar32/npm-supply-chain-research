@@ -1,0 +1,342 @@
+name: Post-Deploy Page Verification
+
+on:
+    workflow_run:
+        workflows: ['CI']
+        types: [completed]
+        branches: ['latest']
+    workflow_dispatch:
+        inputs:
+            staging_url:
+                description: 'URL to test against (leave blank to use charts-staging.ag-grid.com)'
+                required: false
+                default: ''
+            csp_dry_run:
+                description: 'Log the CSP Slack message instead of posting it'
+                required: false
+                type: boolean
+                default: false
+
+env:
+    # Disable git's post-fetch background gc/maintenance for every git invocation
+    # (injected via git's GIT_CONFIG_* protocol). Otherwise it rewrites .git/shallow
+    # concurrently with the next chained `git fetch --depth 1`, intermittently failing
+    # job setup with "fatal: shallow file has changed since we read it".
+    GIT_CONFIG_COUNT: 2
+    GIT_CONFIG_KEY_0: gc.auto
+    GIT_CONFIG_VALUE_0: '0'
+    GIT_CONFIG_KEY_1: maintenance.auto
+    GIT_CONFIG_VALUE_1: 'false'
+    CI: true
+    NX_NO_CLOUD: 'true'
+    IBM_TELEMETRY_DISABLED: 'true'
+
+concurrency:
+    group: post-deploy-verification-${{ github.ref }}
+    cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+permissions:
+    contents: read
+    # read is sufficient: the actions-scope consumers are `gh run list`, the per-run jobs API
+    # that reads the verification step's own conclusion, and the previous run's artifact
+    # download, all read-only.
+    actions: read
+    # Lets the Slack notification resolve the commits since the last verified run back to the
+    # pull requests that carried them, so it can name them and their authors.
+    pull-requests: read
+
+jobs:
+    page-verification:
+        # Pinned to ubuntu-24.04 because Playwright 1.59.1 (installed below) can't install Chromium on ubuntu-26.04 (now ubuntu-latest).
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        name: Page Verification (Staging)
+        # For manual dispatch: always run.
+        # For workflow_run: only proceed if triggered by a push to this repo (not a fork PR),
+        # and only if the upstream CI run succeeded. This guards against the untrusted-checkout
+        # risk flagged by OSSF/Scorecard for workflow_run triggers.
+        if: >
+            github.event_name == 'workflow_dispatch' ||
+            (github.event.workflow_run.conclusion == 'success' &&
+             github.event.workflow_run.event == 'push' &&
+             github.event.workflow_run.head_repository.full_name == github.repository)
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  # Use github.sha (the branch HEAD) rather than workflow_run.head_sha to
+                  # avoid the untrusted-input pattern flagged by the OpenSSF Scorecard.
+                  ref: ${{ github.sha }}
+                  fetch-depth: 0
+                  submodules: true
+
+            - name: Align gallery data to deployed commit
+              # page-verification.spec.ts reads data.json from the local checkout to
+              # discover which gallery examples to test. When two commits land in quick
+              # succession, github.sha (HEAD) may be ahead of what was actually deployed,
+              # causing tests to reference examples that don't exist on staging yet.
+              if: github.event_name != 'workflow_dispatch' && github.event.workflow_run.head_sha != ''
+              env:
+                  DEPLOYED_SHA: ${{ github.event.workflow_run.head_sha }}
+              run: |
+                  git show "${DEPLOYED_SHA}:packages/ag-charts-website/src/content/gallery/data.json" \
+                    > packages/ag-charts-website/src/content/gallery/data.json
+
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version-file: '.nvmrc'
+
+            - name: Install Playwright
+              run: |
+                  npm init -y --prefix /tmp/pw
+                  npm install --prefix /tmp/pw @playwright/test@1.59.1 glob playwright-ctrf-json-reporter@0.0.29
+                  ln -s /tmp/pw/node_modules packages/ag-charts-website/node_modules
+                  /tmp/pw/node_modules/.bin/playwright install chromium --with-deps
+
+            - name: Resolve staging URL
+              id: staging_url
+              run: |
+                  URL=$(node -e "
+                    const src = require('fs').readFileSync('./packages/ag-charts-website/src/constants.ts', 'utf8');
+                    console.log(src.match(/export const STAGING_SITE_URL\s*=\s*'([^']+)'/)[1]);
+                  ")
+                  echo "url=${URL}" >> $GITHUB_OUTPUT
+                  echo "Resolved staging URL: ${URL}"
+
+            - name: Run page verification tests
+              id: run_tests
+              working-directory: packages/ag-charts-website
+              env:
+                  PUBLIC_SITE_URL: ${{ inputs.staging_url || steps.staging_url.outputs.url }}
+              run: /tmp/pw/node_modules/.bin/playwright test --config playwright.staging.config.ts --project=chromium
+
+            # The demo pages link each seed project on GitHub (and in StackBlitz): staging and every
+            # other non-production site link the mirror's staging branch, an archive its bX.Y.Z
+            # branch, production the release tag matching the deployed version; the last two mean
+            # this workflow must run from the bX.Y.Z branch. CI syncs the mirror's staging branch
+            # after the staging deploy (the "Sync Demo Seeds (staging)" job), and this workflow starts
+            # when CI succeeds, so it only ever runs after that sync. Fetches the deployed demo
+            # pages, reads the seed links they render and verifies the folders they open resolve, as
+            # do those of every committed seed manifest. The staging seeds install the package
+            # tarballs staging serves, so it also checks that each one the mirror's seeds name is
+            # served and answers the CORS preflight StackBlitz's npm sends first.
+            # StackBlitz itself cannot be driven headlessly; it imports the same GitHub folder.
+            - name: Check demo seed links resolve
+              if: always() && steps.run_tests.outcome != 'skipped'
+              env:
+                  PUBLIC_SITE_URL: ${{ inputs.staging_url || steps.staging_url.outputs.url }}
+              run: node tools/ci/check-demo-seed-links.mjs "$PUBLIC_SITE_URL"
+
+            - name: Publish CTRF Report
+              if: always()
+              uses: ctrf-io/github-test-reporter@7974087018bf4857cf5a9d78723e152038c3fa31 # v1.3.0
+              with:
+                  report-path: 'reports/ag-charts-page-verification.json'
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: page-verification-results
+                  path: |
+                      packages/ag-charts-website/playwright-report/
+                      packages/ag-charts-website/test-results/
+                  retention-days: 14
+
+            # Kept as its own artifact so the csp-report job can pull just this file from the
+            # previous run to compare against, rather than a bundle carrying every trace. A run
+            # against a hand-given URL is not uploaded: it would become the next run's baseline
+            # while describing a different site.
+            - name: Upload CSP report
+              if: always() && inputs.staging_url == ''
+              uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+              with:
+                  name: csp-violations
+                  path: reports/ag-charts-csp-violations.json
+                  if-no-files-found: warn
+                  retention-days: 30
+
+            - name: Check previous run status
+              id: prev_run
+              if: always()
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  # Both answers below describe the verification suite itself, taken from the conclusion of
+                  # the step that runs it rather than from the run's own. A run aggregates the non-gating
+                  # CSP job, and a run that died before the suite started notified nobody, so its conclusion
+                  # cannot say whether the site was verified or whether the channel was told. `outcome`
+                  # comes from the last run that reached a verdict, which decides both whether the channel
+                  # is owed a back-to-green message and whether this failure is a repeat of one already
+                  # reported; `sha` comes from the last run that passed, so the range it anchors holds every
+                  # commit not yet seen green. Both describe the automatic staging verification only: a
+                  # manual dispatch can point the suite at a hand-given URL, so its result says nothing
+                  # about staging and must not stand in as either one. The current run is still in_progress,
+                  # so keeping only completed runs only ever sees earlier ones, and the limit is generous because the
+                  # run that last passed is furthest away precisely when the range it anchors has the most
+                  # commits to name.
+                  # The runs are filtered here rather than with --branch, --event or --status: those
+                  # server-side filters have been seen to omit every recent run, and a stale list silently
+                  # anchors this comparison to an old run.
+                  RUNS=$(gh run list \
+                    --workflow post-deploy-verification.yml \
+                    --limit 100 \
+                    --json databaseId,headSha,headBranch,event,status \
+                    --jq '[.[] | select(.headBranch == "latest" and .event == "workflow_run" and .status == "completed") | {databaseId, headSha}]')
+
+                  OUTCOME=""
+                  SHA=""
+                  INSPECTED=0
+                  # One API call per run, newest first, stopping at the last pass because no older run can
+                  # change either answer. The cap bounds a long red period, or a list that never passed, to
+                  # twenty calls.
+                  for ROW in $(echo "$RUNS" | jq -r '.[] | "\(.databaseId):\(.headSha)"'); do
+                    if [ "$INSPECTED" -ge 20 ]; then
+                      echo "::warning title=Previous run status::Inspected $INSPECTED runs without finding one that passed verification, so this run's PR range is not anchored."
+                      break
+                    fi
+                    INSPECTED=$((INSPECTED + 1))
+                    RUN_ID=${ROW%%:*}
+                    RUN_SHA=${ROW##*:}
+                    # A run holds several jobs; only the verification job carries this step.
+                    STEP=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/jobs" \
+                      --jq '[.jobs[].steps[]? | select(.name == "Run page verification tests") | .conclusion]
+                            | map(select(. == "success" or . == "failure")) | first // empty') || continue
+                    if [ -z "$STEP" ]; then
+                      continue
+                    fi
+                    if [ -z "$OUTCOME" ]; then
+                      OUTCOME=$STEP
+                    fi
+                    if [ "$STEP" = "success" ]; then
+                      SHA=$RUN_SHA
+                      break
+                    fi
+                  done
+
+                  echo "outcome=$OUTCOME" >> $GITHUB_OUTPUT
+                  echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+            - name: Notify Slack
+              # Always notify on failure. On success, only notify if the previous run
+              # failed - a "back to green" signal - so a routine passing run doesn't
+              # spam the channel.
+              if: >
+                  always() &&
+                  (steps.run_tests.outcome == 'failure' ||
+                   (steps.run_tests.outcome == 'success' && steps.prev_run.outputs.outcome == 'failure'))
+              uses: ./external/ag-shared/github/actions/slack-integration
+              with:
+                  AG_LIBRARY: charts
+                  SLACK_BOT_OAUTH_TOKEN: ${{ secrets.SLACK_BOT_OAUTH_TOKEN }}
+                  SLACK_CHANNEL: '#charts_teamcity_status'
+                  CTRF_REPORT_FILE: reports/ag-charts-page-verification.json
+                  CURRENT_COMMIT_SHA: ${{ github.sha }}
+                  PREV_COMMIT_SHA: ${{ steps.prev_run.outputs.sha }}
+                  IS_SUCCESS: ${{ steps.run_tests.outcome == 'success' }}
+                  # One break notifies the channel in full once. While the suite stays red every further
+                  # run posts the header and the test counts only, with no PR attribution and no second
+                  # round of @-mentions for the people who were told the first time.
+                  IS_REPEAT_FAILURE: ${{ steps.run_tests.outcome == 'failure' && steps.prev_run.outputs.outcome == 'failure' }}
+                  # Names the PRs between the last verified run and this one, and @-mentions their
+                  # authors on a failure, so a break reaches whoever landed it.
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NOTION_API_TOKEN: ${{ secrets.SLACK_USER_CONFIG_NOTION_API_TOKEN }}
+                  NOTION_DATA_SOURCE_ID: ${{ secrets.SLACK_USER_CONFIG_NOTION_DATA_SOURCE_ID }}
+
+    # CSP violations are reported, not gated: a hash in the site policy goes stale whenever a tag
+    # is edited in Google Tag Manager, which breaks no page but does need fixing. Keeping this out
+    # of the verification job means the team that owns the policy hears about it without the
+    # regular channel seeing a failure nobody there can act on.
+    csp-report:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        name: CSP Report (non-gating)
+        needs: page-verification
+        # Report whatever the run observed, whether or not the page assertions passed. A skipped
+        # or cancelled verification job has nothing to report.
+        if: >
+            always() &&
+            needs.page-verification.result != 'skipped' &&
+            needs.page-verification.result != 'cancelled'
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ github.sha }}
+                  fetch-depth: 1
+                  submodules: true
+
+            - name: Setup Node
+              uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version-file: '.nvmrc'
+
+            - name: Download CSP report
+              # Tolerated: the suite can die before writing one, and that failure is the
+              # verification job's to report.
+              continue-on-error: true
+              uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+              with:
+                  name: csp-violations
+                  path: csp/current
+
+            - name: Download previous CSP report
+              # The baseline has to be a run that actually produced a report, so this walks back
+              # over recent successful runs rather than trusting the newest: a dispatch against a
+              # hand-given URL succeeds without uploading one, and a run predating this job has
+              # none at all. Once the artifact is known to exist, a failed download is a real
+              # error, so it fails this job rather than quietly reporting the site as all-new.
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  set -e
+                  # The workflow run is still in progress, so this cannot select the current run.
+                  # Filtered here for the same reason as in the previous step, then capped to the ten newest
+                  # successes.
+                  CANDIDATES=$(gh run list \
+                    --workflow post-deploy-verification.yml \
+                    --limit 100 \
+                    --json databaseId,headBranch,conclusion \
+                    --jq '[.[] | select(.headBranch == "latest" and .conclusion == "success") | .databaseId][:10] | .[]')
+
+                  BASELINE=""
+                  for ID in $CANDIDATES; do
+                    if ! ARTIFACTS=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ID/artifacts" \
+                      --jq '.artifacts[] | select(.expired == false) | .name'); then
+                      echo "::warning title=CSP baseline::Could not list artifacts for run $ID; skipping it."
+                      continue
+                    fi
+                    if grep -qx csp-violations <<<"$ARTIFACTS"; then
+                      BASELINE=$ID
+                      break
+                    fi
+                  done
+
+                  if [ -z "$BASELINE" ]; then
+                    echo "No recent successful run has a csp-violations artifact; treating this run as having no baseline."
+                    exit 0
+                  fi
+
+                  gh run download "$BASELINE" \
+                    --repo "$GITHUB_REPOSITORY" \
+                    --name csp-violations \
+                    --dir csp/previous
+                  echo "Comparing against run $BASELINE."
+
+            - name: Report CSP violations
+              env:
+                  CSP_REPORT_FILE: csp/current/ag-charts-csp-violations.json
+                  PREVIOUS_CSP_REPORT_FILE: csp/previous/ag-charts-csp-violations.json
+                  PROJECT_TITLE: AG Charts
+                  SLACK_BOT_OAUTH_TOKEN: ${{ secrets.SLACK_BOT_OAUTH_TOKEN }}
+                  SLACK_CHANNEL: '#dev-ops-status'
+                  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+                  REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+                  COMMIT_SHA: ${{ github.sha }}
+                  DRY_RUN: ${{ inputs.csp_dry_run || false }}
+                  # A run that failed part way through sees fewer violations than the site has,
+                  # which would otherwise read as a policy being fixed.
+                  RUN_COMPLETE: ${{ needs.page-verification.result == 'success' }}
+              run: node ./external/ag-shared/scripts/slack/notify-csp-violations.mjs

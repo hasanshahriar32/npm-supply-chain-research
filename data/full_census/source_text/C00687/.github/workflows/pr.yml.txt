@@ -1,0 +1,101 @@
+name: pr
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup repo
+        uses: ./.github/actions/setup
+
+      - name: prChecks
+        run: pnpm prChecks
+
+  compatibility:
+    needs: core
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        node: [lts/*]
+        os: [windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            node: lts/-1
+          - os: ubuntu-latest
+            node: latest
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup repo
+        uses: ./.github/actions/setup
+        with:
+          node: ${{ matrix.node }}
+
+      # To test node and OS versions, we don't care about rechecking types
+      # so just check runtime behavior
+      - name: Test
+        run: pnpm testRepo
+
+  tsVersionTasks:
+    needs: core
+    runs-on: ubuntu-latest
+    outputs:
+      tasks: ${{ steps.list.outputs.tasks }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: lts/*
+
+      - id: list
+        run: echo "tasks=$(node ark/repo/testTsVersions.ts --list)" >> "$GITHUB_OUTPUT"
+
+  typescript:
+    needs: tsVersionTasks
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        task: ${{ fromJSON(needs.tsVersionTasks.outputs.tasks) }}
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup repo
+        uses: ./.github/actions/setup
+
+      - name: Test ${{ matrix.task }}
+        run: pnpm testTsVersions ${{ matrix.task }}
+
+  prChecks:
+    needs: [compatibility, typescript]
+    timeout-minutes: 1
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo All checks succeeded! ⛵

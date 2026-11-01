@@ -1,0 +1,76 @@
+name: Build website for branch
+
+on:
+  push:
+    branches-ignore:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-on-server:
+    runs-on: ubuntu-latest
+    env:
+      # a build may wait for the lock while other pushes upload their runners, so each run has its own copy
+      RUN_DIR: /var/www/core-js/runners/${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.extract_branch.outputs.branch }}
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.CI_SSH_KEY }}
+
+      - name: Create run directory on remote server
+        run: |
+          ssh -o StrictHostKeyChecking=no ci@${{ secrets.REMOTE_HOST }} "mkdir -p $RUN_DIR"
+
+      - name: Copy runner file to remote server
+        uses: garygrossgarten/github-action-scp@0.10.0
+        with:
+          local: website/scripts/runner.mjs
+          remote: ${{ env.RUN_DIR }}/runner.mjs
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ci
+          privateKey: ${{ secrets.CI_SSH_KEY }}
+
+      - name: Copy runner wrapper file to remote server
+        uses: garygrossgarten/github-action-scp@0.10.0
+        with:
+          local: website/scripts/runner.sh
+          remote: ${{ env.RUN_DIR }}/runner.sh
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ci
+          privateKey: ${{ secrets.CI_SSH_KEY }}
+
+      - name: Copy runner helpers file to remote server
+        uses: garygrossgarten/github-action-scp@0.10.0
+        with:
+          local: website/scripts/helpers.mjs
+          remote: ${{ env.RUN_DIR }}/helpers.mjs
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ci
+          privateKey: ${{ secrets.CI_SSH_KEY }}
+
+      - name: Run node runner.mjs on remote server
+        env:
+          BRANCH: ${{ steps.extract_branch.outputs.branch }}
+        # git allows `$`, `;`, `(`, quotes and alike in branch names, so the name is escaped for the remote shell
+        run: |
+          ssh -o StrictHostKeyChecking=no ci@${{ secrets.REMOTE_HOST }} "cd /var/www/core-js/ && bash $RUN_DIR/runner.sh $(printf '%q' "$BRANCH")"
+
+      - name: Remove run directory from remote server
+        if: always()
+        run: |
+          ssh -o StrictHostKeyChecking=no ci@${{ secrets.REMOTE_HOST }} "rm -rf $RUN_DIR"

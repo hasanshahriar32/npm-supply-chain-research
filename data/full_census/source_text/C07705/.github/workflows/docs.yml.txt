@@ -1,0 +1,105 @@
+name: Deploy Documentation
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [master]
+    paths:
+      - '*.md'
+      - 'docs/**/*.md'
+      - 'typedoc.json'
+      - 'llms.txt'
+      - 'examples/browser/**'
+      - 'packages/tar-xz/**'
+      - 'packages/nxz/**'
+      - 'src/wasm/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+
+      - name: Setup Python (for XZ download)
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Download XZ sources
+        run: python scripts/download_xz_from_github.py deps/xz.tar.gz deps/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+          actions-cache-folder: emsdk-cache
+
+      - name: Build WASM artifacts
+        run: bash src/wasm/build.sh
+
+      - name: Build TypeScript
+        run: pnpm build
+
+      - name: Build documentation
+        run: pnpm typedoc
+
+      - name: Build tar-xz API docs
+        run: pnpm exec typedoc --options packages/tar-xz/typedoc.json
+
+      - name: Copy llms.txt to docs site
+        run: cp llms.txt docs-site/
+
+      - name: Build browser demo
+        working-directory: examples/browser
+        run: |
+          pnpm install --ignore-scripts
+          pnpm exec vite build
+
+      - name: Build tar-xz demo
+        working-directory: packages/tar-xz
+        run: pnpm exec vite build --config demo/vite.config.ts
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs-site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

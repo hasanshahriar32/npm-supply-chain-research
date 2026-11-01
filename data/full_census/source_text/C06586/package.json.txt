@@ -1,0 +1,66 @@
+{
+  "name": "@metamask/eth-json-rpc-filters",
+  "version": "9.0.0",
+  "description": "[json-rpc-engine](https://github.com/MetaMask/json-rpc-engine) middleware implementing ethereum filter methods. Backed by an [eth-block-tracker](https://github.com/MetaMask/eth-block-tracker) and web3 provider interface (`web3.currentProvider`).",
+  "main": "index.js",
+  "engines": {
+    "node": "^18.16 || ^20 || >=22",
+    "yarn": "^1.22.22"
+  },
+  "scripts": {
+    "build": "echo 'this does nothing'",
+    "build:clean": "rimraf dist && yarn build",
+    "lint": "printf '%s\\n' 'No lint command'",
+    "setup": "yarn install && yarn allow-scripts",
+    "test": "node test"
+  },
+  "license": "ISC",
+  "files": [
+    "*.js"
+  ],
+  "dependencies": {
+    "@metamask/eth-query": "^4.0.0",
+    "@metamask/json-rpc-engine": "^10.0.0",
+    "@metamask/safe-event-emitter": "^3.0.0",
+    "async-mutex": "^0.5.0",
+    "pify": "^5.0.0"
+  },
+  "devDependencies": {
+    "@lavamoat/allow-scripts": "^2.5.1",
+    "@metamask/auto-changelog": "^3.3.0",
+    "@metamask/eth-json-rpc-middleware": "^15.0.0",
+    "@metamask/eth-block-tracker": "^11.0.1",
+    "ganache": "^7.9.2",
+    "sinon": "^15.2.0",
+    "tape": "^5.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MetaMask/eth-json-rpc-filters.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MetaMask/eth-json-rpc-filters/issues"
+  },
+  "homepage": "https://github.com/MetaMask/eth-json-rpc-filters#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@lavamoat/preinstall-always-fail": false,
+      "ethereumjs-util>ethereum-cryptography>keccak": false,
+      "ethereumjs-util>ethereum-cryptography>secp256k1": false,
+      "ethjs-query>babel-runtime>core-js": false,
+      "ganache>keccak": false,
+      "ganache>secp256k1": false,
+      "ganache>@trufflesuite/bigint-buffer": false,
+      "ganache>@trufflesuite/uws-js-unofficial>bufferutil": false,
+      "ganache>@trufflesuite/uws-js-unofficial>utf-8-validate": false,
+      "ganache>bufferutil": false,
+      "ganache>leveldown": false,
+      "ganache>utf-8-validate": false
+    }
+  },
+  "packageManager": "yarn@1.22.22"
+}

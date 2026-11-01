@@ -1,0 +1,118 @@
+name: Deployment
+
+concurrency: production
+
+on:
+  push:
+    branches:
+      - main
+
+# To use Turborepo Remote Caching, set the following environment variables.
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: googleapis/release-please-action@v5
+        id: release
+        with:
+          config-file: .github/release-please/release-please-config.json
+          manifest-file: .github/release-please/.release-please-manifest.json
+
+      - uses: actions/checkout@v4
+        # these if statements ensure that a publication only occurs when
+        # a new release is created:
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        with:
+          fetch-depth: 0 # Fetch all history for all tags and branches
+      - name: read node version from the .nvmrc file
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: echo ::set-output name=NODE_VERSION::$(cat .nvmrc)
+        shell: bash
+        id: nvmrc
+      - uses: actions/setup-node@v4
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        with:
+          node-version: ${{steps.nvmrc.outputs.NODE_VERSION}}
+          # this line is required for the setup-node action to be able to run the npm publish below.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npm ci
+      - name: Clean
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npm run clean
+      - name: Install playwright browsers
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npx playwright install --with-deps
+        # Retry the test command up to 6 times with a timeout of 10 minutes
+      - name: Test
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 10
+          # run npm test and pass through `-- --all` to turborepo
+          command: npm run test -- -- --all
+      - name: Clean
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npm run clean
+      - name: Build
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npm run build:packages
+      - name: Publish
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        run: npm exec -c publish-packages
+
+      - name: 'Get message'
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        id: 'deploy_message'
+        run: |
+          echo "::set-output name=commit_msg::$(git log -1 --format=%B)"
+          echo "::set-output name=commit_sha::$(git log -1 --format=%H)"
+      - name: Slack Notify
+        if: ${{ steps.release.outputs.releases_created == 'true' }}
+        uses: rtCamp/action-slack-notify@v2.2.0
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: ${{ steps.deploy_message.outputs.commit_msg }}
+          SLACK_USERNAME: Mux Elements
+          SLACK_ICON: https://avatars.githubusercontent.com/muxinc?size=48
+          SLACK_FOOTER: ''
+
+  canary:
+    # Only publish canaries from main, and never on the Release Please commit
+    # (that path publishes the real release via `release` above).
+    if: ${{ github.ref == 'refs/heads/main' && github.event.commits[0].author.name != 'github-actions[bot]' }}
+
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: read node version from the .nvmrc file
+        run: echo ::set-output name=NODE_VERSION::$(cat .nvmrc)
+        shell: bash
+        id: nvmrc
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{steps.nvmrc.outputs.NODE_VERSION}}
+          # required so npm can publish below
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+      - run: npm ci
+      - run: npm run clean
+      - run: npm run build:packages
+      - run: npx --yes -w packages wet-run@1.2.5 release prerelease --prerelease canary --provenance --log-level verbose

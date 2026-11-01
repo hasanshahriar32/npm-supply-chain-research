@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, feature/* ]
+
+  pull_request:
+    branches: [ master, feature/* ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [24.x]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Use Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install NPM Dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Chrome
+        run: npx puppeteer browsers install chrome
+
+      - name: Check Installed Browsers
+        run: npx puppeteer browsers list
+
+      - name: Run Compile
+        run: npm run compile
+
+      - name: Run Tests
+        run: npm run test

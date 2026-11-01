@@ -1,0 +1,98 @@
+{
+  "private": true,
+  "useWorkspaces": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "packageManager": "yarn@4.13.0",
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.31.0",
+    "@endo/compartment-mapper": "workspace:^",
+    "@endo/eslint-plugin": "workspace:^",
+    "@endo/marshal": "workspace:^",
+    "@endo/nat": "workspace:^",
+    "@endo/ses-ava": "workspace:^",
+    "@jessie.js/eslint-plugin": "^0.4.3",
+    "@lavamoat/allow-scripts": "^3.4.3",
+    "@lavamoat/preinstall-always-fail": "^2.1.1",
+    "@types/node": "catalog:dev",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "ava": "catalog:dev",
+    "eslint": "catalog:dev",
+    "eslint-config-jessie": "^0.0.6",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-eslint-plugin": "^7.4.1",
+    "eslint-plugin-import": "catalog:dev",
+    "eslint-plugin-jsdoc": "^50.8.0",
+    "eslint-plugin-unicorn": "^56.0.1",
+    "globals": "^17.6.0",
+    "js-yaml": "^5.2.1",
+    "prettier": "^3.8.3",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "ses": "workspace:^",
+    "source-map": "^0.7.6",
+    "tsd": "catalog:dev",
+    "type-coverage": "^2.29.7",
+    "typedoc": "^0.28.19",
+    "typedoc-plugin-mermaid": "^1.12.0",
+    "typescript": "catalog:dev",
+    "typescript-eslint": "^8.60.0",
+    "unist-util-visit": "^5.1.0",
+    "yaml": "^2.9.0",
+    "zx": "^8.8.5"
+  },
+  "type": "module",
+  "scripts": {
+    "clean": "git clean -fX -e node_modules -e '!.yarn/install-state.gz'",
+    "docs": "rm -rf api-docs packages/ses/dist && typedoc && ./scripts/posttypedoc.sh",
+    "update": "echo 'DEPRECATED: use \"yarn upgrade-interactive\" or \"yarn dedupe\"'",
+    "format": "prettier --write .github packages",
+    "lint": "yarn lint:prettier && yarn lint:eslint && yarn lint:sh",
+    "lint:eslint": "eslint .",
+    "lint:workspaces": "prettier --check .github packages && yarn workspaces foreach --all run lint",
+    "lint:workspaces:eslint": "yarn workspaces foreach --all run lint:eslint",
+    "lint:fix": "yarn lint:eslint -- --fix",
+    "lint:workspaces:fix": "yarn workspaces foreach --all run lint-fix",
+    "lint:prettier": "prettier --check .github packages",
+    "lint:sh": "scripts/shellcheck.sh",
+    "release:npm": "scripts/release-npm.mjs",
+    "pack:all": "scripts/pack-all.mjs",
+    "smoketest:publish": "scripts/smoketest-publishing.sh",
+    "test": "yarn workspaces foreach --all --exclude @endo/skel run test",
+    "test:c8": "yarn workspaces foreach --all run test:c8",
+    "test:xs": "yarn workspaces foreach --all run test:xs",
+    "test262": "yarn workspaces foreach --all run test262",
+    "build": "yarn workspaces foreach --all run build",
+    "build-ts": "tsc --build tsconfig.build.json",
+    "build:types:gen": "node scripts/generate-composite-tsconfigs.mjs",
+    "build:types:check": "node scripts/generate-composite-tsconfigs.mjs --check",
+    "build:types": "tsc --build tsconfig.composite.json",
+    "build:types:clean": "yarn build:types --clean",
+    "build:types:watch": "yarn build:types --watch"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "singleQuote": true
+  },
+  "typeCoverage": {
+    "atLeast": 0
+  },
+  "lavamoat": {
+    "allowScripts": {
+      "@lavamoat/preinstall-always-fail": false
+    }
+  },
+  "resolutions": {
+    "@endo/eslint-plugin": "workspace:^",
+    "configstore@npm:^1.4.0": "npm:5.0.1",
+    "eshost@npm:^9.0.0": "patch:eshost@npm%3A9.0.0#~/.yarn/patches/eshost-npm-9.0.0-58e194371d.patch",
+    "nconf@npm:^0.8.2": "npm:0.13.0",
+    "socket.io@npm:^2.3.0": "npm:4.8.4"
+  }
+}

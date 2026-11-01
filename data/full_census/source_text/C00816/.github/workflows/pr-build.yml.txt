@@ -1,0 +1,128 @@
+name: Node.js SDK Continuous Build
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    name: Build Node ${{ matrix.node-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        node-version:
+          - 14.x
+          - 16.x
+          - 18.x
+          - 20.x
+        include:
+          - os: ubuntu-latest
+            node-version: 16.x
+            coverage: true
+          - os: macos-15-intel
+            node-version: 14.x
+        exclude:
+          # Issue with npm6 on windows resulting in failing workflows:
+          # https://github.com/npm/cli/issues/4341#issuecomment-1040608101
+          # Since node14 is EOL, we can drop this set from our tests.
+          # We still test node14 on other platforms.
+          - os: windows-latest
+            node-version: 14.x
+          # https://github.com/actions/runner-images/issues/9741
+          # macos-latest provides only ARM hosts
+          # https://github.com/nodejs/node/issues/36161
+          # https://github.com/nodejs/node/issues/40126
+          # Without workarounds, Node.js 14 isn't supported on ARM macos
+          # As workaround, test on macos-13 version instead
+          - os: macos-latest
+            node-version: 14.x
+
+    steps:
+      - name: Checkout AWS XRay SDK Node Repository @ default branch latest
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 #v3.6.0
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 #v3.9.1
+        with:
+          node-version: ${{ matrix.node-version }}
+          check-latest: true
+
+      - run: npm install -g npm@8.19.4
+
+      - name: Cache NPM modules
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c #v3.5.0
+        with:
+          path: |
+            node_modules
+            package-lock.json
+            packages/*/node_modules
+            packages/*/package-lock.json
+          key: ${{ matrix.os }}-${{ matrix.node-version }}-${{ hashFiles('package.json', 'packages/*/package.json') }}-06142023
+
+      - name: Bootstrap
+        run: |
+          npm ci
+          npx lerna bootstrap --no-ci --hoist
+
+      - name: Build
+        run: |
+          npx lerna run compile
+        shell: bash
+
+      - name: Execute tests with Lerna
+        if: '!matrix.coverage'
+        run: |
+          npx lerna run test
+        shell: bash
+
+      # Only need to report coverage once, so only run instrumented tests on one Node version/OS
+      # Use lerna to get reports from all packages
+      - name: Report coverage
+        if: matrix.coverage
+        run: |
+          npx lerna run testcov
+          npx lerna run reportcov
+        env:
+          CI: true
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 #v4.6.0
+        if: matrix.coverage
+        with:
+          directory: ./packages/core/
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.lcov
+          verbose: true
+
+  static-code-checks:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 #5.0.0
+        with:
+          fetch-depth: 0
+      - name: Check for versioned GitHub actions
+        if: always()
+        run: |
+          # Get changed GitHub workflow/action files
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}..HEAD | grep -E "^\.github/(workflows|actions)/.*\.ya?ml$" || true)
+          
+          if [ -n "$CHANGED_FILES" ]; then
+            # Check for any versioned actions, excluding comments and this validation script
+            VIOLATIONS=$(grep -Hn "uses:.*@v" $CHANGED_FILES | grep -v "grep.*uses:.*@v" | grep -v "#.*@v" || true)
+            if [ -n "$VIOLATIONS" ]; then
+              echo "Found versioned GitHub actions. Use commit SHAs instead:"
+              echo "$VIOLATIONS"
+              exit 1
+            fi
+          fi
+          
+          echo "No versioned actions found in changed files"

@@ -1,0 +1,61 @@
+{
+  "name": "awesome-cordova-plugins",
+  "version": "9.7.0",
+  "description": "Native plugin wrappers for Cordova and Ionic with TypeScript, ES6+, Promise and Observable support",
+  "homepage": "https://awesome-cordova-plugins.com",
+  "author": "Daniel Sogl <me@danielsogl.com> (https://danielsogl.com)",
+  "license": "MIT",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
+  "scripts": {
+    "prepare": "lefthook install",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:core": "tsc -p tsconfig.core.json",
+    "build:esm": "tsx scripts/tasks/build-esm",
+    "build:ngx": "tsx scripts/tasks/build-ngx",
+    "build": "npm run build:core && npm run build:esm && npm run build:ngx",
+    "prebuild": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "npmpub": "tsx scripts/tasks/publish",
+    "lint": "eslint .",
+    "typecheck": "npm run build:core && tsc -p tsconfig.json --noEmit && tsc -p tsconfig.spec.json && tsc -p scripts/tsconfig.json --noEmit",
+    "readmes": "tsx scripts/docs/generate-readmes",
+    "plugin:create": "tsx scripts/tasks/plugin-create",
+    "prettier": "prettier --write --ignore-unknown \"**/*\"",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "tslib": "2.8.1"
+  },
+  "devDependencies": {
+    "@angular/compiler": "22.2.3",
+    "@angular/compiler-cli": "22.2.3",
+    "@angular/core": "22.2.3",
+    "@eslint/js": "^10.0.1",
+    "@oxc-project/runtime": "^0.155.0",
+    "@types/cordova": "11.0.3",
+    "@types/node": "^26.6.5",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsdoc": "^64.5.4",
+    "jsdom": "^30.1.3",
+    "lefthook": "^2.2.2",
+    "prettier": "^3.9.10",
+    "rxjs": "^7.8.2",
+    "tsx": "^4.23.15",
+    "typedoc": "^0.28.20",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danielsogl/awesome-cordova-plugins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/danielsogl/awesome-cordova-plugins/issues"
+  },
+  "private": true
+}

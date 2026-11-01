@@ -1,0 +1,58 @@
+name: linux tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      HUSKY: 0
+
+    strategy:
+      matrix:
+        node-version: [20.10.0, 20.x, 22.x, 24.x]
+
+    steps:
+    - name: Checkout Project
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Lint the Commit Messages
+      uses: wagoid/commitlint-github-action@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Lint Files
+      run: npm run lint
+
+    - name: Run Tests and Coverage
+      env:
+        CI: true
+      run: npm run test-cover
+
+    - name: Send Coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        parallel: true
+        path-to-lcov: ./coverage/lcov.info
+
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close Coveralls Parallel Build
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true

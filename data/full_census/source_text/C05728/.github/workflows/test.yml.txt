@@ -1,0 +1,58 @@
+name: Kubernetes Javascript Client - Validation
+
+on:
+    push:
+        branches: [master, main]
+        paths:
+            - 'src/**'
+            - 'testdata/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - 'tsconfig*.json'
+            - 'eslint.config.js'
+            - 'version-check.js'
+            - '.github/workflows/test.yml'
+    pull_request:
+        branches: [master, main]
+        paths:
+            - 'src/**'
+            - 'testdata/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - 'tsconfig*.json'
+            - 'eslint.config.js'
+            - 'version-check.js'
+            - '.github/workflows/test.yml'
+
+permissions: {}
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        strategy:
+            matrix:
+                # Pinned to 26.7: Node 26.8.0 rewrote fs.readFile
+                # (nodejs/node#65327) so that binding.open is no longer called
+                # from JS, which breaks mock-fs at require time
+                node: ['26.7', '25', '24', '22']
+        name: Node ${{ matrix.node }} validation
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: ${{ matrix.node }}
+            # Pre-check to validate that versions match between package.json
+            # and package-lock.json. Needs to run before npm install
+            - run: node version-check.js
+            - run: npm ci
+            - run: npm test
+            - run: npm run lint
+            - run: npm audit --audit-level=critical
+            - run: npm run build-with-tests && npm run test-transpiled
+            - name: Create k8s Kind Cluster
+              uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
+            - run: npm run integration-test

@@ -1,0 +1,135 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      ["*.md", "docs/**", ".github/**", ".prettierignore", "AUTHORS", "LICENSE"]
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      ["*.md", "docs/**", ".github/**", ".prettierignore", "AUTHORS", "LICENSE"]
+    types: [opened, synchronize, reopened, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    uses: ./.github/workflows/npm-script.yml
+    with:
+      npm-script: lint
+
+  smoke:
+    uses: ./.github/workflows/npm-script.yml
+    with:
+      node-versions: "20.19.0,20,22.12.0,22,24,26"
+      npm-script: test-smoke
+
+  test-node-lts:
+    # TODO: Restore "mocha-github-actions-reporter" style reporting without relying on third party module
+    # https://github.com/mochajs/mocha/issues/5183
+    uses: ./.github/workflows/npm-script.yml
+    needs: smoke
+    strategy:
+      fail-fast: false
+      matrix:
+        test-part:
+          - interfaces
+          - unit
+          - integration
+          - jsapi
+          - requires
+          - reporters
+          - only
+    with:
+      npm-script: test-node:${{ matrix.test-part }}
+
+  test-node-all:
+    name: Test ${{ matrix.test-part }} in all environments
+    permissions:
+      contents: read
+    # TODO: Restore "mocha-github-actions-reporter" style reporting without relying on third party module
+    # https://github.com/mochajs/mocha/issues/5183
+    uses: ./.github/workflows/npm-script.yml
+    needs: test-node-lts
+    strategy:
+      fail-fast: false
+      matrix:
+        coverage: [true]
+        test-part:
+          - interfaces
+          - unit
+          - integration
+          - requires
+          - reporters
+          - only
+        include:
+          - test-part: jsapi
+            coverage: false
+    with:
+      os: "ubuntu-latest,windows-latest"
+      # We pin exact versions here per https://github.com/mochajs/mocha/issues/5052
+      # Ref https://nodejs.org/en/about/previous-releases
+      node-versions: "20.19.4,22.18.0,24.6.0,26.8.2"
+      npm-script: test-node:${{ matrix.test-part }}
+      coverage: ${{ matrix.coverage }}
+
+  coverage:
+    name: Merge coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    if: ${{ !cancelled() && needs.test-node-all.result != 'skipped' }}
+    needs: test-node-all
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+      - uses: actions/download-artifact@v8
+        with:
+          path: coverage-reports
+          pattern: coverage-*
+      - name: Merge coverage reports
+        shell: bash
+        run: |
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/merge-coverage.js coverage-reports coverage/lcov.info | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: coverage/lcov.info
+          overwrite: true
+
+  test-browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - run: npm run test-browser
+        env:
+          NODE_OPTIONS: "--trace-warnings"
+
+  tsc:
+    uses: ./.github/workflows/npm-script.yml
+    with:
+      npm-script: tsc

@@ -1,0 +1,133 @@
+# Workflow Name: Build and Publish
+# This workflow performs the following tasks:
+#  - Checks out repository code and sets up the Node.js environment
+#  - Runs the full test suite (artifact validation + parser tests)
+#  - Builds all release artifacts:
+#      officeparser@<version>.browser.iife.js — IIFE bundle for <script> tags
+#      officeparser@<version>.browser.mjs     — ESM bundle for bundlers (Vite, webpack)
+#      officeparser@<version>.browser.d.ts    — TypeScript declarations
+#      sbom.cdx.json                          — CycloneDX Software Bill of Materials
+#  - Attaches all artifacts to the GitHub Release
+#  - Publishes to npm registry with OIDC provenance (Sigstore attestation)
+#  - Publishes to GitHub Packages with @harshankur scope
+
+name: Build and Publish
+
+# Trigger: fires only when a release is published on GitHub
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+# Permissions:
+#  contents: write   — upload release assets
+#  packages: write   — publish to GitHub Packages
+#  id-token: write   — OIDC token for npm provenance (Sigstore)
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Step 1: Checkout ───────────────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      # ── Step 2: Node.js environment ────────────────────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      # ── Step 3: Install dependencies ───────────────────────────────────────
+      - name: Install Dependencies
+        run: npm ci
+
+      # ── Step 4: Full test suite ────────────────────────────────────────────
+      # Runs testShippingArtifacts.ts + testOfficeParser.ts + testOfficeGenerator.ts.
+      # The workflow halts here if any test fails.
+      - name: Run Tests
+        if: github.event_name == 'release'
+        run: npm test
+
+      # ── Step 5: Prepare versioned release assets ───────────────────────────
+      # The build was already run by `npm test` (which calls `npm run build`).
+      # We just need to copy artifacts to the staging directory.
+      - name: Prepare Release Assets
+        if: github.event_name == 'release'
+        run: |
+          VERSION=${{ github.event.release.tag_name }}
+          VERSION_CLEAN=${VERSION#v}
+          mkdir -p release_assets
+          cp dist/officeparser.browser.iife.js      "release_assets/officeparser@$VERSION_CLEAN.browser.iife.js"
+          cp dist/officeparser.browser.mjs          "release_assets/officeparser@$VERSION_CLEAN.browser.mjs"
+          cp dist/officeparser.browser.d.ts         "release_assets/officeparser@$VERSION_CLEAN.browser.d.ts"
+          cp dist/officeparser.browser.slim.iife.js "release_assets/officeparser@$VERSION_CLEAN.browser.slim.iife.js"
+          cp dist/officeparser.browser.slim.mjs     "release_assets/officeparser@$VERSION_CLEAN.browser.slim.mjs"
+          cp dist/officeparser.browser.slim.d.ts    "release_assets/officeparser@$VERSION_CLEAN.browser.slim.d.ts"
+
+      # ── Step 6: Generate SBOM ─────────────────────────────────────────────
+      # Produces a CycloneDX JSON SBOM inventorying all production dependencies.
+      # Uses @cyclonedx/cyclonedx-npm which reads package-lock.json for an
+      # accurate transitive dependency graph.
+      # The SBOM complements npm provenance: provenance links source→binary,
+      # the SBOM documents the complete dependency inventory.
+      - name: Generate SBOM (CycloneDX)
+        if: github.event_name == 'release'
+        run: |
+          npx --yes @cyclonedx/cyclonedx-npm \
+            --output-format json \
+            --output-file release_assets/sbom.cdx.json
+
+      # ── Step 7: Attach all assets to the GitHub Release ───────────────────
+      # This uploads:
+      #   officeparser@<version>.browser.iife.js      — IIFE bundle
+      #   officeparser@<version>.browser.mjs          — ESM bundle
+      #   officeparser@<version>.browser.d.ts         — TypeScript declarations
+      #   officeparser@<version>.browser.slim.iife.js — Slim IIFE bundle
+      #   officeparser@<version>.browser.slim.mjs     — Slim ESM bundle
+      #   officeparser@<version>.browser.slim.d.ts    — Slim TypeScript declarations
+      #   sbom.cdx.json                               — CycloneDX SBOM
+      - name: Upload Release Assets
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: release_assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Step 8: Publish to npm (with OIDC provenance) ─────────────────────
+      # NPM_CONFIG_PROVENANCE=true triggers Sigstore OIDC signing, creating a
+      # verifiable link between the package on the registry, its source code,
+      # and this workflow run.
+      - name: Setup Node.js for npm
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: npm publish
+        env:
+          NPM_CONFIG_PROVENANCE: true
+
+      # ── Step 9: Publish to GitHub Packages ────────────────────────────────
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@harshankur'
+
+      - name: Publish to GitHub Packages
+        run: |
+          npm pkg set name="@harshankur/officeparser"
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,60 @@
+name: Build bundles
+
+# branches only: the website runner builds and caches the bundles of a tag itself
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Extract branch name
+        shell: bash
+        # scp-action passes `target` to the remote shell as is, so a branch name with other characters is not uploaded:
+        # the website runner builds the bundles of such a branch itself
+        run: |
+          BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          if [[ "$BRANCH" =~ ^[A-Za-z0-9._/-]+$ ]]; then echo 'upload=true' >> "$GITHUB_OUTPUT"; fi
+        id: extract_branch
+
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm run prepare-monorepo
+
+      - name: Build bundle
+        run: npm run bundle-package minified-name core-js-bundle
+
+      - name: Build esmodules bundle
+        run: npm run bundle-package esmodules minified-name core-js-bundle-esmodules
+
+      # the website runner waits for the bundles of the commit it builds and takes them once the commit is there, so the
+      # commit goes last
+      - name: Write commit of bundles
+        if: steps.extract_branch.outputs.upload == 'true'
+        run: echo "$GITHUB_SHA" > packages/core-js-bundle/commit
+
+      - name: Copy files to server over SSH
+        if: steps.extract_branch.outputs.upload == 'true'
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ci
+          key: ${{ secrets.CI_SSH_KEY }}
+          source: "packages/core-js-bundle/core-js-bundle.js,packages/core-js-bundle/core-js-bundle-esmodules.js,packages/core-js-bundle/commit"
+          target: "/var/www/core-js/bundles/${{ steps.extract_branch.outputs.branch }}/"
+          strip_components: 2

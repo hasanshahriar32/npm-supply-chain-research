@@ -1,0 +1,130 @@
+{
+  "name": "@angular-eslint/angular-eslint",
+  "private": true,
+  "description": "The tooling which enables ESLint to work with Angular projects",
+  "volta": {
+    "node": "26.12.0"
+  },
+  "packageManager": "pnpm@12.14.0",
+  "contributors": [
+    "James Henry <angular-eslint@jameshenry.email>"
+  ],
+  "license": "MIT",
+  "repository": "angular-eslint/angular-eslint",
+  "bugs": "https://github.com/angular-eslint/angular-eslint/issues",
+  "scripts": {
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "e2e": "nx e2e e2e",
+    "update-e2e-snapshots-ci": "nx e2e-ci e2e --configuration updateSnapshot",
+    "check-clean-workspace-after-install": "git diff --quiet --exit-code",
+    "postinstall": "node tools/scripts/postinstall.js",
+    "pre-commit": "pnpm lint-staged",
+    "pre-push": "pnpm format-check",
+    "format": "node node_modules/prettier/bin/prettier.cjs --write \"./**/*.{ts,js,json,md}\"",
+    "format-check": "node node_modules/prettier/bin/prettier.cjs --check \"./**/*.{ts,js,json,md}\"",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
+    "typecheck-workspace": "tsc -b --pretty --verbose",
+    "release": "tsx tools/scripts/release.ts",
+    "check-rule-docs": "nx run-many -t check-rule-docs",
+    "update-rule-docs": "nx run-many -t update-rule-docs",
+    "check-rule-lists": "nx run-many -t check-rule-lists",
+    "update-rule-lists": "nx run-many -t update-rule-lists",
+    "update-rule-configs": "nx run-many -t update-rule-configs",
+    "update-native-event-names": "nx run utils:update-native-event-names",
+    "prepare": "husky"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,js,json,md}": [
+      "node node_modules/prettier/bin/prettier.cjs --write"
+    ]
+  },
+  "devDependencies": {
+    "@angular/cli": "catalog:",
+    "@angular/compiler": "catalog:",
+    "@commitlint/cli": "catalog:",
+    "@commitlint/config-conventional": "catalog:",
+    "@eslint/core": "catalog:",
+    "@eslint/js": "catalog:",
+    "@mdn/browser-compat-data": "catalog:",
+    "@nx/devkit": "catalog:",
+    "@nx/esbuild": "catalog:",
+    "@nx/eslint": "catalog:",
+    "@nx/eslint-plugin": "catalog:",
+    "@nx/js": "catalog:",
+    "@nx/plugin": "catalog:",
+    "@nx/vite": "catalog:",
+    "@nx/vitest": "catalog:",
+    "@nx/workspace": "catalog:",
+    "@schematics/angular": "catalog:",
+    "@swc-node/register": "catalog:",
+    "@swc/cli": "catalog:",
+    "@swc/core": "catalog:",
+    "@swc/helpers": "catalog:",
+    "@types/node": "catalog:",
+    "@types/semver": "catalog:",
+    "@types/yargs": "catalog:",
+    "@typescript-eslint/rule-tester": "catalog:typescript-eslint",
+    "@typescript-eslint/types": "catalog:typescript-eslint",
+    "@typescript-eslint/utils": "catalog:typescript-eslint",
+    "@vitest/coverage-v8": "catalog:",
+    "cz-conventional-changelog": "catalog:",
+    "esbuild": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "execa": "catalog:",
+    "husky": "catalog:",
+    "json-schema-to-typescript": "catalog:",
+    "json-schema-traverse": "catalog:",
+    "jsonc-eslint-parser": "catalog:",
+    "lint-staged": "catalog:",
+    "ncp": "catalog:",
+    "nx": "catalog:",
+    "picocolors": "catalog:",
+    "pkg-pr-new": "catalog:",
+    "prettier": "catalog:",
+    "tree-kill": "catalog:",
+    "ts-node": "catalog:",
+    "tslib": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:typescript-eslint",
+    "verdaccio": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "yargs": "catalog:"
+  },
+  "nx": {
+    "targets": {
+      "check-rule-configs": {
+        "dependsOn": [
+          "update-rule-configs"
+        ],
+        "command": "git diff --quiet --exit-code -- packages/angular-eslint/src/configs || (echo \"\n-------\n\nCHECK RULE CONFIGS ERROR: You have uncommitted changes to the generated rule configs.\n\nYou should run 'pnpm update-rule-configs' and commit the result.\n\n-------\n\" && exit 1)"
+      },
+      "update-rule-configs": {
+        "dependsOn": [
+          "utils:build",
+          "^build"
+        ],
+        "outputs": [
+          "{projectRoot}/configs"
+        ],
+        "command": "tsx tools/scripts/generate-configs.ts"
+      }
+    },
+    "includedScripts": []
+  },
+  "dependencies": {}
+}

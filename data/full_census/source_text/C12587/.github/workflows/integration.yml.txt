@@ -1,0 +1,67 @@
+name: Integration Build
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+  pull_request:
+    branches:
+      - '*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [24.x]
+
+    steps:
+      - name: Checkout yeoman-test
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        with:
+          path: yeoman-test
+      - name: Checkout yeoman-generator
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        with:
+          repository: yeoman/generator
+          path: yeoman-generator
+      - name: Checkout yeoman-environment
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+        with:
+          repository: yeoman/environment
+          path: yeoman-environment
+      - uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.2
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run yeoman-test test
+        if: false
+        run: |
+          cd $GITHUB_WORKSPACE/yeoman-test
+          npm ci
+          npm install yeoman/generator#main
+          npm install yeoman/environment#main
+          npm test
+
+      - name: Run yeoman-generator test
+        if: false
+        run: |
+          cd $GITHUB_WORKSPACE/yeoman-generator
+          npm ci
+          npm install ${{ github.repository }}#$GITHUB_SHA
+          npm install yeoman/environment#main
+          npm test
+
+      - name: Run yeoman-environment test
+        if: false
+        run: |
+          cd $GITHUB_WORKSPACE/yeoman-environment
+          npm ci
+          npm install ${{ github.repository }}#$GITHUB_SHA
+          npm install yeoman/generator#main
+          npm test

@@ -1,0 +1,75 @@
+name: Toolkit Visual Test
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Setup Node 💾
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - name: Setup yarn cache
+        uses: actions/cache@v4
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            yarn-
+
+      - name: Install Dependencies 📥
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        run: yarn install
+
+      - name: Set up browser cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/pw-browsers
+          key: ${{ runner.os }}-${{ hashFiles('ui-tests/yarn.lock') }}
+
+      - name: Install Playwright Browsers
+        run: yarn run playwright install --with-deps
+        working-directory: packages/components
+
+      - name: Run Visual Tests 🧪
+        run: yarn run test:visual
+        working-directory: packages/components
+
+      - name: Update Snapshots
+        if: ${{ failure() }}
+        run: |
+          mv test-results test-assets
+          yarn run test:visual -u
+        working-directory: packages/components
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: jupyter-ui-test
+          path: |
+            packages/components/test-assets/
+            packages/components/src/**/*-snapshots/*

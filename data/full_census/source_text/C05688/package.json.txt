@@ -1,0 +1,79 @@
+{
+  "name": "mingo",
+  "version": "7.2.7",
+  "description": "MongoDB query language for in-memory objects",
+  "main": "./cjs/index.js",
+  "module": "./esm/index.js",
+  "types": "./types/index.d.ts",
+  "scripts": {
+    "prepare": "husky install",
+    "docs": "touch docs/.nojekyll; npm run typedoc",
+    "typedoc": "typedoc --entryPointStrategy expand src/",
+    "posttypedoc": "node ./build.mjs demo",
+    "build": "npm run clean && node ./build.mjs",
+    "postbuild": "tsc --project tsconfig.build.json",
+    "clean": "rm -fr build",
+    "perf": "npx tsx benchmarks/perf.ts",
+    "test": "vitest run --coverage",
+    "test-dev": "vitest",
+    "release": "npm run test && npm run build && cd build && npm publish",
+    "prepublishOnly": "echo \"use 'npm run release'\" && false",
+    "postinstall": "node ./build.mjs install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kofrasa/mingo.git"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "**/*.js",
+    "**/*.d.ts",
+    "**/*.json"
+  ],
+  "devDependencies": {
+    "@eslint/compat": "2.1.0",
+    "@types/node": "24.5.2",
+    "@typescript-eslint/eslint-plugin": "8.71.1",
+    "@typescript-eslint/parser": "8.71.1",
+    "@vitest/coverage-v8": "4.1.11",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.1",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-prettier": "5.5.6",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "eslint-plugin-unused-imports": "4.4.1",
+    "glob": "13.0.6",
+    "husky": "9.1.7",
+    "lint-staged": "16.4.0",
+    "prettier": "3.6.2",
+    "ts-node": "10.9.2",
+    "typedoc": "0.28.20",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  },
+  "keywords": [
+    "util",
+    "mongo",
+    "nosql",
+    "query",
+    "aggregate",
+    "filter",
+    "group",
+    "project",
+    "search",
+    "transform",
+    "update",
+    "modify"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kofrasa/mingo/issues"
+  },
+  "lint-staged": {
+    "*.ts": "eslint --cache --fix"
+  }
+}

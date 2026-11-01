@@ -1,0 +1,64 @@
+name: Update CLI README
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  update-readme:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.ECOSPARK_APP_ID }}
+          private-key: ${{ secrets.ECOSPARK_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Build CLI
+        run: pnpm build:cli
+
+      - name: Generate README
+        run: pnpm --filter @sanity/cli readme
+
+      - name: Format README
+
+        run: npx oxfmt packages/@sanity/cli/README.md
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ steps.generate_token.outputs.token }}
+          commit-message: 'chore: update CLI README'
+          title: 'chore: update CLI README'
+          body: 'Auto-generated update to CLI README based on command changes.'
+          branch: chore/update-cli-readme
+          delete-branch: true
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.create-pr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}

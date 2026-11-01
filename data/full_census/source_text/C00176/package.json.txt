@@ -1,0 +1,69 @@
+{
+  "name": "envalid",
+  "version": "9.0.0",
+  "description": "Validation for your environment variables",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "engineStrict": true,
+  "publishConfig": {
+    "provenance": true
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "check-exports": "attw --pack . --ignore-rules cjs-resolves-to-esm",
+    "start": "tsc --watch",
+    "prepare": "tsc",
+    "coverage": "vitest run --coverage",
+    "ts": "tsc --noEmit",
+    "fmt": "biome format --write src tests",
+    "lint": "biome lint --diagnostic-level=error src tests",
+    "test": "vitest",
+    "test:ci": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/af/envalid"
+  },
+  "keywords": [
+    ".env",
+    "dotenv",
+    "env",
+    "env var",
+    "environment",
+    "environment variable",
+    "validation"
+  ],
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.5.14",
+    "@types/node": "26.6.2",
+    "@vitest/coverage-v8": "5.0.1",
+    "expect-type": "1.4.0",
+    "husky": "9.1.7",
+    "typescript": "7.0.2",
+    "vitest": "5.0.1"
+  },
+  "author": "Aaron Franks",
+  "license": "MIT",
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint && npm run ts",
+      "pre-push": "npm run test"
+    }
+  }
+}

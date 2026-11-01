@@ -1,0 +1,27 @@
+name: publish
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "**"
+
+permissions:
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v1
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Publish
+        run: pnpm run publish

@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write # create the GitHub release
+  id-token: write # npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      # Trusted publishing (OIDC) needs npm >=11.5.1; the runner's bundled npm
+      # may be older. Pin to 11.x: OIDC without npm 12's install-time restrictions.
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      # No token: npm authenticates via the id-token below (trusted publishing).
+      # prepublishOnly runs the build; provenance is automatic with OIDC.
+      - run: npm publish --access public
+
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

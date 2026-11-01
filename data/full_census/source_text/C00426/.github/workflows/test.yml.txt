@@ -1,0 +1,17 @@
+name: Tests
+
+on:
+  push:
+    branches:
+     - master
+  pull_request_target:
+  workflow_dispatch:
+
+jobs:   
+  test:
+    runs-on: ubuntu-latest
+    environment: CI
+    steps:
+      - uses: DevExpress/testcafe-build-system/actions/prepare@main
+      - run: npm ci
+      - run: npm test

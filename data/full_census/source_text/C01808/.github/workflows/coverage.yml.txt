@@ -1,0 +1,48 @@
+# Code Coverage Workflow
+#
+# This workflow generates and uploads code coverage reports to Codecov. It performs:
+# - Runs all tests with coverage reporting enabled
+# - Generates coverage reports in various formats
+# - Uploads coverage data to Codecov for tracking and visualization
+# - Provides coverage badges and trend analysis
+#
+# This helps maintain high code quality by ensuring adequate test coverage
+# and provides visibility into which parts of the codebase are well-tested.
+#
+# Triggers: Push to master, pull requests to master
+# Requires: CODECOV_TOKEN secret for uploading to Codecov
+
+name: Code Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.22.1'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests with coverage
+        run: yarn test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: true

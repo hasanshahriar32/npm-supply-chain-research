@@ -1,0 +1,365 @@
+name: Deployment Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deployment-monitor.yml'
+      - '.github/scripts/deployment-monitor/**'
+  schedule:
+    # At minute 0 past every 2nd hour
+    - cron: '0 */2 * * *'
+  workflow_dispatch:
+
+env:
+  SNYK_VERSION_DIR: ${{ github.workspace }}/snyk-versions-${{ github.run_id }}
+
+jobs:
+  create_version_dir:
+    name: 'Create version directory'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create version directory for version comparison
+        run: |
+          mkdir -p $SNYK_VERSION_DIR
+          echo "Created directory for Snyk versions."
+          touch ${{ env.SNYK_VERSION_DIR }}/.keep
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ github.job }}
+          path: ${{ env.SNYK_VERSION_DIR }}
+          include-hidden-files: 'true'
+
+  monitor_cdn:
+    name: 'deployment: CDN'
+    runs-on: ${{ matrix.os }}-latest
+    needs: create_version_dir
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu]
+        base_url: [static.snyk.io, downloads.snyk.io]
+        channel: [stable, preview]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y curl
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - name: Install Snyk
+        run: |
+          rm -f ./snyk
+          curl --retry 2 -L -v --compressed https://${{ matrix.base_url }}/cli/${{ matrix.channel }}/snyk-linux -o ./snyk-linux
+          curl --retry 2 -L -v --compressed https://${{ matrix.base_url }}/cli/${{ matrix.channel }}/snyk-linux.sha256 -o ./snyk-linux.sha256
+          echo --- Content shasum file ---
+          cat snyk-linux.sha256
+          echo --- Shasum binary ---
+          sha256sum snyk-linux
+          chmod +x ./snyk-linux
+          echo --- CLI version ---
+          ./snyk-linux --version
+          echo --- Shasum comparison ---
+          sha256sum -c snyk-linux.sha256
+      - name: Set unique identifier for the artifact file name
+        run: echo "SUFFIX=${{ matrix.os }}-${{ matrix.base_url }}-${{ matrix.channel }}" >> $GITHUB_ENV
+      - name: Capture version and shasum metadata
+        run: |
+          VERSION=$(./snyk-linux --version | tr -d '\r\n')
+          SHA256=$(sha256sum snyk-linux | awk '{print $1}')
+          echo "$VERSION" > ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ env.SUFFIX }}.txt
+          cat <<EOF > ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ env.SUFFIX }}.json
+          {"channel":"${{ matrix.channel }}","base_url":"${{ matrix.base_url }}","source":"${{ matrix.base_url }}","binary":"snyk-linux","version":"$VERSION","sha256":"$SHA256"}
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ env.SUFFIX }}
+          path: |
+            ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ env.SUFFIX }}.txt
+            ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ env.SUFFIX }}.json
+
+  monitor_homebrew:
+    name: 'deployment: Homebrew (macos)'
+    runs-on: macos-latest
+    needs: create_version_dir
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - name: Install Snyk
+        run: |
+          brew tap snyk/tap
+          brew install snyk/tap/snyk
+      - name: Capture version and shasum metadata
+        env:
+          SNYK_VERSION_DIR: ${{ env.SNYK_VERSION_DIR }}
+          METADATA_SUFFIX: ${{ github.job }}
+        run: bash .github/scripts/deployment-monitor/capture-homebrew-metadata.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ github.job }}
+          path: |
+            ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ github.job }}.txt
+            ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ github.job }}.json
+
+  monitor_scoop:
+    name: 'deployment: Scoop (windows)'
+    runs-on: windows-latest
+    needs: create_version_dir
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - name: Install Scoop and Snyk
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+          scoop bucket add snyk https://github.com/snyk/scoop-snyk
+          scoop install snyk
+      - name: Capture version and shasum metadata
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
+          $Version = (snyk --version).Trim()
+          $Candidates = @()
+          if (Get-Command scoop -ErrorAction SilentlyContinue) {
+            $SnykPrefix = (scoop prefix snyk 2>$null)
+            if ($SnykPrefix) {
+              $Candidates += (Join-Path $SnykPrefix "snyk-win.exe")
+            }
+          }
+          $Candidates += "$env:USERPROFILE\scoop\apps\snyk\current\snyk-win.exe"
+          $Cmd = (Get-Command snyk.exe -ErrorAction SilentlyContinue)
+          if ($Cmd) {
+            $Candidates += $Cmd.Source
+          }
+          $SnykPath = $Candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $SnykPath) {
+            throw "Unable to resolve Snyk binary path for Scoop."
+          }
+          $Sha256 = (Get-FileHash -Algorithm SHA256 $SnykPath).Hash.ToLower()
+          $BinaryName = "snyk-win.exe"
+          $ManifestPath = "sha256sums-stable.txt.asc"
+          $ManifestUrls = @(
+            "https://static.snyk.io/cli/stable/sha256sums.txt.asc",
+            "https://downloads.snyk.io/cli/stable/sha256sums.txt.asc"
+          )
+          $ManifestRaw = $null
+          $ManifestBaseUrl = $null
+          foreach ($ManifestUrl in $ManifestUrls) {
+            & curl.exe --retry 2 -fsSL $ManifestUrl -o $ManifestPath
+            if ($LASTEXITCODE -ne 0) {
+              continue
+            }
+            $Candidate = Get-Content $ManifestPath -Raw
+            if ($Candidate -match "<Error>") {
+              continue
+            }
+            if ($Candidate -notmatch "-----BEGIN PGP SIGNED MESSAGE-----") {
+              continue
+            }
+            $ManifestRaw = $Candidate
+            $ManifestBaseUrl = ([Uri]$ManifestUrl).Host
+            break
+          }
+          if (-not $ManifestRaw) {
+            throw "Failed to download a valid sha256sums.txt.asc manifest for stable channel."
+          }
+          $Expected = $null
+          foreach ($Line in ($ManifestRaw -split "\r?\n")) {
+            $Line = $Line.Trim()
+            if ($Line -match '^([0-9a-fA-F]{64})\s+\*?snyk-win\.exe$') {
+              $Expected = $Matches[1].ToLower()
+              break
+            }
+          }
+          if (-not $Expected) {
+            throw "Missing expected hash for snyk-win.exe in manifest."
+          }
+          if ($Sha256 -ne $Expected) {
+            throw "Hash mismatch for snyk-win.exe (scoop). Expected $Expected, got $Sha256."
+          }
+          $Version | Out-File -FilePath "${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ github.job }}.txt" -Encoding ascii
+          @{
+            channel = "stable"
+            base_url = $ManifestBaseUrl
+            source = "scoop"
+            binary = $BinaryName
+            version = $Version
+            sha256 = $Sha256
+          } | ConvertTo-Json -Compress | Out-File -FilePath "${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ github.job }}.json" -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ github.job }}
+          path: |
+            ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ github.job }}.txt
+            ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ github.job }}.json
+
+  monitor_npm:
+    name: 'deployment: npm (ubuntu)'
+    runs-on: ubuntu-latest
+    needs: create_version_dir
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+      - name: Install GPG
+        run: sudo apt-get update && sudo apt-get install -y gnupg
+      - name: Install Snyk
+        run: npm install -g snyk
+      - name: Capture Snyk version and shasum metadata
+        env:
+          SNYK_VERSION_DIR: ${{ env.SNYK_VERSION_DIR }}
+          METADATA_SUFFIX: ${{ github.job }}
+          SOURCE: npm
+          MANIFEST_MODE: stable
+          SKIP_HASH_IF_NOT_ELF: '1'
+        run: bash .github/scripts/deployment-monitor/capture-linux-metadata.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ github.job }}
+          path: |
+            ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ github.job }}.txt
+            ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ github.job }}.json
+
+  monitor_snyk_images:
+    name: 'deployment: snyk-images (snyk/snyk:linux)'
+    runs-on: ubuntu-latest
+    needs: create_version_dir
+    container:
+      image: snyk/snyk:linux
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - name: Install curl and GPG
+        run: apt-get update && apt-get install -y curl gnupg
+      - name: Capture version and shasum metadata
+        env:
+          SNYK_VERSION_DIR: ${{ env.SNYK_VERSION_DIR }}
+          METADATA_SUFFIX: ${{ github.job }}
+          SOURCE: snyk-images
+          MANIFEST_MODE: experimental
+        run: bash .github/scripts/deployment-monitor/capture-linux-metadata.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snyk-version-${{ github.job }}
+          path: |
+            ${{ env.SNYK_VERSION_DIR }}/snyk-version-${{ github.job }}.txt
+            ${{ env.SNYK_VERSION_DIR }}/snyk-metadata-${{ github.job }}.json
+
+  compare_versions:
+    name: 'Compare Snyk Versions'
+    runs-on: ubuntu-latest
+    needs:
+      [
+        monitor_cdn,
+        monitor_homebrew,
+        monitor_scoop,
+        monitor_npm,
+        monitor_snyk_images,
+        verify_manifests,
+        verify_experimental_manifest,
+      ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: snyk-version-*
+          merge-multiple: true
+          path: ${{ env.SNYK_VERSION_DIR }}
+      - name: Compare Snyk versions
+        env:
+          SNYK_VERSION_DIR: ${{ env.SNYK_VERSION_DIR }}
+        run: bash .github/scripts/deployment-monitor/compare-snyk-versions.sh
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.3'
+      - name: Compare CDN shasums
+        env:
+          SNYK_VERSION_DIR: ${{ env.SNYK_VERSION_DIR }}
+        run: go run -C .github/scripts/deployment-monitor ./cmd/compare-cdn-shasums
+
+  verify_manifests:
+    name: 'Verify shasum manifests (stable/preview)'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GPG
+        run: sudo apt-get update && sudo apt-get install -y gnupg
+      - name: Import Snyk CLI public key
+        run: |
+          curl --retry 2 -sSL https://raw.githubusercontent.com/snyk/cli/main/help/_about-this-project/snyk-code-signing-public.pgp -o public.pgp
+          gpg --import public.pgp
+      - name: Verify stable manifest
+        run: |
+          curl --retry 2 -sSL https://downloads.snyk.io/cli/stable/sha256sums.txt.asc -o sha256sums-stable.txt.asc
+          gpg --verify sha256sums-stable.txt.asc
+      - name: Verify preview manifest
+        run: |
+          curl --retry 2 -sSL https://downloads.snyk.io/cli/preview/sha256sums.txt.asc -o sha256sums-preview.txt.asc
+          gpg --verify sha256sums-preview.txt.asc
+
+  verify_experimental_manifest:
+    name: 'Verify shasum manifest (experimental)'
+    runs-on: ubuntu-latest
+    container:
+      image: snyk/snyk:linux
+    steps:
+      - name: Install GPG
+        run: apt-get update && apt-get install -y gnupg curl
+      - name: Import Snyk CLI public key
+        run: |
+          curl --retry 2 -sSL https://raw.githubusercontent.com/snyk/cli/main/help/_about-this-project/snyk-code-signing-public.pgp -o public.pgp
+          gpg --import public.pgp
+      - name: Verify experimental manifest
+        run: |
+          VERSION=$(snyk --version | tr -d '\r\n')
+          curl --retry 2 -sSL "https://downloads.snyk.io/experimental/cli/v${VERSION}/sha256sums.txt.asc" -o sha256sums-experimental.txt.asc
+          gpg --verify sha256sums-experimental.txt.asc
+
+  notify_slack_on_failure:
+    if: ${{ failure() && github.ref == 'refs/heads/main' }}
+    name: 'Do a Slack notification on failure'
+    needs: compare_versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post a message in a channel
+        uses: slackapi/slack-github-action@v2.1.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CLI_ALERTS_CHANNEL_ID }}
+            text: ":red_circle: *Deployment Monitor Failed!*"
+            blocks:
+              - type: "header"
+                text:
+                  type: "plain_text"
+                  text: ":red_circle: Deployment Monitor Failed!"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*Workflow*: `${{ github.workflow }}`"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: ":link: *View run:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Open in GitHub Actions>"
+              - type: "divider"
+              - type: "context"
+                elements:
+                  - type: "mrkdwn"
+                    text: ":warning: Please investigate the failure. This message was generated automatically."

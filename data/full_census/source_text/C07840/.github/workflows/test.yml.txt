@@ -1,0 +1,223 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  GIT_COMMIT: ${{ github.sha }}
+  GIT_REF: ${{ github.ref }}
+  GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+  LOG_LEVEL: info
+  PACT_BROKER_BASE_URL: ${{ secrets.PACT_BROKER_BASE_URL }}
+  PACT_BROKER_TOKEN: ${{ secrets.PACT_BROKER_TOKEN }}
+  # The oldest supported LTS version
+  STABLE_NODE_VERSION: 22
+
+jobs:
+  complete:
+    name: Test completion check
+    if: always()
+
+    permissions:
+      contents: none
+
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - test-alpine
+      - lint
+      - format
+      - examples
+      - regression
+
+    steps:
+      - name: Failed
+        run: exit 1
+        if: >
+          contains(needs.*.result, 'failure')
+          || contains(needs.*.result, 'cancelled')
+          || contains(needs.*.result, 'skipped')
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.JS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.JS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          cache: npm
+
+      - run: npm ci
+      - run: npm run format
+
+  regression:
+    name: Run regression suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.JS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.STABLE_NODE_VERSION }}
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install regression dependencies
+        run: npm ci
+        working-directory: regression
+
+      - run: npm run test
+        working-directory: regression
+
+  test:
+    name: >-
+      Test
+      on ${{ matrix.os }}
+      with Node ${{ matrix.node-version }}
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24, 26]
+        os:
+          - macos-26-intel
+          - macos-latest
+          - ubuntu-24.04-arm
+          - ubuntu-latest
+          - windows-latest
+          # - windows-11-arm  # Disable until pact-js-core supports it
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+        shell: bash
+
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: matrix.node-version == env.STABLE_NODE_VERSION
+        with:
+          report_type: coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+      - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        if: always() && matrix.node-version == env.STABLE_NODE_VERSION
+        with:
+          report_type: test_results
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+
+
+
+
+  test-alpine:
+    name: >-
+      Test Alpine
+      with Node ${{ matrix.node-version }}
+
+    runs-on: ubuntu-latest
+    container:
+      image: node:${{ matrix.node-version }}-alpine
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22, 24, 26]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: npm ci
+      - run: npm test
+
+  examples:
+    name: Test Examples
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.JS
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.STABLE_NODE_VERSION }}
+          cache: npm
+
+      - run: npm run install-plugins
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install and test examples
+        run: |
+          error_file=$(mktemp)
+          find examples \
+            -maxdepth 2 \
+            -name package.json \
+            -not -path '*/node_modules/*' \
+            -print0 | while IFS= read -r -d '' dir; do
+            pushd "$(dirname "$dir")" > /dev/null
+            echo "::group::$PWD"
+            if ! npm ci; then
+              echo "npm ci failed in $PWD" >> "$error_file"
+            fi
+            if ! npm run test; then
+              echo "npm run test failed in $PWD" >> "$error_file"
+            fi
+            echo "::endgroup::"
+            popd > /dev/null
+          done
+          if [ -s "$error_file" ]; then
+            echo "::error::Examples test failures occurred"
+            while IFS= read -r line; do
+              echo "::error::$line"
+            done < "$error_file"
+            rm "$error_file"
+            exit 1
+          fi

@@ -1,0 +1,216 @@
+{
+    "name": "@nevware21/ts-async",
+    "description": "support for asynchronous development with a Promise based task Scheduler, several different Promise implementations (synchronous, idle, asynchronous and native runtime wrappers), await helpers, and aliases all built and tested using TypeScript.",
+    "version": "0.6.1",
+    "homepage": "https://github.com/nevware21/ts-async",
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/nevware21"
+        },
+        {
+            "type": "buymeacoffee",
+            "url": "https://www.buymeacoffee.com/nevware21"
+        }
+    ],
+    "sideEffects": false,
+    "license": "MIT",
+    "author": {
+        "name": "NevWare21 Solutions LLC",
+        "email": "github+ts_async@nevware21.com"
+    },
+    "keywords": [
+        "typescript",
+        "javascript",
+        "es5",
+        "promise",
+        "es6.promise",
+        "async",
+        "asynchronous",
+        "async promise",
+        "asynchronous promise",
+        "sync",
+        "synchronous",
+        "sync promise",
+        "synchronous promise",
+        "idle",
+        "idle promise",
+        "requestIdleCallback",
+        "minification",
+        "browser",
+        "promise polyfill",
+        "scheduler",
+        "task scheduler"
+    ],
+    "main": "lib/dist/es5/main/ts-async.js",
+    "esnext:main": "lib/dist/es6/main/ts-async.js",
+    "module": "lib/dist/es5/mod/ts-async.js",
+    "esnext": "lib/dist/es6/mod/ts-async.js",
+    "types": "lib/dist/types/ts-async.d.ts",
+    "scripts": {
+        "postinstall": "node common/scripts/install-run-rush.js update --full",
+        "build": "rush build && npm run preproc-restore",
+        "rebuild": "rush rebuild && npm run preproc-restore && npm run size && npm run size-check",
+        "test": "rush test",
+        "lint": "grunt ts_async-lint",
+        "coverage:report": "npm run coverage:nyc && npm run coverage:merge",
+        "coverage:nyc": "nyc report --reporter=json",
+        "coverage:merge": "merge-coverage",
+        "codecov": "npm run coverage:report",
+        "clean": "git clean -xdf && npm install",
+        "cleanBuild": "npm run clean && npm run rebuild && npm run docs",
+        "docs": "typedoc --plugin typedoc-github-theme",
+        "rush-update": "rush update --recheck --purge --full",
+        "test:browser": "cd lib && npm run test:browser",
+        "test:node": "cd lib && npm run test:node",
+        "test:worker": "cd lib && npm run test:worker",
+        "debug:browser": "cd lib && npm run debug:browser",
+        "debug:worker": "cd lib && npm run debug:worker",
+        "prep-release": "npm run cleanBuild && npm run npm-pack",
+        "npm-pack": "copyfiles README.md LICENSE lib && cd lib && npm pack",
+        "npm-publish": "publish-npm -c ./publish-groups.json",
+        "preproc-restore": "ts-preproc-restore -c ./preproc.json",
+        "size": "size-limit",
+        "size-check": "node lib/test/bundle-size-check.js && node lib/test/bundle-pure-annotations-check.js",
+        "link-check": "node lib/test/readme-links-check.mjs",
+        "readme-link-check": "npm run docs && npm run link-check"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/nevware21/ts-async.git"
+    },
+    "bugs": {
+        "url": "https://github.com/nevware21/ts-async/issues"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "https://github.com/nevware21/ts-async/blob/main/LICENSE"
+        }
+    ],
+    "engines": {
+        "node": ">= 0.8.0"
+    },
+    "dependencies": {
+        "@nevware21/ts-utils": ">= 0.15.0 < 2.x"
+    },
+    "devDependencies": {
+        "@istanbuljs/nyc-config-typescript": "^1.0.2",
+        "@microsoft/api-extractor": "^7.48.1",
+        "@microsoft/rush": "5.181.0",
+        "@nevware21/grunt-eslint-ts": "^0.5.1",
+        "@nevware21/grunt-ts-plugin": "^0.5.1",
+        "@nevware21/coverage-tools": ">= 0.1.4 < 2.x",
+        "@nevware21/publish-npm": ">= 0.1.4 < 2.x",
+        "@nevware21/ts-preproc": "^0.1.4",
+        "@size-limit/esbuild-why": "^13.0.1",
+        "@size-limit/preset-small-lib": "^13.0.1",
+        "@size-limit/time": "^13.0.1",
+        "@types/eslint": "^8.56.10",
+        "@types/estree": "^1.0.0",
+        "@types/mocha": "^10.0.1",
+        "@types/sinon": "^22.0.0",
+        "@typescript-eslint/eslint-plugin": "^7.14.1",
+        "@typescript-eslint/parser": "^7.14.1",
+        "copyfiles": "^2.4.1",
+        "eslint": "^8.56.0",
+        "eslint-formatter-codeframe": "^7.32.1",
+        "eslint-plugin-security": "^1.7.1",
+        "grunt": "^1.6.2",
+        "grunt-cli": "^1.4.3",
+        "magic-string": "^1.0.0",
+        "nyc": "^18.0.0",
+        "size-limit": "^13.0.1",
+        "typedoc": "^0.28.2",
+        "typedoc-github-theme": "^0.4.0",
+        "typescript": "~5.2.2"
+    },
+    "size-limit": [
+        {
+            "name": "es5-full",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "20 kb",
+            "brotli": false,
+            "ignore": [
+                "lib/dist/es5/mod/polyfills.js",
+                "lib/dist/es5/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es6-full",
+            "path": "lib/dist/es6/mod/ts-async.js",
+            "limit": "19.5 kb",
+            "brotli": false,
+            "ignore": [
+                "lib/dist/es6/mod/polyfills.js",
+                "lib/dist/es6/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es5-zip",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "8.5 Kb",
+            "gzip": true,
+            "ignore": [
+                "lib/dist/es5/mod/polyfills.js",
+                "lib/dist/es5/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es6-zip",
+            "path": "lib/dist/es6/mod/ts-async.js",
+            "limit": "8.5 Kb",
+            "gzip": true,
+            "ignore": [
+                "lib/dist/es6/mod/polyfills.js",
+                "lib/dist/es6/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es5-promise",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "11 kb",
+            "import": "{ createAsyncPromise }",
+            "brotli": false,
+            "ignore": [
+                "lib/dist/es5/mod/polyfills.js",
+                "lib/dist/es5/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es5-any",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "13 kb",
+            "import": "{ createAnyPromise }",
+            "brotli": false,
+            "ignore": [
+                "lib/dist/es5/mod/polyfills.js",
+                "lib/dist/es5/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es5-race",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "12 kb",
+            "import": "{ createRacePromise }",
+            "brotli": false,
+            "ignore": [
+                "lib/dist/es5/mod/polyfills.js",
+                "lib/dist/es5/mod/polyfills.*.js"
+            ]
+        },
+        {
+            "name": "es5-polypromise",
+            "path": "lib/dist/es5/mod/ts-async.js",
+            "limit": "14 kb",
+            "import": "{ PolyPromise }",
+            "brotli": false
+        },
+        {
+            "name": "es5-polyfill",
+            "path": "lib/build/es5/mod/polyfills.js",
+            "limit": "14.5 kb",
+            "brotli": false
+        }
+    ]
+}

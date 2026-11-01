@@ -1,0 +1,37 @@
+name: autofix.ci
+on:
+  pull_request:
+    types: [labeled, unlabeled, opened, synchronize, reopened]
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  USE_AUTOFIX: ${{ !contains(github.event.pull_request.labels.*.name, 'no-autofix') }}
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24.x
+
+      - name: Lint
+        run: pnpm run lint:fix
+
+      - name: Sort Source
+        run: |
+          pnpm run lint:fix:sort-source-files
+
+      - name: Run autofix.ci
+        if: env.USE_AUTOFIX == 'true'
+        uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a

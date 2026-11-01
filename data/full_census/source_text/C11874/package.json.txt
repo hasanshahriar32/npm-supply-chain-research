@@ -1,0 +1,103 @@
+{
+  "name": "react-easy-crop",
+  "version": "6.2.4",
+  "description": "A React component to crop images/videos with easy interactions",
+  "homepage": "https://ValentinH.github.io/react-easy-crop/",
+  "keywords": [
+    "react",
+    "crop",
+    "cropper",
+    "image crop"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ValentinH/react-easy-crop"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "author": "Valentin Hervieu <valentin@hervi.eu>",
+  "license": "MIT",
+  "packageManager": "pnpm@11.5.2",
+  "sideEffects": false,
+  "scripts": {
+    "start": "vite ./examples --port 3001 --clearScreen false",
+    "auto": "auto",
+    "postversion": "pnpm build",
+    "build": "tsdown && pnpm build:copy-files && pnpm test:build-types",
+    "test:build-types": "node ./scripts/check-build-types.js",
+    "docs:start": "pnpm --dir docs start",
+    "docs:build": "pnpm --dir docs build",
+    "docs:deploy": "pnpm --dir docs deploy",
+    "test": "pnpm unit && pnpm e2e && pnpm lint",
+    "unit": "vitest run src",
+    "unit:watch": "vitest src",
+    "start:ci": "vite ./examples --port 3001 --mode production",
+    "e2e": "start-server-and-test start http://localhost:3001 cy:run",
+    "e2e:ci": "start-server-and-test start:ci http://localhost:3001 cy:ci",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
+    "cy:ci": "percy exec -- cypress run --record",
+    "lint": "eslint --ext .ts,.tsx ./examples ./src",
+    "type-check": "tsc --noEmit",
+    "prebuild": "rimraf dist",
+    "build:copy-files": "node ./scripts/copy-build-files.js",
+    "precommit": "lint-staged",
+    "format": "prettier --write src/**/*.ts* docs/src/**/*.{js,css}"
+  },
+  "peerDependencies": {
+    "react": ">=16.4.0",
+    "react-dom": ">=16.4.0"
+  },
+  "dependencies": {
+    "normalize-wheel": "^1.0.1"
+  },
+  "devDependencies": {
+    "@auto-it/all-contributors": "11.3.6",
+    "@auto-it/first-time-contributor": "11.3.6",
+    "@auto-it/released": "11.3.6",
+    "@percy/cli": "^1.31.14",
+    "@percy/cypress": "^3.1.1",
+    "@types/lodash.debounce": "^4.0.6",
+    "@types/node": "^25.9.2",
+    "@types/react": "^18.0.28",
+    "@types/react-dom": "^18.0.10",
+    "@typescript-eslint/eslint-plugin": "^5.51.0",
+    "@typescript-eslint/parser": "^5.51.0",
+    "all-contributors-cli": "^6.4.0",
+    "auto": "11.3.6",
+    "cypress": "^15.17.0",
+    "eslint": "^8.34.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-flowtype": "^8.0.3",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "fs-extra": "^11.3.4",
+    "html-webpack-plugin": "^4.5.0",
+    "husky": "^4.3.0",
+    "lint-staged": "^10.4.0",
+    "lodash.debounce": "^4.0.8",
+    "np": "^6.5.0",
+    "prettier": "^2.1.2",
+    "query-string": "^6.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "rimraf": "^3.0.0",
+    "start-server-and-test": "^1.15.3",
+    "ts-node": "^10.9.1",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.8"
+  },
+  "lint-staged": {
+    "*.+(ts|tsx|js|css)": [
+      "prettier --write",
+      "git add"
+    ]
+  }
+}

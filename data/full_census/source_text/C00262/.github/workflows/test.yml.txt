@@ -1,0 +1,51 @@
+name: Tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: latest
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run typecheck
+        run: pnpm typecheck
+
+      - name: Run Unit Tests
+        run: pnpm test:unit
+
+      - name: Use Ubuntu archive mirror
+        run: |
+          # Avoid slow Azure mirror downloads; retain Ubuntu's signed packages.
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/*mirrors.txt
+
+      - name: Install Playwright browsers
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Run E2E Tests
+        env:
+          PLAYWRIGHT_ENABLE_WEBKIT: '1'
+        run: pnpm test:e2e
+
+      - name: Validate benchmark workloads
+        run: pnpm benchmark:test
+
+      - name: Validate release build
+        run: pnpm test:ci
+
+      - name: Validate published types
+        run: |
+          pnpm --dir packages/vue-virtual-scroller pack --out "$RUNNER_TEMP/vue-virtual-scroller.tgz"
+          pnpm exec attw "$RUNNER_TEMP/vue-virtual-scroller.tgz" --profile esm-only

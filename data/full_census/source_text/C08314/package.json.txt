@@ -1,0 +1,101 @@
+{
+  "name": "prettier-eslint-cli",
+  "version": "9.2.1",
+  "type": "module",
+  "description": "CLI for prettier-eslint",
+  "repository": "git+https://github.com/prettier/prettier-eslint-cli.git",
+  "homepage": "https://github.com/prettier/prettier-eslint-cli#readme",
+  "author": "Kent C. Dodds <kent@doddsfamily.us> (http://kentcdodds.com/)",
+  "maintainers": [
+    "Simon Fridlund <simon@fridlund.email>",
+    "JounQin (https://www.1stG.me) <admin@1stg.me>"
+  ],
+  "funding": "https://opencollective.com/prettier-eslint-cli",
+  "license": "MIT",
+  "packageManager": "yarn@4.17.0",
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
+  },
+  "bin": {
+    "prettier-eslint": "dist/index.js"
+  },
+  "main": "dist/no-main.js",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "eslint",
+    "formatter",
+    "prettier",
+    "prettier-eslint",
+    "prettier-eslint-cli"
+  ],
+  "scripts": {
+    "build": "nps build",
+    "format": "nps format",
+    "lint": "nps lint",
+    "prepare": "patch-package && simple-git-hooks && yarn-berry-deduplicate || exit 0",
+    "release": "nps build && clean-pkg-json && changeset publish",
+    "start": "nps",
+    "test": "nps test",
+    "version": "changeset version && yarn --no-immutable && nps test.update"
+  },
+  "peerDependencies": {
+    "prettier-eslint": ">=17.0.1"
+  },
+  "peerDependenciesMeta": {
+    "prettier-eslint": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@eslint/config-array": "^0.23.5",
+    "@humanfs/node": "^0.16.8",
+    "@prettier/eslint": "npm:prettier-eslint@^17.1.0",
+    "chalk": "^5.6.2",
+    "common-tags": "^1.8.2",
+    "eslint": "^10.5.0",
+    "find-up": "^8.0.0",
+    "glob-parent": "^6.0.0",
+    "ignore": "^7.0.5",
+    "indent-string": "^5.0.0",
+    "loglevel": "^1.9.2",
+    "loglevel-colored-level-prefix": "^1.0.0",
+    "minimatch": "^10.2.5",
+    "yargs": "^18.0.0"
+  },
+  "devDependencies": {
+    "@1stg/eslint-config": "^10.3.1",
+    "@1stg/prettier-config": "^5.4.0",
+    "@1stg/tsconfig": "^4.0.0",
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.0",
+    "@oxc-node/core": "^0.1.0",
+    "@types/common-tags": "^1.8.4",
+    "@types/glob-parent": "^5.1.3",
+    "@types/node": "^25.9.3",
+    "@types/yargs": "^17.0.35",
+    "@unts/patch-package": "^8.1.1",
+    "@vitest/coverage-v8": "^4.1.8",
+    "@vitest/eslint-plugin": "^1.6.20",
+    "all-contributors-cli": "^6.26.1",
+    "clean-pkg-json": "^2.0.0",
+    "eslint-plugin-node-dependencies": "^2.2.0",
+    "nano-staged": "^1.0.2",
+    "nps": "^5.10.0",
+    "nps-utils": "^1.7.0",
+    "prettier": "^3.8.4",
+    "simple-git-hooks": "^2.13.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8",
+    "yarn-berry-deduplicate": "^6.1.3"
+  },
+  "nano-staged": {
+    "*.{cjs,js,json,md,ts,yml}": "node src/index.ts --write"
+  },
+  "prettier": "@1stg/prettier-config/semi",
+  "simple-git-hooks": {
+    "pre-commit": "yarn nano-staged && yarn start validate"
+  }
+}

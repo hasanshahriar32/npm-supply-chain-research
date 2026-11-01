@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: null
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint and Test with Node.js ${{ matrix.node }} and ESLint ${{ matrix.eslint }} on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        node:
+          - 18
+          - 20
+          - 22
+          - 24
+          - 26
+        eslint:
+          - 8
+          - 9
+          - 10
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+
+      - name: Install Dependencies
+        run: yarn --immutable
+
+      - name: Install ESLint ${{ matrix.eslint }}
+        if: ${{ matrix.eslint < 10 }}
+        run: |
+          yarn add -D eslint@${{ matrix.eslint }} @types/eslint@${{ matrix.eslint }}
+
+      - name: Build and Lint
+        if: ${{ matrix.node > 18 && matrix.eslint == 10 }}
+        run: |
+          yarn build
+          yarn lint
+        env:
+          PARSER_NO_WATCH: true
+
+      - name: Test
+        run: yarn test
+
+      - name: Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

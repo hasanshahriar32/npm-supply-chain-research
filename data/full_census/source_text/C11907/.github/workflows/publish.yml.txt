@@ -1,0 +1,46 @@
+name: Publish to NPM
+on:
+  release:
+    types: [created]
+jobs:
+  build-windows:
+    uses: ./.github/workflows/build-windows.yml
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    needs: build-windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies, build and test. 🔧
+        run: ./build.sh
+
+      - name: Publish typescript-logging (core) 📦
+        run: |
+          cd core
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish typescript-logging (category-style) 📦
+        run: |
+          cd category-style
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish typescript-logging (log4ts-style) 📦
+        run: |
+          cd log4ts-style
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish typescript-logging (node-channel) 📦
+        run: |
+          cd node-channel
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

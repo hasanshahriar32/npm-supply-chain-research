@@ -1,0 +1,61 @@
+{
+  "name": "y18n",
+  "version": "5.0.8",
+  "description": "the bare-bones internationalization library used by yargs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "type": "module",
+  "module": "./index.mjs",
+  "keywords": [
+    "i18n",
+    "internationalization",
+    "yargs"
+  ],
+  "homepage": "https://github.com/yargs/y18n",
+  "bugs": {
+    "url": "https://github.com/yargs/y18n/issues"
+  },
+  "repository": "yargs/y18n",
+  "license": "ISC",
+  "author": "Ben Coe <bencoe@gmail.com>",
+  "main": "./build/index.cjs",
+  "scripts": {
+    "check": "gts lint && npm run check:js",
+    "check:js": "eslint . --ext mjs",
+    "fix": "gts fix && npm run fix:js",
+    "fix:js": "eslint . --ext mjs --fix",
+    "pretest": "rimraf build && tsc -p tsconfig.test.json",
+    "test": "c8 --reporter=text --reporter=html mocha test/*.mjs test/cjs/*.cjs",
+    "posttest": "npm run check",
+    "coverage": "c8 report --check-coverage",
+    "precompile": "rimraf build",
+    "compile": "tsc",
+    "prepare": "npm run compile"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.27.5",
+    "@babel/preset-typescript": "^7.27.1",
+    "@types/node": "^22.15.30",
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "c8": "^12.0.0",
+    "chai": "^6.2.2",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^14.0.0",
+    "eslint-plugin-prettier": "^5.5.1",
+    "gts": "^5.3.1",
+    "mocha": "^12.0.0",
+    "rimraf": "^6.0.1",
+    "tslib": "^2.4.1",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "build",
+    "index.mjs",
+    "!*.d.ts"
+  ],
+  "engines": {
+    "node": "^20.19.0 || ^22.12.0 || >=23"
+  }
+}

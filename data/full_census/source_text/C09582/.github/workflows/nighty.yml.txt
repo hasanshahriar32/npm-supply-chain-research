@@ -1,0 +1,31 @@
+name: Nightly
+on:
+  schedule:
+    - cron: '0 18 * * *' # 6pm Daily
+jobs:
+
+  Nightly:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        node: [24.x]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+    steps:
+      # Checkout
+      - uses: actions/checkout@v4
+
+      # Node
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # Dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # TypeScript Compiler Range
+      - name: Range
+        run: npm run range

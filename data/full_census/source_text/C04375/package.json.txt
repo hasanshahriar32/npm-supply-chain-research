@@ -1,0 +1,220 @@
+{
+  "name": "yet-another-react-lightbox",
+  "version": "0.0.0-semantic-release",
+  "description": "Modern React lightbox component",
+  "repository": "github:igordanchenko/yet-another-react-lightbox",
+  "homepage": "https://yet-another-react-lightbox.com",
+  "bugs": "https://github.com/igordanchenko/yet-another-react-lightbox/issues",
+  "funding": "https://github.com/sponsors/igordanchenko",
+  "author": "Igor Danchenko",
+  "license": "MIT",
+  "type": "module",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugins": {
+      "types": "./dist/plugins/index.d.ts",
+      "default": "./dist/plugins/index.js"
+    },
+    "./plugins/captions": {
+      "types": "./dist/plugins/captions/index.d.ts",
+      "default": "./dist/plugins/captions/index.js"
+    },
+    "./plugins/counter": {
+      "types": "./dist/plugins/counter/index.d.ts",
+      "default": "./dist/plugins/counter/index.js"
+    },
+    "./plugins/download": {
+      "types": "./dist/plugins/download/index.d.ts",
+      "default": "./dist/plugins/download/index.js"
+    },
+    "./plugins/fullscreen": {
+      "types": "./dist/plugins/fullscreen/index.d.ts",
+      "default": "./dist/plugins/fullscreen/index.js"
+    },
+    "./plugins/inline": {
+      "types": "./dist/plugins/inline/index.d.ts",
+      "default": "./dist/plugins/inline/index.js"
+    },
+    "./plugins/rotate": {
+      "types": "./dist/plugins/rotate/index.d.ts",
+      "default": "./dist/plugins/rotate/index.js"
+    },
+    "./plugins/share": {
+      "types": "./dist/plugins/share/index.d.ts",
+      "default": "./dist/plugins/share/index.js"
+    },
+    "./plugins/slideshow": {
+      "types": "./dist/plugins/slideshow/index.d.ts",
+      "default": "./dist/plugins/slideshow/index.js"
+    },
+    "./plugins/thumbnails": {
+      "types": "./dist/plugins/thumbnails/index.d.ts",
+      "default": "./dist/plugins/thumbnails/index.js"
+    },
+    "./plugins/video": {
+      "types": "./dist/plugins/video/index.d.ts",
+      "default": "./dist/plugins/video/index.js"
+    },
+    "./plugins/zoom": {
+      "types": "./dist/plugins/zoom/index.d.ts",
+      "default": "./dist/plugins/zoom/index.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./plugins/captions.css": "./dist/plugins/captions/captions.css",
+    "./plugins/counter.css": "./dist/plugins/counter/counter.css",
+    "./plugins/thumbnails.css": "./dist/plugins/thumbnails/thumbnails.css"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/index.d.ts"
+      ],
+      "core": [
+        "dist/index.d.ts"
+      ],
+      "plugins": [
+        "dist/plugins/index.d.ts"
+      ],
+      "plugins/captions": [
+        "dist/plugins/captions/index.d.ts"
+      ],
+      "plugins/counter": [
+        "dist/plugins/counter/index.d.ts"
+      ],
+      "plugins/download": [
+        "dist/plugins/download/index.d.ts"
+      ],
+      "plugins/fullscreen": [
+        "dist/plugins/fullscreen/index.d.ts"
+      ],
+      "plugins/inline": [
+        "dist/plugins/inline/index.d.ts"
+      ],
+      "plugins/rotate": [
+        "dist/plugins/rotate/index.d.ts"
+      ],
+      "plugins/share": [
+        "dist/plugins/share/index.d.ts"
+      ],
+      "plugins/slideshow": [
+        "dist/plugins/slideshow/index.d.ts"
+      ],
+      "plugins/thumbnails": [
+        "dist/plugins/thumbnails/index.d.ts"
+      ],
+      "plugins/video": [
+        "dist/plugins/video/index.d.ts"
+      ],
+      "plugins/zoom": [
+        "dist/plugins/zoom/index.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "engines": {
+    "node": ">=14"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "clean": "rimraf dist",
+    "start": "npm-run-all clean --parallel \"build:* -- -w\"",
+    "build": "npm-run-all clean build:scss build:css build:js build:fixup",
+    "build:scss": "sass src --no-source-map",
+    "build:css": "postcss src/*.css src/**/*.css --base src -d dist -u autoprefixer cssnano --no-map",
+    "build:js": "rollup -c",
+    "build:fixup": "node fixup-dist.js",
+    "lint": "eslint",
+    "test": "npm-run-all test:unit test:types",
+    "test:ui": "vitest --ui",
+    "test:unit": "vitest run --coverage",
+    "test:types": "node test/types",
+    "dev": "vite --config dev/vite.config.ts",
+    "dev:build": "vite build --config dev/vite.config.ts",
+    "dev:preview": "vite preview --config dev/vite.config.ts",
+    "size": "size-limit",
+    "ci": "npm-run-all build test lint size"
+  },
+  "peerDependencies": {
+    "@types/react": "^16 || ^17 || ^18 || ^19",
+    "@types/react-dom": "^16 || ^17 || ^18 || ^19",
+    "react": "^16.8.0 || ^17 || ^18 || ^19",
+    "react-dom": "^16.8.0 || ^17 || ^18 || ^19"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
+    "@types/react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "@eslint/js": "9.39.5",
+    "@rollup/plugin-typescript": "12.3.1",
+    "@size-limit/preset-small-lib": "14.3.0",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.8",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/ui": "5.0.5",
+    "autoprefixer": "10.6.1",
+    "chokidar": "6.0.0",
+    "commitlint-pre-push": "1.0.2",
+    "cssnano": "9.9.0",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "fs-extra": "11.4.1",
+    "glob": "13.0.6",
+    "globals": "17.13.0",
+    "husky": "9.1.7",
+    "jsdom": "30.1.3",
+    "lint-staged": "17.6.0",
+    "npm-run-all2": "9.0.4",
+    "postcss": "8.5.31",
+    "postcss-cli": "12.0.0",
+    "prettier": "3.9.10",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "rimraf": "6.1.3",
+    "rollup": "4.65.0",
+    "rollup-plugin-dts": "6.5.1",
+    "sass": "1.106.1",
+    "size-limit": "14.3.0",
+    "tslib": "2.8.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  },
+  "keywords": [
+    "react",
+    "image",
+    "photo",
+    "lightbox",
+    "react lightbox",
+    "react image lightbox",
+    "react photo lightbox"
+  ]
+}

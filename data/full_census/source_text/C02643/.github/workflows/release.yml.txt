@@ -1,0 +1,98 @@
+name: Release
+
+# Releases are cut from master by semantic-release (conventional commits
+# decide the version; `.releaserc.json`). The release runs only after the
+# `tests` workflow has passed for the exact commit at the tip of master, so
+# every published version has been through the full CI matrix. The weekly
+# data job dispatches this workflow itself, because its token-authored push
+# does not trigger `tests`.
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+# Avoid overlapping releases when several commits land on master at once.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # A manual or weekly-data run, or a green `tests` run for a push.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+      actions: write
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0
+
+      # Never publish a commit the tests did not see: if master moved on,
+      # that newer commit's own tests run will trigger the release.
+      - name: Require the tested commit to be the tip of master
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${{ github.event.workflow_run.head_sha }}" ]; then
+            echo "master moved past the tested commit; its own run will release."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config user.name "ealush"
+          git config user.email "code@ealush.com"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # A manual or data-triggered run has no preceding `tests` run: apply
+      # the gates that decide whether a package is publishable.
+      - name: Verify the package
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          npm test
+          npm run check:compat
+          npm run size
+          npm run check:package
+
+      # Provenance links the npm tarball to this workflow run and commit
+      # (signed through the job's id-token). If npm cannot generate it, the
+      # publish fails and nothing is released.
+      - name: Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      # The version commit is [skip ci], so the website would keep the
+      # previous package version. A workflow dispatched with GITHUB_TOKEN
+      # does run.
+      - name: Redeploy the website with the released version
+        run: gh workflow run website.yml --ref master
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,30 @@
+{
+  "name": "ionic-cli",
+  "private": true,
+  "scripts": {
+    "bootstrap": "lerna bootstrap && npm run build",
+    "clean": "lerna run clean",
+    "lint": "lerna run lint",
+    "lint:fix": "lerna run lint -- -- --fix",
+    "link": "lerna exec npm link",
+    "unlink": "lerna exec npm unlink",
+    "test": "lerna run test",
+    "build": "lerna run build",
+    "watch": "lerna run watch --parallel",
+    "docs": "node packages/cli-scripts/bin/ionic-cli-scripts docs",
+    "docs:watch": "chokidar 'packages/cli-scripts/dist/docs/**/*.js' -c 'npm run docs'",
+    "publish:testing": "lerna publish prerelease --preid=testing --exact --no-git-tag-version --no-push --dist-tag=testing",
+    "publish:ci": "lerna version -m 'chore(release): publish [skip ci]' --exact --conventional-commits --yes && lerna exec --no-private --since HEAD~ -- npm publish --provenance"
+  },
+  "devDependencies": {
+    "chokidar-cli": "^2.0.0",
+    "husky": "^4.2.0",
+    "lerna": "^3.13.3",
+    "typescript": "~4.8.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lerna exec --concurrency 1 --stream -- lint-staged"
+    }
+  }
+}

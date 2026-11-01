@@ -1,0 +1,55 @@
+name: 'Release'
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+
+# Two master pushes in quick succession queue two release runs against the same
+# HEAD; serialising them keeps semantic-release from racing on the tag push.
+concurrency:
+  group: 'release'
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  semantic-release:
+    name: 'Release'
+    runs-on: ubuntu-latest
+    if:
+      github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push')
+    permissions:
+      contents: read
+      # required for npm trusted publishing (OIDC)
+      id-token: write
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 'master'
+          # the job token is read-only; the tag push must use GH_TOKEN from env
+          persist-credentials: false
+      - name: 'Setup Vite+'
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
+        with:
+          node-version: 'lts'
+          cache: true
+          # installed explicitly below, to keep the lockfile immutable
+          run-install: false
+
+      - name: 'Install dependencies'
+        run: vp install --frozen-lockfile
+
+      - name: 'Build'
+        run: vp run build
+
+      - name: 'Release'
+        env:
+          # a secret cannot be named GITHUB_*, so the PAT lives in GH_TOKEN --
+          # semantic-release reads either name
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: vp exec semantic-release

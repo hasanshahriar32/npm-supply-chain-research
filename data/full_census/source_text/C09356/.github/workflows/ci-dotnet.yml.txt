@@ -1,0 +1,59 @@
+name: CI - .NET
+
+on:
+  workflow_call:
+    inputs:
+      compile-manager:
+        description: Build Selenium Manager from source instead of downloading the pinned binary
+        required: false
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      compile-manager:
+        description: Build Selenium Manager from source instead of downloading the pinned binary
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    uses: ./.github/workflows/bazel.yml
+    with:
+      name: Lint
+      os: windows
+      run: ./go dotnet:lint
+
+  unit-tests:
+    name: Unit Tests
+    uses: ./.github/workflows/bazel.yml
+    with:
+      name: Unit Tests
+      os: ubuntu
+      run: bazel test //dotnet/test/unit/... --flaky_test_attempts=1
+
+  integration-tests:
+    name: Browser Tests
+    uses: ./.github/workflows/bazel.yml
+    with:
+      name: Browser Tests
+      os: windows
+      needs-display: true
+      rerun-with-debug: true
+      run: |
+        bazel test --local_resources=browser=1 ${{ inputs.compile-manager && '--manager=host' || '' }} //dotnet/test/webdriver:ElementFindingTests-firefox //dotnet/test/webdriver:ElementFindingTests-chrome
+
+  remote-tests:
+    name: Remote Tests
+    uses: ./.github/workflows/bazel.yml
+    with:
+      name: Remote Tests
+      os: windows
+      needs-display: true
+      rerun-with-debug: true
+      run: |
+        bazel test --local_resources=browser=1 ${{ inputs.compile-manager && '--manager=host' || '' }} //dotnet/test/remote --flaky_test_attempts=3

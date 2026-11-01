@@ -1,0 +1,31 @@
+name: Release
+"on":
+  push:
+    branches:
+      - master
+      - next
+      - beta
+      - "*.x"
+permissions:
+  contents: read # for checkout
+jobs:
+  release:
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm provenance
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          package-manager-cache: false
+      - run: npm clean-install
+      - run: npm install --global corepack@latest
+      - run: corepack npm audit signatures
+      - run: npx semantic-release@26.0.0-beta.5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

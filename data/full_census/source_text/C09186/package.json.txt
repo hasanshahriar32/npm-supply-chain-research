@@ -1,0 +1,28 @@
+{
+  "name": "comlink-root",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build --filter='!./apps/*'",
+    "dev": "turbo run dev",
+    "format": "oxfmt .",
+    "lint": "oxlint --type-aware",
+    "release": "changeset publish",
+    "test": "turbo run test",
+    "turbo:fix": "turbo daemon clean",
+    "type-check": "turbo run type-check"
+  },
+  "dependencies": {
+    "typescript": "catalog:"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
+    "@types/node": "^26.2.0",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "turbo": "2.10.9"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

@@ -1,0 +1,74 @@
+{
+  "name": "style-to-js",
+  "version": "2.0.2",
+  "description": "Parses CSS inline style to JavaScript object (camelCased).",
+  "author": "Mark <mark@remarkablemark.org>",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist umd",
+    "lint": "eslint .",
+    "lint:fix": "npm run lint -- --fix",
+    "lint:package": "publint",
+    "lint:tsc": "tsc --noEmit",
+    "lint:types": "npx @arethetypeswrong/cli --pack",
+    "prepare": "husky",
+    "prepublishOnly": "npm run lint && npm run lint:tsc && npm run test:ci && npm run clean && npm run build",
+    "test": "jest --detectOpenHandles",
+    "test:ci": "CI=true npm test -- --ci --colors --coverage",
+    "test:watch": "npm test -- --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remarkablemark/style-to-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/remarkablemark/style-to-js/issues"
+  },
+  "keywords": [
+    "css",
+    "javascript",
+    "object",
+    "pojo",
+    "style",
+    "style-to-js"
+  ],
+  "dependencies": {
+    "style-to-object": "2.0.2"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
+    "@eslint/js": "10.0.1",
+    "@types/jest": "30.0.0",
+    "eslint": "10.13.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "5.5.7",
+    "eslint-plugin-simple-import-sort": "14.0.0",
+    "globals": "17.13.0",
+    "husky": "9.1.7",
+    "jest": "30.5.2",
+    "lint-staged": "17.6.0",
+    "prettier": "3.9.10",
+    "publint": "0.3.25",
+    "ts-jest": "29.4.15",
+    "ts-node": "10.9.2",
+    "tsdown": "0.23.2",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
+  },
+  "files": [
+    "dist/",
+    "umd/"
+  ],
+  "license": "MIT"
+}

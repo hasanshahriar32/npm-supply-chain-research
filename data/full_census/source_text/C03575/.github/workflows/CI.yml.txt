@@ -1,0 +1,48 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v6
+      with:
+        version: latest
+        run_install: true
+    - run: pnpm fmt:check
+    - run: pnpm test
+
+  user_test:
+    name: User Test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+      with:
+        path: ./g-plane/typed-query-selector
+    - name: Checkout "refined-github"
+      uses: actions/checkout@v6
+      with:
+        repository: refined-github/refined-github
+        ref: 558ce6cbc989767820a86acf545d881a7a4d1bae
+        path: ./refined-github/refined-github
+    - name: Install dependencies
+      run: npm ci
+      working-directory: ./refined-github/refined-github
+    - name: Link package
+      run: |
+        cd ./g-plane/typed-query-selector
+        sudo npm link
+        cd ../../refined-github/refined-github
+        npm link typed-query-selector
+    - name: Execute in non-strict mode
+      run: node node_modules/.bin/tsc --noEmit --extendedDiagnostics
+      working-directory: ./refined-github/refined-github
+    - name: Execute in strict mode
+      run: |
+        sed -i "s/typed-query-selector/typed-query-selector\/strict/" source/refined-github.ts
+        node node_modules/.bin/tsc --noEmit --extendedDiagnostics
+      working-directory: ./refined-github/refined-github

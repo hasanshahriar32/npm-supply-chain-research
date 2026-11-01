@@ -1,0 +1,115 @@
+name: Node CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+env:
+  HUSKY: 0
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: mansona/npm-lockfile-version@v1
+        with:
+          version: 3
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: |
+          npm ci
+      - name: Build TypeScript types
+        run: |
+          npm run build
+      - name: Prettier
+        run: |
+          npm run prettier:check
+      - name: ESLint
+        run: |
+          npm run lint
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: "npm"
+      - name: Install dependencies
+        run: |
+          npm ci
+      - name: Integration
+        run: |
+          npm run test-check-coverage
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v6
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - name: Install dependencies
+        run: |
+          npm ci
+      - name: npm test
+        run: npm test
+
+  saucelabs-test:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+      - name: Install dependencies
+        run: |
+          npm ci
+        env:
+          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 1
+      - name: Saucelabs test
+        env:
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+        run: |
+          npm run test-cloud
+
+  dependabot-automerge:
+    needs: [static-analysis, coverage, test, saucelabs-test]
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Automerge Dependabot PRs if all checks have passed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge --squash --auto ${{ github.event.pull_request.number }}

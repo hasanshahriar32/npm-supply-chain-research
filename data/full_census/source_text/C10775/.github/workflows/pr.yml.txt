@@ -1,0 +1,68 @@
+name: Node.js CI
+
+on:
+  pull_request:
+    branches: [master, next]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests-01:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+      - run: yarn test packages/json-joy/
+  tests-02:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+      - run: yarn test --testPathIgnorePatterns packages/json-joy/
+  tests-03:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn format
+      - run: yarn lint
+      - run: yarn build
+      - run: yarn vitest
+      - run: yarn workspace @jsonjoy.com/rpc-server test:e2e:all
+      - run: yarn workspace @jsonjoy.com/json-crdt-server test:e2e
+      - run: yarn typecheck
+      - run: yarn typedoc

@@ -1,0 +1,42 @@
+name: Nx Publish
+
+# Declare default permissions as read-only
+permissions: read-all
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # needed to push changes and edit releases
+            id-token: write # needed for provenance data generation
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+                  fetch-tags: true
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version-file: package.json
+                  cache: "npm"
+                  registry-url: "https://registry.npmjs.org/"
+
+            - run: npm ci --legacy-peer-deps
+            - uses: nrwl/nx-set-shas@v5
+
+            - run: echo "LATEST_VERSION=$(npm view @stricli/core --json | jq -r '.version')" >> $GITHUB_ENV
+            - run: echo "RELEASE_VERSION=$(npm pkg get version --workspaces | jq -r '.["@stricli/core"]')" >> $GITHUB_ENV
+
+            - name: Publish to npm and update GitHub Release
+              if: ${{ env.LATEST_VERSION != env.RELEASE_VERSION }}
+              env:
+                  NPM_CONFIG_PROVENANCE: true
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                npx nx release publish
+                gh release edit "v$RELEASE_VERSION" --prerelease=false --latest

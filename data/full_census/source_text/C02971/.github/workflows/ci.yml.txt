@@ -1,0 +1,70 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: 0 0 * * 0
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Lint
+        run: npm run -s lint
+      - name: Type Check
+        run: npm run tsc
+
+  test:
+    name: Test
+
+    strategy:
+      matrix:
+        include:
+          - eslint: 10
+            node: 24.18.0
+            os: ubuntu-latest
+          # On other platforms
+          - eslint: 10
+            node: 24.18.0
+            os: windows-latest
+          - eslint: 10
+            node: 24.18.0
+            os: macos-latest
+          # On other Node.js versions
+          - eslint: 10
+            node: 22.23.0
+            os: ubuntu-latest
+          - eslint: 10
+            node: 26.4.0
+            os: ubuntu-latest
+          # On the minimum supported ESLint/Node.js version
+          - eslint: 10.6.0
+            node: 22.23.0
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install Packages
+        run: npm install
+      - name: Install ESLint ${{ matrix.eslint }}
+        run: |+
+            npm install -D eslint@${{ matrix.eslint }}
+      - name: Build
+        run: npm run -s build
+      - name: Test
+        run: npm run -s test:ci

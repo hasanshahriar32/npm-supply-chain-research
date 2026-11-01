@@ -1,0 +1,24 @@
+name: Semgrep OSS scan
+on:
+  pull_request: {}
+  push:
+    branches: [main, master]
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 0 1-7 * 6' # per-repo, staggered across month
+concurrency:
+  group: semgrep-${{ github.event_name }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  semgrep:
+    name: semgrep-oss
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - run: semgrep scan --config=auto

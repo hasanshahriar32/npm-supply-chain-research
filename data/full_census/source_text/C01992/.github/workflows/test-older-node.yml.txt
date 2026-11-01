@@ -1,0 +1,28 @@
+name: test-older-node
+on:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-older-node-branch-node-${{ github.ref }}
+  cancel-in-progress: true
+
+# TODO : delete this workflow on next major if we drop node 12, 14, 16 and 18
+
+jobs:
+  test-older-node:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [14, 16, 18]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: ${{ matrix.node }}
+
+      - run: |
+          NPM_CONFIG_ENGINE_STRICT=false npm install --ignore-scripts
+      - run: npm run test:json

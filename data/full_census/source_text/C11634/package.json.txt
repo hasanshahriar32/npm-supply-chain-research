@@ -1,0 +1,57 @@
+{
+  "name": "stringifier",
+  "description": "Yet another stringify function",
+  "version": "2.1.1",
+  "author": {
+    "name": "Takuto Wada",
+    "email": "takuto.wada@gmail.com",
+    "url": "https://github.com/twada"
+  },
+  "bugs": "https://github.com/twada/stringifier/issues",
+  "contributors": [
+    {
+      "name": "Stuart Cook",
+      "url": "https://github.com/Zalathar"
+    }
+  ],
+  "dependencies": {
+    "traverse": "^0.6.6",
+    "type-name": "^2.0.1"
+  },
+  "devDependencies": {
+    "mocha": "^10.0.0",
+    "semistandard": "^17.0.0",
+    "snazzy": "^9.0.0"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "index.js",
+    "strategies.js",
+    "package.json"
+  ],
+  "homepage": "https://github.com/twada/stringifier",
+  "keywords": [
+    "stringify"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/twada/stringifier.git"
+  },
+  "scripts": {
+    "preversion": "npm test",
+    "fmt": "semistandard --fix index.js strategies.js test/*.js",
+    "lint": "semistandard --verbose index.js strategies.js test/*.js | snazzy",
+    "test": "mocha test"
+  },
+  "semistandard": {
+    "globals": [
+      "BigInt",
+      "describe",
+      "beforeEach",
+      "it"
+    ]
+  }
+}

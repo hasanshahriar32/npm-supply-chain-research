@@ -1,0 +1,29 @@
+name: Publish prereleases
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - next
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    runs-on: ubuntu-slim
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+
+      - name: Build Package
+        run: pnpm build
+
+      - run: pnpm exec pkg-pr-new publish --comment=update

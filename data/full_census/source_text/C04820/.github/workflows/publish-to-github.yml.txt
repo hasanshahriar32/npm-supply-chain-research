@@ -1,0 +1,45 @@
+name: publish-to-github
+on:
+  release:
+    types: [created]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: contains(github.event.release.tag_name, '-beta.') == false
+    steps:
+    - uses: actions/checkout@v7.0.1
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4.4.0
+
+    - name: Install Node.js
+      uses: actions/setup-node@v7.1.0
+      with:
+        node-version-file: .nvmrc
+        registry-url: 'https://npm.pkg.github.com'
+        # Defaults to the user or organization that owns the workflow file
+        scope: '@javierbrea'
+        cache: 'pnpm'
+
+    - name: Cache dependencies
+      id: cache-pnpm
+      uses: actions/cache@v6.1.0
+      with:
+        path: node_modules
+        key: pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+    - name: Install Node.js dependencies
+      shell: bash
+      run: pnpm install
+      env:
+        HUSKY_SKIP_INSTALL: 1
+
+    - run: pnpm check:all
+
+    - name: Rename package to @javierbrea/eslint-plugin-boundaries
+      run: npm pkg set name=@javierbrea/eslint-plugin-boundaries
+      working-directory: ./packages/eslint-plugin
+
+    - run: pnpm publish --no-git-checks
+      working-directory: ./packages/eslint-plugin
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,312 @@
+name: Deploy to Beta Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_to_npm:
+        description: "Deploy to NPM"
+        type: boolean
+        default: false
+      force_deploy_confirmation:
+        description: "Force deploy (bypass ALL PR checks). Type 'FORCE_DEPLOY' to confirm"
+        type: string
+        default: ""
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write # allows the JWT to be requested from GitHub's OIDC provider
+  contents: read # This is required for actions/checkout
+  pull-requests: read # This is required to get PR information
+
+env:
+  NODE_OPTIONS: '--no-warnings'
+
+jobs:
+  validate-actor:
+    # Allow only to run from branches and not tags
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
+    uses: ./.github/workflows/validate-actor.yml
+    with:
+      team_names: 'sdk_team,integrations'
+    secrets:
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  find-pr:
+    name: Find PR for Current Branch
+    needs: validate-actor
+    runs-on: arc-amd64
+    outputs:
+      pr_number: ${{ steps.pr-info.outputs.pr_number }}
+      pr_url: ${{ steps.pr-info.outputs.pr_url }}
+      pr_base_branch: ${{ steps.pr-info.outputs.pr_base_branch }}
+      force_deploy_mode: ${{ steps.check-force-deploy.outputs.force_deploy_mode }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check force deploy mode
+        id: check-force-deploy
+        env:
+          FORCE_DEPLOY_CONFIRMATION: ${{ inputs.force_deploy_confirmation }}
+        run: |
+          if [ "$FORCE_DEPLOY_CONFIRMATION" = "FORCE_DEPLOY" ]; then
+            echo "force_deploy_mode=true" >> $GITHUB_OUTPUT
+            echo "⚠️ FORCE DEPLOY MODE ENABLED - All PR validation checks will be skipped"
+          else
+            echo "force_deploy_mode=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find PR for current branch
+        id: pr-info
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            console.log(`Finding PRs for branch: ${branch}`);
+
+            const allowedBasePatterns = [
+              /^develop$/,
+              /^main$/,
+              /^hotfix\/.+$/,
+              /^release\/.+$/,
+              /^hotfix-release\/.+$/,
+            ];
+
+            const { data: pullRequests } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${branch}`,
+              state: 'open'
+            });
+
+            // Filter PRs whose base branch matches one of the allowed patterns
+            const validPRs = pullRequests.filter(pr =>
+              allowedBasePatterns.some(pattern => pattern.test(pr.base.ref))
+            );
+
+            if (validPRs.length > 0) {
+              const pr = validPRs[0];
+              const prNumber = pr.number.toString();
+              const prUrl = pr.html_url;
+              console.log(`Found PR #${prNumber} for branch ${branch} targeting ${pr.base.ref}: ${prUrl}`);
+
+              core.setOutput('pr_number', prNumber);
+              core.setOutput('pr_url', prUrl);
+              core.setOutput('pr_base_branch', pr.base.ref);
+            } else {
+              const allowedBranches = 'develop, main, hotfix/*, release/*, hotfix-release/*';
+              core.setFailed(`No open PR found for branch ${branch} targeting an allowed base branch (${allowedBranches})`);
+            }
+
+  validate-pr:
+    name: Validate PR Status
+    needs: find-pr
+    runs-on: arc-amd64
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate PR
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const prNumber = '${{ needs.find-pr.outputs.pr_number }}';
+            const forceDeployMode = '${{ needs.find-pr.outputs.force_deploy_mode }}' === 'true';
+
+            // Skip validation if force deploy is enabled
+            if (forceDeployMode) {
+              console.log(`⚠️ FORCE DEPLOY MODE - Skipping all PR validation checks`);
+              console.log(`PR #${prNumber} validation bypassed by explicit user confirmation`);
+              return;
+            }
+
+            console.log(`Validating PR #${prNumber}...`);
+
+            // Get detailed PR information
+            const { data: prDetails } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            // Check if PR is in draft state
+            if (prDetails.draft) {
+              core.setFailed(`PR #${prNumber} is in draft state. Please mark it as ready for review before deploying.`);
+              return;
+            }
+
+            // Check if PR is mergeable
+            if (prDetails.mergeable === false) {
+              core.setFailed(`PR #${prNumber} is not in a mergeable state. Please resolve conflicts before deploying.`);
+              return;
+            }
+
+            // Check mergeable_state
+            if (prDetails.mergeable_state !== 'clean') {
+              let reason = '';
+
+              if (prDetails.mergeable_state === 'blocked') {
+                reason = 'required checks or approvals are missing';
+              } else if (prDetails.mergeable_state === 'dirty') {
+                reason = 'there are merge conflicts';
+              } else if (prDetails.mergeable_state === 'unstable') {
+                reason = 'required checks are failing';
+              } else {
+                reason = `the mergeable state is "${prDetails.mergeable_state}"`;
+              }
+
+              core.setFailed(`PR #${prNumber} is not ready to merge: ${reason}. Please resolve all issues before deploying.`);
+              return;
+            }
+
+            console.log(`PR #${prNumber} is in a clean mergeable state. All requirements satisfied.`);
+
+  get-deploy-inputs:
+    name: Get Deploy Inputs
+    needs: [find-pr, validate-pr]
+    runs-on: arc-amd64
+    outputs:
+      version_suffix: ${{ steps.deploy-inputs.outputs.version_suffix }}
+      beta_identifier: ${{ steps.deploy-inputs.outputs.beta_identifier }}
+      beta_identifier_for_automation_tests: ${{ steps.deploy-inputs.outputs.beta_identifier_for_automation_tests }}
+      trigger_source: ${{ steps.set-trigger-source.outputs.trigger_source }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate re-run actor
+        uses: ./.github/actions/assert-rerun-actor
+        with:
+          app_id: ${{ vars.RELEASE_APP_ID }}
+          private_key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          team_names: 'sdk_team,integrations'
+
+      - name: Set trigger source
+        id: set-trigger-source
+        env:
+          PR_URL: ${{ needs.find-pr.outputs.pr_url }}
+          PR_NUMBER: ${{ needs.find-pr.outputs.pr_number }}
+          SERVER_URL: ${{ github.server_url }}
+          ACTOR: ${{ github.actor }}
+          FORCE_DEPLOY_MODE: ${{ needs.find-pr.outputs.force_deploy_mode }}
+        run: |
+          TRIGGER_BASE="Triggered via PR <${PR_URL}|#${PR_NUMBER}> by <${SERVER_URL}/${ACTOR}|${ACTOR}>"
+
+          if [ "$FORCE_DEPLOY_MODE" = "true" ]; then
+            echo "trigger_source=${TRIGGER_BASE} [⚠️ FORCE DEPLOY]" >> $GITHUB_OUTPUT
+          else
+            echo "trigger_source=${TRIGGER_BASE}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract deploy inputs
+        id: deploy-inputs
+        shell: bash
+        run: |
+          # Suffix the short commit hash with the PR number
+          SHA_SHORT=$(echo ${{ github.sha }} | cut -c1-7)
+          # The version_suffix is structured as "beta.pr.<PR_NUMBER>.<SHORT_COMMIT_HASH>".
+          # - "beta.pr." is a fixed prefix indicating a beta release for a pull request.
+          # - <PR_NUMBER> is the number of the pull request associated with the branch.
+          # - <SHORT_COMMIT_HASH> is the first 7 characters of the commit hash for traceability.
+          echo "version_suffix=beta.pr.${{ needs.find-pr.outputs.pr_number }}.$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "beta_identifier=PR-${{ needs.find-pr.outputs.pr_number }}/$SHA_SHORT" >> $GITHUB_OUTPUT
+          echo "beta_identifier_for_automation_tests=pr-${{ needs.find-pr.outputs.pr_number }}-$SHA_SHORT" >> $GITHUB_OUTPUT
+
+  deploy-cdn:
+    name: Deploy to CDN
+    uses: ./.github/workflows/deploy.yml
+    needs: get-deploy-inputs
+    with:
+      environment: beta
+      bugsnag_release_stage: beta
+      s3_dir_path: beta/${{ needs.get-deploy-inputs.outputs.beta_identifier }}/v3
+      s3_dir_path_legacy: beta/${{ needs.get-deploy-inputs.outputs.beta_identifier }}/v1.1
+      version_suffix: ${{ needs.get-deploy-inputs.outputs.version_suffix }}
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_PROD_ACCOUNT_ID }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_PROD_S3_BUCKET_NAME }}
+      AWS_S3_SYNC_ROLE: ${{ secrets.AWS_PROD_S3_SYNC_ROLE }}
+      AWS_CF_DISTRIBUTION_ID: ${{ secrets.AWS_PROD_CF_DISTRIBUTION_ID }}
+      BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_RELEASE_CHANNEL_ID: ${{ secrets.SLACK_RELEASE_CHANNEL_ID_NON_PROD }}
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  deploy-npm:
+    name: Deploy to NPM
+    uses: ./.github/workflows/deploy-npm.yml
+    needs: [find-pr, get-deploy-inputs]
+    if: ${{ inputs.deploy_to_npm }}
+    with:
+      environment: beta
+      bugsnag_release_stage: beta
+      version_suffix: ${{ needs.get-deploy-inputs.outputs.version_suffix }}
+      base_version: ${{ needs.find-pr.outputs.pr_base_branch }}
+      head_version: ${{ github.ref_name }}
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+    secrets:
+      RS_PROD_BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_RELEASE_CHANNEL_ID: ${{ secrets.SLACK_RELEASE_CHANNEL_ID_NON_PROD }}
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  deploy-sanity-suite:
+    name: Deploy sanity suite
+    needs: [get-deploy-inputs]
+    uses: ./.github/workflows/deploy-sanity-suite.yml
+    with:
+      environment: 'beta'
+      beta_identifier: ${{ needs.get-deploy-inputs.outputs.beta_identifier }}
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+    secrets:
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_PROD_ACCOUNT_ID }}
+      AWS_S3_BUCKET_NAME: ${{ secrets.AWS_PROD_S3_BUCKET_NAME }}
+      AWS_S3_SYNC_ROLE: ${{ secrets.AWS_PROD_S3_SYNC_ROLE }}
+      AWS_CF_DISTRIBUTION_ID: ${{ secrets.AWS_PROD_CF_DISTRIBUTION_ID }}
+      SANITY_SUITE_WRITE_KEY: ${{ secrets.SANITY_SUITE_PROD_WRITE_KEY }}
+      SANITY_SUITE_DATAPLANE_URL: ${{ secrets.SANITY_SUITE_PROD_DATAPLANE_URL }}
+      SANITY_SUITE_CONFIG_SERVER_HOST: ${{ secrets.SANITY_SUITE_PROD_CONFIG_SERVER_HOST }}
+      BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_RELEASE_CHANNEL_ID: ${{ secrets.SLACK_RELEASE_CHANNEL_ID_NON_PROD }}
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  run-e2e-regression-test-suites:
+    uses: ./.github/workflows/run-e2e-regression-test-suites.yml
+    name: Run E2E Regression Test Suites
+    needs: [get-deploy-inputs, deploy-sanity-suite, deploy-cdn]
+    with:
+      environment: beta
+      sanity_test_suite_url: https://cdn.rudderlabs.com/sanity-suite/beta/${{ needs.get-deploy-inputs.outputs.beta_identifier }}
+      build_source_id: ${{ needs.get-deploy-inputs.outputs.beta_identifier_for_automation_tests }}
+      trigger_source: ${{ needs.get-deploy-inputs.outputs.trigger_source }}
+    secrets:
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

@@ -1,0 +1,57 @@
+{
+  "name": "read-env-value",
+  "version": "2.0.2",
+  "description": "Read env with default value",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/node-modules/read-env-value.git"
+  },
+  "keywords": [
+    "env",
+    "environment"
+  ],
+  "author": "fengmk2",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/node-modules/read-env-value/issues"
+  },
+  "homepage": "https://github.com/node-modules/read-env-value#readme",
+  "engines": {
+    "node": ">= 22.18.0"
+  },
+  "devDependencies": {
+    "@eggjs/oxlint-config": "^1.0.0",
+    "@eggjs/tsconfig": "3",
+    "@types/node": "24",
+    "c8": "10",
+    "husky": "9",
+    "mm": "4",
+    "oxlint": "1",
+    "prettier": "3",
+    "typescript": "5"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "pretest": "npm run lint -- --fix",
+    "test": "node --test",
+    "preci": "npm run lint",
+    "ci": "c8 -r html -r lcov -r text npm test",
+    "postci": "npm run prepublishOnly",
+    "postversion": "npx sync-npm-version-to-jsr && git add jsr.json",
+    "prepublishOnly": "tsc -b --clean && tsc",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown --cache",
+    "*.{ts,js,json,md,yml}": [
+      "prettier --ignore-unknown --write",
+      "oxlint --fix"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

@@ -1,0 +1,66 @@
+{
+  "private": true,
+  "name": "@fast-check/monorepo",
+  "description": "Test making sure fast-check expose the right typings",
+  "type": "module",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22",
+      "onFail": "warn"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.16.1",
+      "onFail": "download"
+    }
+  },
+  "workspaces": [
+    "examples",
+    "packages/*",
+    "website"
+  ],
+  "scripts": {
+    "contributor:add": "all-contributors add",
+    "build": "pnpm --filter {./packages/**} run build",
+    "build-ci": "pnpm --filter {./packages/**} run build-ci",
+    "build:compare": "./scripts/compare-build.sh",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "bench": "vitest bench",
+    "bench:ci": "cross-env BENCH_WRITE=true BENCH_COMPARE=true vitest bench --run --reporter=default",
+    "bench:snap": "cross-env BENCH_WRITE=true vitest bench --run",
+    "bench:compare": "cross-env BENCH_COMPARE=true vitest bench --run",
+    "typecheck": "pnpm run typecheck:workflow-scripts && pnpm --parallel run typecheck",
+    "typecheck:workflow-scripts": "tsc --project .github/workflows/scripts/tsconfig.json",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --fix",
+    "lint:check": "oxlint",
+    "publint": "pnpm --filter {./packages/**} --parallel exec publint --strict",
+    "bump": "changeset",
+    "changelog": "changeset status",
+    "pack": "pnpm --filter {./packages/**} --parallel exec pnpm pack --out package.tgz",
+    "unpack": "pnpm --filter {./packages/**} --parallel exec tar -xf package.tgz --strip-components=1 --exclude='package/package.json'",
+    "update:documentation": "cross-env UPDATE_CODE_SNIPPETS=true pnpm run test --project fast-check test/documentation"
+  },
+  "devDependencies": {
+    "@atproto/api": "^0.29.6",
+    "@changesets/cli": "^3.0.3",
+    "@fast-check/packaged": "workspace:*",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.0.5",
+    "all-contributors-cli": "^7.0.0",
+    "cross-env": "^10.1.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "pkg-pr-new": "^0.0.92",
+    "publint": "^0.3.25",
+    "rolldown": "^1.2.16",
+    "rolldown-plugin-dts": "^0.29.0",
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

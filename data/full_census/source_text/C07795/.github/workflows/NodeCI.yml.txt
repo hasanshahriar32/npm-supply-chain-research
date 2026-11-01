@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Allow one concurrent deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install Packages
+        run: npm install -f
+      - name: build
+        run: |
+          npm run build
+      - name: Lint
+        run: npm run lint
+  build-doc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install And Build
+        run: |+
+          npm install -f
+          npm run update
+          npm run build
+          export NODE_OPTIONS="--max-old-space-size=8192"
+          npm run docs:build
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22.22.3, 24.16.0, 26.3.0]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Update npm
+        # npm 10 (bundled with Node 22) crashes with
+        # "Cannot read properties of null (reading 'edgesOut')"
+        # while resolving the peer set of vitest@4.1.11.
+        run: npm install -g npm@^11
+      - name: Install Packages
+        run: npm install -f
+      - name: Test
+        run: npm test
+      - name: Type Test
+        run: npm run test:type
+  test-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install Packages
+        run: npm install -f
+      - name: Test
+        run: npm run test:integration
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install Packages
+        run: npm install -f
+      - name: Test
+        run: npm run cover
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

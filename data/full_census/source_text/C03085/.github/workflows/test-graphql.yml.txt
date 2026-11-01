@@ -1,0 +1,23 @@
+name: Ensure GraphQL schema and generated code is up-to-date
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * *' # 8:00 AM UTC time every day
+
+concurrency:
+  group: test-graphql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Ensure GraphQL schema and generated code is up-to-date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+      - name: Setup tools
+        uses: ./.github/actions/setup-mise
+      - run: yarn install --immutable
+      - run: yarn verify-graphql-code

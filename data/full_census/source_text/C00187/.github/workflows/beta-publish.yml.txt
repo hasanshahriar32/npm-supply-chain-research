@@ -1,0 +1,103 @@
+name: Bump Beta Version
+
+# NOTE: This workflow is an automated version of ./tools/update-release.sh if you want to run it manually.
+
+on:
+    workflow_dispatch: {}
+    schedule:
+        - cron: '0 20 * * 0'
+
+env:
+    # Disable git's post-fetch background gc/maintenance for every git invocation
+    # (injected via git's GIT_CONFIG_* protocol). Otherwise it rewrites .git/shallow
+    # concurrently with the next chained `git fetch --depth 1`, intermittently failing
+    # job setup with "fatal: shallow file has changed since we read it".
+    GIT_CONFIG_COUNT: 2
+    GIT_CONFIG_KEY_0: gc.auto
+    GIT_CONFIG_VALUE_0: '0'
+    GIT_CONFIG_KEY_1: maintenance.auto
+    GIT_CONFIG_VALUE_1: 'false'
+    NX_NO_CLOUD: true
+    NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+    NX_BRANCH: ${{ github.ref }}
+    AG_SKIP_NATIVE_DEP_VERSION_CHECK: true
+    DEPLOYMENT_APP_ID: 957224
+    IBM_TELEMETRY_DISABLED: 'true'
+
+permissions:
+    contents: read
+
+jobs:
+    bump_version_and_tag:
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+        steps:
+            - name: Authenticate with GitHub App
+              uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+              id: app-token
+              with:
+                  app-id: ${{ env.DEPLOYMENT_APP_ID }}
+                  private-key: ${{ secrets.DEPLOYMENT_APP_PRIVATE_KEY }}
+
+            - name: Checkout
+              id: checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+
+            - name: Fetch Refs
+              run: git fetch origin --depth 1 latest-success latest
+
+            - name: Check for In-Progress Release Branch
+              id: release_guard
+              if: ${{ github.event_name == 'schedule' }}
+              run: node ./tools/release/checkScheduledBetaBump.js
+
+            - name: Setup
+              id: setup
+              if: ${{ github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true' }}
+              uses: ./.github/actions/setup-nx
+              with:
+                  cache_mode: ro
+                  base_ref: ${{ github.head_ref }}
+                  yarn_postinstall: false
+
+            - name: Calculate Next Beta Version
+              id: next_version
+              if: ${{ github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true' }}
+              run: |
+                  NEW_VERSION=$(node ./tools/calculate-next-version.js)
+                  echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+                  echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+                  echo "tag=b${NEW_VERSION}" >> $GITHUB_OUTPUT
+
+            - name: Bump Beta Package Version
+              if: ${{ github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true' }}
+              run: ./tools/bump-versions.sh ${NEW_VERSION}
+
+            # Plain git rather than EndBug/add-and-commit: the action's git wrapper rejects the
+            # GIT_CONFIG_COUNT set above unless it is opted into, which the action exposes no way
+            # to do, and the variable cannot be unset for a single step.
+            - name: Commit Changes
+              if: ${{ success() && (github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true') }}
+              run: |
+                  git config user.name 'github-actions[bot]'
+                  git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+                  git add .
+                  git commit -m "Automated package version bump to ${NEW_VERSION}."
+                  git push
+
+            - name: Tag Latest Successful Commit
+              uses: EndBug/latest-tag@8fcae8848c1e23fd8212258f69a9619bc62cad67 # v1.6.3
+              if: ${{ success() && (github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true') }}
+              with:
+                  ref: ${{ steps.next_version.outputs.tag }}
+                  description: Latest commit to pass GitHub Actions workflow on latest branch.
+
+            - name: Tag Latest Successful Commit
+              uses: EndBug/latest-tag@8fcae8848c1e23fd8212258f69a9619bc62cad67 # v1.6.3
+              if: ${{ success() && (github.event_name != 'schedule' || steps.release_guard.outputs.can_bump == 'true') }}
+              with:
+                  ref: latest-beta-version
+                  description: Latest commit to pass GitHub Actions workflow on latest branch.

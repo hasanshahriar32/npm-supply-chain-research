@@ -1,0 +1,186 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request: {}
+permissions:
+  contents: read
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    permissions:
+      contents: read
+      pull-requests: read
+    name: Check for changes
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.filter.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            packages:
+              - 'packages/**'
+              - 'targets/**'
+              - 'tests/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'vitest.config.ts'
+              - '.github/workflows/*.yml'
+              - '.github/actions/**'
+              - 'package.json'
+  build:
+    needs: changes
+    if: ${{ needs.changes.outputs.packages == 'true' }}
+    name: 'Build'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          turbo-cache: 'true'
+
+      - name: Build
+        run: pnpm build-ci --filter=!@react-spring/docs
+
+      - name: Pack
+        run: pnpm package
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: targets/web/package.tgz
+
+  test-unit:
+    name: 'Test:unit'
+    needs: [changes]
+    if: ${{ needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['22.x', '24.x']
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Test
+        run: pnpm test:unit
+
+  test-types:
+    name: 'Test:types with TS ${{ matrix.ts }}'
+    needs: [changes]
+    if: ${{ needs.changes.outputs.packages == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ts: ['5.7', '5.9', '6.0', '7.0']
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Install TypeScript ${{ matrix.ts }}
+        run: pnpm add -w typescript@${{ matrix.ts }}
+
+      - name: Build
+        run: pnpm build-ci
+
+      - name: Check repo types
+        run: |
+          pnpm tsc --version
+          pnpm check:types
+
+      - name: Test types
+        run: pnpm test:types
+      
+      
+
+  test-e2e:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.packages == 'true' }}
+    name: 'Test:E2E'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Test
+        run: pnpm test:e2e
+
+  are-the-types-wrong:
+    name: Check package config with are-the-types-wrong
+
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+
+      - name: show folder
+        run: ls -l .
+
+      - name: Run are-the-types-wrong
+        # The library is ESM-only; the `esm-only` profile accepts a CJS require()
+        # resolving to ESM (works via Node's require(ESM) since 22.12/20.19).
+        run: npx @arethetypeswrong/cli@0.18.3 ./package.tgz --format table --profile esm-only

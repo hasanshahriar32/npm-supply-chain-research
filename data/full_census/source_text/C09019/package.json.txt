@@ -1,0 +1,49 @@
+{
+  "name": "browserslist-to-es-version",
+  "version": "1.4.2",
+  "repository": "https://github.com/rstackjs/browserslist-to-es-version",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./core": {
+      "types": "./dist/core.d.ts",
+      "import": "./dist/core.js",
+      "require": "./dist/core.cjs"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "browserslist-to-es-version": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rs lib",
+    "bump": "pnpm version -m \"release: v%s\"",
+    "check": "rs check",
+    "dev": "rs lib -w",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "prepare": "rs hooks",
+    "test": "rs test"
+  },
+  "dependencies": {
+    "browserslist": "^4.29.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "rstack": "^0.8.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

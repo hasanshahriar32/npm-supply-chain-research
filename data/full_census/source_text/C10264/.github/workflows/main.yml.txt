@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/main.yml
+      - packages/**/*.{js,ts,json}
+      - '*.{json,js}'
+      - .eslintrc
+      - tools/**/*
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node:
+          - 20 # 2026-05-26
+          - 22 # 2026-12-07
+          - 24 # 2027-06-16
+          - latest
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      with:
+        ref: ${{ github.sha }}
+        fetch-depth: 2
+    - uses: ./.github/actions/setup-deps
+      with:
+        node-version: ${{ matrix.node }}
+    - name: Get base sha
+      id: base-commit
+      run: |
+        echo "sha=${{ github.event.pull_request.base.sha || github.event.before }}" >> $GITHUB_OUTPUT
+    - name: Build
+      run: |
+        if [[ "${{ github.event_name }}" != "pull_request" || $(git diff --name-only HEAD^1 HEAD | grep casl-) = "" ]]; then
+          pnpm run -r build
+        else
+          pnpm run -r --filter '[${{ steps.base-commit.outputs.sha }}]...' build
+        fi
+    - name: lint
+      run:  |
+        if [[ "${{ github.event_name }}" != "pull_request" || $(git diff --name-only HEAD^1 HEAD | grep casl-) = "" ]]; then
+          pnpm run -r lint
+        else
+          pnpm run -r --filter '[${{ steps.base-commit.outputs.sha }}]' lint
+        fi
+    - name: test
+      run:   |
+        if [[ "${{ github.event_name }}" != "pull_request" || $(git diff --name-only HEAD^1 HEAD | grep casl-) = "" ]]; then
+          pnpm run -r  test --coverage
+        else
+          pnpm run -r --filter '...[${{ steps.base-commit.outputs.sha }}]' test --coverage
+        fi
+    - name: Submit coverage
+      if: matrix.node == 'latest'
+      uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
+      with:
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true # optional (default = false)

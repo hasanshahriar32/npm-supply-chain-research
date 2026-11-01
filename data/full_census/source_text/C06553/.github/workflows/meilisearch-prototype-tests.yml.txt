@@ -1,0 +1,59 @@
+# Testing the code base against a specific Meilisearch feature
+name: Meilisearch prototype tests
+
+env:
+  HUSKY: 0
+  NODE_OPTIONS: "--trace-warnings"
+
+# Will only run for PRs and pushes to *-beta
+on:
+  pull_request:
+    branches:
+      - "prototype-beta/**"
+  push:
+    branches:
+      - "prototype-beta/**"
+
+jobs:
+  meilisearch-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.grep-step.outputs.meilisearch_version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Grep docker beta version of Meilisearch
+        id: grep-step
+        run: |
+          MEILISEARCH_VERSION=$(sh .github/scripts/prototype-docker-version.sh $GITHUB_REF_NAME)
+          if [ -z "$MEILISEARCH_VERSION" ]
+          then
+            echo "Could not find any docker image for this prototype: $GITHUB_REF_NAME"
+            exit 1
+          else
+            echo $MEILISEARCH_VERSION
+          fi
+          echo "meilisearch_version=$MEILISEARCH_VERSION" >> $GITHUB_OUTPUT
+  integration_tests:
+    runs-on: ubuntu-latest
+    needs: ["meilisearch-version"]
+    services:
+      meilisearch:
+        image: getmeili/meilisearch-enterprise:${{ needs.meilisearch-version.outputs.version }}
+        env:
+          MEILI_MASTER_KEY: "masterKey"
+          MEILI_NO_ANALYTICS: "true"
+          MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS: "any"
+        ports:
+          - "7700:7700"
+    strategy:
+      matrix:
+        node-version: ["20", "22", "24"]
+    name: integration-tests (Node.js ${{ matrix.node-version }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/set-up-node
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests
+        run: pnpm test

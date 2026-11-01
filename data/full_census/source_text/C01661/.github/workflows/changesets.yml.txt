@@ -1,0 +1,40 @@
+name: Handle Changesets
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+  # note: no write permissions are needed since the workflow uses GH_ACCESS_TOKEN instead of GITHUB_TOKEN
+
+jobs:
+  release:
+    name: Handle Changesets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+        with:
+          # See https://github.com/changesets/action/issues/187
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup pnpm and Node.js
+        uses: pnpm/setup@v2
+        with:
+          cache: true
+
+      - name: Build Package
+        run: pnpm build
+
+      - name: Create Version PR or Publish to NPM
+        id: changesets
+        uses: changesets/action@v2
+        with:
+          # note: the action injects CHANGESETS_OUTPUT into this script's env,
+          # which is how it detects published packages and creates git tags
+          publish-script: pnpm exec changeset publish
+          github-token: ${{ secrets.GH_ACCESS_TOKEN }}

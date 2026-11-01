@@ -1,0 +1,37 @@
+name: Browsers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+      - name: BrowserStack Env Setup
+        uses: browserstack/github-actions/setup-env@master
+        with:
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          project-name: intl-pluralrules
+
+      - name: BrowserStackLocal Start
+        uses: browserstack/github-actions/setup-local@master
+        with:
+          local-testing: start
+          local-identifier: random
+
+      - run: npm ci
+      - run: npm install --no-save @vitest/browser-playwright@4.0.18
+      - run: npx vitest run --config=.github/vitest.browserstack.config.js
+
+      - name: BrowserStackLocal Stop
+        uses: browserstack/github-actions/setup-local@master
+        if: always()
+        with:
+          local-testing: stop

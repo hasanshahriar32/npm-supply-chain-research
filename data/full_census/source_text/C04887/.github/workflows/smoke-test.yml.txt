@@ -1,0 +1,35 @@
+name: Smoke test
+
+on:
+  schedule:
+    - cron: '0 0 * * SUN'
+  workflow_dispatch:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  test:
+    permissions:
+      contents: read # to fetch code (actions/checkout)
+      issues: write # to create comment
+      pull-requests: read # for searching pull requests
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # This is set to the lowest Node.js version we support
+          node-version: 20
+          cache: 'yarn'
+      - run: |
+          yarn install
+          yarn build
+          ln -s ../ node_modules/eslint-plugin-jest
+      - uses: AriPerkkio/eslint-remote-tester-run-action@212a4b725efb5ffce2e15f9ade8c43e252b09ce2 # v6
+        with:
+          issue-title: 'Results of weekly scheduled smoke test'
+          eslint-remote-tester-config: eslint-remote-tester.config.ts

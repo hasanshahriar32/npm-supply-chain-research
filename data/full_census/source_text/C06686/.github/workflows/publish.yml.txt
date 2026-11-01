@@ -1,0 +1,388 @@
+name: Publish library
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (no publishing, no git commits/tags)'
+        required: false
+        default: false
+        type: boolean
+
+# Serialize all automated writers to `main` (this workflow and publish-standalone.yml
+# share the same group) so their pushes can never race and clobber each other.
+# `cancel-in-progress: false` queues runs instead of cancelling them.
+concurrency:
+  group: main-writer
+  cancel-in-progress: false
+
+env:
+  LIBRARY_VERSION: 1.1.${{ github.run_number }}
+
+jobs:
+  publish-library:
+    # Prevent infinite loops: skip if the commit was made by the build system itself
+    # (e.g., the "Release X.Y.Z" commit pushed at the end of this workflow)
+    if: "!contains(github.event.head_commit.author.email, 'flubuild@microsoft.com')"
+    name: Publish icon libraries
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+
+    steps:
+      - name: Generate a token
+        id: generate-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.GH_FLUENT_CI_APP_ID }}
+          private-key: ${{ secrets.GH_FLUENT_CI_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+          # Nx (release changelog / affected) needs the full commit history to resolve
+          # ranges between release tags. On this gigantic repo we keep the checkout cheap
+          # via a `tree:0` partial clone: full history is present, but trees/blobs are
+          # fetched on demand instead of a fragile `fetch-depth: 50` window that breaks
+          # once more than 50 commits land between releases.
+          # See https://github.com/nrwl/nx-set-shas#usage (fetch-depth: 0 + filter: tree:0).
+          filter: tree:0
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Bump version patch
+        run: |
+          grep -E "[0-9]+\.[0-9]+\.[0-9]+" FluentIcons.podspec | python3 -c """
+          import sys
+          import os
+          current_version = sys.stdin.read().strip().split(\"'\")[1]
+          major, minor, patch = current_version.split('.')
+          os.system(f'echo \"CURRENT_VERSION={current_version}\" >> \$GITHUB_ENV')
+          os.system(f'echo \"NEW_VERSION={major}.{minor}.{int(patch) + 1}\" >> \$GITHUB_ENV')
+          """
+
+      - name: Check CURRENT_VERSION tag availability
+        run: |
+          set -euo pipefail
+          echo "CURRENT_VERSION=$CURRENT_VERSION"
+
+          echo "Checking for tag locally..."
+          if git show-ref --tags --quiet "refs/tags/$CURRENT_VERSION"; then
+            echo "✅ Tag exists locally: $CURRENT_VERSION"
+          else
+            echo "⚠️ Tag not found locally: $CURRENT_VERSION"
+            echo "Known tags (last 20):"
+            git tag --sort=-creatordate | head -n 20
+          fi
+
+          echo "Checking tag resolves to a commit..."
+          if git rev-parse "$CURRENT_VERSION^{commit}" >/dev/null 2>&1; then
+            echo "✅ Tag resolves to commit: $(git rev-parse "$CURRENT_VERSION^{commit}")"
+          else
+            echo "⚠️ Tag does not resolve to a commit: $CURRENT_VERSION"
+          fi
+
+      - name: Bump react version patch
+        run: |
+          grep -E "[0-9]+\.[0-9]+\.[0-9]+" ./packages/react-icons/package.json | python3 -c """
+          import sys
+          import os
+          current_version = sys.stdin.read().strip().split(':')[1]
+          current_version = current_version.split('\"')[1]
+          major,minor,asset = current_version.split('.')
+          os.system(f'echo \"REACT_VERSION={major}.{minor}.{int(asset) + 1}\" >> \$GITHUB_ENV')
+          """
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+          # Required so setup-node writes an .npmrc that wires npm auth to NODE_AUTH_TOKEN,
+          # which `nx release publish` (npm publish under the hood) relies on.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      ## iOS
+      - name: Run iOS generate script
+        run: yarn deploy:ios
+        working-directory: importer
+
+      - name: Build Fonts
+        run: yarn deploy:fonts
+        working-directory: importer
+
+      ## Flutter
+      # Disabling for now until the pipeline job is fixed
+      # - name: Run Flutter generate script
+      #   run: yarn deploy:flutter
+      #   working-directory: importer
+
+      # # The name should be same as the package name on pub.dev
+      # - name: 'fluentui_system_icons'
+      #   uses: k-paxian/dart-package-publisher@master
+      #   with:
+      #     relativePath: 'flutter'
+      #     skipTests: true
+      #     accessToken: ${{ secrets.FLUTTER_OAUTH_ACCESS_TOKEN }}
+      #     refreshToken: ${{ secrets.FLUTTER_OAUTH_REFRESH_TOKEN }}
+
+      ## Publish
+      # Needs to be "-E" instead of "-r" on macOS
+      - name: Replace version numbers in README.md
+        run: |
+          sed -i.bk -r "s/[0-9]+\.[0-9]+\.[0-9]+/$NEW_VERSION/g" README.md
+          rm README.md.bk
+
+      # Needs to be "-E" instead of "-r" on macOS
+      - name: Replace version numbers in ios/README.md
+        run: |
+          sed -i.bk -r "s/[0-9]+\.[0-9]+\.[0-9]+/$NEW_VERSION/g" ios/README.md
+          rm ios/README.md.bk
+
+      # Needs to be "-E" instead of "-r" on macOS
+      - name: Replace version number in Podspec
+        run: |
+          sed -i.bk -r "s/[0-9]+\.[0-9]+\.[0-9]+/$NEW_VERSION/g" ios/FluentIcons.podspec
+          rm ios/FluentIcons.podspec.bk
+
+      # Disabling Flutter version updates for now until the pipeline is fixed
+      # # Needs to be "-E" instead of "-r" on macOS
+      # - name: Replace version number in flutter/CHANGELOG.md
+      #   run: |
+      #     sed -i.bk -r "s/[0-9]+\.[0-9]+\.[0-9]+/$NEW_VERSION/g" flutter/CHANGELOG.md
+      #     rm flutter/CHANGELOG.md.bk
+
+      # # Needs to be "-E" instead of "-r" on macOS
+      # - name: Replace version number in flutter/pubspec.yaml
+      #   run: |
+      #     sed -i.bk -r "s/version: [0-9]+\.[0-9]+\.[0-9]+/version: $NEW_VERSION/g" flutter/pubspec.yaml
+      #     rm flutter/pubspec.yaml.bk
+
+      - name: Build NPM publishable packages
+        env:
+          REACT_ICONS_SKIP_METADATA_DIFF_CHECK: 'true'
+        run: |
+          yarn nx run-many --target=build --projects="tag:npm:public"
+          yarn nx run react-icons:build-verify -u
+
+      # NX Release (all npm packages via release groups)
+      - name: Prepare NPM release (version + changelog)
+        run: |
+          yarn nx release version $REACT_VERSION --group=react --verbose
+          yarn nx release version $NEW_VERSION --group=native --verbose
+          yarn nx release changelog $REACT_VERSION --group=react --from $CURRENT_VERSION --no-git-tag --no-git-commit --verbose
+          yarn nx release changelog $NEW_VERSION --group=native --from $CURRENT_VERSION --no-git-tag --no-git-commit --verbose
+
+      # Publishes the `react` + `native` release groups (svg-icons, svg-sprites, react-icons,
+      # react-icons-font-subsetting-webpack-plugin, react-native-icons) via Nx Release, which
+      # reads npm auth from NODE_AUTH_TOKEN (see setup-node registry-url above). On dry-run we
+      # still exercise the publish path with `--dry-run` instead of skipping it entirely.
+      - name: Publish to npm (Nx Release)
+        run: |
+          yarn nx release publish --group=react --access public ${{ inputs.dry-run && '--dry-run' || '' }} --verbose
+          yarn nx release publish --group=native --access public ${{ inputs.dry-run && '--dry-run' || '' }} --verbose
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Android
+      - name: Run Android generate script
+        run: yarn deploy:android
+        working-directory: importer
+
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          gradle-version: wrapper
+          gradle-home-cache-excludes: |
+            caches
+            jdks
+
+      # - name: Base64 decodes and pipes the GPG key content into the secret file
+      #   env:
+      #     GPG_KEY_CONTENT: ${{ secrets.GPG_KEY_CONTENT }}
+      #     SIGNING_SECRET_KEY_RING_FILE: ${{ secrets.SIGNING_SECRET_KEY_RING_FILE }}
+      #   run: |
+      #     git fetch --unshallow
+      #     sudo bash -c "echo '$GPG_KEY_CONTENT' | base64 -d > '$SIGNING_SECRET_KEY_RING_FILE'"
+
+      - name: Build Android library
+        run: ./gradlew assembleRelease -DversionName='${{ env.NEW_VERSION }}'
+        working-directory: android
+
+      # Temporarily commenting out the publishing to Maven Central, as it is blocking the release for other platforms
+      # - name: Publish to Maven Central
+      #   if: ${{ !inputs.dry-run }}
+      #   env:
+      #     OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+      #     OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+      #     GPG_SIGNING_KEY_ID: ${{ secrets.GPG_SIGNING_KEY_ID }}
+      #     GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+      #     SIGNING_SECRET_KEY_RING_FILE: ${{ secrets.SIGNING_SECRET_KEY_RING_FILE }}
+      #     SONATYPE_STAGING_PROFILE_ID: ${{ secrets.SONATYPE_STAGING_PROFILE_ID }}
+      #     VERSION_NAME: ${{ env.NEW_VERSION }}
+      #   run: ./gradlew publishReleasePublicationToSonatypeRepository --max-workers 1 closeAndReleaseSonatypeStagingRepository
+      #   working-directory: android
+
+      - name: Generate BUILD.gn file for Android
+        run: python3 generate_build_gn_android.py
+        working-directory: importer
+
+      - name: Update icon sheet
+        run: python3 generate_icons_md.py
+
+      - name: Config git credentials
+        run: git config user.email "flubuild@microsoft.com" && git config user.name "Fluent Build System"
+
+      - name: Commit version number change
+        if: ${{ !inputs.dry-run }}
+        run: |
+          git add -A
+          git commit -m "chore(release): publish $NEW_VERSION [skip ci]"
+
+      - name: Push release
+        if: ${{ !inputs.dry-run }}
+        run: |
+          set -euo pipefail
+          # Re-sync ONLY here (never rebuild): replay the already-built release commit onto
+          # the latest main. main can advance during the long build via any writer — another
+          # automated job or a PR merge. Those changes are normally disjoint from a release
+          # commit, so this replays cleanly and keeps the just-published artifacts byte-for-
+          # byte. A genuine conflict aborts the job instead of silently mutating a published
+          # artifact.
+          git fetch origin main
+          git rebase origin/main
+          # Branch FIRST, tag SECOND: push the commit, then tag the SHA now guaranteed on
+          # main. This ordering makes an orphaned tag (tag without its commit on main)
+          # impossible, and fails closed if main moved in the interim — just re-run to retry.
+          # (Do NOT use --tags/--follow-tags: they push tags independently of the branch, so
+          # a rejected branch push can still leave a tag pointing at a commit not on main.)
+          git push origin HEAD:main
+          git tag "$NEW_VERSION"
+          git push origin "refs/tags/$NEW_VERSION"
+
+      - name: Trigger CocoaPods publish
+        if: ${{ !inputs.dry-run }}
+        run: gh workflow run cocoapods-publish.yml
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+
+      - name: Dry-run summary
+        if: ${{ inputs.dry-run }}
+        run: |
+          echo "## 🧪 Dry-run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following actions would have been performed:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- **Library version:** \`$NEW_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **React icons version:** \`$REACT_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📤 npm packages that would be published" >> $GITHUB_STEP_SUMMARY
+          echo "- \`@fluentui/svg-icons@$NEW_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`@fluentui/svg-sprites@$NEW_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`@fluentui/react-icons@$REACT_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`@fluentui/react-icons-font-subsetting-webpack-plugin@$REACT_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`@fluentui/react-native-icons@$REACT_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🏷️ Git operations that would be performed" >> $GITHUB_STEP_SUMMARY
+          echo "- Commit: \`chore(release): publish $NEW_VERSION [skip ci]\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tag: \`$NEW_VERSION\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Push to: \`origin/main\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📝 Files modified (not committed)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          git status --short >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Stage changed package files
+        if: ${{ inputs.dry-run }}
+        run: |
+          # Collect all uncommitted package changes into a temp directory for artifact upload.
+          # This allows inspecting what a dry-run publish *would* have committed/published.
+          mkdir -p /tmp/changed-packages
+          # Copy each changed file under packages/ (preserving directory structure) to the staging area
+          git status --porcelain -- 'packages/' | awk '{print $NF}' | xargs -I{} cp --parents {} /tmp/changed-packages/ 2>/dev/null || true
+          # Include root manifests so the artifact is a self-contained snapshot of version bumps
+          cp package.json yarn.lock /tmp/changed-packages/
+
+      - name: Upload changed package files
+        if: ${{ inputs.dry-run }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: changed-packages-files
+          path: /tmp/changed-packages/
+          if-no-files-found: warn
+
+  # publish-android-demo:
+  #   name: Publish Android demo app
+  #   runs-on: ubuntu-latest
+  #   needs: publish-library
+
+  #   steps:
+  #   - uses: actions/checkout@v7
+
+  #   - name: Bump version patch
+  #     run: |
+  #       grep -E "[0-9]+\.[0-9]+\.[0-9]+" FluentIcons.podspec | python3 -c """
+  #       import sys
+  #       import os
+  #       current_version = sys.stdin.read().strip().split(\"'\")[1]
+  #       major, minor, patch = current_version.split('.')
+  #       os.system(f'echo \"NEW_VERSION={major}.{minor}.{int(patch) + 1}\" >> \$GITHUB_ENV')
+  #       """
+
+  #   - name: Use Node 11
+  #     uses: actions/setup-node@v1
+  #     with:
+  #       node-version: 11.x
+
+  #   - run: yarn install --immutable
+
+  #   - name: Run generate script
+  #     run: yarn deploy:android
+  #     working-directory: importer
+
+  #   - name: Setup Java
+  #     uses: actions/setup-java@v5
+  #     with:
+  #       distribution: temurin
+  #       java-version: 8
+
+  #   - name: Set up Gradle
+  #     uses: gradle/actions/setup-gradle@v5
+  #     with:
+  #       gradle-version: wrapper
+  #       gradle-home-cache-excludes: |
+  #         caches
+  #         jdks
+
+  #   - name: Restore release keystore
+  #     run: |
+  #       echo "${{ secrets.ANDROID_KEYSTORE }}" > release.keystore.asc
+  #       gpg -d --passphrase "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" --batch release.keystore.asc > release.keystore
+
+  #   - name: Build Android demo app
+  #     run: ./gradlew :sample-showcase:assembleRelease -DversionName=${{ env.NEW_VERSION }} -DversionCode=${{ github.run_number }} -Pandroid.injected.signing.store.file=/home/runner/work/fluentui-system-icons/fluentui-system-icons/release.keystore -Pandroid.injected.signing.store.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ANDROID_KEYSTORE_ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+  #     working-directory: android
+
+  #   - name: Publish apk to App Center
+  #     uses: wzieba/AppCenter-Github-Action@v1.0.0
+  #     with:
+  #       appName: ${{ secrets.APP_CENTER_DEMO_APP_NAME }}
+  #       token: ${{ secrets.APP_CENTER_TOKEN }}
+  #       group: Public
+  #       file: android/sample-showcase/build/outputs/apk/release/sample-showcase-release.apk
+  #       releaseNotes: Please enjoy this latest version(${{ env.NEW_VERSION }}) of Fluent System Icons Demo.

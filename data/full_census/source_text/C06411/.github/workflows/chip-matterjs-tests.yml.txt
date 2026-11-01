@@ -1,0 +1,136 @@
+# This workflow executed the chip tool tests against matter.js
+name: Matter.js Controller vs Chip Device Tests
+
+on:
+  schedule:
+    - cron: 30 4 * * * # Every day at 04:30 (chip-tool-test should have finished by then and rebuild is done)
+  workflow_dispatch: # Manually on demand
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  merge_group:
+
+# Cancel previous PR/branch runs when a new commit is pushed
+# Cancel a superseded run for the same ref, but keep the trigger in the group: a push must not cancel a manual
+# or scheduled run on the same ref, and those two queue rather than cancel each other.
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name }}-chip-matterjs-tests
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+
+jobs:
+  head-commit-message:
+    if: github.repository == 'matter-js/matter.js'
+    name: get head commit message
+    runs-on: ubuntu-latest
+    outputs:
+      head-commit-message: ${{ steps.get_head_commit_message.outputs.headCommitMsg }}
+    steps:
+      - name: Get repo
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Print head git commit message
+        id: get_head_commit_message
+        run: echo "headCommitMsg=$(git show -s --format=%s)" >> $GITHUB_OUTPUT
+
+  # Find out what is needed to be done by this test workflow
+  tests-needed:
+    needs: [head-commit-message]
+    if: github.repository == 'matter-js/matter.js'
+    runs-on: ubuntu-latest
+    outputs:
+      controller-tests-required: ${{ steps.check-trigger.outputs.controller-tests-required }}
+
+    steps:
+      - name: Check out matter.js
+        uses: actions/checkout@v7
+
+      - if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || ((github.event_name == 'push' || github.event_name == 'pull_request') && contains(needs.head-commit-message.outputs.head-commit-message, '[execute-controllertests]') == true) }}
+        name: Controller tests required to run?
+        id: check-trigger
+        run: echo "controller-tests-required=true" >> $GITHUB_OUTPUT
+
+  # If we need to do anything, make sure that chip binaries are build and environment can be set up
+  prepare-chip-build:
+    needs: [tests-needed]
+    if: ${{ github.repository == 'matter-js/matter.js' && needs.tests-needed.outputs.controller-tests-required == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out matter.js
+        uses: actions/checkout@v7
+
+      - name: Prepare chip tests and rebuild chip-tool if needed
+        uses: ./.github/actions/prepare-chip-testing
+        with:
+          rebuild-chip-tool: "false"
+          build-matter-js: "false"
+
+  matterjs-all-chip-apps:
+    needs: [prepare-chip-build]
+    if: ${{ github.repository == 'matter-js/matter.js' && needs.tests-needed.outputs.controller-tests-required == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out matter.js
+        uses: actions/checkout@v7
+
+      - name: Initialize chip tests
+        uses: ./.github/actions/prepare-chip-testing
+        with:
+          rebuild-chip-tool: 'false'
+
+      - name: Patch Test runner interface-id
+        uses: actions/github-script@v9
+        with:
+          result-encoding: string
+          script: |
+            const fs = require("fs");
+            let file= fs.readFileSync("./connectedhomeip/scripts/tests/chiptest/linux.py", "utf8");
+            // Patch the test runner to execute controller and app on same network interface
+            file = file.replaceAll("'ip netns exec tool'", "'ip netns exec app'");
+            fs.writeFileSync("./connectedhomeip/scripts/tests/chiptest/linux.py", file);
+
+      - name: Patch Matter Yaml Files and PICS values
+        shell: bash
+        run: |
+          sed -i 's/^SMOKECO\.S\.A000d=1$/SMOKECO.S.A000d=0/' connectedhomeip/src/app/tests/suites/certification/ci-pics-values
+          sed -i 's/^TSTAT\.S\.A0057=1$/TSTAT.S.A0057=0/' connectedhomeip/src/app/tests/suites/certification/ci-pics-values
+          sed -i 's/^TSTAT\.S\.A0058=1$/TSTAT.S.A0058=0/' connectedhomeip/src/app/tests/suites/certification/ci-pics-values
+
+      - name: Chip-Apps execution with matter.js controller
+        id: test-execution-matterjs-chip
+        shell: bash
+        run: |
+          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0
+          sudo sysctl -w net.ipv4.conf.all.forwarding=1
+          sudo sysctl -w net.ipv6.conf.all.forwarding=1
+          cd connectedhomeip
+          ./scripts/run_in_build_env.sh  \
+            './scripts/tests/run_test_suite.py \
+              --runner chip_tool_python \
+              --log-level info \
+              --target-glob "{Test_*,}" \
+              --target-skip-glob "{Test_TC_BDX_*,Test_TC_DGTHREAD*,Test_TC_DGWIFI*,Test_TC_S_2_3,Test_TC_REFALM_2_*,Test_TC_SMOKECONC_2_1}" \
+              run \
+              --keep-going \
+              --tool-path chip-tool:../support/chip-testing/dist/esm/ControllerWebSocketTestApp.js \
+              --app-path all-clusters:../bin/chip-all-clusters-app \
+              --app-path all-devices:../bin/all-devices-app \
+              --app-path lock:../bin/chip-lock-app \
+              --app-path bridge:../bin/chip-bridge-app \
+              --app-path tv:../bin/chip-tv-app \
+              --app-path lit-icd:../bin/lit-icd-app \
+              --app-path microwave-oven:../bin/chip-microwave-oven-app \
+              --app-path rvc:../bin/chip-rvc-app \
+              --app-path network-manager:../bin/matter-network-manager-app \
+              --app-path energy-gateway:../bin/chip-energy-gateway-app \
+              --app-path evse:../bin/chip-evse-app \
+            '
+      - name: Verify that Matter.js controller was used
+        shell: bash
+        run: |
+          cd connectedhomeip
+          ls -la test_controller.log
+          if [ ! -f ./test_controller.log ]; then
+              exit 1
+          fi

@@ -1,0 +1,107 @@
+name: CI & Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  build:
+    name: Lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - run: npm ci
+      - run: npx ls-engines
+      - run: npm run prepublishOnly
+      - run: npm run lint
+      - name: build:lib, test:integration
+        run: |
+          npm run build:lib
+          npm run test:integration
+
+  test:
+    needs: [build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run the testing suite on each major OS with the latest LTS release of Node.js
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        node: [lts/*]
+        # It makes sense to also test the oldest, and latest, versions of Node.js, on ubuntu-only since it's the fastest CI runner
+        include:
+          - os: ubuntu-latest
+            # Also test the previous LTS release
+            node: lts/-1
+          - os: ubuntu-latest
+            # Test the actively developed version that will become the latest LTS release next October
+            node: current
+        # The `build` job already runs the testing suite in ubuntu and lts/*
+        exclude:
+          - os: ubuntu-latest
+            # Test the oldest LTS release of Node that's still receiving bugfixes and security patches, versions older than that have reached End-of-Life
+            node: lts/*
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npx ls-engines
+      - name: build:lib, test:integration
+        run: |
+          npm run build:lib
+          npm run test:integration
+
+  browser:
+    name: Test browser.js
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - run: npm ci
+      - name: build:browser.js, test:browser.js
+        run: |
+          npm run build:browser.js
+          npm run test:browser.js
+
+  e2e:
+    name: Run integration tests on real redis
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:8.2.1
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+      - run: npm ci
+      - name: test:e2e
+        run: npm run test:e2e -- --forceExit
+        # run: npm run test:e2e -- --openHandlesTimeout=60000
+        # timeout-minutes: 2
+      # - name: Find open handles
+      #   if: failure()
+      #   run: |
+      #     npm run test:e2e -- --detectOpenHandles --forceExit
+      #env:
+      #  DEBUG: ioredis:*

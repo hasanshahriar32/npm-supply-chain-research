@@ -1,0 +1,117 @@
+name: Bundle Size Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+
+jobs:
+  analyze-bundle-size:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24.x
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - name: Build base branch bundles
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          pnpm install --frozen-lockfile
+          VITEST_VERSION=$(node -p "require('vitest/package.json').version")
+          # the PR's perf harness may not exist on the base ref; keep a copy so we can
+          # measure the base build with the same script (same runner cancels variance)
+          cp bench/perf-ci.mjs /tmp/perf-ci.mjs
+          cp bench/bundle/dependency-analyze.mjs /tmp/dependency-analyze.mjs
+          cp bench/unplugin-transform.bench.ts /tmp/unplugin-transform.bench.ts
+          # runner setup (pnpm store probing) can leave the lockfile dirty; nothing
+          # in this fresh checkout is precious, so surface the diff and discard it
+          git status --porcelain
+          git diff --stat
+          git checkout -f "$BASE_REF"
+          pnpm install
+          # Use the PR runner for both measurements, including across Vitest major upgrades.
+          pnpm add -Dw --save-exact --ignore-scripts "vitest@$VITEST_VERSION"
+          cp /tmp/unplugin-transform.bench.ts bench/unplugin-transform.bench.ts
+          node /tmp/dependency-analyze.mjs > /tmp/base-dependencies.json
+          pnpm build
+          # the base ref may predate some bundle configs (react, full, schema-org);
+          # tolerate their absence so the other baselines are still produced and the
+          # new bundles surface as fresh rather than failing the run
+          pnpm test:bundle-size || true
+          pnpm test:vue-bundle-size || true
+          pnpm test:react-bundle-size || true
+          pnpm test:schema-org-bundle-size || true
+          # snapshot the whole base dist; report.ts diffs PR dist against it by path
+          rm -rf /tmp/base-dist
+          cp -r bench/bundle/dist /tmp/base-dist
+          # measure base perf with the PR's harness against the base-built packages;
+          # run from /tmp so the working tree stays clean across the checkout back
+          node --expose-gc /tmp/perf-ci.mjs > /tmp/base-perf.json || echo '{}' > /tmp/base-perf.json
+          pnpm exec vitest bench bench/unplugin-transform.bench.ts --config bench/vitest.config.ts --run --reporter=json --outputFile=/tmp/base-transform-perf.json
+          # the base pnpm install may have rewritten the lockfile; discard before switching back
+          git checkout -f -
+
+      - name: Build PR bundles
+        run: |
+          pnpm install
+          node bench/bundle/dependency-analyze.mjs > /tmp/pr-dependencies.json
+          pnpm build
+          pnpm test:bundle-size
+          pnpm test:vue-bundle-size
+          pnpm test:react-bundle-size
+          pnpm test:schema-org-bundle-size
+          node --expose-gc bench/perf-ci.mjs > /tmp/pr-perf.json || echo '{}' > /tmp/pr-perf.json
+          pnpm exec vitest bench bench/unplugin-transform.bench.ts --config bench/vitest.config.ts --run --reporter=json --outputFile=/tmp/pr-transform-perf.json
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Resolve baseline label
+        run: |
+          sha=$(git rev-parse --short "${{ github.event.pull_request.base.sha }}")
+          date=$(git show -s --format=%cs "${{ github.event.pull_request.base.sha }}")
+          echo "BASE_LABEL=${{ github.base_ref }} @ $sha · $date" >> "$GITHUB_ENV"
+
+      - name: Run report script
+        id: analyze
+        env:
+          BASE_DIST: /tmp/base-dist
+          BASE_DEPENDENCIES: /tmp/base-dependencies.json
+          BASE_PERF: /tmp/base-perf.json
+          BASE_TRANSFORM_PERF: /tmp/base-transform-perf.json
+          PR_DEPENDENCIES: /tmp/pr-dependencies.json
+          PR_PERF: /tmp/pr-perf.json
+          PR_TRANSFORM_PERF: /tmp/pr-transform-perf.json
+        run: |
+          output=$(bun bench/bundle/report.ts)
+          echo "$output"
+          printf '%s\n' "$output" >> "$GITHUB_STEP_SUMMARY"
+          echo "result<<EOF" >> $GITHUB_OUTPUT
+          echo "$output" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post comment on PR
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          header: Bundle Size Analysis
+          message: ${{ steps.analyze.outputs.result }}

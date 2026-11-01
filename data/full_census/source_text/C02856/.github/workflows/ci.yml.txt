@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*' # older version branches
+    tags:
+      - '*'
+
+  pull_request: {}
+  schedule:
+  - cron:  '0 6 * * 0' # weekly, on sundays
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 16
+        cache: pnpm
+    - name: install dependencies
+      run: pnpm install
+    - name: lint
+      run: pnpm lint:js
+
+  node-tests:
+    name: "Node: Node ${{ matrix.node }} - ${{ matrix.os }}"
+    runs-on: "${{matrix.os}}-latest"
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu', 'windows', 'macOS']
+        node: [16, 18, 20]
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node }}
+        cache: pnpm
+    - name: install dependencies
+      run: pnpm install
+    - name: test
+      run: pnpm test:node
+
+  acceptance-tests:
+    name: "Acceptance: Node ${{ matrix.node }} - ${{ matrix.os }}"
+    runs-on: "${{matrix.os}}-latest"
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu', 'windows']
+        node: [16, 18, 20]
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node }}
+        cache: pnpm
+    - name: install dependencies
+      run: pnpm install
+    - name: test
+      run: pnpm test:ember
+
+  floating-test:
+    name: Floating dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 16
+        cache: pnpm
+    - name: install dependencies
+      run: pnpm install --no-lockfile
+    - name: test
+      run: pnpm test

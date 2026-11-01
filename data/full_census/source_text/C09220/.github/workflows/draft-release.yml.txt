@@ -1,0 +1,28 @@
+name: draft-release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+jobs:
+  draft-github-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: $/.github/actions/setup
+      - name: Get Changelog
+        id: get-changelog
+        uses: ./.github/actions/get-changelog # zizmor: ignore[self-repository]
+      - name: Create Draft Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ steps.get-changelog.outputs.changelog }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --notes "$CHANGELOG" \
+            --draft

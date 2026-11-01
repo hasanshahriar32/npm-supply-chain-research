@@ -1,0 +1,40 @@
+name: Update and Create PR
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Runs on the first day of each month at midnight
+  workflow_dispatch: # Allows the workflow to be triggered manually
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-and-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository 🛎️
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v4.3.1 https://github.com/actions/checkout/releases/tag/v4.3.1
+
+      - name: Set up Node.js 🛠️
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0 https://github.com/actions/setup-node/releases/tag/v6.0.0
+        with:
+          node-version: 'lts/*' # Use the LTS version of Node.js
+
+      - name: Install dependencies 📦
+        run: npm install
+
+      - name: Run update script 🔄
+        run: npm run update
+
+      - name: Create Pull Request 🚀 (if there are changes)
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0 https://github.com/peter-evans/create-pull-request/releases/tag/v8.1.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: auto-update
+          title: "🤖Automated update"
+          body: "This PR contains automated updates from running `npm run update`"
+          labels: "automated update"
+          sign-commits: true
+

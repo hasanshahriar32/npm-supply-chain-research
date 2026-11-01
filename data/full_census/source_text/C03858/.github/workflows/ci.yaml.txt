@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - '.github/workflows/ci.yaml'
+      - 'src/**'
+      - 'package.json'
+      - 'tsconfig.json'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # node versions supported by nestjs 11.x/12.x (@nestjs/core engines: >= 20)
+        node-version: ['20', '22', '24', '26']
+        nest-version: ['11']
+        include:
+          # nestjs 12.x (package.json) is ESM-only: jest can require() it natively only on node 24.9+
+          - { node-version: '24', nest-version: '' }
+          - { node-version: '26', nest-version: '' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: |
+          npm config set legacy-peer-deps true
+          npm install
+
+      - name: Install nestjs
+        if: matrix.nest-version
+        run: npm install @nestjs/common@^${{ matrix.nest-version }} @nestjs/core@^${{ matrix.nest-version }} @nestjs/platform-express@^${{ matrix.nest-version }} @nestjs/testing@^${{ matrix.nest-version }}
+
+      - name: Lint
+        if: startsWith(matrix.node-version, '26')
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

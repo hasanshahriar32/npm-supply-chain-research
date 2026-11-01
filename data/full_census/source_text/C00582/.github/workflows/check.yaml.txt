@@ -1,0 +1,231 @@
+# This workflow runs for every pull request to lint and test the proposed changes.
+
+name: Check
+
+on:
+    pull_request:
+
+    # Push to master will trigger code checks
+    push:
+        branches:
+            - master
+        tags-ignore:
+            - '**' # Ignore all tags to prevent duplicate builds when tags are pushed.
+
+    # Release flow will trigger checks manually
+    workflow_call:
+
+    # Allows running the checks - most importantly the integration tests - on demand.
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build_and_test:
+        name: Build & Test
+        if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+        runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: [22, 24, 26]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+
+            - name: Install Chrome for puppeteer
+              run: pnpm exec puppeteer browsers install chrome
+
+            - name: Run Tests
+              run: pnpm test
+
+    integration_tests:
+        name: Integration tests (Node ${{ matrix.node-version }})
+        # These run against the live Apify API with real credentials, so they are skipped for fork PRs,
+        # where repository secrets are not available.
+        if: >-
+            ${{
+              !contains(github.event.head_commit.message, '[skip ci]') &&
+              (
+                (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
+                (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+                github.event_name == 'workflow_dispatch'
+              )
+            }}
+        runs-on: ubuntu-latest
+
+        env:
+            APIFY_TEST_USER_API_TOKEN: ${{ secrets.APIFY_TEST_USER_PYTHON_SDK_API_TOKEN }}
+
+        # A single Node version on purpose: these tests exercise HTTP against the live Apify API, where
+        # the Node version carries no signal, and every extra job multiplies the load on the shared
+        # test account. Version coverage is the unit tier's job.
+        strategy:
+            fail-fast: false
+            matrix:
+                node-version: [26]
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v7
+
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+
+            # A workflow that calls this one as a reusable workflow - the release flow does - gets no
+            # secrets unless it opts in with `secrets: inherit`, so the token can legitimately be empty.
+            # Skip rather than fail there, otherwise a missing token blocks the release.
+            - name: Run integration tests
+              if: ${{ env.APIFY_TEST_USER_API_TOKEN != '' }}
+              run: pnpm test:integration
+
+            - name: Report the skipped integration tests
+              if: ${{ env.APIFY_TEST_USER_API_TOKEN == '' }}
+              run: echo "::warning::APIFY_TEST_USER_API_TOKEN is empty, the integration tests did not run."
+
+    test_bundling:
+        name: Test bundler support
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+
+            - name: Run Tests
+              run: pnpm test:bundling
+
+    lint:
+        name: Lint
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+            - run: pnpm lint
+            - name: Type-check tests
+              run: pnpm tsc-check-tests
+            - name: Type-check maintainer scripts
+              run: pnpm tsc-check-scripts
+            - name: Type-check docs code samples
+              run: pnpm tsc-check-docs
+            - name: Format check
+              run: pnpm format:check
+
+    api_surface:
+        name: Public API surface
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+            - name: Build
+              run: pnpm build
+            - name: Check public API surface
+              run: pnpm api:check
+
+    docs:
+        name: Docs build
+        if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Source code
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install pnpm and dependencies
+              uses: apify/actions/pnpm-install@v1.6.2
+
+            - name: Build docs
+              run: |
+                  cd website
+                  pnpm lint
+                  pnpm build
+
+            - name: Run Lychee Link Checker
+              id: lychee
+              if: github.event_name == 'pull_request'
+              uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+              with:
+                  fail: false
+                  args: >
+                      --base-url https://docs.apify.com
+                      --max-retries 6
+                      --exclude="github.com"
+                      --exclude="npmjs.com"
+                      --exclude="^https://x\.com/"
+                      --exclude="docs\.apify\.com/api/client/js/assets/"
+                      --no-progress
+                      --timeout '60'
+                      --accept '100..=103,200..=299,429'
+                      --max-redirects 5
+                      --format markdown
+                      './website/build/**/*.html'
+
+            - name: Find Comment
+              if: github.event_name == 'pull_request'
+              uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4.0.0
+              id: find-comment
+              with:
+                  issue-number: ${{ github.event.pull_request.number }}
+                  body-includes: There are broken links in the documentation.
+
+            - name: Links are passing
+              if: github.event_name == 'pull_request' && steps.lychee.outputs.exit_code == 0 && steps.find-comment.outputs.comment-id
+              uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+              with:
+                  comment-id: ${{ steps.find-comment.outputs.comment-id }}
+                  issue-number: ${{ github.event.pull_request.number }}
+                  body: |
+                      ✅ The link checker did not find any broken links.
+
+                      See more at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#summary-${{ job.check_run_id }}
+                  edit-mode: replace
+
+            - name: Links are failing
+              if: github.event_name == 'pull_request' && steps.lychee.outputs.exit_code != 0
+              uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
+              with:
+                  comment-id: ${{ steps.find-comment.outputs.comment-id }}
+                  issue-number: ${{ github.event.pull_request.number }}
+                  body: |
+                      ⚠️ There are broken links in the documentation.
+
+                      See more at ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#summary-${{ job.check_run_id }}
+                  edit-mode: replace

@@ -1,0 +1,117 @@
+{
+  "name": "ng-packagr",
+  "version": "22.3.0-next.2",
+  "description": "Compile and package Angular libraries in Angular Package Format (APF)",
+  "keywords": [
+    "apf",
+    "angular-package-format",
+    "angular",
+    "angular-library",
+    "angular-components",
+    "component-library",
+    "typescript",
+    "css",
+    "scss"
+  ],
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || >=26.0.0"
+  },
+  "author": "ng-packagr GitHub organization",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ng-packagr/ng-packagr.git"
+  },
+  "homepage": "https://github.com/ng-packagr/ng-packagr",
+  "bugs": {
+    "url": "https://github.com/ng-packagr/ng-packagr/issues"
+  },
+  "bin": {
+    "ng-packagr": "./src/cli/main.js"
+  },
+  "main": "./src/public_api.js",
+  "typings": "./src/public_api.d.ts",
+  "dependencies": {
+    "@ampproject/remapping": "^2.3.0",
+    "ajv": "^8.17.1",
+    "browserslist": "^4.26.0",
+    "chokidar": "^5.0.0",
+    "dependency-graph": "^1.0.0",
+    "esbuild": "^0.28.2",
+    "find-cache-directory": "^6.0.0",
+    "injection-js": "^2.4.0",
+    "jsonc-parser": "^3.3.1",
+    "less": "^4.2.0",
+    "ora": "^9.0.0",
+    "postcss": "^8.4.47",
+    "rolldown": "^1.2.0",
+    "rolldown-plugin-dts": "^0.28.0",
+    "rxjs": "^7.8.1",
+    "sass": "^1.103.1",
+    "sass-embedded": "^1.103.1",
+    "tinyglobby": "^0.2.12"
+  },
+  "peerDependencies": {
+    "@angular/compiler-cli": "^22.0.0 || ^22.2.0-next || ^22.3.0-next",
+    "tailwindcss": "^2.0.0 || ^3.0.0 || ^4.0.0",
+    "tslib": "^2.3.0",
+    "typescript": ">=6.0 <6.1"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@angular/cdk": "~22.2.0-next",
+    "@angular/common": "~22.2.0-next",
+    "@angular/compiler": "~22.2.0-next",
+    "@angular/compiler-cli": "~22.2.0-next",
+    "@angular/core": "~22.2.0-next",
+    "@angular/material": "~22.2.0-next",
+    "@angular/ng-dev": "https://github.com/angular/dev-infra-private-ng-dev-builds.git#37be0b2012ab2d2f58d575689b1bac74eed56e41",
+    "@angular/platform-browser": "~22.2.0-next",
+    "@angular/router": "~22.2.0-next",
+    "@eslint/compat": "^2.0.5",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "@types/less": "^3.0.2",
+    "@types/node": "^22.0.0",
+    "@types/semver": "^7.8.0",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
+    "@typescript-eslint/parser": "8.71.2",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-header": "3.1.1",
+    "eslint-plugin-import": "2.32.0",
+    "globals": "^17.6.0",
+    "husky": "^9.0.0",
+    "json-schema-to-typescript": "^16.0.0",
+    "prettier": "~3.9.0",
+    "rimraf": "^6.0.0",
+    "standard-version": "^9.0.0",
+    "tailwindcss": "^3.2.0",
+    "tslib": "^2.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "6.0.3",
+    "vitest": "^5.0.0"
+  },
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "build": "rimraf dist && pnpm --silent schema && tsc --project src/tsconfig.packagr.json && node ./scripts/postbuild.js",
+    "schema": "json2ts --input src/ng-package.schema.json --output src/ng-package.schema.ts && json2ts --input src/ng-entrypoint.schema.json --output src/ng-entrypoint.schema.ts",
+    "release": "standard-version --releaseCommitMessageFormat 'release: cut {{currentTag}}' --no-verify --tag-prefix=\"\"",
+    "publish:ci": "pnpm --silent build",
+    "lint": "eslint --cache --max-warnings=0 \"**/*.ts\"",
+    "integration:consumers": "integration/consumers.sh",
+    "integration:consumers:ngc": "ngc --project integration/consumers/tsc/tsconfig.json",
+    "integration:samples": "tsx integration/samples.ts",
+    "integration:samples:dev": "tsx --tsconfig src/tsconfig.packagr.json ./integration/samples.dev.ts",
+    "integration:specs": "vitest run ./integration/samples/",
+    "integration:watch:specs": "vitest run --sequence.shuffle=false ./integration/watch/",
+    "test:specs": "vitest run ./src/",
+    "test": "pnpm --silent build && pnpm --silent test:specs && pnpm --silent integration:samples && pnpm --silent integration:specs && pnpm --silent integration:watch:specs && pnpm --silent integration:consumers"
+  }
+}

@@ -1,0 +1,29 @@
+name: autofix.ci
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+  pull_request:
+    branches:
+      - main
+      - dev
+
+  merge_group: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@e10bbede8ba835eaee8df633bb472d303aba8509
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Lint
+        run: pnpm run update
+
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a # v1.3.4

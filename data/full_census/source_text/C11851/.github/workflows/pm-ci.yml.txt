@@ -1,0 +1,236 @@
+name: utoopm-ci
+
+on:
+  push:
+    branches: ["next"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  npm-launcher-package-managers:
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '(pm)')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '(pm)'))
+    name: npm-launcher-${{ matrix.host }}
+    runs-on: ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - name: Setup Yarn Plug'n'Play
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Test package-manager installs without lifecycle scripts
+        run: node e2e/npm-launcher-package-managers.mjs
+
+  binary-size:
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '(pm)')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '(pm)'))
+    name: utoopm-binary-size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Init git submodules
+        run: git submodule update --init --recursive --depth 1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly-2026-08-20
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Assert release dependency trim
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p target
+          cargo tree -p utoo-pm --target x86_64-unknown-linux-gnu -e normal,build --prefix none > target/utoo-pm-release-tree.txt
+
+          if grep -E '^(h2|hickory-resolver|gix|aws-lc-rs) ' target/utoo-pm-release-tree.txt; then
+            echo "Unexpected heavyweight dependency found in utoo-pm release tree" >&2
+            exit 1
+          fi
+
+      - name: Build release binary
+        run: cargo build -p utoo-pm --release --bin utoo --target x86_64-unknown-linux-gnu
+
+      - name: Report binary size
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="target/x86_64-unknown-linux-gnu/release/utoo"
+          bytes="$(stat -c '%s' "$binary")"
+          {
+            echo "### utoo-pm binary size"
+            echo
+            echo "- target: x86_64-unknown-linux-gnu"
+            echo "- bytes: $bytes"
+            echo "- binary: $binary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '(pm)')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '(pm)'))
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            test: |
+              cargo test -p utoo-pm --target aarch64-apple-darwin --  --nocapture
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            test: |
+              rustup target add x86_64-apple-darwin &&
+              cargo test -p utoo-pm --target x86_64-apple-darwin --  --nocapture
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            test: |
+              cargo test -p utoo-pm --target x86_64-unknown-linux-gnu --  --nocapture
+
+          - host: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            test: |
+              cargo test -p utoo-pm --target aarch64-unknown-linux-gnu --  --nocapture
+
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            test: |
+              cargo test -p utoo-pm --target x86_64-pc-windows-msvc -- --nocapture
+
+    name: utoopm-ci-${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Init git submodules
+        run: git submodule update --init --recursive --depth 1
+
+      # Disable Windows Defender real-time scanning to speed up I/O-heavy builds (~30-50% faster)
+      - name: Disable Windows Defender
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          try {
+            Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction Stop
+          } catch {
+            Write-Warning "Unable to disable Windows Defender real-time monitoring: $_"
+          }
+      
+      # Add: Configure Git longpaths on Windows
+      - name: Configure Git (Windows)
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+      
+      # Add: Install OpenSSL on Windows
+      - name: Install OpenSSL (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          Write-Host "Installing OpenSSL via vcpkg..."
+          vcpkg install openssl:x64-windows-static-md
+          
+          $openssl_dir = "C:\vcpkg\installed\x64-windows-static-md"
+          echo "OPENSSL_DIR=$openssl_dir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "OPENSSL_NO_VENDOR=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "OPENSSL_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          
+          Write-Host "OpenSSL installed at: $openssl_dir"
+          if (Test-Path "$openssl_dir\lib") {
+            Get-ChildItem "$openssl_dir\lib" -Filter "*.lib" | Select-Object Name | Format-Table
+          }
+      
+      - name: Setup node
+        uses: actions/setup-node@v4
+        if: ${{ !matrix.settings.docker }}
+        with:
+          node-version: 20
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        if: ${{ !matrix.settings.docker }}
+        with:
+          toolchain: nightly-2026-08-20
+          targets: ${{ matrix.settings.target }}
+      
+      # - name: Cache cargo
+      #   uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: pm-ci-${{ matrix.settings.target }}
+      
+      - name: Setup toolchain
+        run: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.setup }}
+        shell: bash
+      
+      - name: Postinstall OS-detection e2e
+        run: sh e2e/postinstall-os-detect.sh
+        shell: bash
+
+      - name: Immutable npm launcher e2e
+        run: sh e2e/npm-launcher.sh
+        shell: bash
+
+      - name: Setup Utoo
+        uses: utooland/setup-utoo@v1
+
+      - name: Install dependencies
+        run: utoo install
+      
+      - name: Setup node x86
+        uses: actions/setup-node@v4
+      
+      - name: Test in docker
+        uses: addnab/docker-run-action@v3
+        if: ${{ matrix.settings.docker }}
+        with:
+          image: ${{ matrix.settings.docker }}
+          options: "-v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build"
+          run: ${{ matrix.settings.test }}
+      
+      - name: Test
+        run: ${{ matrix.settings.test }}
+        if: ${{ !matrix.settings.docker }}
+        shell: bash
+
+  success:
+    name: utoopm-ci-success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - npm-launcher-package-managers
+      - test
+    steps:
+      - name: Check success
+        run: |
+          if [ "${{ needs.test.result }}" == "failure" ] || [ "${{ needs.test.result }}" == "cancelled" ] || [ "${{ needs.npm-launcher-package-managers.result }}" == "failure" ] || [ "${{ needs.npm-launcher-package-managers.result }}" == "cancelled" ]; then
+            echo "Tests failed or were cancelled"
+            exit 1
+          else
+            echo "Tests passed or were skipped"
+          fi

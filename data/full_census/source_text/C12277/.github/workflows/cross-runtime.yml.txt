@@ -1,0 +1,119 @@
+name: Cross-runtime
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new commit supersedes the previous one's jobs, so stop paying for them.
+# Only pull request runs share a group — see the note in `test.yml`.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+# Runs the real test suite on non-Node runtimes. Bun uses its built-in
+# jest-compatible runner; Deno runs the actual jest via its Node compatibility.
+# The browser job bundles the core resolver for the browser and runs it both in
+# a web-globals sandbox and in real headless Chromium (the Node-based jest suite
+# cannot run in a browser).
+jobs:
+  bun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+        env:
+          HUSKY: "0"
+
+      - name: Run tests
+        run: bun test test/
+
+  deno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          HUSKY: "0"
+
+      # jest is no longer a project dev-dep (the Node.js test runner is used
+      # instead), so install it ad-hoc just for this job. The bridge shim
+      # (`test/_runner.js`) adapts the suite to jest's globals exactly as it
+      # does on the legacy-test matrix.
+      - name: Install jest
+        run: npm install --no-save --no-package-lock --no-audit jest@^30
+
+      - name: Use Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.x
+
+      # jest clears mocks by walking the sandbox globals and testing
+      # `"_isMockFunction" in value`. On `localStorage` that opens Deno's
+      # SQLite-backed web storage, and the jest workers - separate Deno
+      # processes - race to create that database on a cold cache, failing a
+      # random suite with "database is locked". The preload swaps in an
+      # in-memory `Storage`; the workers inherit `NODE_OPTIONS`, so it reaches
+      # all of them.
+      - name: Run tests (jest via Deno node compatibility)
+        env:
+          DENO_DIR: ${{ runner.temp }}/deno
+          NODE_OPTIONS: --require ./test/deno-web-storage-shim.js
+        run: |
+          deno run -A --node-modules-dir=auto node_modules/jest/bin/jest.js
+          # A preload that stops being applied fails silently, so assert that
+          # the web storage database really was never opened.
+          if [ -d "$DENO_DIR/location_data" ]; then
+            echo "::error::Deno opened its SQLite web storage - test/deno-web-storage-shim.js was not applied"
+            exit 1
+          fi
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          HUSKY: "0"
+
+      # webpack bundles the core resolver for the browser as an ES module
+      # (experiments.outputModule), resolving the browser field and failing on
+      # any Node builtin that is not shimmed. First run it in a web-globals-only
+      # sandbox (fast, deterministic), then in real headless Chromium.
+      - name: Verify browser bundle in a web-globals sandbox
+        run: npm run test:browser
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Run resolver in headless Chromium
+        run: node test/smoke/browser-playwright.cjs

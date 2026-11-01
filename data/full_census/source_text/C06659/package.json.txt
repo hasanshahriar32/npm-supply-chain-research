@@ -1,0 +1,72 @@
+{
+  "author": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+  "bugs": "https://github.com/micromark/micromark-extension-mdx-expression/issues",
+  "description": "",
+  "devDependencies": {
+    "@types/estree": "^1.0.0",
+    "@types/node": "^22.0.0",
+    "acorn": "^8.0.0",
+    "acorn-jsx": "^5.0.0",
+    "c8": "^10.0.0",
+    "micromark": "^4.0.0",
+    "micromark-build": "^2.0.0",
+    "micromark-util-character": "^2.0.0",
+    "micromark-util-symbol": "^2.0.0",
+    "micromark-util-types": "^2.0.0",
+    "prettier": "^3.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-preset-wooorm": "^11.0.0",
+    "type-coverage": "^2.0.0",
+    "typescript": "^5.0.0",
+    "xo": "^0.60.0"
+  },
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/unifiedjs"
+    },
+    {
+      "type": "OpenCollective",
+      "url": "https://opencollective.com/unified"
+    }
+  ],
+  "keywords": [],
+  "license": "MIT",
+  "name": "micromark-extension-mdx-expression-mono",
+  "prettier": {
+    "bracketSpacing": false,
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "useTabs": false
+  },
+  "private": true,
+  "repository": "micromark/micromark-extension-mdx-expression",
+  "version": "0.0.0",
+  "scripts": {
+    "build": "tsc --build --clean && tsc --build && type-coverage && npm run build --workspaces",
+    "format": "remark --frail --output --quiet -- . && prettier --log-level warn --write -- . && xo --fix",
+    "test-api-dev": "node --conditions development test/index.js",
+    "test-api-prod": "node --conditions production test/index.js",
+    "test-api": "npm run test-api-dev && npm run test-api-prod",
+    "test-coverage": "c8 --100 --reporter lcov npm run test-api",
+    "test": "npm run build && npm run format && npm run test-coverage"
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "strict": true
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/micromark-util-events-to-acorn/",
+    "packages/micromark-factory-mdx-expression/",
+    "packages/micromark-extension-mdx-expression/"
+  ],
+  "xo": {
+    "prettier": true,
+    "rules": {
+      "unicorn/no-this-assignment": "off"
+    }
+  }
+}

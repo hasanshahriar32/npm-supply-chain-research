@@ -1,0 +1,29 @@
+name: Lint Docs
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'website/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - run: pnpm run lint-docs-ci

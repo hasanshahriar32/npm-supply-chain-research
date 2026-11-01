@@ -1,0 +1,67 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 22 * * 3'
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        node-version:
+          - '24'
+          - '22.23.4'
+        os:
+          - ubuntu-22.04
+          - windows-latest
+    runs-on: "${{ matrix.os }}"
+    env:
+      WINEDLLOVERRIDES: mscoree,mshtml=
+      WINEDEBUG: -all
+    steps:
+      - name: Install Dependencies (Linux)
+        if : ${{ matrix.os == 'ubuntu-22.04' }}
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get -qq update
+          sudo apt-get install --no-install-recommends -y wine64 wine32 wine mono-devel
+          wine64 hostname
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "${{ matrix.node-version }}"
+          check-latest: true
+          cache: 'yarn'
+      - name: Install
+        run: yarn install --frozen-lockfile
+      - name: Test
+        run: yarn test
+
+  required-ci:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        run: |
+          echo "One or more required jobs did not succeed:"
+          echo "  test: $TEST_RESULT"
+          exit 1
+      - name: We are done
+        run: echo "Hello World"

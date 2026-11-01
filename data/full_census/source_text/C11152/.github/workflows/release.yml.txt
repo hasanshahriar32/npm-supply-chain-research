@@ -1,0 +1,181 @@
+name: Release
+
+on:
+  push:
+    branches: [main, alpha, beta]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    if: github.repository_owner == 'TanStack'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Setup Tools
+        uses: tanstack/config/.github/setup@e4b48f16568324f76f467aa4c2aac2f05db632c3
+      - name: Check lint
+        run: pnpm run lint:check
+      - name: Check release versioning
+        run: pnpm run test:release
+
+  test-db:
+    name: Test (${{ matrix.group }})
+    if: github.repository_owner == 'TanStack'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [db-1, db-2, db-replay]
+    env:
+      TEST_GROUP: ${{ matrix.group }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Setup Tools
+        uses: tanstack/config/.github/setup@e4b48f16568324f76f467aa4c2aac2f05db632c3
+      - name: Build dependencies
+        run: node scripts/ci-tests.mjs build "$TEST_GROUP"
+      - name: Run tests
+        run: node scripts/ci-tests.mjs test "$TEST_GROUP"
+      - name: Upload DB report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: db-report-${{ matrix.group }}
+          path: packages/db/.vitest-reports/*.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  test-packages:
+    name: Test (${{ matrix.group }})
+    if: github.repository_owner == 'TanStack'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          [ivm-offline, sqlite-core, sqlite-adapters, frameworks, collections]
+    env:
+      TEST_GROUP: ${{ matrix.group }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Setup Tools
+        uses: tanstack/config/.github/setup@e4b48f16568324f76f467aa4c2aac2f05db632c3
+      - name: Build dependencies
+        run: node scripts/ci-tests.mjs build "$TEST_GROUP"
+      - name: Typecheck Test Sources
+        if: matrix.group == 'ivm-offline'
+        run: pnpm run typecheck:tests
+      - name: Run tests
+        run: node scripts/ci-tests.mjs test "$TEST_GROUP"
+      - name: Check dependency versions
+        if: matrix.group == 'ivm-offline'
+        run: pnpm run test:sherif
+
+  release:
+    name: Release
+    needs: [lint, test-db, test-packages]
+    if: github.repository_owner == 'TanStack'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true # release job pushes version/docs changes
+      - name: Setup Tools
+        uses: tanstack/config/.github/setup@e4b48f16568324f76f467aa4c2aac2f05db632c3
+      - name: Download DB reports
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: db-report-*
+          path: packages/db/.vitest-reports
+          merge-multiple: true
+      - name: Merge DB coverage and test reports
+        run: pnpm --dir packages/db exec vitest --mergeReports .vitest-reports
+      - name: Build packages
+        run: pnpm run build
+      - name: Run Changesets (version or publish)
+        id: changesets
+        uses: changesets/action@e0145edc7d9d8679003495b11f87bd8ef63c0cba # v1.5.3
+        with:
+          version: pnpm run changeset:version
+          publish: pnpm run changeset:publish
+          commit: 'ci: Version Packages'
+          title: 'ci: Version Packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate Docs
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm generate-docs
+      - name: Commit Generated Docs
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+
+            EXISTING_BRANCH=$(gh pr list --author "app/github-actions" --search "docs: regenerate API documentation in:title" --state open --json headRefName --jq '.[0].headRefName' 2>/dev/null || echo "")
+            CREATE_PR=true
+
+            if [ -n "$EXISTING_BRANCH" ] && [ "$EXISTING_BRANCH" != "null" ]; then
+              BRANCH="$EXISTING_BRANCH"
+              echo "Found existing docs PR on branch $BRANCH, updating it"
+              git checkout -B "$BRANCH"
+              CREATE_PR=false
+            else
+              BRANCH="docs/auto-update-$(date +%s)"
+              git checkout -b "$BRANCH"
+            fi
+
+            git add docs/
+            if git diff --cached --quiet; then
+              echo "No new docs changes to commit"
+              exit 0
+            fi
+            git commit -m "docs: regenerate API documentation"
+            git push --force-with-lease origin "$BRANCH"
+
+            if [ "$CREATE_PR" = true ]; then
+              gh pr create \
+                --title "docs: regenerate API documentation" \
+                --body "Automated documentation update from release" \
+                --base main \
+                --head "$BRANCH"
+            fi
+          else
+            echo "No changes in generated docs"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Comment on PRs about release
+        if: steps.changesets.outputs.published == 'true'
+        uses: tanstack/config/.github/comment-on-release@e4b48f16568324f76f467aa4c2aac2f05db632c3
+        with:
+          published-packages: ${{ steps.changesets.outputs.publishedPackages }}
+        env:
+          # The pinned action reads REPOSITORY but does not set it.
+          REPOSITORY: ${{ github.repository }}

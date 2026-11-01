@@ -1,0 +1,45 @@
+name: Cypress browser tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  browser-test:
+    name: Cypress browser tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: pnpm i
+      - run: pnpm build
+      - run: >
+          npx concurrently -k -s first -n "SBESM,SB16,SB17,SB18,TEST" -c "magenta,blue,red,cyan,green"
+          "pnpm --filter 'react-esm-example' start-server"
+          "pnpm --filter 'react-16-example' start-server"
+          "pnpm --filter 'react-17-example' start-server"
+          "pnpm --filter 'react-18-example' start-server"
+          "pnpm --filter 'storybook-addon-performance' cypress:run"
+      # Upload the videos and screenshots
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        # We want to upload the recording even if the last step failed
+        # https://help.github.com/en/actions/reference/context-and-expression-syntax-for-github-actions#job-status-check-functions
+        if: always()
+        with:
+          name: cypress-videos
+          path: packages/storybook-addon-performance/cypress/videos

@@ -1,0 +1,43 @@
+{
+  "private": true,
+  "name": "@react-native-async-storage/root",
+  "version": "0.0.1-dev",
+  "versionDocs": "3.1",
+  "scripts": {
+    "build": "turbo run build",
+    "build:android": "./scripts/build-native-lib.sh android",
+    "build:apple": "./scripts/build-native-lib.sh apple",
+    "build:js": "yarn workspace @react-native-async-storage/async-storage build",
+    "format": "concurrently 'yarn:format:*'",
+    "format:c": "clang-format -i $(git ls-files '*.cpp' '*.h' '*.m' '*.mm') --style file:.config/.clang-format",
+    "format:js": "prettier --write $(git ls-files '*.ts' '*.tsx' '*.json' '*.yml' 'README.md' 'docs/*.md' ':!docs/index.md' ':!docs/contributing.md' ':!docs/changelog.md' ':!docs/integrations/expo.md')",
+    "test:lint": "turbo run test:lint",
+    "test:ts": "turbo run test:ts",
+    "test:format": "prettier --check --log-level warn $(git ls-files '*.ts' '*.tsx' '*.json' '*.yml' 'README.md' 'docs/*.md' ':!docs/index.md' ':!docs/contributing.md' ':!docs/changelog.md' ':!docs/integrations/expo.md')",
+    "release:version": "./.github/scripts/setup-ci-git-user.sh && changeset version",
+    "release:publish": "./.github/scripts/setup-ci-git-user.sh && changeset publish",
+    "docs:dev": "mkdocs serve",
+    "docs:build": "mkdocs build"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.7",
+    "concurrently": "^8.2.2",
+    "eslint": "9.34.0",
+    "prettier": "3.6.2",
+    "turbo": "2.5.6",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": "^22.18.0"
+  },
+  "packageManager": "yarn@4.9.4",
+  "workspaces": [
+    "packages/async-storage",
+    "packages/eslint-config",
+    "packages/expo-with-async-storage",
+    "examples/react-native",
+    "examples/web",
+    "examples/common-tests",
+    "examples/expo"
+  ]
+}

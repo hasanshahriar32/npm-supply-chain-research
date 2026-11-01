@@ -1,0 +1,126 @@
+{
+  "name": "react-svg",
+  "version": "19.2.4",
+  "description": "A React component that injects SVG into the DOM.",
+  "type": "commonjs",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/react-svg.d.mts",
+        "default": "./dist/react-svg.mjs"
+      },
+      "default": {
+        "types": "./dist/react-svg.d.cts",
+        "default": "./dist/react-svg.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/react-svg.cjs",
+  "module": "dist/react-svg.mjs",
+  "types": "dist/react-svg.d.cts",
+  "sideEffects": false,
+  "size-limit": [
+    {
+      "name": "ESM bundle",
+      "path": "dist/react-svg.mjs",
+      "gzip": true,
+      "limit": "2 kB"
+    },
+    {
+      "name": "CJS bundle",
+      "path": "dist/react-svg.cjs",
+      "gzip": true,
+      "limit": "2.5 kB"
+    }
+  ],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "run-s clean bundle",
+    "bundle": "tsdown",
+    "check:format": "prettier --list-different \"**/*.{cjs,cts,js,mjs,mts,ts,tsx}\"",
+    "check:types": "tsc --noEmit",
+    "clean": "run-p clean:*",
+    "clean:coverage": "shx rm -rf coverage",
+    "clean:react": "ts-node ./scripts/clean-react",
+    "format": "prettier --write \"**/*.{cjs,cts,js,mjs,mts,ts,tsx}\"",
+    "lint": "eslint .",
+    "package:attw": "attw --pack .",
+    "package:publint": "publint",
+    "postbuild": "run-s package:*",
+    "size": "size-limit",
+    "test": "run-s check:* lint build size test:*",
+    "test:cjs": "jest --config ./config/jest/config.cjs.js",
+    "test:dist": "jest --config ./config/jest/config.dist.js",
+    "test:es": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config ./config/jest/config.es.js",
+    "test:src": "jest --config ./config/jest/config.src.js",
+    "test:react": "ts-node ./scripts/test-react"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tanem/react-svg.git"
+  },
+  "keywords": [
+    "dom",
+    "html",
+    "images",
+    "img",
+    "javascript",
+    "react",
+    "scalable vector graphics",
+    "svg",
+    "svginjector",
+    "typescript"
+  ],
+  "author": "Tane Morgan (https://github.com/tanem)",
+  "license": "MIT",
+  "bugs": "https://github.com/tanem/react-svg/issues",
+  "homepage": "https://github.com/tanem/react-svg",
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "dependencies": {
+    "@tanem/svg-injector": "^12.2.5"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@eslint-react/eslint-plugin": "5.18.0",
+    "@eslint/js": "10.0.1",
+    "@faker-js/faker": "10.6.0",
+    "@jest/globals": "30.5.2",
+    "@size-limit/file": "14.3.0",
+    "@testing-library/react": "16.3.3",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/shelljs": "0.10.0",
+    "css.escape": "1.5.1",
+    "eslint": "10.8.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-perfectionist": "5.10.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-simple-import-sort": "12.1.1",
+    "globals": "17.13.0",
+    "jest": "30.5.2",
+    "jest-environment-jsdom": "30.5.2",
+    "nock": "13.5.6",
+    "npm-run-all2": "9.0.4",
+    "prettier": "3.9.10",
+    "publint": "0.3.25",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "shelljs": "0.10.0",
+    "shx": "0.4.0",
+    "size-limit": "14.3.0",
+    "ts-jest": "29.4.15",
+    "ts-node": "10.9.2",
+    "tsdown": "0.22.14",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.56.1"
+  }
+}

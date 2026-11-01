@@ -1,0 +1,64 @@
+name: Release Node.js Package
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The version to release'
+        required: true
+
+jobs:
+  release-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    # Setup .npmrc file to publish to GitHub Packages
+    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 26
+        registry-url: 'https://registry.npmjs.org'
+    - run: npm ci
+    - name: Update version in package.json, package-lock.json, and lib/version.ts
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION=${{ github.event.inputs.version }}
+        else
+          VERSION=${{ github.event.release.tag_name }}
+        fi
+        VERSION=${VERSION#v}
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        node ./scripts/update-version.mjs $VERSION
+    - run: npm run release
+
+    - name: Create GitHub Issue on Failure
+      if: failure()
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      with:
+        script: |
+          const { owner, repo } = context.repo;
+          const version = process.env.VERSION;
+          const issueTitle = `Release job for ${version} failed`;
+          const issueBody = `The release job failed. Please check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.`;
+          const assignees = [context.actor];
+
+          await github.rest.issues.create({
+            owner,
+            repo,
+            title: issueTitle,
+            body: issueBody,
+            assignees
+          });
+
+  deploy-docs:
+    needs: [release-package]
+    permissions:
+      contents: read
+      pages: write
+      issues: write
+      id-token: write
+    uses: ./.github/workflows/deploy-doc.yml

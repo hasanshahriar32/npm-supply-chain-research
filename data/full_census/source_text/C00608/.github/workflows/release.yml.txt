@@ -1,0 +1,511 @@
+name: Release
+
+on:
+  push:
+    # The authoritative semver check lives in the
+    # `validate_tag` job so we don't accidentally drop valid prerelease or
+    # build-metadata tags that GitHub's glob syntax can't express.
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  LATEST_FED_VERSION_JSON_KEY: latest-2
+
+jobs:
+  validate_tag:
+    name: Validate release tag
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - name: Strip v prefix
+        id: parse
+        env:
+          TAG: ${{ github.ref_name }}
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: Validate semver tag
+        if: github.event_name == 'push'
+        uses: skymatic/semver-validation-action@deebc1609f29f664ba6b2ae252ce1b2ac7f9fbf5 # v4
+        with:
+          version: ${{ steps.parse.outputs.version }}
+
+  build:
+    name: Build and bundle release artifacts (${{ matrix.platform }})
+    needs: validate_tag
+    if: |
+      !cancelled() &&
+      needs.validate_tag.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: amd_linux_min_glibc
+            runs-on: ubuntu-latest
+            container: ghcr.io/apollographql/ci-utility-docker-images/apollo-rust-builder:0.30.6
+            target: x86_64-unknown-linux-gnu
+          - platform: amd_musl
+            runs-on: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - platform: arm_ubuntu
+            runs-on: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - platform: amd_macos
+            # macos-xx-large images are intel Macs: https://github.com/actions/runner-images
+            runs-on: macos-14-large
+            target: x86_64-apple-darwin
+          - platform: arm_macos
+            runs-on: macos-14
+            target: aarch64-apple-darwin
+          - platform: amd_windows
+            runs-on: windows-2022
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.runs-on }}
+    container: ${{ matrix.container }}
+
+    env:
+      XTASK_TARGET: ${{ matrix.target }}
+
+    steps:
+      - name: Report glibc version (min-glibc builder)
+        if: matrix.platform == 'amd_linux_min_glibc'
+        run: ldd --version
+
+      - name: Install musl-tools
+        if: matrix.platform == 'amd_musl'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev musl-tools bash
+          ldd --version
+
+      - name: Install OpenSSL (arm ubuntu)
+        if: matrix.platform == 'arm_ubuntu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          ldd --version
+
+      - name: Install cmake and nasm (Windows)
+        if: runner.os == 'Windows'
+        run: choco install cmake nasm -y
+        shell: pwsh
+
+      - name: Install macOS tooling
+        if: runner.os == 'macOS'
+        run: |
+          brew install openssl@3 p7zip curl
+          # Override the system curl because of outdated CA certificates on the
+          # base macOS image.
+          echo "/usr/local/opt/curl/bin" >> "$GITHUB_PATH"
+
+      - name: Install Rosetta 2 (arm macOS)
+        if: matrix.platform == 'arm_macos'
+        run: |
+          if [ "$(uname -m)" = "arm64" ]; then
+            /usr/sbin/softwareupdate --install-rosetta --agree-to-license
+          else
+            echo "Rosetta 2 can only be installed on Apple Silicon!"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Fix git ownership (containerized runner)
+        if: matrix.platform == 'amd_linux_min_glibc'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          target: ${{ matrix.target }}
+          # The action defaults RUSTFLAGS to `-D warnings`, which is great for
+          # the `checks.yml` CI but wrong for releases: configurations that
+          # disable features (e.g. musl with --no-default-features) surface
+          # dead-code warnings that aren't release blockers. Since v2 the action
+          # also denies warnings through `CARGO_BUILD_WARNINGS`, so that needs
+          # switching off too.
+          rustflags: ""
+          build-warnings: warn
+
+      - name: Build and package (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_TEAM_ID: YQK948L752
+          APPLE_USERNAME: opensource@apollographql.com
+          MACOS_KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+          MACOS_CERT_BUNDLE_BASE64: ${{ secrets.MACOS_CERT_BUNDLE_BASE64 }}
+          MACOS_CERT_BUNDLE_PASSWORD: ${{ secrets.MACOS_CERT_BUNDLE_PASSWORD }}
+          APPLE_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+        run: |
+          # Copy the GraphQL schema exactly once across the whole release, using ARM MacOS is 
+          # an arbitrary choice to accomplish that.
+          cargo xtask package --rebuild ${{ matrix.platform == 'arm_macos' && '--copy-schema' || '' }}
+
+      - name: Build and package
+        if: runner.os != 'macOS'
+        shell: bash
+        run: cargo xtask package --rebuild
+
+      - uses: ./.github/actions/upload-artifact-with-retry
+        with:
+          name: artifacts-${{ matrix.platform }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  build_image:
+    name: Build and push Docker image to internal registry
+    needs: validate_tag
+    if: |
+      !cancelled() &&
+      needs.validate_tag.result == 'success'
+    permissions:
+      contents: read
+      id-token: write
+    uses: apollographql/release-tooling/.github/workflows/build_and_publish.yml@c213498102777dadfef33f5c3b04d8543ec3fdf3
+    with:
+      image_name: rover
+      image_description: "Apollo Rover CLI — a tool for working with the Apollo GraphOS platform"
+      platforms: '[{"platform":"linux/amd64","runner":"ubuntu-latest"},{"platform":"linux/arm64","runner":"ubuntu-24.04-arm"}]'
+      context: .
+      dockerfile_location: ./Dockerfile
+      buildkit_cache_key: rover-cargo
+      buildkit_cache_hash_files: "**/Cargo.lock"
+    secrets: inherit
+
+  publish_platform_packages:
+    name: Publish ${{ matrix.pkg }} to npm
+    needs: [validate_tag, build]
+    if: |
+      !cancelled() &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pkg: rover-darwin-arm64
+            build_platform: arm_macos
+            target: aarch64-apple-darwin
+          - pkg: rover-darwin-x64
+            build_platform: amd_macos
+            target: x86_64-apple-darwin
+          - pkg: rover-linux-arm64
+            build_platform: arm_ubuntu
+            target: aarch64-unknown-linux-gnu
+          - pkg: rover-linux-x64
+            build_platform: amd_linux_min_glibc
+            target: x86_64-unknown-linux-gnu
+          - pkg: rover-linux-x64-musl
+            build_platform: amd_musl
+            target: x86_64-unknown-linux-musl
+          - pkg: rover-win32-x64
+            build_platform: amd_windows
+            target: x86_64-pc-windows-msvc
+            binary_ext: ".exe"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: artifacts-${{ matrix.build_platform }}
+          path: artifacts
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+
+      - name: Resolve release parameters
+        id: params
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            dry_run="false"
+          else
+            dry_run="true"
+          fi
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
+      - name: Publish ${{ matrix.pkg }} to npm
+        env:
+          VERSION: ${{ needs.validate_tag.outputs.version }}
+          DRY_RUN: ${{ steps.params.outputs.dry_run }}
+          BINARY_EXT: ${{ matrix.binary_ext }}
+        run: |
+          cargo npm generate -p rover
+          pkg_dir="installers/npm/@apollo/${{ matrix.pkg }}"
+          mkdir -p "$pkg_dir"
+          tar -xzf "artifacts/rover-v${VERSION}-${{ matrix.target }}.tar.gz" \
+              --strip-components=1 -C "$pkg_dir" "dist/rover${BINARY_EXT}"
+          dry_run_flag=""
+          [ "$DRY_RUN" = "true" ] && dry_run_flag="--dry-run"
+          cargo xtask publish-npm --dir "$pkg_dir" $dry_run_flag
+
+  publish:
+    name: Publish release artifacts
+    needs: [validate_tag, build, build_image, publish_platform_packages]
+    if: |
+      !cancelled() &&
+      needs.build.result == 'success' &&
+      needs.build_image.result == 'success' &&
+      needs.publish_platform_packages.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+          pattern: artifacts-*
+          merge-multiple: true
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+
+      - name: Resolve release parameters
+        id: params
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          VERSION: ${{ needs.validate_tag.outputs.version }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ]; then
+            extra=""
+            dry_run="false"
+          else
+            extra="--draft"
+            dry_run="true"
+            mkdir -p artifacts
+            echo "this release is part of a test, please ignore." > artifacts/this_is_a_fake_release.txt
+          fi
+
+          # Prerelease regex adapted from https://semver.org/ — a prerelease has
+          # an identifier appended after a `-`.
+          if [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-.+$ ]]; then
+            is_prerelease="true"
+          else
+            is_prerelease="false"
+          fi
+
+          {
+            echo "extra=$extra"
+            echo "dry_run=$dry_run"
+            echo "is_prerelease=$is_prerelease"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compute checksums
+        working-directory: artifacts
+        run: |
+          sha256sum *.tar.gz > sha256sums.txt
+          md5sum *.tar.gz > md5sums.txt
+          sha1sum *.tar.gz > sha1sums.txt
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          PRERELEASE_FLAG: ${{ steps.params.outputs.is_prerelease == 'true' && '--prerelease' || '' }}
+          EXTRA: ${{ steps.params.outputs.extra }}
+        run: |
+          # The release's notes, written by `cargo xtask changeset release` in
+          # the release pull request. A tag without them, such as a release
+          # candidate, gets a placeholder to fill in by hand.
+          NOTES_FILE=".changeset/notes/${TAG}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            CHANGELOG_NOTES="$(cat "$NOTES_FILE")"
+          else
+            CHANGELOG_NOTES='<!-- changelog -->'
+          fi
+          gh release create "$TAG" \
+            $PRERELEASE_FLAG \
+            --title "$TAG" \
+            $EXTRA \
+            --notes "${CHANGELOG_NOTES}
+
+          "'---
+          This release was automatically created by [GitHub Actions](./.github/workflows/release.yml).
+
+          If you would like to verify that the binary you have downloaded was built from the source code in this repository, you can compute a checksum of the zipped tarball and compare it to the checksums that are included as release artifacts.
+
+          Binaries built for MacOS are signed, notarized, and automatically verified with [Gatekeeper](https://support.apple.com/guide/deployment-reference-macos/using-gatekeeper-apd02b925e38/web).' \
+            artifacts/*
+
+      - name: Publish to npm
+        env:
+          DRY_RUN: ${{ steps.params.outputs.dry_run }}
+        run: |
+          dry_run_flag=""
+          [ "$DRY_RUN" = "true" ] && dry_run_flag="--dry-run"
+          cargo xtask publish-npm $dry_run_flag
+
+      # tag_latest=false on prereleases keeps :latest pointing at the most
+      # recent stable release
+      - name: Publish Docker image to DockerHub
+        if: github.event_name == 'push'
+        uses: apollographql/release-tooling/release-dockerhub@c213498102777dadfef33f5c3b04d8543ec3fdf3
+        with:
+          commit_sha: ${{ github.sha }}
+          image_name: rover
+          version_number: ${{ needs.validate_tag.outputs.version }}
+          tag_latest: ${{ steps.params.outputs.is_prerelease == 'false' }}
+
+      - name: Publish Docker image to GHCR
+        if: github.event_name == 'push'
+        uses: apollographql/release-tooling/release-ghcr@c213498102777dadfef33f5c3b04d8543ec3fdf3
+        with:
+          commit_sha: ${{ github.sha }}
+          image_name: rover
+          version_number: ${{ needs.validate_tag.outputs.version }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  update_action_repos:
+    name: Update apollographql-gh-actions/${{ matrix.dest }}
+    needs: [validate_tag, publish]
+    if: github.event_name == 'push' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions: {}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - src: install
+            dest: install-rover
+          - src: subgraph-lint
+            dest: rover-subgraph-lint 
+          - src: persisted-queries-publish
+            dest: rover-persisted-queries-publish
+          - src: subgraph-check
+            dest: rover-subgraph-check
+          - src: subgraph-publish
+            dest: rover-subgraph-publish
+    steps:
+      - name: Mint installation token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          app-id: ${{ secrets.APOLLO_GH_ACTIONS_APP_ID }}
+          private-key: ${{ secrets.APOLLO_GH_ACTIONS_APP_PRIVATE_KEY }}
+          owner: apollographql-gh-actions
+          repositories: ${{ matrix.dest }}
+
+      - name: Discover bot identity
+        id: bot
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          # The bot user's id is required to construct the noreply email that
+          # GitHub accepts as authored-by-the-App.
+          id=$(gh api "/users/${APP_SLUG}[bot]" --jq '.id')
+          {
+            echo "name=${APP_SLUG}[bot]"
+            echo "email=${id}+${APP_SLUG}[bot]@users.noreply.github.com"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout rover at the release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: rover
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+
+      - name: Checkout target action repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: apollographql-gh-actions/${{ matrix.dest }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: target
+
+      - name: Check existing tag and release on target
+        id: state
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          DEST: ${{ matrix.dest }}
+          # Action repo tags use a `rover-` prefix to avoid colliding with the
+          # legacy `v1`/`v1.0.0` tags inherited from the pre-lockstep era.
+          ACTION_TAG: rover-${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/apollographql-gh-actions/${DEST}/git/ref/tags/${ACTION_TAG}" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+          if gh api "repos/apollographql-gh-actions/${DEST}/releases/tags/${ACTION_TAG}" >/dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stage mastered files
+        if: steps.state.outputs.tag_exists == 'false'
+        env:
+          SRC: ${{ matrix.src }}
+        run: |
+          set -euo pipefail
+          cp -R "rover/actions/${SRC}/." target/
+          # install-rover ships the canonical installer scripts alongside its
+          # action.yml.
+          if [ "$SRC" = "install" ]; then
+            cp rover/installers/binstall/scripts/nix/install.sh    target/install.sh
+            cp rover/installers/binstall/scripts/windows/install.ps1 target/install.ps1
+            chmod +x target/install.sh
+          fi
+
+      - name: Commit, tag, and push
+        if: steps.state.outputs.tag_exists == 'false'
+        working-directory: target
+        env:
+          ROVER_TAG: ${{ github.ref_name }}
+          ACTION_TAG: rover-${{ github.ref_name }}
+          BOT_NAME: ${{ steps.bot.outputs.name }}
+          BOT_EMAIL: ${{ steps.bot.outputs.email }}
+        run: |
+          set -euo pipefail
+          git config user.name  "$BOT_NAME"
+          git config user.email "$BOT_EMAIL"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Release $ROVER_TAG"
+          fi
+          git tag "$ACTION_TAG"
+          git push origin HEAD
+          git push origin "$ACTION_TAG"
+
+      - name: Create GitHub release on action repo
+        if: steps.state.outputs.release_exists == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          DEST: ${{ matrix.dest }}
+          ACTION_TAG: rover-${{ github.ref_name }}
+          ROVER_TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.validate_tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Prerelease regex adapted from https://semver.org/ — kept in sync
+          # with the `publish` job's resolve-release-parameters step.
+          if [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-.+$ ]]; then
+            prerelease_flag="--prerelease"
+          else
+            prerelease_flag=""
+          fi
+          gh release create "$ACTION_TAG" \
+            --repo "apollographql-gh-actions/${DEST}" \
+            --title "rover ${ROVER_TAG}" \
+            $prerelease_flag \
+            --notes "Mastered from [apollographql/rover@${ROVER_TAG}](https://github.com/apollographql/rover/releases/tag/${ROVER_TAG})."

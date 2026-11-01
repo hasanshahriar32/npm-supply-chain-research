@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write # to enable use of OIDC for trusted publishing and npm provenance
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: lts/*
+    - run: npm install --no-package-lock
+      name: Install dev dependencies
+    - name: Type-check atoms/src
+      run: npm run typecheck:atoms
+    - name: Rebuild atoms from atoms/src and check for drift
+      run: |
+        npm run build:atoms
+        if ! git diff --exit-code -- atoms; then
+          echo "::error::'atoms/' on master does not match what 'npm run build:atoms' produces from 'atoms/src/'. This should have been caught by the 'Verify Atoms' check on the PR — aborting release."
+          exit 1
+        fi
+    - run: npm run build
+      name: Run build
+    - run: npm run test
+      name: Run test
+    - run: npx semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      name: Release

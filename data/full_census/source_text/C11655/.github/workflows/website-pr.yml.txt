@@ -1,0 +1,23 @@
+name: Test Github Pages for PR
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+      - name: Install Dependencies
+        run: npm ci --prefix=website/
+      - name: Build the Website
+        run: npm run --prefix=website/ build

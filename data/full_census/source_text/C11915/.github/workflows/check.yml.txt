@@ -1,0 +1,51 @@
+name: Check
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    name: Format, Schema, and Examples
+    runs-on: ubuntu-latest
+    # Internal branches are handled by the push event; only run for pull requests from forks.
+    if: >-
+      github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+          ref: ${{ github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          cache: 'npm'
+          node-version: 24
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Setup data
+        run: npm run data
+
+      - name: Format
+        run: npm run format
+
+      - name: Build Schema
+        run: npm run schema
+
+      - name: Check Schema
+        run: scripts/check-schema.sh
+
+      - name: Setup Git remote
+        run: scripts/setup-git-ci.sh
+
+      - name: Fetch main
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+
+      - name: Check and Commit
+        run: scripts/check-and-commit.sh

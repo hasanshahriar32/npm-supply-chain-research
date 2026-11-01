@@ -1,0 +1,27 @@
+name: Issue Notification
+on:
+  issues:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  notify:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    env:
+      TITLE: ${{ github.event.issue.title }}
+      URL: ${{ github.event.issue.html_url }}
+      AUTHOR: ${{ github.event.issue.user.login }}
+      NUM: ${{ github.event.issue.number }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    steps:
+      - name: Notify Slack
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then echo "SLACK_WEBHOOK not set, skipping"; exit 0; fi
+          PAYLOAD=$(jq -n \
+            --arg text "🐛 New issue #${NUM} on aimock by *${AUTHOR}*: <${URL}|${TITLE}>" \
+            '{text: $text}')
+          curl -sf -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"

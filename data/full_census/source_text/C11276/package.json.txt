@@ -1,0 +1,46 @@
+{
+  "name": "react-intersection-observer-workspace",
+  "private": true,
+  "packageManager": "pnpm@10.5.2+sha512.da9dc28cd3ff40d0592188235ab25d3202add8a207afbedc682220e4a0029ffbff4562102b9e6e46b4e3f9e8bd53e6d05de48544b0c57d4b0179e22c76d1199b",
+  "scripts": {
+    "build": "pnpm --filter react-intersection-observer build",
+    "build:all": "pnpm build && pnpm --filter storybook build && pnpm --filter docs build",
+    "build:docs": "pnpm build && pnpm --filter docs build",
+    "build:storybook": "pnpm build && pnpm --filter storybook build",
+    "compat:packed": "pnpm --filter react-intersection-observer compat:packed",
+    "dev": "pnpm --parallel --filter react-intersection-observer --filter storybook --filter docs dev",
+    "dev:docs": "pnpm --filter docs dev",
+    "dev:storybook": "pnpm --filter storybook dev",
+    "docs:build": "pnpm --filter docs build",
+    "lint": "pnpm --filter react-intersection-observer lint && pnpm --filter storybook lint && pnpm --filter docs lint",
+    "test": "pnpm --filter react-intersection-observer test",
+    "typecheck": "pnpm build && pnpm --filter react-intersection-observer typecheck && pnpm --filter storybook typecheck && pnpm --filter docs typecheck",
+    "turbo:build": "turbo run build",
+    "turbo:check": "turbo run lint typecheck test"
+  },
+  "pnpm": {
+    "allowedDeprecatedVersions": {
+      "rollup-plugin-terser": "*",
+      "sourcemap-codec": "*",
+      "source-map-resolve": "*",
+      "source-map-url": "*",
+      "stable": "*",
+      "urix": "*"
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
+    "fallow": "3.10.0",
+    "lint-staged": "^17.2.0",
+    "simple-git-hooks": "^2.13.1",
+    "turbo": "^2.10.7"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec lint-staged"
+  },
+  "lint-staged": {
+    "*.{js,json,css,md,ts,tsx}": [
+      "biome check --fix --no-errors-on-unmatched --files-ignore-unknown=true"
+    ]
+  }
+}

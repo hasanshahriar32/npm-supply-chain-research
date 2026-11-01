@@ -1,0 +1,271 @@
+{
+  "name": "@salesforce/plugin-agent",
+  "description": "Commands to interact with Salesforce agents",
+  "version": "2.2.4",
+  "author": "Salesforce",
+  "bugs": "https://github.com/forcedotcom/cli/issues",
+  "enableO11y": true,
+  "o11yUploadEndpoint": "https://794testsite.my.site.com/byolwr/webruntime/log/metrics",
+  "productFeatureId": "aJCEE0000007rcH4AQ",
+  "dependencies": {
+    "@inquirer/core": "^10.3.2",
+    "@inquirer/prompts": "^7.10.1",
+    "@oclif/core": "^5.0.0",
+    "@oclif/multi-stage-output": "^1.0.0",
+    "@salesforce/agents": "^2.3.3",
+    "@salesforce/core": "^9.1.9",
+    "@salesforce/kit": "^4.0.0",
+    "@salesforce/sf-plugins-core": "^13.0.0",
+    "@salesforce/source-deploy-retrieve": "^13.0.0",
+    "@salesforce/types": "1.8.0",
+    "ansis": "^3.17.0",
+    "fast-xml-parser": "^5.11.1",
+    "glob": "^11.1.0",
+    "ink": "^7.1.1",
+    "ink-text-input": "^6.0.0",
+    "inquirer-autocomplete-standalone": "^0.8.1",
+    "react": "^19.3.0",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@eslint-react/eslint-plugin": "^5.26.3",
+    "@oclif/plugin-command-snapshot": "^6.0.0",
+    "@oclif/test": "^5.0.0",
+    "@salesforce/cli-plugins-testkit": "^5.3.66",
+    "@salesforce/dev-scripts": "^15.0.0",
+    "@salesforce/plugin-command-reference": "^3.1.132",
+    "@types/chai": "^4.3.17",
+    "@types/inquirer": "^9.0.10",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18",
+    "@types/react": "^19.3.0",
+    "@types/sinon": "^10.0.20",
+    "eslint": "^10.4.0",
+    "eslint-config-salesforce-typescript": "^6.0.0",
+    "eslint-plugin-sf-plugin": "^3.0.1",
+    "esmock": "^2.7.6",
+    "oclif": "^5.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "/lib",
+    "/messages",
+    "/oclif.manifest.json",
+    "/schemas"
+  ],
+  "homepage": "https://github.com/salesforcecli/plugin-agent",
+  "keywords": [
+    "force",
+    "salesforce",
+    "salesforcedx",
+    "sf",
+    "sf-plugin",
+    "sfdx",
+    "sfdx-plugin"
+  ],
+  "license": "Apache-2.0",
+  "oclif": {
+    "commands": "./lib/commands",
+    "bin": "sf",
+    "topicSeparator": " ",
+    "devPlugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-command-snapshot",
+      "@salesforce/plugin-command-reference"
+    ],
+    "topics": {
+      "agent": {
+        "description": "Commands to work with agents.",
+        "external": true,
+        "subtopics": {
+          "test": {
+            "description": "Commands to test agents.",
+            "external": true
+          },
+          "publish": {
+            "description": "Command to publish agents to an org.",
+            "external": true
+          },
+          "generate": {
+            "description": "Commands to generate agent artifacts, such as the agent spec YAML file, authoring bundle, and test spec file.",
+            "external": true
+          },
+          "validate": {
+            "description": "Command to validate an Agent Script file.",
+            "external": true
+          },
+          "adl": {
+            "description": "Commands to manage Agentforce Data Libraries.",
+            "external": true,
+            "subtopics": {
+              "file": {
+                "description": "Commands to manage files in an SFDRIVE data library.",
+                "external": true
+              }
+            }
+          },
+          "mcp": {
+            "description": "Commands to manage MCP server registrations in the API Catalog.",
+            "external": true,
+            "subtopics": {
+              "asset": {
+                "description": "Commands to manage the asset allowlist of an MCP server.",
+                "external": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "flexibleTaxonomy": true
+  },
+  "repository": "salesforcecli/plugin-agent",
+  "scripts": {
+    "build": "wireit",
+    "clean": "sf-clean",
+    "clean-all": "sf-clean all",
+    "compile": "wireit",
+    "docs": "sf-docs",
+    "fix-license": "eslint src test --fix --rule \"header/header: [2]\"",
+    "format": "wireit",
+    "link-check": "wireit",
+    "lint": "wireit",
+    "postpack": "sf-clean --ignore-signing-artifacts",
+    "prepack": "sf-prepack",
+    "prepare": "sf-install",
+    "test": "wireit",
+    "test:nuts": "nyc mocha \"test/nuts/**/*.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:nuts:run-eval": "nyc mocha \"test/nuts/agent.test.run-eval.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:nuts:test": "nyc mocha \"test/nuts/agent.test.nut.ts\" \"test/nuts/agent.test.create.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:nuts:generate": "nyc mocha \"test/nuts/agent.activate.nut.ts\" \"test/nuts/agent.generate.*.nut.ts\" \"test/nuts/template.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:nuts:z": "nyc mocha \"test/nuts/z*.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:nuts:adl-mcp": "nyc mocha \"test/nuts/agent.adl.nut.ts\" \"test/nuts/agent.mcp.nut.ts\" --slow 4500 --timeout 600000 --reporter-options maxDiffSize=15000 --exit",
+    "test:only": "wireit",
+    "version": "oclif readme"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "wireit": {
+    "build": {
+      "dependencies": [
+        "compile",
+        "lint"
+      ]
+    },
+    "compile": {
+      "command": "tsc -p . --pretty --incremental",
+      "files": [
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        "messages/**"
+      ],
+      "output": [
+        "lib/**",
+        "*.tsbuildinfo"
+      ],
+      "clean": "if-file-deleted"
+    },
+    "format": {
+      "command": "prettier --write \"+(src|test|schemas)/**/*.+(ts|js|json)|command-snapshot.json\"",
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "schemas/**/*.json",
+        "command-snapshot.json",
+        ".prettier*"
+      ],
+      "output": []
+    },
+    "lint": {
+      "command": "eslint src test --color --cache --cache-location .eslintcache",
+      "files": [
+        "src/**/*.ts",
+        "test/**/*.ts",
+        "messages/**",
+        "**/eslint.config.*",
+        "**/.eslint*",
+        "**/tsconfig.json"
+      ],
+      "output": []
+    },
+    "test:compile": {
+      "command": "tsc -p \"./test\" --pretty",
+      "files": [
+        "test/**/*.ts",
+        "**/tsconfig.json"
+      ],
+      "output": []
+    },
+    "test": {
+      "dependencies": [
+        "test:compile",
+        "test:only",
+        "test:command-reference",
+        "test:deprecation-policy",
+        "lint",
+        "test:json-schema",
+        "link-check"
+      ]
+    },
+    "test:only": {
+      "command": "nyc mocha \"test/**/*.test.ts\"",
+      "env": {
+        "FORCE_COLOR": "2"
+      },
+      "files": [
+        "test/**/*.ts",
+        "src/**/*.ts",
+        "**/tsconfig.json",
+        ".mocha*",
+        "!*.nut.ts",
+        ".nycrc"
+      ],
+      "output": []
+    },
+    "test:command-reference": {
+      "command": "node --loader ts-node/esm --no-warnings=ExperimentalWarning \"./bin/dev.js\" commandreference:generate --erroronwarnings",
+      "files": [
+        "src/**/*.ts",
+        "messages/**",
+        "package.json"
+      ],
+      "output": [
+        "tmp/root"
+      ]
+    },
+    "test:deprecation-policy": {
+      "command": "node --loader ts-node/esm --no-warnings=ExperimentalWarning \"./bin/dev.js\" snapshot:compare",
+      "files": [
+        "src/**/*.ts"
+      ],
+      "output": [],
+      "dependencies": [
+        "compile"
+      ]
+    },
+    "test:json-schema": {
+      "command": "node --loader ts-node/esm --no-warnings=ExperimentalWarning \"./bin/dev.js\" schema:compare",
+      "files": [
+        "src/**/*.ts",
+        "schemas"
+      ],
+      "output": []
+    },
+    "link-check": {
+      "command": "node -e \"process.exit(process.env.CI ? 0 : 1)\" || linkinator \"**/*.md\" --skip \"CHANGELOG.md|node_modules|test/|confluence.internal.salesforce.com|my.salesforce.com|localhost|%s\" --markdown --retry --directory-listing --verbosity error",
+      "files": [
+        "./*.md",
+        "./!(CHANGELOG).md",
+        "messages/**/*.md"
+      ],
+      "output": []
+    }
+  },
+  "exports": "./lib/index.js",
+  "type": "module"
+}

@@ -1,0 +1,86 @@
+name: 'build-test'
+on:
+  # Pull requests only when they change something the tests cover; every push to main.
+  pull_request:
+    paths:
+      - 'dictionaries/**'
+      # Only the packages a dictionary depends on: people-names uses en-freq. The rest run in test-packages.yml.
+      - 'packages/en-freq/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/actions/**'
+      - '.github/workflows/test.yml'
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Test supported Node versions
+  test-node-versions:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Node.js release lines, see https://nodejs.org/en/about/previous-releases
+        # Maintenance LTS: nothing may need a newer Node than this. Current: we work with the newest.
+        node-version:
+          - 22.x
+          - 26.x
+        os:
+          - ubuntu-latest
+
+        include:
+          # Active LTS, on Windows.
+          - os: windows-latest
+            node-version: 24.x
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: pnpm test
+
+  test-conditional-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24.x
+
+      - name: Conditional Build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm conditional-build
+
+      - name: Build Report
+        # Use the PR body action to create a report of the build.
+        id: build-report
+        uses: streetsidesoftware/actions/public/pr-body@v1
+        with:
+          title: Build Results
+
+      - name: Add to Summary
+        uses: streetsidesoftware/actions/public/summary@v1
+        with:
+          text: ${{ steps.build-report.outputs.body}}

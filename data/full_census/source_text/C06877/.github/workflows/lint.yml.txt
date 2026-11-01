@@ -1,0 +1,29 @@
+name: Lint
+
+on: pull_request
+
+env:
+  FORCE_COLOR: true
+
+jobs:
+  linux:
+    timeout-minutes: 30
+    name: Linux
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v6
+        env:
+          FORCE_COLOR: 0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint

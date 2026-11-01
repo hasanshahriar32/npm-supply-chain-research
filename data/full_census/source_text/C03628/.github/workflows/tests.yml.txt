@@ -1,0 +1,223 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - master
+      - ci
+  pull_request:
+
+env:
+  GEL_PKG_ROOT: ${{ vars.GEL_PKG_ROOT || 'https://packages.geldata.com' }}
+
+jobs:
+  test:
+    # Skip tests when doing a release to avoid the workflow race
+    # when the release PR gets merged by the bot.
+    if: needs.prep.outputs.version == 0
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: ["lts/-1", "lts/*", "current"]
+        os: [ubuntu-latest]
+        gel-version: ["stable"]
+        include:
+          - os: ubuntu-latest
+            node-version: "lts/*"
+            gel-version: "4"
+          - os: ubuntu-latest
+            node-version: "lts/*"
+            gel-version: "5"
+          - os: ubuntu-latest
+            node-version: "lts/*"
+            gel-version: "6"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 50
+          submodules: true
+
+      - name: Set up Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install Turbo globally
+        run: |
+          yarn global add turbo
+
+      - name: Install dev deps
+        run: |
+          yarn --frozen-lockfile
+
+      - name: Lint
+        run: |
+          yarn lint
+
+      - name: Check format
+        run: |
+          yarn format
+
+      - name: Install Gel
+        uses: geldata/setup-gel@d55a567c00df5e48b000e5e7986d0dffae6b57fe
+        with:
+          instance-name: test
+          server-version: ${{ matrix.gel-version }}
+          cli-version: ${{ matrix.gel-version == 'nightly' && 'nightly' || 'stable' }}
+      # should be updated to use gel cli
+      - name: Show actual Gel server version
+        run: |
+          echo ACTIVE_GEL_VERSION=$(edgedb query 'select sys::get_version_as_str()' -I test) >> $GITHUB_ENV
+      # should be updated to use gel cli
+      - name: Install postgis extension
+        if: ${{ matrix.gel-version == 'nightly' || matrix.gel-versoin == '6.0-rc.2' }}
+        run: |
+          edgedb extension install postgis -I test --slot 6-alpha-3
+
+      - name: Run package tests
+        run: |
+          yarn ci:test
+
+      - name: Run query builder integration tests lts
+        if: ${{ matrix.gel-version == '4' || matrix.gel-version == '5' || matrix.gel-version == '6' || matrix.gel-version == 'stable' || matrix.gel-version == 'nightly' }}
+        run: |
+          turbo run ci:integration-test --filter=@gel/integration-lts
+          yarn workspace @gel/integration-lts run bench:types || echo "Benchmark types script failed, proceeding anyway."
+
+      - name: Run query builder integration tests stable
+        if: ${{ matrix.gel-version == 'stable' || matrix.gel-version == 'nightly' }}
+        run: |
+          turbo run ci:integration-test --filter=@gel/integration-stable
+
+      - name: Run query builder integration tests nightly
+        if: ${{ matrix.gel-version == 'nightly' }}
+        run: |
+          turbo run ci:integration-test --filter=@gel/integration-nightly
+
+      - name: Typecheck other packages
+        run: |
+          yarn ci:typecheck
+
+  # This job exists solely to act as the test job aggregate to be
+  # targeted by branch policies.
+  regression-tests:
+    name: "Regression Tests"
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo OK
+
+  test-cli-wrapper:
+    name: "Test CLI Wrapper"
+    runs-on: ubuntu-latest
+    env:
+      DEBUG: "*"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Install dev deps
+        run: |
+          yarn --frozen-lockfile
+
+      - name: Build and pack CLI wrapper
+        run: |
+          yarn workspace gel run build
+          yarn workspace gel pack --filename=${{ github.workspace }}/edgedb-cli.tar.gz
+
+      - name: Test CLI wrapper with npm
+        run: |
+          mkdir ${{ runner.temp }}/temp-npm
+          cd ${{ runner.temp }}/temp-npm
+          npm init -y
+          npm install ${{ github.workspace }}/edgedb-cli.tar.gz
+          npm exec gel -- project init --non-interactive
+          npm exec gel -- --version
+          npm exec gel -- query 'select sys::get_version_as_str()'
+          if gel --version; then
+            echo "Error: gel command should not be available outside of npm exec"
+            exit 1
+          else
+            echo "gel command is not available outside of npm exec, as expected"
+          fi
+
+      - name: Test CLI wrapper with yarn
+        run: |
+          mkdir ${{ runner.temp }}/temp-yarn
+          cd ${{ runner.temp }}/temp-yarn
+          yarn init -y
+          yarn add ${{ github.workspace}}/edgedb-cli.tar.gz
+          yarn gel project init --non-interactive
+          yarn gel --version
+          yarn gel query 'select sys::get_version_as_str()'
+          if gel --version; then
+            echo "Error: gel command should not be available outside of yarn"
+            exit 1
+          else
+            echo "gel command is not available outside of yarn, as expected"
+          fi
+
+      - uses: threeal/setup-yarn-action@ec8c075e62bc497968de40011c2b766f5e8f1ac5
+        with:
+          version: latest
+          cache: false
+      - name: Test CLI wrapper with yarn-berry
+        run: |
+          mkdir ${{ runner.temp }}/temp-yarn-berry
+          cd ${{ runner.temp }}/temp-yarn-berry
+          yarn set version berry
+          yarn init -y
+          touch yarn.lock
+          yarn add ${{ github.workspace }}/edgedb-cli.tar.gz
+          yarn gel project init --non-interactive
+          yarn gel --version
+          yarn gel query 'select sys::get_version_as_str()'
+          if gel --version; then
+            echo "Error: gel command should not be available outside of yarn"
+            exit 1
+          else
+            echo "gel command is not available outside of yarn, as expected"
+          fi
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+        with:
+          version: latest
+          run_install: false
+      - name: Test CLI wrapper with pnpm
+        run: |
+          mkdir ${{ runner.temp }}/temp-pnpm
+          cd ${{ runner.temp}}/temp-pnpm
+          pnpm init
+          pnpm add ${{ github.workspace }}/edgedb-cli.tar.gz
+          pnpm exec gel project init --non-interactive
+          pnpm exec gel --version
+          pnpm exec gel query 'select sys::get_version_as_str()'
+          if gel --version; then
+            echo "Error: gel command should not be available outside of pnpm"
+            exit 1
+          else
+            echo "gel command is not available outside of pnpm, as expected"
+          fi
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Test CLI wrapper with bun
+        run: |
+          mkdir temp-bun
+          cd temp-bun
+          bun init
+          bun add ${{ github.workspace }}/edgedb-cli.tar.gz
+          bun gel project init --non-interactive
+          bun gel --version
+          bun gel query 'select sys::get_version_as_str()'
+          if gel --version; then
+            echo "Error: gel command should not be available outside of bun"
+            exit 1
+          else
+            echo "gel command is not available outside of bun, as expected"
+          fi

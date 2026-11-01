@@ -1,0 +1,133 @@
+name: Test
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      smoke_invocation_url:
+        description: Replay native smoke tests from a successful BuildBuddy cross-build
+        required: false
+      smoke_commit_sha:
+        description: Commit SHA of the cross-build invocation
+        required: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    if: github.event_name != 'workflow_dispatch' || inputs.smoke_invocation_url == ''
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Validate Cargo Release Metadata
+        run: cargo metadata --locked --format-version 1 > /dev/null
+
+      - name: Validate Provider-Only ICU Features
+        shell: python
+        run: |
+          import re
+          import subprocess
+
+          for crate in ("formatjs_intl", "formatjs_intl_getcanonicallocales"):
+              tree = subprocess.check_output([
+                  "cargo", "tree", "--locked", "-p", crate,
+                  "--no-default-features", "--edges", "normal,features",
+              ], text=True)
+              if 'feature "compiled_data"' in tree or re.search(r"icu_\w+_data v", tree):
+                  raise SystemExit(f"Provider-only {crate} must not enable compiled ICU data:\n" + tree)
+
+  examples:
+    if: github.event_name != 'workflow_dispatch' || inputs.smoke_invocation_url == ''
+    name: Examples (${{ matrix.example }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - rescripts
+          - strict-locale-type
+          - strict-message-types
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-examples-${{ matrix.example }}
+          repository-cache: true
+
+      - name: Build Example
+        working-directory: examples/${{ matrix.example }}
+        run: bazel build //...
+
+      - name: Test Example
+        working-directory: examples/${{ matrix.example }}
+        run: bazel test //...
+
+  validate-pnpm-lock:
+    if: github.event_name != 'workflow_dispatch' || inputs.smoke_invocation_url == ''
+    name: Validate pnpm-lock.yaml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install dependencies with pnpm
+        run: pnpm install --frozen-lockfile
+
+  publish-test-status:
+    needs: test
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'github-actions[bot]' &&
+      startsWith(github.ref_name, 'renovate/')
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    env:
+      CHECK_STATE: ${{ needs.test.result == 'success' && 'success' || 'failure' }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Publish Required Check Status
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$CHECK_STATE" \
+            -f context=test \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            -f description="Dispatched test workflow $CHECK_STATE"
+
+  native_smoke_replay:
+    if: github.event_name == 'workflow_dispatch' && inputs.smoke_invocation_url != ''
+    permissions:
+      contents: read
+      statuses: write
+    uses: ./.github/workflows/native-smoke.yml
+    with:
+      invocation_url: ${{ inputs.smoke_invocation_url }}
+      commit_sha: ${{ inputs.smoke_commit_sha }}
+    secrets:
+      BUILDBUDDY_RO_PUBLIC_KEY: ${{ secrets.BUILDBUDDY_RO_PUBLIC_KEY }}

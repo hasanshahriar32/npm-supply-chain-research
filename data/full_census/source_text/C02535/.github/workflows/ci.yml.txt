@@ -1,0 +1,31 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: macos-latest
+
+        strategy:
+            matrix:
+                node-version: [v22, v24]
+        env:
+            CI: true
+            LINT: ${{ matrix.node-version == 'v24' && true || false }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node-version }}
+            - run: corepack enable
+            - run: yarn install
+            - run: yarn build
+            - run: yarn test:node
+            - run: yarn test:browser
+            - run: yarn lint:ci
+              if: ${{ env.LINT == 'true' }}

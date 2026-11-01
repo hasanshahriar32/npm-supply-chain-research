@@ -1,0 +1,137 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  release_please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      npm_paths: ${{ steps.npm-release-paths.outputs.npm_paths }}
+      npm_release_created: ${{ steps.npm-release-paths.outputs.npm_release_created }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Build npm workspace graph
+        id: npm-workspace-graph
+        env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+        run: |
+          bazel_args=()
+          if [ -n "$BUILDBUDDY_ORG_API_KEY" ]; then
+            bazel_args+=(
+              --config=ci
+              "--remote_header=x-buildbuddy-api-key=$BUILDBUDDY_ORG_API_KEY"
+            )
+          fi
+
+          bazel build "${bazel_args[@]}" :release_please_npm_workspace_graph
+          graph_path="$(bazel cquery "${bazel_args[@]}" --output=files :release_please_npm_workspace_graph)"
+          echo "path=$graph_path" >> "$GITHUB_OUTPUT"
+
+      - name: Install Release Please
+        run: |
+          npm install \
+            --ignore-scripts \
+            --no-audit \
+            --no-fund \
+            --prefix "$RUNNER_TEMP/release-please" \
+            release-please@17.6.0
+
+      - name: Verify release dependency propagation
+        run: >-
+          bazel test //tools:calendar_registry_test //tools:release_please_npm_plugin_test
+          --test_env=NODE_PATH="$RUNNER_TEMP/release-please/node_modules"
+
+      - name: Verify Release Please package manifest updates
+        env:
+          NODE_PATH: ${{ runner.temp }}/release-please/node_modules
+        run: >-
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON
+          tools/release-please/config.test.ts
+
+      # Release Please owns version/changelog PRs and GitHub release notes.
+      - name: Run Release Please
+        id: release
+        env:
+          FORMATJS_RELEASE_PLEASE_NPM_WORKSPACE_GRAPH: ${{ steps.npm-workspace-graph.outputs.path }}
+          GH_RELEASE_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          NODE_PATH: ${{ runner.temp }}/release-please/node_modules
+          RELEASE_PLEASE_CONFIG_FILE: release-please-config.json
+          RELEASE_PLEASE_MANIFEST_FILE: .release-please-manifest.json
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tools/release-please/run.ts
+
+      - name: Collect npm release paths
+        id: npm-release-paths
+        run: |
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --input-type=module <<'JS'
+          import fs from 'node:fs'
+          import {collectNpmReleasePaths} from './tools/release-please/npm-release-paths.ts'
+
+          const currentManifest = JSON.parse(
+            fs.readFileSync('.release-please-manifest.json', 'utf8')
+          )
+          const packages = Object.fromEntries(
+            Object.keys(currentManifest)
+              .filter(path => path.startsWith('packages/'))
+              .map(path => [path, JSON.parse(fs.readFileSync(`${path}/package.json`, 'utf8'))])
+          )
+          const npmPaths = await collectNpmReleasePaths(currentManifest, packages)
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `npm_paths=${JSON.stringify(npmPaths)}\n`
+          )
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `npm_release_created=${npmPaths.length > 0}\n`
+          )
+          JS
+
+  dispatch_release_npm:
+    name: Dispatch npm Package Release
+    needs: release_please
+    if: ${{ needs.release_please.outputs.npm_release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Dispatch release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NPM_RELEASE_PATHS: ${{ needs.release_please.outputs.npm_paths }}
+        run: |
+          # Keep npm Trusted Publishing bound to release.yml by dispatching it
+          # as the top-level workflow, not as a reusable workflow call.
+          gh workflow run release.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF_NAME" \
+            --raw-field "npm_paths=$NPM_RELEASE_PATHS"

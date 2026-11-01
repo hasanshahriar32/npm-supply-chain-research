@@ -1,0 +1,58 @@
+{
+  "name": "browser-run",
+  "description": "Transform stream that executes JavaScript it receives in a real browser and outputs console output",
+  "version": "12.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/juliangruber/browser-run.git"
+  },
+  "homepage": "https://github.com/juliangruber/browser-run",
+  "main": "index.js",
+  "bin": {
+    "browser-run": "./bin/bin.js"
+  },
+  "scripts": {
+    "build": "browserify browser/reporter.js -o static/reporter.js",
+    "prepublish": "npm run build",
+    "release": "np",
+    "test": "npm run build && node--test"
+  },
+  "dependencies": {
+    "browser-launcher": "^3.0.1",
+    "duplexer": "^0.1.1",
+    "ecstatic": "^4.1.2",
+    "electron-stream": "^11.0.0",
+    "enstore": "^1.0.1",
+    "html-inject-script": "^2.0.0",
+    "server-destroy": "^1.0.1",
+    "source-map-support": "^0.4.0",
+    "through": "^2.3.8",
+    "xhr-write-stream": "^0.1.2",
+    "xtend": "^4.0.1",
+    "yargs": "^16.2.0"
+  },
+  "devDependencies": {
+    "browserify": "^14.1.0",
+    "concat-stream": "^1.5.1",
+    "np": "^8.0.4",
+    "test": "^3.0.0",
+    "tree-kill": "^1.0.0",
+    "utf8-stream": "^0.0.0"
+  },
+  "keywords": [
+    "browser",
+    "stream",
+    "test",
+    "headless",
+    "duplex"
+  ],
+  "author": {
+    "name": "Julian Gruber",
+    "email": "mail@juliangruber.com",
+    "url": "http://juliangruber.com"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=14"
+  }
+}

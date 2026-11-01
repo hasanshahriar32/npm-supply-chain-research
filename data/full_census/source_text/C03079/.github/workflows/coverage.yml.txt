@@ -1,0 +1,21 @@
+name: Coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14'
+      - run: yarn --frozen-lockfile
+      - run: git submodule update --init --recursive
+      - run: yarn run coverage:lcov
+      - uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage/lcov.info

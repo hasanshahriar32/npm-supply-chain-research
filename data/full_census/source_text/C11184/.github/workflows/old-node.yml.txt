@@ -1,0 +1,26 @@
+name: Regular CI (second class citizen of Node.js)
+on:
+  push:
+    branches:
+      - main
+      - "nopr/*"
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 26]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2.1.0 # Immutable
+        with:
+          runtime: node
+      - name: Build
+        run: pnpm build:lib
+      - name: Switch Node.js version for tests
+        run: pnpm runtime set node ${{ matrix.node-version }} -g
+      - name: Test
+        run: pnpm test:lib

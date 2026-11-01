@@ -1,0 +1,142 @@
+{
+  "name": "mutative",
+  "version": "2.0.1",
+  "description": "A JavaScript library for efficient immutable updates",
+  "main": "dist/index.js",
+  "module": "dist/mutative.esm.js",
+  "umd:main": "dist/mutative.umd.production.min.js",
+  "unpkg": "dist/mutative.umd.production.min.js",
+  "jsdelivr": "dist/mutative.umd.production.min.js",
+  "jsnext:main": "dist/mutative.esm.js",
+  "react-native": "dist/mutative.esm.js",
+  "source": "src/index.ts",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "node": "./dist/index.mjs",
+        "default": "./dist/mutative.esm.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "audit:dependencies": "pnpm audit --audit-level=low && pnpm --dir website audit --audit-level=low",
+    "test": "vitest run",
+    "test:package": "node scripts/check-package.mjs",
+    "test:build-watch": "node scripts/check-build-watch.mjs",
+    "test:api-docs": "node scripts/check-api-docs.mjs",
+    "type-check": "tsc --noEmit && tsc --noEmit -p test",
+    "lint": "oxlint",
+    "clean": "rimraf dist",
+    "test:coverage": "vitest run --coverage",
+    "benchmark:immer": "pnpm build && pnpm benchmark:immer:build && node perf-testing/run-benchmarks.mjs",
+    "benchmark:immer:build": "node perf-testing/build.mjs",
+    "benchmark:immer:check": "pnpm build && pnpm benchmark:immer:build && node --expose-gc --enable-source-maps perf-testing/dist/immutability-benchmarks.mjs --check --patches both",
+    "benchmark:memory": "pnpm build && pnpm benchmark:immer:build && node perf-testing/run-memory.mjs",
+    "benchmark:ci": "pnpm build && node perf-testing/ci.mjs",
+    "test:benchmarks": "node --expose-gc --test perf-testing/*.test.mjs",
+    "profile:immer": "pnpm build && pnpm benchmark:immer:build && node --expose-gc --enable-source-maps perf-testing/dist/immutability-profiling.mjs",
+    "profile:immer:analyze": "node perf-testing/read-cpuprofile.mjs",
+    "build": "pnpm run clean && tsdown && tsc --noEmit false --emitDeclarationOnly --outDir dist && node scripts/write-package-entries.mjs",
+    "build:analyze": "ANALYZE=true pnpm build",
+    "build:doc": "rimraf docs && typedoc",
+    "commit": "git-cz",
+    "size": "size-limit && pnpm size:compare",
+    "size:compare": "node scripts/check-build-size.mjs",
+    "analyze": "size-limit --why",
+    "format": "oxfmt \"src/**/*.ts\" \"test/**/*.ts\"",
+    "publish:docs": "pnpm run clean && cd website && pnpm run deploy",
+    "start:docs": "cd website && pnpm run dev"
+  },
+  "size-limit": [
+    {
+      "name": "production CJS, all exports",
+      "path": "dist/mutative.cjs.production.min.js",
+      "import": "*",
+      "limit": "9.1 KB"
+    },
+    {
+      "name": "ESM, create",
+      "path": "dist/mutative.esm.mjs",
+      "import": "{ create }",
+      "limit": "8.1 KB"
+    },
+    {
+      "name": "ESM, all exports",
+      "path": "dist/mutative.esm.mjs",
+      "import": "*",
+      "limit": "9.0 KB"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/unadlib/mutative.git"
+  },
+  "author": "unadlib",
+  "keywords": [
+    "immutable",
+    "mutable",
+    "copy-on-write",
+    "mutative",
+    "immutability",
+    "mutation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0"
+  },
+  "packageManager": "pnpm@12.6.0",
+  "bugs": {
+    "url": "https://github.com/unadlib/mutative/issues"
+  },
+  "homepage": "https://mutative.js.org/",
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@size-limit/esbuild": "^11.2.0",
+    "@size-limit/esbuild-why": "^11.2.0",
+    "@size-limit/preset-small-lib": "^11.2.0",
+    "@size-limit/webpack": "^11.2.0",
+    "@size-limit/webpack-why": "^11.2.0",
+    "@types/node": "^24.0.13",
+    "@vitest/coverage-v8": "^5.0.5",
+    "commitizen": "^4.3.2",
+    "deep-freeze": "^0.0.1",
+    "esbuild": "0.28.2",
+    "fast-json-patch": "^3.1.1",
+    "immer": "11.1.18",
+    "lodash": "^4.18.1",
+    "mitata": "1.0.34",
+    "mutative-v1": "npm:mutative@1.3.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "publint": "^0.3.24",
+    "redux": "^5.0.1",
+    "rimraf": "^6.1.3",
+    "size-limit": "^11.2.0",
+    "terser": "5.34.1",
+    "tsdown": "^0.23.0",
+    "tslib": "^2.8.1",
+    "typedoc": "^0.28.12",
+    "typedoc-plugin-markdown": "^4.8.1",
+    "typescript": "^5.8.3",
+    "typescript-5.0": "npm:typescript@5.0.4",
+    "vite-bundle-analyzer": "^1.3.2",
+    "vitest": "^5.0.5",
+    "yargs": "^17.7.2"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}

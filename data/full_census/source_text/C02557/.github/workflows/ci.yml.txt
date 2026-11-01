@@ -1,0 +1,999 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - run: npm install
+      - run: npm audit --omit=dev
+  standard:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - run: npm install
+      - run: npm run standard
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: install shellspec
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/shellspec/shellspec/b8935ec266d2c5f7f364c6024730e4d68432cce3/install.sh -o "$RUNNER_TEMP/install-shellspec.sh"
+          sh "$RUNNER_TEMP/install-shellspec.sh" 0.28.1 --yes --prefix "$RUNNER_TEMP/shellspec"
+          echo "$RUNNER_TEMP/shellspec/bin" >> "$GITHUB_PATH"
+      - run: shellspec --version
+      - run: npm install
+      - run: npm test
+      - run: npm run testshell
+  test-npm-linux-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: install Linux Secret Service tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring libsecret-tools expect
+      - name: install packed dotenvx
+        run: |
+          npm install
+          TARBALL=$(npm pack --pack-destination "$RUNNER_TEMP")
+          mkdir fixture
+          cd fixture
+          npm init -y
+          npm install "$RUNNER_TEMP/$TARBALL"
+      - name: encrypt with native storage and decrypt with get
+        working-directory: fixture
+        run: |
+          dbus-run-session -- bash -eu <<'BASH'
+          export CI= DOTENVX_NO_ARMOR=true DOTENVX_NO_1PASSWORD=true DOTENVX_NO_BITWARDEN=true
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/native-config"
+          export XDG_DATA_HOME="$RUNNER_TEMP/native-data"
+          export XDG_RUNTIME_DIR="$RUNNER_TEMP/native-runtime"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_RUNTIME_DIR"
+          chmod 700 "$XDG_RUNTIME_DIR"
+          eval "$(printf '%s' 'dotenvx-ci' | gnome-keyring-daemon --unlock --components=secrets)"
+          cleanup () {
+            if [ -f .env ]; then
+              PUBLIC_KEY=$(sed -n 's/^DOTENV_PUBLIC_KEY="\([^"]*\)"/\1/p' .env)
+              if [ -n "$PUBLIC_KEY" ]; then
+                secret-tool clear service dotenvx public-key "$PUBLIC_KEY" || true
+              fi
+            fi
+          }
+          trap cleanup EXIT
+          printf 'HELLO=LinuxNative\n' > .env
+          expect <<'EXPECT'
+          set timeout 30
+          spawn ./node_modules/.bin/dotenvx encrypt --no-armor
+          expect {
+            "Choose private key custody" { send "\r" }
+            timeout { exit 1 }
+            eof { exit 1 }
+          }
+          expect {
+            "Choose local custody" { send "\033\[B\r" }
+            timeout { exit 1 }
+            eof { exit 1 }
+          }
+          expect {
+            eof {}
+            timeout { exit 1 }
+          }
+          exit [lindex [wait] 3]
+          EXPECT
+          grep -q '^HELLO=.*encrypted:' .env
+          test ! -f .env.keys
+          test "$(./node_modules/.bin/dotenvx get HELLO)" = 'LinuxNative'
+          BASH
+  test-npm-powershell-shim:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: verify npm powershell shim
+        shell: pwsh
+        run: |
+          npm install
+          $TARBALL = npm pack
+          mkdir fixture
+          cd fixture
+          npm init -y
+          npm install "..\$TARBALL"
+          "HELLO=PowerShell" | Out-File -FilePath .env.testing -Encoding utf8
+          "console.log(process.env.HELLO)" | Out-File -FilePath index.js -Encoding utf8
+          Get-ChildItem .\node_modules\.bin\dotenvx*
+          Get-Command .\node_modules\.bin\dotenvx.ps1
+          $OUTPUT = .\node_modules\.bin\dotenvx.ps1 run --quiet -f .env.testing -- node index.js
+          Write-Output $OUTPUT
+          if ($OUTPUT -ne "PowerShell") {
+            Write-Output "expected PowerShell, got '$OUTPUT'"
+            exit 1
+          }
+  test-npm-powershell-env-local-encrypt:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: verify npm powershell .env.local encrypt
+        shell: pwsh
+        run: |
+          npm install
+          $TARBALL = npm pack
+          mkdir fixture
+          cd fixture
+          npm init -y
+          npm install "..\$TARBALL"
+          "TEST_KEY=value123" | Out-File -FilePath .env.local -Encoding utf8NoBOM
+          $OUTPUT = .\node_modules\.bin\dotenvx.ps1 encrypt --no-armor -f .env.local 2>&1
+          $OUTPUT_TEXT = $OUTPUT -join [Environment]::NewLine
+          Write-Output $OUTPUT_TEXT
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "dotenvx encrypt failed with exit code $LASTEXITCODE"
+            exit $LASTEXITCODE
+          }
+          if ($OUTPUT_TEXT -notmatch "encrypted.*\.env\.local") {
+            Write-Output "expected output to mention encrypted .env.local, got '$OUTPUT_TEXT'"
+            exit 1
+          }
+          $ENV_LOCAL = Get-Content .env.local -Raw
+          if ($ENV_LOCAL -notmatch "encrypted:") {
+            Write-Output "expected .env.local to contain encrypted value"
+            exit 1
+          }
+  test-npm-powershell-native:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: encrypt with native storage and decrypt with PowerShell get
+        shell: pwsh
+        run: |
+          npm install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $TARBALL = npm pack
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mkdir fixture
+          cd fixture
+          npm init -y
+          npm install "..\$TARBALL" node-pty@1.1.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:CI = ''
+          $env:DOTENVX_NO_ARMOR = 'true'
+          $env:DOTENVX_NO_1PASSWORD = 'true'
+          $env:DOTENVX_NO_BITWARDEN = 'true'
+          "HELLO=WindowsNative" | Out-File -FilePath .env -Encoding utf8NoBOM
+          try {
+            @'
+          const pty = require('node-pty');
+          const child = pty.spawn('pwsh.exe', ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', String.raw`& .\node_modules\.bin\dotenvx.ps1 encrypt --no-armor; exit $LASTEXITCODE`], {
+            name: 'xterm-256color', cols: 120, rows: 30, cwd: process.cwd(), env: process.env
+          });
+          let stage = 0;
+          let output = '';
+          const timeout = setTimeout(() => {
+            console.error('Timed out selecting native storage');
+            child.kill();
+            process.exit(1);
+          }, 30000);
+          child.onData(data => {
+            process.stdout.write(data);
+            output += data;
+            if (stage === 0 && output.includes('Choose private key custody')) {
+              stage = 1;
+              output = '';
+              child.write('\r');
+            } else if (stage === 1 && output.includes('Choose local custody')) {
+              stage = 2;
+              output = '';
+              child.write('\x1b[B\r');
+            }
+          });
+          child.onExit(({ exitCode }) => {
+            clearTimeout(timeout);
+            process.exit(exitCode || (stage === 2 ? 0 : 1));
+          });
+          '@ | node
+            if ($LASTEXITCODE -ne 0) { throw 'Interactive native encryption failed' }
+            if ((Get-Content .env -Raw) -notmatch '(?m)^HELLO=.*encrypted:') { throw 'Expected encrypted HELLO' }
+            if (Test-Path .env.keys) { throw 'Native encryption unexpectedly wrote .env.keys' }
+            $VALUE = .\node_modules\.bin\dotenvx.ps1 get HELLO
+            if ($LASTEXITCODE -ne 0 -or $VALUE -ne 'WindowsNative') { throw 'get failed to decrypt through Credential Manager' }
+          } finally {
+            $PUBLIC_KEY = ((Get-Content .env | Select-String '^DOTENV_PUBLIC_KEY=').Line -split '=', 2)[1].Trim('"')
+            if ($PUBLIC_KEY) { & cmdkey.exe "/delete:dotenvx:$PUBLIC_KEY" | Out-Null }
+          }
+  test-pkg:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - run: npm install
+      - name: pkg
+        run: |
+          echo "pkg-ing"
+          node esbuild.js --minify
+          cd ./build
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-x86_64 --output ../bin/linux-x86_64/dotenvx
+      - name: verify packaged startup stays under 500 ms
+        run: node .github/scripts/check-startup.js bin/linux-x86_64/dotenvx
+      - name: verify version
+        run: |
+          cd bin/linux-x86_64/
+          RELEASED_VERSION=$(./dotenvx --version)
+          EXPECTED_VERSION=$(node -p "require('./../../package.json').version")
+          echo $RELEASED_VERSION
+          echo $EXPECTED_VERSION
+          if [ "$RELEASED_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "postrelease version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          fi
+      - name: verify dotenvx run/get
+        run: |
+          cd bin/linux-x86_64/
+          echo "HELLO=Ubuntu" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(./dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(./dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "Ubuntu" ]; then
+            echo "postrelease dotenvx get failure: expected Ubuntu, got $EXPECTED_VALUE"
+            exit 1
+          fi
+      - name: verify nested invocations
+        run: |
+          cd bin/linux-x86_64/
+          echo "HELLO=Ubuntu" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(./dotenvx run --quiet -- ./dotenvx run --quiet -- ./dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx nested invocations: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+      - name: verify dotenvx encrypt then run/get then decrypt then run/get
+        run: |
+          cd bin/linux-x86_64/
+          echo "HELLO=Ubuntu" > .env
+          ./dotenvx encrypt
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(./dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(./dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "Ubuntu" ]; then
+            echo "postrelease dotenvx get failure: expected Ubuntu, got $EXPECTED_VALUE"
+            exit 1
+          fi
+          ./dotenvx decrypt
+          EXPECTED_MESSAGE=$(./dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(./dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "Ubuntu" ]; then
+            echo "postrelease dotenvx get failure: expected Ubuntu, got $EXPECTED_VALUE"
+            exit 1
+          fi
+      - name: verify Alpine compatibility
+        run: |
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          RELEASED_VERSION=$(docker run --rm -v "$PWD/bin/linux-x86_64:/app:ro" alpine:3.22 /app/dotenvx --version)
+          echo $RELEASED_VERSION
+          echo $EXPECTED_VERSION
+          if [ "$RELEASED_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "Alpine version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          fi
+
+  # run only on semantic version tag
+  release:
+    needs: 
+      - audit
+      - test
+      - test-pkg
+    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '.')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      # GITHUB_ENV operates like a .env file
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+
+      - name: node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+
+      # https://news.ycombinator.com/item?id=32388964
+      # https://github.com/procursusteam/ldid
+      # https://www.pulumi.com/blog/nodejs-binaries-with-pkg/
+      # https://github.com/pulumi/pulumi-aws-static-website/blob/main/.github/workflows/release.yaml
+      - name: ldid for macos binary building
+        uses: MOZGIII/install-ldid-action@v1
+        with:
+          tag: v2.1.5-procursus2
+
+      - name: npm install
+        run: npm install
+
+      - name: pkg
+        run: |
+          echo "pkg-ing"
+          node esbuild.js --minify
+          cd ./build
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-macos-x64 --output ../bin/darwin-amd64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-macos-x64 --output ../bin/darwin-x86_64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-macos-arm64 --output ../bin/darwin-arm64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-x64 --output ../bin/linux-amd64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-x64 --output ../bin/linux-x86_64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-arm64 --output ../bin/linux-arm64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-arm64 --output ../bin/linux-aarch64/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-linuxstatic-armv7 --output ../bin/linux-armv7l/dotenvx
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-win-x64 --output ../bin/windows-amd64/dotenvx.exe
+          ../node_modules/.bin/pkg . --public-packages "*" --public --target node20-win-x64 --output ../bin/windows-x86_64/dotenvx.exe
+          cd ..
+          echo "change ownership"
+          sudo chown -R root:root bin/
+          echo "dist-ing"
+          mkdir -p dist
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-darwin-amd64.tar.gz -C bin/darwin-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-darwin-x86_64.tar.gz -C bin/darwin-x86_64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-darwin-arm64.tar.gz -C bin/darwin-arm64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-linux-amd64.tar.gz -C bin/linux-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-linux-x86_64.tar.gz -C bin/linux-x86_64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-linux-arm64.tar.gz -C bin/linux-arm64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-linux-aarch64.tar.gz -C bin/linux-aarch64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-linux-armv7l.tar.gz -C bin/linux-armv7l/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-windows-amd64.tar.gz -C bin/windows-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-${{ env.CLEAN_VERSION }}-windows-x86_64.tar.gz -C bin/windows-x86_64/ .
+          zip -j ./dist/dotenvx-${{ env.CLEAN_VERSION }}-windows-amd64.zip bin/windows-amd64/dotenvx.exe
+          zip -j ./dist/dotenvx-${{ env.CLEAN_VERSION }}-windows-x86_64.zip bin/windows-x86_64/dotenvx.exe
+          tar --gzip -cf ./dist/dotenvx-darwin-amd64.tar.gz -C bin/darwin-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-darwin-x86_64.tar.gz -C bin/darwin-x86_64/ .
+          tar --gzip -cf ./dist/dotenvx-darwin-arm64.tar.gz -C bin/darwin-arm64/ .
+          tar --gzip -cf ./dist/dotenvx-linux-amd64.tar.gz -C bin/linux-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-linux-x86_64.tar.gz -C bin/linux-x86_64/ .
+          tar --gzip -cf ./dist/dotenvx-linux-arm64.tar.gz -C bin/linux-arm64/ .
+          tar --gzip -cf ./dist/dotenvx-linux-aarch64.tar.gz -C bin/linux-aarch64/ .
+          tar --gzip -cf ./dist/dotenvx-linux-armv7l.tar.gz -C bin/linux-armv7l/ .
+          tar --gzip -cf ./dist/dotenvx-windows-amd64.tar.gz -C bin/windows-amd64/ .
+          tar --gzip -cf ./dist/dotenvx-windows-x86_64.tar.gz -C bin/windows-x86_64/ .
+          zip -j ./dist/dotenvx-windows-amd64.zip bin/windows-amd64/dotenvx.exe
+          zip -j ./dist/dotenvx-windows-x86_64.zip bin/windows-x86_64/dotenvx.exe
+
+      - name: update install.sh with VERSION
+        run: |
+          sed "0,/^VERSION=\".*\"/s//VERSION=\"${{ env.CLEAN_VERSION }}\"/" install.sh > ./dist/install.sh
+
+      - name: create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/install.sh
+          body: "see [CHANGELOG](https://github.com/dotenvx/dotenvx/blob/main/CHANGELOG.md)"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: publish checksums to release
+        uses: wangzuo/action-release-checksums@main
+        with:
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      # GITHUB_ENV operates like a .env file
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+      # https://github.com/Justintime50/homebrew-releaser
+      - name: homebrew releaser
+        uses: Justintime50/homebrew-releaser@v1
+        with:
+          debug: false
+          homebrew_owner: dotenvx
+          homebrew_tap: homebrew-brew
+          formula_folder: Formula
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          commit_owner: motdotenv
+          commit_email: mot@dotenv.org
+          version: ${{ env.VERSION }}
+          install: |
+            bin.install "dotenvx"
+            bin.install_symlink "dotenvx" => "git-dotenvx"
+          test: |
+            system bin/"dotenvx", "--version"
+          target_darwin_amd64: true
+          target_darwin_arm64: true
+          target_linux_amd64: true
+          target_linux_arm64: true
+          update_readme_table: true
+  npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # Setup .npmrc file to publish to npm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+      - run: |
+          echo "NODE_AUTH_TOKEN=$(npx @dotenvx/dotenvx-ops get dotenvx://rot_71321cf34570a5db681b07d1e4078d93 --token '${{ secrets.DOTENVX_OPS_TOKEN }}')" >> $GITHUB_ENV
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
+
+  npm-named-binaries:
+    name: npm:${{ matrix.platform }}
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - darwin-amd64
+          - darwin-arm64
+          - darwin-x86_64
+          - linux-aarch64
+          - linux-amd64
+          - linux-arm64
+          - linux-armv7l
+          - linux-x86_64
+          - windows-amd64
+          - windows-x86_64
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '20.x'
+          registry-url: 'https://registry.npmjs.org'
+      - name: fetch release asset
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          gh release download "${{ env.VERSION }}" \
+            --repo dotenvx/dotenvx \
+            --pattern "dotenvx-${{ env.CLEAN_VERSION }}-${{ matrix.platform }}.tar.gz" \
+            --output tarball.tar.gz
+      - name: prepare package
+        run: |
+          package="dotenvx-${{ matrix.platform }}"
+          package_dir="dist/npm/$package"
+          mkdir -p output "$package_dir"
+          tar -xzvf tarball.tar.gz -C output --strip-components=1
+          if [ -f "output/dotenvx.exe" ]; then
+            cp "output/dotenvx.exe" "$package_dir/dotenvx.exe"
+            binary="dotenvx.exe"
+          else
+            cp "output/dotenvx" "$package_dir/dotenvx"
+            binary="dotenvx"
+          fi
+          cp LICENSE "$package_dir/LICENSE"
+          cat > "$package_dir/README.md" <<EOF
+          # $package
+
+          > $package binary
+
+          [see documentation](https://github.com/dotenvx/dotenvx)
+          EOF
+          PACKAGE="$package" PACKAGE_DIR="$package_dir" BINARY="$binary" node -e "const fs = require('fs'); const pkg = { name: '@dotenvx/' + process.env.PACKAGE, version: process.env.CLEAN_VERSION, description: process.env.PACKAGE + ' binary', repository: { type: 'git', url: 'git+https://github.com/dotenvx/dotenvx.git' }, files: [process.env.BINARY, 'README.md', 'LICENSE'], author: '@motdotla', license: 'See LICENSE', publishConfig: { access: 'public' } }; fs.writeFileSync(process.env.PACKAGE_DIR + '/package.json', JSON.stringify(pkg, null, 2) + '\n')"
+      - run: npm pack dist/npm/dotenvx-${{ matrix.platform }} --dry-run
+      - run: |
+          echo "NODE_AUTH_TOKEN=$(npx @dotenvx/dotenvx-ops get dotenvx://rot_71321cf34570a5db681b07d1e4078d93 --token '${{ secrets.DOTENVX_OPS_TOKEN }}')" >> $GITHUB_ENV
+      - name: publish package
+        run: |
+          if npm view "@dotenvx/dotenvx-${{ matrix.platform }}@${{ env.CLEAN_VERSION }}" version >/dev/null 2>&1; then
+            echo "@dotenvx/dotenvx-${{ matrix.platform }}@${{ env.CLEAN_VERSION }} already published"
+            exit 0
+          fi
+          npm publish dist/npm/dotenvx-${{ matrix.platform }}
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
+
+  docker:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      # GITHUB_ENV operates like a .env file
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: dotenv/dotenvx:latest
+          platforms: linux/amd64,linux/arm64
+      - name: Build and push tag
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: dotenv/dotenvx:${{ env.VERSION }}
+          platforms: linux/amd64,linux/arm64
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: Docker Hub Description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: dotenv/dotenvx
+          short-description: ${{ github.event.repository.description }}
+  winget:
+    needs: release
+    continue-on-error: true
+    runs-on: windows-latest
+    steps:
+      - name: extract version using powershell
+        shell: pwsh
+        run: |
+          $VERSION = $env:GITHUB_REF -replace 'refs/tags/', ''
+          $CLEAN_VERSION = $VERSION -replace '^v', ''
+          echo "VERSION=$VERSION" | Out-File -FilePath $env:GITHUB_ENV -Append
+          echo "CLEAN_VERSION=$CLEAN_VERSION" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Submit using wingetcreate
+        run: | 
+          iwr https://aka.ms/wingetcreate/latest -OutFile wingetcreate.exe
+          .\wingetcreate.exe update dotenvx.dotenvx -s -v ${{ env.CLEAN_VERSION }} -u https://github.com/dotenvx/dotenvx/releases/download/${{ env.VERSION }}/dotenvx-${{ env.CLEAN_VERSION }}-windows-x86_64.zip -t ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+  minimal:
+    needs: release
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> "$GITHUB_ENV"
+      - name: checkout Minimal packages fork
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: dotenvx/minimal-pkgs
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - name: update package and open pull request
+        env:
+          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          BRANCH="dotenvx-${CLEAN_VERSION//./-}"
+          AMD64_ASSET="dotenvx-${CLEAN_VERSION}-linux-x86_64.tar.gz"
+          ARM64_ASSET="dotenvx-${CLEAN_VERSION}-linux-aarch64.tar.gz"
+
+          gh release download "$VERSION" \
+            --repo dotenvx/dotenvx \
+            --pattern "$AMD64_ASSET" \
+            --pattern "$ARM64_ASSET"
+          AMD64_SHA256=$(sha256sum "$AMD64_ASSET" | cut -d ' ' -f 1)
+          ARM64_SHA256=$(sha256sum "$ARM64_ASSET" | cut -d ' ' -f 1)
+
+          git fetch https://github.com/gominimal/pkgs.git main
+          git checkout -B "$BRANCH" FETCH_HEAD
+          sed -i "s/let version = \".*\" in/let version = \"$CLEAN_VERSION\" in/" packages/dotenvx/build.ncl
+          sed -i "/linux-x86_64.tar.gz/{n;s/sha256 = \".*\"/sha256 = \"$AMD64_SHA256\"/;}" packages/dotenvx/build.ncl
+          sed -i "/linux-aarch64.tar.gz/{n;s/sha256 = \".*\"/sha256 = \"$ARM64_SHA256\"/;}" packages/dotenvx/build.ncl
+
+          if git diff --quiet; then
+            echo "Minimal package is already at $CLEAN_VERSION"
+            exit 0
+          fi
+
+          git config user.name 'motdotenv'
+          git config user.email 'mot@dotenv.org'
+          git add packages/dotenvx/build.ncl
+          git commit -m "dotenvx@$CLEAN_VERSION"
+          git push --force origin "$BRANCH"
+
+          PR_URL=$(gh pr list \
+            --repo gominimal/pkgs \
+            --head "dotenvx:$BRANCH" \
+            --state open \
+            --json url \
+            --jq '.[0].url')
+          if [ -n "$PR_URL" ]; then
+            echo "Minimal pull request already exists: $PR_URL"
+          else
+            gh pr create \
+              --repo gominimal/pkgs \
+              --head "dotenvx:$BRANCH" \
+              --base main \
+              --title "dotenvx@$CLEAN_VERSION" \
+              --body "## Summary
+
+          bumps dotenvx to v$CLEAN_VERSION"
+          fi
+
+  # aggregate publish-all job to wait for all previous jobs to complete
+  publish-all:
+    runs-on: ubuntu-latest
+    needs: 
+      - homebrew
+      - npm
+      - npm-named-binaries
+    steps:
+      - name: publish-all aggregate step
+        run: echo "publish-all completed"
+
+  dotenvx-sh:
+    needs: publish-all
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+      - name: update install.sh with VERSION
+        run: |
+          mkdir -p dist
+          sed "0,/^VERSION=\".*\"/s//VERSION=\"${{ env.CLEAN_VERSION }}\"/" install.sh > ./dist/install.sh
+      - name: checkout dotenvx/dotenvx.sh repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: "dotenvx/dotenvx.sh"
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          path: "dotenvx.sh"
+      - name: copy install.sh to dotenvx.sh repo
+        run: |
+          cp dist/install.sh dotenvx.sh/install.sh
+          echo "${{ env.CLEAN_VERSION }}" > dotenvx.sh/VERSION
+      - name: commit and push
+        run: |
+          cd dotenvx.sh
+          git config user.name 'motdotenv'
+          git config user.email 'mot@dotenv.org'
+          git add .
+          git commit -m "${{ env.VERSION }}" --allow-empty
+          git tag "${{ env.VERSION }}" --force
+          git push origin HEAD --tags --force
+
+  confirm-dotenvx-sh:
+    needs: dotenvx-sh
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - name: extract version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          CLEAN_VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CLEAN_VERSION=$CLEAN_VERSION" >> $GITHUB_ENV
+      - name: wait for deployment
+        run: |
+          end=$((SECONDS+300))
+          while [ $SECONDS -lt $end ]; do
+            current_version=$(curl -s -L https://dotenvx.sh/VERSION)
+            if [ "$current_version" == "${{ env.CLEAN_VERSION }}" ]; then
+              echo "dotenvx.sh deployment successful with version $current_version"
+              exit 0
+            fi
+            echo "waiting for deployment..."
+            sleep 10
+          done
+          echo "[DEPLOYMENT_FAILED]: VERSION did not update to ${{ env.CLEAN_VERSION }} within 5 minutes"
+          exit 1
+
+  postrelease-npm:
+    needs: confirm-dotenvx-sh
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: sleep
+        run: sleep 60
+      - name: verify version
+        run: |
+          npm install @dotenvx/dotenvx --save
+          RELEASED_VERSION=$(npx @dotenvx/dotenvx --version)
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          echo $RELEASED_VERSION
+          echo $EXPECTED_VERSION
+          if [ "$RELEASED_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "postrelease version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          fi
+      - name: verify dotenvx run/get
+        run: |
+          npm install @dotenvx/dotenvx --save
+          echo "HELLO=NPM" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(npx @dotenvx/dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello NPM" ]; then
+            echo "postrelease dotenvx run failure: expected Hello NPM, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(npx @dotenvx/dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "NPM" ]; then
+            echo "postrelease dotenvx get failure: expected NPM, got $EXPECTED_VALUE"
+            exit 1
+          fi
+
+  postrelease-ubuntu:
+    needs: confirm-dotenvx-sh
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: sleep
+        run: sleep 60
+      - name: install dotenvx
+        run: curl -fsS https://dotenvx.sh/ | sh
+      - name: verify version
+        run: |
+          RELEASED_VERSION=$(dotenvx --version)
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          echo $RELEASED_VERSION
+          echo $EXPECTED_VERSION
+          if [ "$RELEASED_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "postrelease version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          fi
+      - name: verify dotenvx run/get
+        run: |
+          echo "HELLO=Ubuntu" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "Ubuntu" ]; then
+            echo "postrelease dotenvx get failure: expected Ubuntu, got $EXPECTED_VALUE"
+            exit 1
+          fi
+      - name: verify nested invocations
+        run: |
+          echo "HELLO=Ubuntu" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(dotenvx run --quiet -- dotenvx run --quiet -- dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Ubuntu" ]; then
+            echo "postrelease dotenvx nested invocations: expected Hello Ubuntu, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+
+  postrelease-mac:
+    needs: confirm-dotenvx-sh
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: sleep
+        run: sleep 60
+      - name: install dotenvx
+        run: brew install dotenvx/brew/dotenvx
+      - name: verify version
+        run: |
+          RELEASED_VERSION=$(dotenvx --version)
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          echo $RELEASED_VERSION
+          echo $EXPECTED_VERSION
+          if [ "$RELEASED_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "postrelease version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          fi
+      - name: verify dotenvx run/get
+        run: |
+          echo "HELLO=Mac" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Mac" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Mac, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+          EXPECTED_VALUE=$(dotenvx get HELLO)
+          echo $EXPECTED_VALUE
+          if [ "$EXPECTED_VALUE" != "Mac" ]; then
+            echo "postrelease dotenvx get failure: expected Mac, got $EXPECTED_VALUE"
+            exit 1
+          fi
+      - name: verify nested invocations
+        run: |
+          echo "HELLO=Mac" > .env
+          echo "console.log('Hello ' + process.env.HELLO)" > index.js
+          EXPECTED_MESSAGE=$(dotenvx run --quiet -- dotenvx run --quiet -- dotenvx run --quiet -- node index.js)
+          echo $EXPECTED_MESSAGE
+          if [ "$EXPECTED_MESSAGE" != "Hello Mac" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Mac, got $EXPECTED_MESSAGE"
+            exit 1
+          fi
+
+  postrelease-windows:
+    needs: confirm-dotenvx-sh
+    runs-on: windows-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: extract version
+        shell: pwsh
+        run: |
+          $VERSION = $env:GITHUB_REF -replace 'refs/tags/', ''
+          echo "VERSION=$VERSION" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: sleep
+        run: sleep 60
+      - name: install dotenvx
+        run: |
+          curl -L -o dotenvx-windows-x86_64.zip https://github.com/dotenvx/dotenvx/releases/download/${{ env.VERSION }}/dotenvx-windows-x86_64.zip
+          Expand-Archive -Path dotenvx-windows-x86_64.zip -DestinationPath .\dotenvx
+      - name: verify version
+        run: |
+          $RELEASED_VERSION = .\dotenvx\dotenvx.exe --version
+          $EXPECTED_VERSION = node -p "require('./package.json').version"
+          Write-Output "released version: $RELEASED_VERSION"
+          Write-Output "expected version: $EXPECTED_VERSION"
+          if ($RELEASED_VERSION -ne $EXPECTED_VERSION) {
+            Write-Output "postrelease version mismatch: expected $EXPECTED_VERSION, got $RELEASED_VERSION"
+            exit 1
+          }
+        shell: pwsh
+      - name: verify dotenvx run/get
+        run: |
+          "HELLO=Windows" | Out-File -FilePath .env
+          "console.log('Hello ' + process.env.HELLO)" | Out-File -FilePath index.js
+          $EXPECTED_MESSAGE = .\dotenvx\dotenvx.exe run --quiet -- node index.js
+          Write-Output "Expected Message: $EXPECTED_MESSAGE"
+          if ($EXPECTED_MESSAGE -ne "Hello Windows") {
+            Write-Output "postrelease dotenvx run failure: expected 'Hello Windows', got '$EXPECTED_MESSAGE'"
+            exit 1
+          }
+          $EXPECTED_VALUE = .\dotenvx\dotenvx.exe get HELLO
+          Write-Output "Expected Value: $EXPECTED_VALUE"
+          if ($EXPECTED_VALUE -ne "Windows") {
+            Write-Output "postrelease dotenvx get failure: expected 'Windows', got '$EXPECTED_VALUE'"
+            exit 1
+          }
+        shell: pwsh
+      - name: verify nested invocations
+        run: |
+          "HELLO=Windows" | Out-File -FilePath .env
+          "console.log('Hello ' + process.env.HELLO)" | Out-File -FilePath index.js
+          $EXPECTED_MESSAGE = .\dotenvx\dotenvx.exe run --quiet -- .\dotenvx\dotenvx.exe run --quiet -- .\dotenvx\dotenvx.exe run --quiet -- node index.js
+          Write-Output "Expected Message: $EXPECTED_MESSAGE"
+          if ($EXPECTED_MESSAGE -ne "Hello Windows") {
+            Write-Output "postrelease dotenvx run failure: expected 'Hello Windows', got '$EXPECTED_MESSAGE'"
+            exit 1
+          }
+        shell: pwsh
+
+  postrelease-bunx:
+    needs: confirm-dotenvx-sh
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20.x
+      - name: wait for npm propagation
+        run: sleep 60
+      - name: verify dotenvx run
+        run: |
+          echo "HELLO=Bun" > .env
+          EXPECTED_VERSION=$(node -p "require('./package.json').version")
+          docker run --rm \
+            -v $(pwd):/workspace \
+            -w /workspace \
+            oven/bun:1.1.25-alpine \
+            sh -c "bunx @dotenvx/dotenvx@$EXPECTED_VERSION run --overload --quiet -- sh -c 'echo Hello \$HELLO'" | tee output.txt
+          output=$(cat output.txt)
+          if [ "$output" != "Hello Bun" ]; then
+            echo "postrelease dotenvx run failure: expected Hello Bun, got $output"
+            exit 1
+          fi

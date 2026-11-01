@@ -1,0 +1,14 @@
+name: Danger
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review, labeled, unlabeled]
+
+jobs:
+  danger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: getsentry/github-workflows/danger@36c729264d2edc29ebae61950c50e1e9f043ad7e
+        with:
+          extra-dangerfile: scripts/check-additional-danger.js
+          extra-install-packages: "curl unzip openjdk-17-jre-headless"

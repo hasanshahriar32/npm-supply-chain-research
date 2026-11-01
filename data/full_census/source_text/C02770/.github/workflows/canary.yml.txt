@@ -1,0 +1,55 @@
+name: electron-nightly Canary
+
+on:
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        os: [windows-latest, macOS-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # tag: v7.0.1
+        with:
+          repository: electron/minimal-repro
+          ref: refs/heads/main
+          path: minimal-repro
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # tag: v7.0.0
+        with:
+          # electron/minimal-repro doesn't have a .nvmrc file
+          node-version: lts/*
+          check-latest: true
+          cache: 'npm'
+          cache-dependency-path: minimal-repro/package-lock.json
+      - name: Replace electron with electron-nightly
+        run: |
+          cd minimal-repro
+          npm uninstall --save-dev electron
+          npm install --save-dev electron-nightly@latest
+        shell: bash
+      - name: Install Electron Packager
+        run: |
+          cd minimal-repro
+          npm install --save-dev @electron/packager@latest
+        shell: bash
+      - name: Package
+        env:
+          MATRIX_OS: ${{ matrix.os }}
+        run: |
+          cd minimal-repro
+          if [ "$MATRIX_OS" == "macOS-latest" ]; then
+            node_modules/.bin/electron-packager . --arch=universal
+          else
+            node_modules/.bin/electron-packager . --arch=all
+          fi
+        shell: bash

@@ -1,0 +1,38 @@
+name: Node CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # 10.x for baseline + supported branches per https://github.com/nodejs/release
+        node-version: [10.x, 14.x, 16.x, 18.x]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: yarn --frozen-lockfile
+      - run: yarn lint
+      - run: git submodule update --init --recursive
+      - run: yarn run test
+  types:
+    name: 'Test types'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: test/types
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: yarn
+      - run: yarn test

@@ -1,0 +1,66 @@
+name: Benchmark Tests
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark-tests:
+    permissions:
+      contents: write # required for pushing benchmark results to gh-pages
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version:
+          - ^26.3.0
+    runs-on: oracle-bare-metal-64cpu-1024gb-x86-64-ubuntu-24
+    container:
+      image: ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb
+    timeout-minutes: 10
+    steps:
+      # Apt packages:
+      # - git: Needed for 'npm run submodule'
+      # - libatomic1: Needed by Node.js 26
+      - name: Setup container environment
+        run: |
+          apt-get update && apt-get install --fix-missing -y git libatomic1
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Avoid "detected dubious ownership in repository" error when running
+      # `npm run submodule`.
+      - run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+          node-version: ${{ matrix.node_version }}
+
+      - name: Bootstrap
+        run: npm ci --ignore-scripts
+
+      - name: Build 🔧
+        run: npm run compile
+
+      - name: Benchmark tests
+        run: |
+          npm run test:bench
+          find . -name .benchmark-results.txt -exec cat {} + > combined_benchmarks.txt
+
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          tool: 'benchmarkjs'
+          output-file-path: combined_benchmarks.txt
+          gh-pages-branch: gh-pages
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          benchmark-data-dir-path: "benchmarks"
+          auto-push: true

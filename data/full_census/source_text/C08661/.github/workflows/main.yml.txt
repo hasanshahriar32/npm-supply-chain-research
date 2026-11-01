@@ -1,0 +1,48 @@
+name: Main CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  Main:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # CRITICAL: Required for OIDC / Trusted Publishing
+      contents: write # Required by semantic-release to push tags/releases
+      issues: write   # Required to comment on related issues
+      pull-requests: write # Required to comment on related PRs
+    
+    strategy:
+      matrix:
+        node-version: [24]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: |
+          yarn install
+
+      - name: Build
+        run: |
+          yarn prepare
+
+      - name: Publish to NPM
+        if: github.repository == 'react-native-image-picker/react-native-image-picker' && github.ref == 'refs/heads/main'
+        run: |
+          yarn ci:publish
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+

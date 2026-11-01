@@ -1,0 +1,85 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}-latest
+
+    strategy:
+      matrix:
+        os: [ ubuntu, windows ]
+        # TODO: We still support Node 16 but can't run ESLint v9 tests with it anymore.
+        node-version: [18.x, 20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: npm
+
+    - run: npm ci
+    - run: npm run test:unit
+
+    - name: Test with ESLint v10
+      if: matrix.node-version == '22.x'
+      run: npm install --save-dev eslint@10 && npm run test:unit
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: ./build/coverage/lcov.info
+        parallel: true
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20.x"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  # Flat-config RuleTester languageOptions break under ESLint 8, so exercise the
+  # declared peer minimum with a legacy eslintrc-style smoke instead of mocha.
+  min-peer-eslint8:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20.x"
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save --force eslint@8.38.0
+      - run: node scripts/smoke-eslint8.js
+
+  finish-coveralls:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close parallel build
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true

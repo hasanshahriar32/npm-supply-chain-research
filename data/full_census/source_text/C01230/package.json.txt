@@ -1,0 +1,53 @@
+{
+  "name": "@braintree/wrap-promise",
+  "version": "3.0.4",
+  "description": "A small lib to return promises or use callbacks",
+  "main": "dist/wrap-promise.js",
+  "types": "dist/wrap-promise.d.ts",
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "commitizen": "^4.3.1",
+    "cz-customizable": "^7.5.4",
+    "eslint": "^8.35.0",
+    "eslint-config-braintree": "^6.0.0-typescript-prep-rc.2",
+    "eslint-plugin-prettier": "^4.2.1",
+    "husky": "^9.1.7",
+    "jest": "^30.2.0",
+    "prettier": "^2.8.4",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "prebuild": "prettier --write .",
+    "build": "tsc --declaration",
+    "lint": "eslint --ext .js,.ts .",
+    "posttest": "npm run lint",
+    "test": "jest",
+    "prepare": "husky",
+    "commit": "cz"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/braintree/wrap-promise.git"
+  },
+  "keywords": [],
+  "author": "Braintree <code@getbraintree.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/braintree/wrap-promise/issues"
+  },
+  "homepage": "https://github.com/braintree/wrap-promise#readme",
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-customizable"
+    }
+  }
+}

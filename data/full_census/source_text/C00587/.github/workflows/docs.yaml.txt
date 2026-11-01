@@ -1,0 +1,140 @@
+name: Build docs
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+jobs:
+  build-rust:
+    name: Build rustdoc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - name: Configure cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Clean docs folder
+        run: cargo clean --doc
+      - name: Build docs
+        run: RUSTFLAGS='--cfg reqwest_unstable' cargo doc --no-deps --features http3 --manifest-path impit/Cargo.toml
+      - name: Remove lock file
+        run: rm target/doc/.lock
+      - name: Copy redirect
+        run: cp impit/docs/index.html target/doc/index.html
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: target/doc/
+          name: rustdoc
+
+  build-node:
+    name: Build TypeDoc documentation (Node.JS bindings)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - name: Configure cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 26
+
+      - name: Install pnpm and dependencies
+        uses: apify/actions/pnpm-install@v1.6.2
+        with:
+          working-directory: impit-node
+
+      - name: Build docs
+        run: cd impit-node && pnpm run docs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: impit-node/docs/
+          name: typedoc
+
+  build-python:
+    name: Build Sphinx docs (Python bindings)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Use Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: 3.x
+
+      - name: Set up uv package manager
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+
+      - name: Disable automatic `uv` builds
+        run: sed -i '/^\[tool\.uv\]$/a package = false' pyproject.toml
+        working-directory: impit-python
+
+      - name: Install dependencies
+        working-directory: impit-python
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv sync --all-groups --active --frozen
+          # comment out cookies module import
+          sed -i 's/from .cookies/#from .cookies/' ./python/impit/impit.pyi
+          sed -i 's/from .cookies/#from .cookies/' ./python/impit/__init__.py
+          sed -i 's/__version__/#__version__/' ./python/impit/__init__.py
+          # copy empty impit.py to avoid Sphinx errors
+          cp ./docs/stub.py ./python/impit/impit.py
+
+      - name: Build docs
+        working-directory: impit-python/docs
+        run: |
+          source ../.venv/bin/activate
+          uv run make html
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: impit-python/docs/_build/html
+          name: sphinx-doc
+
+  deploy:
+    name: Deploy
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: [build-rust, build-node, build-python]
+    steps:
+      - name: Download typedoc artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: typedoc
+          path: docs/js/
+      - name: Download Sphinx doc artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: sphinx-doc
+          path: docs/python/
+      - name: Setup pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - name: Upload docs to github pages
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: docs
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5

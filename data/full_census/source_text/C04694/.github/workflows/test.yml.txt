@@ -1,0 +1,154 @@
+name: Test
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      porto-ref:
+        type: string
+        description: 'Porto ref'
+        default: ''
+      contracts-ref:
+        type: string
+        description: 'Contracts ref'
+        default: ''
+      relay-ref:
+        type: string
+        description: 'Relay ref'
+        default: ''
+      relay-release:
+        type: boolean
+        description: 'Perform relay image build and push'
+        default: false
+      env:
+        type: string
+        description: 'Environment to use for tests'
+        default: 'prod'
+      relay-url:
+        type: string
+        description: 'RPC URL to use for tests'
+        default: ''
+      # Test selection inputs
+      test-local-browser:
+        type: boolean
+        description: 'Run Local Browser tests'
+        default: true
+      test-local-node:
+        type: boolean
+        description: 'Run Local Node tests'
+        default: true
+      test-deployment-browser:
+        type: boolean
+        description: 'Run Deployment Browser tests'
+        default: true
+      test-deployment-node:
+        type: boolean
+        description: 'Run Deployment Node tests'
+        default: true
+
+env:
+   ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  relay-release:
+    name: Publish Relay Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      relay_version: ${{ steps.trigger-relay.outputs.short_sha }}
+    steps:
+      - name: Trigger release workflow and wait
+        id: trigger-relay
+        if: inputs.relay-ref != '' && inputs.relay-release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELAY_GH_TOKEN }}
+        run: |
+          # Trigger the workflow
+          gh workflow run release.yml \
+            --repo ithacaxyz/relay \
+            --ref ${{ inputs.relay-ref }}
+          
+          sleep 5
+          
+          # Get the latest run ID and wait for it to complete
+          run_id=$(gh run list --repo ithacaxyz/relay --workflow=release.yml --limit=1 --json databaseId | jq -r '.[0].databaseId')
+          gh run watch $run_id --repo ithacaxyz/relay
+          
+          short_sha=$(gh run view $run_id --repo ithacaxyz/relay --json headSha | jq -r '.headSha' | cut -c 1-7)
+          echo "short_sha=$short_sha" >> $GITHUB_OUTPUT
+
+  test:
+    name: "Tests (Env: ${{ matrix.env }}, Runtime: ${{ matrix.browser == 'true' && 'Browser' || 'Node.js' }})"
+    needs: relay-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        include:
+          - env: 'anvil'
+            browser: 'true'
+            enabled: ${{ inputs.test-local-browser == true || inputs.test-local-browser == null }}
+          - env: 'anvil'
+            browser: 'false'
+            enabled: ${{ inputs.test-local-node == true || inputs.test-local-node == null }}
+          - env: ${{ inputs.env || 'prod' }}
+            browser: 'true'
+            enabled: ${{ (inputs.test-deployment-browser == true || inputs.test-deployment-browser == null) }}
+          - env: ${{ inputs.env || 'prod' }}
+            browser: 'false'
+            enabled: ${{ (inputs.test-deployment-node == true || inputs.test-deployment-node == null) }}
+    env: 
+      CI: true
+      VITE_DEFAULT_ENV: ${{ matrix.env }}
+      VITE_RELAY_VERSION: ${{ needs.relay-release.outputs.relay_version || inputs.relay-ref }}
+      VITE_RELAY_URL: ${{ inputs.relay-url }}
+
+    steps:
+      - name: Skip if not enabled
+        if: matrix.enabled != true
+        run: |
+          echo "Skipping this test configuration"
+          exit 0
+      - name: Clone repository
+        if: matrix.enabled == true
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          ref: ${{ inputs.porto-ref }}
+
+      - name: Initialize submodules
+        if: matrix.enabled == true
+        run: |
+          git submodule update --init --recursive
+          # Configure submodules to fetch all refs
+          git submodule foreach 'git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"'
+          git submodule foreach 'git fetch --tags'
+
+      - name: Checkout contracts submodule at specific ref
+        if: matrix.enabled == true && inputs.contracts-ref != ''
+        run: |
+          cd contracts/account
+          git fetch origin ${{ inputs.contracts-ref }}
+          git checkout ${{ inputs.contracts-ref }}
+
+      - name: Install dependencies
+        if: matrix.enabled == true
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run prepare scripts
+        if: matrix.enabled == true
+        run: pnpm --filter "./apps/**" run prepare
+
+      - name: Set up Docker
+        if: matrix.enabled == true && matrix.env == 'anvil'
+        uses: docker/setup-docker-action@b60f85385d03ac8acfca6d9996982511d8620a19 # v4
+
+      - name: Install Playwright
+        if: matrix.enabled == true && matrix.browser == 'true'
+        run: pnpx playwright@1.56.1 install --with-deps
+
+      - name: Test
+        if: matrix.enabled == true
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3
+        with:
+          max_attempts: 3
+          timeout_minutes: 30
+          command: pnpm ${{ matrix.browser == 'true' && 'test:browser' || 'test' }} ${{ matrix.env == 'anvil' && '--bail=1 --retry=3' || '' }}

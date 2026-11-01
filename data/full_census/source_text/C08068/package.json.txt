@@ -1,0 +1,126 @@
+{
+  "name": "@pivanov/utils",
+  "version": "1.0.1",
+  "description": "A focused collection of TypeScript utilities for modern web development",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/pivanov/pivanov-utils.git"
+  },
+  "homepage": "https://github.com/pivanov/pivanov-utils#readme",
+  "bugs": {
+    "url": "https://github.com/pivanov/pivanov-utils/issues"
+  },
+  "scripts": {
+    "build": "rm -rf dist && bun run scripts/build.ts && bun x tsc --emitDeclarationOnly",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "lint": "biome lint .",
+    "format": "biome format . --write",
+    "check": "biome check . --write",
+    "typecheck": "bun x tsc --noEmit",
+    "docs:dev": "bun x vitepress dev docs",
+    "docs:build": "bun x vitepress build docs",
+    "docs:preview": "bun x vitepress preview docs",
+    "bench": "bun run bench/index.ts",
+    "prepublishOnly": "bun run build && bun run verify:dist",
+    "publish": "npm publish --access public",
+    "verify:dist": "bun run scripts/verify-dist.ts",
+    "verify": "bun run lint && bun run typecheck && bun test && bun run build && bun run verify:dist"
+  },
+  "author": {
+    "name": "Pavel Ivanov",
+    "email": "iweb.ivanov@gmail.com",
+    "url": "https://github.com/pivanov"
+  },
+  "keywords": [
+    "utils",
+    "typescript",
+    "react",
+    "dom",
+    "cache",
+    "browser cache api",
+    "event-bus",
+    "string",
+    "object",
+    "promise"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./assertion": {
+      "types": "./dist/types/assertion/index.d.ts",
+      "import": "./dist/esm/assertion/index.js",
+      "require": "./dist/cjs/assertion/index.js"
+    },
+    "./cache": {
+      "types": "./dist/types/cache/index.d.ts",
+      "import": "./dist/esm/cache/index.js",
+      "require": "./dist/cjs/cache/index.js"
+    },
+    "./object": {
+      "types": "./dist/types/object/index.d.ts",
+      "import": "./dist/esm/object/index.js",
+      "require": "./dist/cjs/object/index.js"
+    },
+    "./promise": {
+      "types": "./dist/types/promise/index.d.ts",
+      "import": "./dist/esm/promise/index.js",
+      "require": "./dist/cjs/promise/index.js"
+    },
+    "./string": {
+      "types": "./dist/types/string/index.d.ts",
+      "import": "./dist/esm/string/index.js",
+      "require": "./dist/cjs/string/index.js"
+    },
+    "./tools": {
+      "types": "./dist/types/tools/index.d.ts",
+      "import": "./dist/esm/tools/index.js",
+      "require": "./dist/cjs/tools/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/types/index.d.ts",
+      "import": "./dist/esm/types/index.js",
+      "require": "./dist/cjs/types/index.js"
+    }
+  },
+  "files": [
+    "dist/"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@happy-dom/global-registrator": "^15.11.7",
+    "@testing-library/react": "^16.0.1",
+    "@types/bun": "^1.1.14",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "mitata": "^1.0.34",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vitepress": "~1.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

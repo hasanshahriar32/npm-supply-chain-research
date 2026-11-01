@@ -1,0 +1,98 @@
+{
+  "name": "clickhouse-js",
+  "description": "Official JS client for ClickHouse DB",
+  "homepage": "https://clickhouse.com",
+  "license": "Apache-2.0",
+  "keywords": [
+    "clickhouse",
+    "sql",
+    "client"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ClickHouse/clickhouse-js.git"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "typecheck": "npm --workspaces run typecheck",
+    "lint": "npm --workspaces run lint",
+    "lint:fix": "npm --workspaces run lint:fix",
+    "build": "npm run --workspaces build",
+    "prettify": "prettier --write .",
+    "prettier:check": "prettier --check .",
+    "test": "echo -e \"Please specify a test script to run. See \\033[1mnpm run\\033[0m for reference.\" && exit 1",
+    "test:node:unit": "npm --prefix packages/client-node run test:unit",
+    "test:node:unit:bun": "npm --prefix packages/client-node run test:unit:bun",
+    "test:node:integration:tls": "npm --prefix packages/client-node run test:integration:tls",
+    "test:node:integration": "npm --prefix packages/client-node run test:integration",
+    "test:node:integration:dist": "npm --prefix packages/client-node run test:integration:dist",
+    "test:node:oss-dependents": "npm --prefix packages/client-node run test:oss-dependents",
+    "test:node:integration:local_cluster": "npm --prefix packages/client-node run test:integration:local_cluster",
+    "test:node:integration:cloud": "npm --prefix packages/client-node run test:integration:cloud",
+    "test:node:all": "npm --prefix packages/client-node run test:all",
+    "test:node:coverage": "npm --prefix packages/client-node run test:coverage",
+    "test:web:unit": "npm --prefix packages/client-web run test:unit",
+    "test:web:integration": "npm --prefix packages/client-web run test:integration",
+    "test:web:integration:dist": "npm --prefix packages/client-web run test:integration:dist",
+    "test:web:integration:local_cluster": "npm --prefix packages/client-web run test:integration:local_cluster",
+    "test:web:integration:cloud": "npm --prefix packages/client-web run test:integration:cloud",
+    "test:web:integration:cloud:jwt": "npm --prefix packages/client-web run test:integration:cloud:jwt",
+    "test:web:all": "npm --prefix packages/client-web run test:all",
+    "test:web:coverage": "npm --prefix packages/client-web run test:coverage",
+    "//": "See https://github.com/kylebarron/parquet-wasm/issues/798",
+    "postinstall": "cd node_modules/parquet-wasm && npm pkg delete type",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@faker-js/faker": "^10.6.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "25.9.3",
+    "@types/split2": "^4.2.3",
+    "@types/uuid": "^11.0.0",
+    "@vitest/browser-playwright": "^4.1.11",
+    "@vitest/coverage-istanbul": "^4.1.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "apache-arrow": "^21.2.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-expect-type": "^0.7.0",
+    "husky": "^9.1.7",
+    "jsonwebtoken": "^9.0.3",
+    "lint-staged": "^17.6.0",
+    "parquet-wasm": "0.9.0",
+    "playwright": "^1.64.0",
+    "prettier": "3.9.10",
+    "split2": "^4.2.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "typescript-language-server": "^6.0.2",
+    "undici": "^8.11.2",
+    "uuid": "^14.0.3",
+    "vitest": "^4.0.16"
+  },
+  "workspaces": [
+    "./packages/*",
+    "./tests/clickhouse-test-runner"
+  ],
+  "files": [
+    "dist"
+  ],
+  "lint-staged": {
+    "*.ts": [
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ],
+    "*.yml": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ]
+  }
+}

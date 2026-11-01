@@ -1,0 +1,278 @@
+name: Node.js builds
+
+on:
+  push:
+    tags:
+      - v?[0-9]+.[0-9]+.[0-9]+.[0-9]+
+      - v?[0-9]+.[0-9]+.[0-9]+
+      - v?[0-9]+.[0-9]+
+
+permissions:
+  contents: read
+
+jobs:
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+      - env:
+          GH_TOKEN: ${{github.token}}
+        run: |
+          REF=${{github.ref}}
+          TAG=${REF#"refs/tags/"}
+          gh release create -t "Release ${TAG}" -n "" "${{github.ref}}"
+
+  build:
+    name: Node.js ${{matrix.node-version}} on ${{matrix.os}}
+    needs: create-release
+    runs-on: ${{matrix.os}}
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, macos-15-intel, windows-11-arm]
+        node-version: [22, 24, 26]
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Setup Node.js ${{matrix.node-version}}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{matrix.node-version}}
+      - name: Install the package and run tests
+        env:
+          DEVELOPMENT_SKIP_GETTING_ASSET: true
+        run: |
+          npm i
+          npm run build --if-present
+          npm test
+      - name: Save to GitHub
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: npm run save-to-github
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-node-22:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 22 on Bullseye
+            runs-on: ubuntu-latest
+          - name: Node.js 22 on Bullseye ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-node-22/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-alpine-node-22:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 22 on Alpine
+            runs-on: ubuntu-latest
+          - name: Node.js 22 on Alpine ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-alpine-node-22/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-node-24:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 24 on Bullseye
+            runs-on: ubuntu-latest
+          - name: Node.js 24 on Bullseye ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-node-24/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-alpine-node-24:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 24 on Alpine
+            runs-on: ubuntu-latest
+          - name: Node.js 24 on Alpine ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-alpine-node-24/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-node-26:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 26 on Trixie
+            runs-on: ubuntu-latest
+          - name: Node.js 26 on Trixie ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-node-26/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'
+
+  build-linux-alpine-node-26:
+    name: ${{ matrix.name }}
+    needs: create-release
+    runs-on: ${{ matrix.runs-on }}
+    continue-on-error: true
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Node.js 26 on Alpine
+            runs-on: ubuntu-latest
+          - name: Node.js 26 on Alpine ARM64
+            runs-on: ubuntu-24.04-arm
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Install, test, and create artifact
+        uses: ./.github/actions/linux-alpine-node-26/
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Attest
+        if: env.CREATED_ASSET_NAME != ''
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: '${{ env.CREATED_ASSET_NAME }}'
+          subject-path: '${{ github.workspace }}/build/Release/re2.node'

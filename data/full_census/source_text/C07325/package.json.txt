@@ -1,0 +1,82 @@
+{
+  "name": "graceful-process",
+  "version": "2.2.0",
+  "description": "graceful exit process even parent exit on SIGKILL.",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:node-modules/graceful-process.git"
+  },
+  "bug": {
+    "url": "https://github.com/node-modules/graceful-process/issues"
+  },
+  "author": "fengmk2",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18.19.0"
+  },
+  "dependencies": {
+    "read-env-value": "^1.1.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.1",
+    "@eggjs/tsconfig": "2",
+    "@types/node": "22",
+    "@vitest/coverage-v8": "3",
+    "coffee": "5",
+    "fkill": "9",
+    "husky": "9",
+    "lint-staged": "15",
+    "mm": "4",
+    "oxlint": "^0.16.10",
+    "prettier": "3",
+    "tshy": "3",
+    "tshy-after": "1",
+    "typescript": "5",
+    "urllib": "4",
+    "vitest": "3"
+  },
+  "scripts": {
+    "lint": "oxlint",
+    "pretest": "npm run lint -- --fix && npm run prepublishOnly",
+    "test": "vitest run --testTimeout=30000",
+    "preci": "npm run lint && npm run prepublishOnly",
+    "ci": "vitest run --testTimeout=30000 --coverage",
+    "postci": "npm run prepublishOnly",
+    "prepublishOnly": "tshy && tshy-after && attw --pack",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown --cache",
+    "*.{ts,js,json,md,yml}": [
+      "prettier --ignore-unknown --write",
+      "oxlint --fix"
+    ]
+  },
+  "type": "module",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "./dist/commonjs/index.d.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js"
+}

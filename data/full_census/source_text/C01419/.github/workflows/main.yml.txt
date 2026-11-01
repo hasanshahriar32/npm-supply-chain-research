@@ -1,0 +1,63 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ['**']
+
+permissions:
+  pull-requests: write # required for Danger to post comments
+  statuses: write # required for Danger to post commit statuses
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !contains(github.ref, 'main')}}
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Setup Deps
+        uses: ./.github/actions/setup-deps
+
+      - name: Build
+        run: yarn build
+
+      - name: Validate TypeScript
+        run: yarn typecheck && yarn typecheck:test-app
+
+      - name: Validate ESLint
+        run: yarn lint && yarn lint:deps
+
+      - name: Run tests
+        run: yarn test && yarn test:test-app
+
+      - name: Run performance tests
+        working-directory: ./test-apps/native
+        run: ./reassure-tests.sh
+
+      - name: Run Danger.js
+        run: yarn danger ci
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  check-changeset:
+    name: Check Changeset
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Setup Deps
+        uses: ./.github/actions/setup-deps
+
+      - name: Check changeset
+        if: github.ref != 'refs/heads/main'
+        run: yarn changeset status --since=origin/${{ github.base_ref }}

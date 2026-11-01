@@ -1,0 +1,32 @@
+name: Performance
+
+on:
+    pull_request:
+    push:
+        branches: [master]
+    workflow_dispatch:
+
+jobs:
+    performance:
+        name: performance
+        permissions:
+            contents: read
+
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: nubjs/setup-nub@v0
+
+            - run: nub --version
+
+            - name: Use Node.js LTS
+              uses: actions/setup-node@v5
+              with:
+                  node-version: lts/*
+
+            - run: nub ci
+            - run: nub run build
+            - run: nub run perf

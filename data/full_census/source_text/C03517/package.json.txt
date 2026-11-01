@@ -1,0 +1,49 @@
+{
+  "name": "victory-native-xl-monorepo",
+  "private": true,
+  "workspaces": [
+    "lib",
+    "example"
+  ],
+  "license": "MIT",
+  "react-native": "src/index",
+  "scripts": {
+    "lint": "eslint --ext .js,.ts,.tsx example lib",
+    "typecheck": "tsc --noEmit",
+    "build": "shx cp README.md ./lib/README.md && yarn workspace victory-native build",
+    "dev:lib": "yarn workspace victory-native dev",
+    "dev:example": "yarn workspace example start",
+    "dev": "concurrently -n lib,example -c blue,green \"yarn dev:lib\" \"yarn dev:example\"",
+    "dev:ios": "concurrently -n lib,example -c blue,green \"yarn dev:lib\" \"yarn dev:example --ios\"",
+    "docs:install": "cd website && yarn install --frozen-lockfile",
+    "docs:dev": "cd website && yarn start",
+    "docs:build": "cd website && yarn build",
+    "test": "yarn workspace victory-native test",
+    "test:watch": "yarn workspace victory-native test:watch",
+    "changeset": "changeset",
+    "check:code": "yarn lint && yarn typecheck && yarn test",
+    "version": "yarn changeset version && yarn install --no-immutable"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@svitejs/changesets-changelog-github-compact": "^1.2.0",
+    "@types/node": "^24.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.3.0",
+    "@typescript-eslint/parser": "^6.3.0",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.46.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-import-resolver-typescript": "^3.6.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-react": "^7.33.1",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.0.1",
+    "shx": "^0.3.4",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "yarn@4.14.1"
+}

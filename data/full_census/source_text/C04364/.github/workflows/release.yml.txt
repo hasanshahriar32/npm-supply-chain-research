@@ -1,0 +1,60 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+
+name: Release ReactSimpleIcons
+
+on:
+  push:
+    branches:
+      - main
+
+  release:
+    types: [created]
+
+jobs:
+  publish-npm:
+    name: Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # to create release (changesets/action)
+      issues: write # to post issue comments (changesets/action)
+      pull-requests: write # to create pull request (changesets/action)
+      id-token: write # to mint the OIDC token used by npm trusted publishing (auth + provenance)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install Dependencies 📦
+        uses: ./.github/actions/install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔥 generate:icons
+        run: pnpm generate:icons
+
+      - name: 💣 build
+        run: pnpm build
+
+      # pnpm 11 performs the OIDC exchange for trusted publishing itself, so nothing
+      # else in the chain needs to authenticate. Logged to make the active versions
+      # obvious if a publish ever fails again.
+      - name: Toolchain versions 🔎
+        run: node -v && pnpm -v
+
+      - name: Create Release Pull Request or Publish to npm 📦
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          commit: 'ci(release): version @icons-pack/react-simple-icons'
+          title: 'ci(release): version @icons-pack/react-simple-icons'
+        # Auth to npm is handled by trusted publishing (OIDC), configured on npmjs.com
+        # against this repo + workflow filename. No NPM_TOKEN needed, and provenance
+        # attestations are generated automatically, so NPM_CONFIG_PROVENANCE is not set.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

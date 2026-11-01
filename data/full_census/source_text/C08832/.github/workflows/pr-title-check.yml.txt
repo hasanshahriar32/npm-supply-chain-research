@@ -1,0 +1,22 @@
+name: PR Title Check
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+permissions:
+  contents: read
+  pull-requests: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pr-title-check:
+    runs-on: depot-ubuntu-22.04-2
+    timeout-minutes: 5
+    container:
+      image: node:24-slim
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Run PR title check
+        run: |
+          node .github/scripts/pr-title-check.js

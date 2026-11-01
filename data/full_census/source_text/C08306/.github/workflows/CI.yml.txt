@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: lint
+        run: npm run lint
+
+  test_bundle:
+    name: Test production (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Node, script: 'test:standalone' }
+          - { name: Chromium, script: 'test:browser', browser: chromium }
+          - { name: Firefox, script: 'test:browser', browser: firefox }
+          - { name: Safari, script: 'test:browser', browser: webkit }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      # Browsers downloaded on one runner image can miss libraries on another
+      # one, so the cache is keyed by image.
+      - name: Get runner image
+        if: matrix.browser
+        id: image
+        run: echo "name=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browser
+        if: matrix.browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.image.outputs.name }}-playwright-${{ hashFiles('node_modules/playwright/package.json') }}
+      - name: Install Playwright OS dependencies
+        if: matrix.browser
+        run: npx playwright install-deps ${{ matrix.browser }}
+      - name: Build
+        run: npm run build
+      - name: Build test app
+        run: npm run build:test
+      - name: Run tests
+        run: npm run ${{ matrix.script }}
+        env:
+          TEST_RUNTIME_BROWSER: ${{ matrix.browser }}
+
+  test:
+    name: Test on ${{ matrix.name }} with Node ${{ matrix.node }}
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, image: ubuntu-latest, node: 22 }
+          - { name: Linux, image: ubuntu-latest, node: 24 }
+          - { name: Linux, image: ubuntu-latest, node: 26 }
+          - { name: MacOS, image: macos-latest, node: 22 }
+          - { name: Windows, image: windows-latest, node: 22 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - name: Install
+        run: npm ci
+      - name: Run tests
+        run: npm run test:all

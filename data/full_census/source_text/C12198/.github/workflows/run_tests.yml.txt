@@ -1,0 +1,80 @@
+name: Run tests
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches: [main]
+
+env:
+  package_dir: "/"
+
+jobs:
+  prepare-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Check if the caller already provided a build
+      - name: Try to download existing build artifact
+        id: download-check
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./dist
+        continue-on-error: true
+
+      # 2. If the download failed, build it now using Node 24
+      - name: Setup Node 24 (for building)
+        if: steps.download-check.outcome != 'success'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install & Build (only if needed)
+        if: steps.download-check.outcome != 'success'
+        run: |
+          npm ci
+          npm run build
+
+      # 3. Always upload it (or re-upload it) so the matrix jobs can find it
+      - name: Ensure artifact is available for matrix
+        if: steps.download-check.outcome != 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: ./dist
+          retention-days: 1
+
+  test-matrix:
+    needs: prepare-build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [6, 8, 10, 12, 14, 16, 18, 20, 22, 24]
+    name: Node.js v${{ matrix.node-version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ./dist
+
+      - name: Run tests
+        run: |
+          NODE_MAJOR=$(node -p "process.versions.node.split('.')[0]")
+          echo "Running on Node $NODE_MAJOR"
+          if [ "$NODE_MAJOR" -lt 18 ]; then
+            echo "Running legacy smoke test..."
+            npm run test:legacy-test
+          else
+            echo "Running full test suite..."
+            npm ci
+            npm run test:jasmine
+            npm run test:jasmine-browser
+          fi

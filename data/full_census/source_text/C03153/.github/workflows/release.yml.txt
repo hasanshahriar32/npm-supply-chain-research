@@ -1,0 +1,256 @@
+name: publish release
+on:
+  workflow_dispatch: null
+  push:
+    tags:
+    - v*
+    - test-release-*
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: gh release create
+        run: gh release create --repo ${{ github.repository }} "${GITHUB_REF#refs/tags/}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  macos:
+    needs: create-release
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          components: clippy
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo build --release --target aarch64-apple-darwin
+      - run: cargo build --release --target x86_64-apple-darwin
+      - run: lipo -create -output dotslash target/aarch64-apple-darwin/release/dotslash target/x86_64-apple-darwin/release/dotslash
+      # Package universal binary
+      - run: tar -czvf dotslash-macos.tar.gz --options gzip:compression-level=9 dotslash
+        shell: bash
+      # Package architecture-specific binaries
+      - run: tar -czvf dotslash-macos-arm64.tar.gz -C target/aarch64-apple-darwin/release --options gzip:compression-level=9 dotslash
+        shell: bash
+      - run: tar -czvf dotslash-macos-x86_64.tar.gz -C target/x86_64-apple-darwin/release --options gzip:compression-level=9 dotslash
+        shell: bash
+      # Upload all binaries
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload "${GITHUB_REF#refs/tags/}" dotslash-macos.tar.gz
+          gh release upload "${GITHUB_REF#refs/tags/}" dotslash-macos-arm64.tar.gz
+          gh release upload "${GITHUB_REF#refs/tags/}" dotslash-macos-x86_64.tar.gz
+      # TODO(#68): Deprecated; will be removed in a future release!
+      # Package universal binary
+      - run: tar -czvf "dotslash-macos.${GITHUB_REF#refs/tags/}.tar.gz" dotslash
+        shell: bash
+      # Package architecture-specific binaries
+      - run: tar -czvf "dotslash-macos-arm64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/aarch64-apple-darwin/release dotslash
+        shell: bash
+      - run: tar -czvf "dotslash-macos-amd64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/x86_64-apple-darwin/release dotslash
+        shell: bash
+      # Upload all binaries
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-macos.${GITHUB_REF#refs/tags/}.tar.gz"
+          gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-macos-arm64.${GITHUB_REF#refs/tags/}.tar.gz"
+          gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-macos-amd64.${GITHUB_REF#refs/tags/}.tar.gz"
+
+  ubuntu-22_04-x86_64:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo build --release
+      - run: tar -cvf dotslash-ubuntu-22.04.x86_64.tar.gz -I 'gzip -9' -C target/release dotslash
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" dotslash-ubuntu-22.04.x86_64.tar.gz
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar -czvf "dotslash-ubuntu-22.04.x86_64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/release dotslash
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-ubuntu-22.04.x86_64.${GITHUB_REF#refs/tags/}.tar.gz"
+
+  ubuntu-22_04-arm64:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+          components: clippy
+      - name: Install aarch64 build tools
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-aarch64-linux-gnu
+      - run: cargo build --target aarch64-unknown-linux-gnu --release
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+      - run: tar -cvf dotslash-ubuntu-22.04.aarch64.tar.gz -I 'gzip -9' -C target/aarch64-unknown-linux-gnu/release dotslash
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-ubuntu-22.04.aarch64.tar.gz"
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar -czvf "dotslash-ubuntu-22.04.arm64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/aarch64-unknown-linux-gnu/release dotslash
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-ubuntu-22.04.arm64.${GITHUB_REF#refs/tags/}.tar.gz"
+
+  linux-musl-x86_64:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+          components: clippy
+      - name: Install musl build tools
+        run: |
+          sudo apt update
+          sudo apt install -y musl-tools
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo build --target x86_64-unknown-linux-musl --release
+      - run: tar -cvf dotslash-linux-musl.x86_64.tar.gz -I 'gzip -9' -C target/x86_64-unknown-linux-musl/release dotslash
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-linux-musl.x86_64.tar.gz"
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar -czvf "dotslash-linux-musl.x86_64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/x86_64-unknown-linux-musl/release dotslash
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-linux-musl.x86_64.${GITHUB_REF#refs/tags/}.tar.gz"
+
+  linux-musl-arm64:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-musl
+          components: clippy
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cross
+          version: latest
+      - run: cross build --target aarch64-unknown-linux-musl --release
+      - run: tar -cvf dotslash-linux-musl.aarch64.tar.gz -I 'gzip -9' -C target/aarch64-unknown-linux-musl/release dotslash
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-linux-musl.aarch64.tar.gz"
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar -czvf "dotslash-linux-musl.arm64.${GITHUB_REF#refs/tags/}.tar.gz" -C target/aarch64-unknown-linux-musl/release dotslash
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: gh release upload "${GITHUB_REF#refs/tags/}" "dotslash-linux-musl.arm64.${GITHUB_REF#refs/tags/}.tar.gz"
+
+  windows:
+    needs: create-release
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo build --release
+      - run: tar czvf dotslash-windows.tar.gz --options gzip:compression-level=9 -C target/release dotslash.exe
+        shell: cmd
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload %GITHUB_REF:~10% dotslash-windows.tar.gz
+        shell: cmd
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar czvf dotslash-windows.%GITHUB_REF:~10%.tar.gz -C target/release dotslash.exe
+        shell: cmd
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload %GITHUB_REF:~10% dotslash-windows.%GITHUB_REF:~10%.tar.gz
+        shell: cmd
+
+  windows-arm64:
+    needs: create-release
+    runs-on: windows-11-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo test
+      - run: cargo clippy
+      - run: cargo build --release
+      - run: tar czvf dotslash-windows-arm64.tar.gz --options gzip:compression-level=9 -C target/release dotslash.exe
+        shell: cmd
+      - name: upload release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload %GITHUB_REF:~10% dotslash-windows-arm64.tar.gz
+        shell: cmd
+      # TODO(#68): Deprecated; will be removed in a future release!
+      - run: tar czvf dotslash-windows-arm64.%GITHUB_REF:~10%.tar.gz -C target/release dotslash.exe
+        shell: cmd
+      - name: upload versioned release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload %GITHUB_REF:~10% dotslash-windows-arm64.%GITHUB_REF:~10%.tar.gz
+        shell: cmd
+
+  publish-downstream:
+    # This job depends on release assets uploaded by the previous jobs.
+    # Keep this job's dependencies in sync with node/platforms.js.
+    needs: [macos, windows, windows-arm64, linux-musl-x86_64, linux-musl-arm64]
+    uses: ./.github/workflows/release-downstream.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

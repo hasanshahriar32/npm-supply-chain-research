@@ -1,0 +1,347 @@
+on:
+  push:
+    branches:
+      - main
+  # Deliberately the default types (opened, synchronize, reopened) — no `edited`.
+  # Editing a description cannot change what any job here would conclude, and a
+  # run triggered by an edit would have to either repeat the whole suite or skip
+  # it and report a verdict derived from nothing, overwriting the real run's
+  # result for the same commit. The changelog check is the one thing that does
+  # care about the description, and it lives in changelog.yml for that reason.
+  pull_request:
+  merge_group:
+
+name: Commit Checks
+jobs:
+  changes:
+    name: Detect Changes
+    uses: ./.github/workflows/detect-changes.yml
+
+  cargo-deny:
+    name: Cargo Deny
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+          install: false
+        env:
+          CARGO_NET_RETRY: "5"
+      - name: Install mise tools
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          max_attempts: 3
+          timeout_minutes: 10
+          command: mise install
+      - run: mise run cargo-deny
+
+  fmt:
+    name: Format
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+    - name: Install nightly@nightly toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      with:
+        # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+        cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+        toolchain: nightly
+        components: rustfmt
+    - name: Format
+      run: cargo +nightly fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+    - name: Install stable@stable toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      with:
+        # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+        cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+        components: clippy
+    - name: Run Clippy
+      run: cargo clippy --locked --workspace --all-features --all-targets
+
+  check_no_default_features:
+    # The musl release build turns off default features (no `composition-js`),
+    # and nothing else builds that configuration - so code that only compiles
+    # with them would otherwise first fail at release time. Like that release
+    # build, this allows warnings: without `composition-js` a lot of code is
+    # unused, and dead-code warnings there aren't worth gating on.
+    name: Check (no default features)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+    - name: Install stable@stable toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      with:
+        # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+        cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+        build-warnings: warn
+    - name: Check
+      run: cargo check --locked --workspace --no-default-features
+
+  test_installers:
+    # Gated explicitly as well as transitively. `needs: test` alone would skip
+    # this correctly today, but relying on that propagation makes it the one job
+    # whose gating is invisible at the job level. `changes` has to be in `needs`
+    # for `needs.changes` to resolve at all.
+    needs: [changes, test]
+    if: needs.changes.outputs.code == 'true'
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, macos-latest, windows-latest]
+        package_manager: [npm, npm_global, pnpm]
+        include:
+          - runner: ubuntu-latest
+            pkg: rover-linux-x64
+            target: x86_64-unknown-linux-gnu
+          - runner: macos-latest
+            pkg: rover-darwin-arm64
+            target: aarch64-apple-darwin
+          - runner: windows-latest
+            pkg: rover-win32-x64
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+        env:
+          CARGO_NET_RETRY: "5"
+      - uses: ./.github/actions/download-artifact-with-retry
+        with:
+          name: installer-binary-${{ matrix.pkg }}
+          path: target/${{ matrix.target }}/release
+      - run: cargo npm generate --target ${{ matrix.target }}
+      - run: node .mise/scripts/patch-npm-shim.js
+      - if: runner.os != 'Windows'
+        run: chmod +x installers/npm/@apollo/${{ matrix.pkg }}/rover
+      - run: mise run install_${{ matrix.package_manager }}
+        env:
+          PLATFORM_PKG: ${{ matrix.pkg }}
+          ROVER_PACKAGES_BASE: ${{ github.workspace }}
+
+  test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - runner: ubuntu-latest
+            pkg: rover-linux-x64
+            binary_path: target/x86_64-unknown-linux-musl/debug/rover
+          - runner: macos-latest
+            pkg: rover-darwin-arm64
+            binary_path: target/debug/rover
+          - runner: windows-latest
+            pkg: rover-win32-x64
+            binary_path: target/debug/rover.exe
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache_save: ${{ github.ref == 'refs/heads/main' }}
+        env:
+          CARGO_NET_RETRY: "5"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          # This is how we test with musl linux. We check the glibc version in the `check_minimal_glibc` job
+          target: ${{ matrix.runner == 'ubuntu-latest' && 'x86_64-unknown-linux-musl' || '' }}
+      - if: ${{ matrix.runner == 'ubuntu-latest' }}
+        name: Install musl-tools for cross-compiling
+        run: sudo apt-get install --yes --no-install-recommends musl-tools
+      - run: mise run test ${{ matrix.runner == 'ubuntu-latest' && ' --target x86_64-unknown-linux-musl' || '' }}
+      - uses: ./.github/actions/upload-artifact-with-retry
+        with:
+          name: installer-binary-${{ matrix.pkg }}
+          path: ${{ matrix.binary_path }}
+
+
+  test_network_denied:
+    name: Test with the network denied
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Install strace
+        run: sudo apt-get install --yes --no-install-recommends strace
+      - name: Build rover and the network-denied tests
+        run: |
+          cargo build --locked -p rover
+          cargo test --locked -p rover --test network_denied --no-run
+      - name: Run the offline tests with no route out
+        run: |
+          set -euo pipefail
+
+          BIN="$(cargo test --locked -p rover --test network_denied --no-run --message-format=json \
+            | jq -r 'select(.profile.test == true and .target.name == "network_denied") | .executable' \
+            | tail -1)"
+
+          if [ -z "$BIN" ] || [ "$BIN" = "null" ]; then
+            echo '::error::Could not find the built network-denied test binary, so the offline tests did not run.'
+            exit 1
+          fi
+
+          # A network namespace with no interface but loopback, which starts
+          # down. Nothing inside it can reach out, which is the whole point:
+          # these tests refuse to pass anywhere a connection could succeed.
+          sudo unshare --net -- bash -c \
+            "ip link set lo up && ROVER_TEST_NETWORK_DENIED=1 '$BIN' --ignored --nocapture"
+
+
+  test_minimal_glibc:
+    name: Test with minimal glibc versions
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    container: ghcr.io/apollographql/ci-utility-docker-images/apollo-rust-builder:0.30.16
+
+    steps:
+    # No `ref:` override. It used to be `github.head_ref || github.ref_name`,
+    # which is a bare branch name resolved against the base repository, so it
+    # matched nothing on a pull request from a fork and checkout failed there —
+    # see run 30554828564 on #3558. That was survivable only while this job sat
+    # outside the required set; it is inside the aggregator now, so with
+    # `enforce_admins: true` it would have made every fork pull request
+    # unmergeable by anyone. Defaulting also means this job tests the same
+    # `refs/pull/N/merge` commit as every other job in this workflow, rather
+    # than the branch tip. Nothing downstream needs a named branch:
+    # check-glibc.sh only objdumps target/debug/rover.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+    # Still required: the container runs as a different user than the one that
+    # owns the checkout.
+    - name: Fix git ownership
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+    - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+      with:
+        # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+        cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+    # mise 2026.10.19 runs `cargo install` outside the repo, where rustup can't see
+    # rust-toolchain.toml, and this container has no default toolchain. Making the
+    # pinned toolchain the default keeps rust-toolchain.toml the one place it's set.
+    - name: Make the pinned toolchain the rustup default
+      run: rustup default "$(rustup show active-toolchain | awk '{print $1}')"
+    - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+      with:
+        # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+        cache_save: ${{ github.ref == 'refs/heads/main' }}
+        install: false
+      env:
+        CARGO_NET_RETRY: "5"
+    - name: Install mise tools
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+      with:
+        max_attempts: 3
+        timeout_minutes: 30
+        command: mise install
+    - run: mise run test
+    - run: mise run check-glibc
+
+  # Branch protection requires this job and nothing else from this workflow, so
+  # adding, renaming or gating a job above no longer means hand-editing the list
+  # of required status checks in the repository settings.
+  #
+  # Every job in this workflow is listed in `needs`, deliberately. There is no
+  # advisory tier: a check worth running on every pull request is worth blocking
+  # on, and a job that is only sometimes trusted is a job nobody reads.
+  commit_checks_complete:
+    name: Commit Checks Complete
+    if: always()
+    needs:
+      - changes
+      - cargo-deny
+      - fmt
+      - clippy
+      - check_no_default_features
+      - test
+      - test_installers
+      - test_minimal_glibc
+      - test_network_denied
+    runs-on: ubuntu-latest
+    steps:
+      # Every gate in this workflow keys on `code`, so if that output breaks —
+      # renamed, or a mistyped step id making it resolve to '' — every job skips
+      # and the checks below have nothing left to object to. Assert the
+      # classifier ran and returned one of its two values, so a broken gate
+      # fails loudly instead of reporting a green aggregate over no work.
+      - name: Fail if Detect Changes produced no classification
+        if: >-
+          ${{
+               needs.changes.result != 'success'
+            || (needs.changes.outputs.code != 'true' && needs.changes.outputs.code != 'false')
+          }}
+        env:
+          RESULT: ${{ needs.changes.result }}
+          CODE: ${{ needs.changes.outputs.code }}
+        run: |
+          echo "::error::Detect Changes did not classify this change (result='$RESULT', code='$CODE')."
+          exit 1
+
+      - name: Fail if a check failed or was cancelled
+        if: >-
+          ${{
+               contains(needs.*.result, 'failure')
+            || contains(needs.*.result, 'cancelled')
+          }}
+        run: |
+          echo '::error::A commit check failed or was cancelled.'
+          exit 1
+
+      # Branch protection counts a skipped job as satisfied, which is what lets
+      # a docs-only pull request merge. The flip side is that a mistake in a
+      # job's `if:` would skip the Rust suite and still go green, so assert that
+      # nothing was skipped once Detect Changes says the change touches code.
+      - name: Fail if a check was skipped despite code changes
+        if: >-
+          ${{
+            needs.changes.outputs.code == 'true' && (
+                 needs['cargo-deny'].result == 'skipped'
+              || needs.fmt.result == 'skipped'
+              || needs.clippy.result == 'skipped'
+              || needs.test.result == 'skipped'
+              || needs.test_installers.result == 'skipped'
+              || needs.test_minimal_glibc.result == 'skipped'
+              || needs.test_network_denied.result == 'skipped'
+            )
+          }}
+        run: |
+          echo '::error::A Rust check was skipped even though this change touches code. Check the job if: conditions in checks.yml.'
+          exit 1

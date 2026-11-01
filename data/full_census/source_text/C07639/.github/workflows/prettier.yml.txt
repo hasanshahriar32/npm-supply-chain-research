@@ -1,0 +1,26 @@
+"on":
+  push:
+    branches:
+      - main
+name: Lint repository contents
+jobs:
+  lint_repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          token: ${{ secrets.OCTOKITBOT_PAT }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: echo "./node_modules/.bin" >> $GITHUB_PATH
+      - run: ./bin/format-with-prettier.mts
+      - run: git diff-index --quiet HEAD
+      - if: failure()
+        run: |
+          git config user.email "33075676+octokitbot@users.noreply.github.com"
+          git config user.name "Octokit Bot"
+          git add .
+          git commit -m "style: lint JSON files" && git push || true

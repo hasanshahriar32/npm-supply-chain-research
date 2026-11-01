@@ -1,0 +1,95 @@
+{
+  "name": "sqs-consumer",
+  "version": "15.0.4",
+  "description": "Build SQS-based Node applications without the boilerplate",
+  "keywords": [
+    "aws-sqs",
+    "backend",
+    "message-queue",
+    "nodejs",
+    "queue-consumer",
+    "serverless",
+    "sqs"
+  ],
+  "homepage": "https://bbc.github.io/sqs-consumer/",
+  "bugs": {
+    "url": "https://github.com/bbc/sqs-consumer/issues"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bbc/sqs-consumer.git"
+  },
+  "type": "module",
+  "main": "dist/cjs/index.js",
+  "types": "dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "publishConfig": {
+    "provenance": true
+  },
+  "scripts": {
+    "clean": "rm -fr dist/*",
+    "compile": "tsc -b ./tsconfig.cjs.json ./tsconfig.esm.json",
+    "add-package-jsons": "node ./scripts/addPackageJsons.js",
+    "build": "npm run clean && npm run compile && npm run add-package-jsons",
+    "watch": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "release:sync": "node ./scripts/release.js sync",
+    "release:validate": "node ./scripts/release.js validate",
+    "release:notes": "node ./scripts/release.js notes",
+    "test:unit": "vitest run --config ./vitest.config.ts",
+    "test:unit:report": "vitest run --config ./vitest.config.ts --reporter=junit --outputFile=test/reports/test-results.xml",
+    "pretest:integration:init": "npm run build",
+    "test:integration:init": "bash ./test/scripts/initIntTests.sh",
+    "test:integration": "npm run test:integration:init && cucumber-js --config ./test/config/cucumber.mjs",
+    "test": "npm run test:unit:report && npm run test:integration",
+    "coverage": "vitest run --config ./vitest.config.ts --coverage --coverage.reporter=html --coverage.reporter=json-summary",
+    "lcov": "vitest run --config ./vitest.config.ts --coverage --coverage.reporter=lcov",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run test",
+    "generate-docs": "typedoc"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1136.0",
+    "debug": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "@types/debug": "^4.1.13",
+    "@types/node": "^25.9.3",
+    "@vitest/coverage-v8": "^4.1.10",
+    "jsr": "^0.14.3",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "p-event": "^7.1.1",
+    "sqs-producer": "^9.0.6",
+    "typedoc": "^0.28.20",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-sqs": "^3.1136.0"
+  },
+  "overrides": {
+    "cross-spawn": "^7.0.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@12.6.0"
+}

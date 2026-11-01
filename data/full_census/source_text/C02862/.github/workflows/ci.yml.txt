@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/setup
+
+    - name: Rust Tests
+      run: cargo test --verbose
+
+    - name: Build Rust Package
+      run: ./build.sh
+
+    - name: Node Tests
+      run: pnpm test
+
+    - run: pnpm run lint:format:js
+    - run: pnpm run lint:package
+    - run: pnpm run lint:published-types

@@ -1,0 +1,202 @@
+name: native-metrics CI
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches:
+      - '**'
+    tags-ignore: # Do not run for tags
+      - '**'
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [lts/*]
+
+    steps:
+    - uses: actions/checkout@v6
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        check-latest: true
+    - name: Install Dependencies
+      run: npm install
+    - name: Run Linting
+      run: npm run lint
+    - name: Inspect Lockfile
+      run: npm run lint:lockfile
+
+  test_x86_x64:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        node: [ 22, 24, 26 ]
+        arch: [ x86, x64 ]
+        exclude:
+          # Ubuntu does not ship x86 builds.
+          - { os: ubuntu-latest, arch: x86 }
+          # Neither does Windows.
+          - { os: windows-latest, arch: x86, node: 24 }
+          - { os: windows-latest, arch: x86, node: 26 }
+    runs-on: ${{ matrix.os }}
+    name: "${{ matrix.os }} / Node ${{ matrix.node }} ${{ matrix.arch }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Use node ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          architecture: ${{ matrix.arch }}
+          check-latest: true
+      - uses: actions/cache@v5
+        with:
+          path: ${{ github.workspace }}/node_modules
+          key: "${{ matrix.os }}-${{ matrix.arch }}-node-${{ matrix.node }}-${{ hashFiles('./package.json') }}"
+      - name: Install
+        run: npm install
+      - name: Unit Test
+        run: npm run unit
+      - name: Post Unit Test Coverage
+        # v5.5.4 because v6.0.1 requires Node 24 and we can't do that here
+        # until we drop support for Node 22.
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage/unit/
+          files: lcov.info
+          flags: unit-tests-${{ matrix.node }}-${{ matrix.os }}-${{ matrix.arch }}
+      - name: Integration Test
+        run: npm run integration
+      - name: Post Integration Test Coverage
+        # v5.5.4 because v6.0.1 requires Node 24 and we can't do that here
+        # until we drop support for Node 22.
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage/integration/
+          files: lcov.info
+          flags: integration-tests-${{ matrix.node }}-${{ matrix.os }}-${{ matrix.arch }}
+
+
+# Disabled due to the macOS environment in GHA being very inconsistent,
+# but also consistently too slow.
+#  test_macos_arm:
+#    strategy:
+#      matrix:
+#        os: [ macos-14 ]
+#        node: [ 18, 20, 22, 24 ]
+#        arch: [ arm64 ]
+#    runs-on: ${{ matrix.os }}
+#    name: "${{ matrix.os }} / Node ${{ matrix.node }} ${{ matrix.arch }}"
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v6
+#      - uses: actions/cache@v5
+#        with:
+#          path: ${{ github.workspace }}/node_modules
+#          key: "${{ matrix.os }}-${{ matrix.arch }}-node-${{ matrix.node }}-${{ hashFiles('./package.json') }}"
+#      - name: Use node ${{ matrix.node }}
+#        uses: actions/setup-node@v6
+#        with:
+#          node-version: ${{ matrix.node }}
+#          architecture: ${{ matrix.arch }}
+#      - name: Install
+#        run: npm install
+#      - name: Unit Test
+#        run: npm run unit
+#      - name: Post Unit Test Coverage
+#        uses: codecov/codecov-action@v4
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          directory: ./coverage/unit/
+#          files: lcov.info
+#          flags: unit-tests-${{ matrix.node }}-${{ matrix.os }}-${{ matrix.arch }}
+#      - name: Integration Test
+#        run: npm run integration
+#      - name: Post Integration Test Coverage
+#        uses: codecov/codecov-action@v4
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
+#          directory: ./coverage/integration/
+#          files: lcov.info
+#          flags: integration-tests-${{ matrix.node }}-${{ matrix.os }}-${{ matrix.arch }}
+
+  test_linux_arm:
+    # Skip this group if the PR doesn't originate from the main repo.
+    # Trying to run this on standard runners is just going to fail due to
+    # lack of CPU resources.
+    if: ${{ vars.NR_RUNNER != '' }}
+    strategy:
+      matrix:
+        node: [ 22, 24, 26 ]
+    runs-on: ${{ vars.NR_RUNNER }}
+    name: Linux / Node ${{ matrix.node }} arm64
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Compute cache key
+        run: echo -e "CACHE_KEY=$(shasum -a 256 package.json | cut -f1 -d ' ')" >> "$GITHUB_ENV"
+      - name: Restore modules cache
+        id: cache_restore
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ github.workspace }}/node_modules
+          key: linux-arm-node-${{ matrix.node }}-${{ env.CACHE_KEY }}
+      - name: Install
+        run: npm install
+      - name: Unit Test
+        run: npm run unit
+      - name: Post Unit Test Coverage
+        # v5.5.4 because v6.0.1 requires Node 24 and we can't do that here
+        # until we drop support for Node 22.
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage/unit/
+          files: lcov.info
+          flags: unit-tests-${{ matrix.node }}-linux-arm64
+      - name: Integration Test
+        run: npm run integration
+      - name: Post Integration Test Coverage
+        # v5.5.4 because v6.0.1 requires Node 24 and we can't do that here
+        # until we drop support for Node 22.
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage/integration
+          files: lcov.info
+          flags: integration-tests-${{ matrix.node }}-linux-arm64
+
+  # Compiles the native sources from source (not the prebuilt binary used by the
+  # other test jobs) and runs the C++ gtest suite via `npm run native`.
+  native_test:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    name: "Native C++ tests / ${{ matrix.os }}"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Use node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          check-latest: true
+      - name: Install
+        run: npm install
+      - name: Native Test
+        run: npm run native

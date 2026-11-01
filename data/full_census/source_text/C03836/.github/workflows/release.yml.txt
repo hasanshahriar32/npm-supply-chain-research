@@ -1,0 +1,305 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  NODE_NO_WARNINGS: 1
+  CI: true
+
+jobs:
+  dependencies:
+    if: github.event_name == 'pull_request' && github.event.pull_request.title != 'Upcoming Release Changes'
+    name: Dependencies
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-dependencies
+      cancel-in-progress: true
+    uses: the-guild-org/shared-config/.github/workflows/changesets-dependencies.yml@v1
+    with:
+      node-version-file: .node-version
+    secrets:
+      githubToken: ${{ secrets.BOT_GITHUB_TOKEN }}
+  snapshot-npm-tag:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: Choose snapshot NPM tag
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-snapshot-npm-tag
+      cancel-in-progress: true
+    outputs:
+      value: ${{ steps.choose-tag.outputs.result }}
+    steps:
+      - name: Choose NPM Tag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        id: choose-tag
+        with:
+          result-encoding: string
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            // having #snapshot-npm-tag "next" in the PR body will set the npm tag to "next"
+            const npmTagFromPrBody = prBody.match(/#snapshot-npm-tag\s+"([^"]+)"/)?.[1];
+            if (npmTagFromPrBody) {
+              console.log(`Detected npm tag from PR body "${npmTagFromPrBody}"`);
+              return npmTagFromPrBody;
+            }
+            const prTitle = context.payload.pull_request.title;
+            const prAuthor = context.payload.pull_request.user.login;
+            if (prAuthor === 'theguild-bot' && prTitle === 'Upcoming Release Changes') {
+              console.log('Using "rc" tag for upcoming release');
+              return 'rc';
+            }
+            console.log('Using "alpha" tag for snapshot release');
+            return 'alpha';
+  snapshot:
+    runs-on: ubuntu-latest
+    needs: [snapshot-npm-tag]
+    name: Snapshot
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-release-snapshot
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    outputs:
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: the-guild-org/shared-config/setup@v1
+        id: env
+        name: setup env
+        with:
+          node-version-file: .node-version
+      - if: ${{ github.event.pull_request.title == 'Upcoming Release Changes' && true || false }}
+        name: restore deleted changesets
+        run: git checkout HEAD~1 -- .
+      - name: ${{ needs.snapshot-npm-tag.outputs.value }} release
+        id: changesets
+        uses: the-guild-org/changesets-snapshot-action@232ff9af22cfd043528fe2e4c403afd090ba3ed3 # v0.0.4
+        with:
+          tag: ${{ needs.snapshot-npm-tag.outputs.value }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+
+  stable:
+    if: github.ref == 'refs/heads/main'
+    concurrency: ${{ github.workflow }}-${{ github.ref }}-release-stable
+    name: Stable
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: the-guild-org/shared-config/.github/workflows/release-stable.yml@v1
+    with:
+      node-version-file: .node-version
+      releaseScript: changeset publish
+      versionScript: changeset version
+    secrets:
+      githubToken: ${{ secrets.BOT_GITHUB_TOKEN }}
+      npmToken: ${{ secrets.NPM_TOKEN }}
+  ghcr:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [Node, Bun]
+    name: ${{ matrix.runtime }} Docker image
+    needs: [stable, snapshot]
+    if: always() && github.actor != 'dependabot[bot]' && (
+      contains(needs.stable.outputs.publishedPackages, '@graphql-hive/gateway') ||
+      contains(needs.snapshot.outputs.publishedPackages, '@graphql-hive/gateway')
+      )
+    steps:
+      - name: Version
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        id: ver-gateway
+        with:
+          script: |
+            const publishedPackages = ${{ needs.stable.outputs.publishedPackages || needs.snapshot.outputs.publishedPackages }};
+            const gateway = publishedPackages.find((p) => p.name === '@graphql-hive/gateway');
+            if (!gateway) {
+              return core.setFailed('@graphql-hive/gateway was not published!');
+            }
+            const { version } = gateway;
+            let r;
+            if (context.eventName === 'pull_request') {
+              // version is like 2.7.0-alpha-49e0277ad6ba49764af44b27cc4febdd3c063d15,
+              // shorten the hash at the end to 7 chars to be 2.7.0-alpha-49e0277
+              const parts = version.split('-');
+              parts[parts.length - 1] = parts[parts.length - 1].slice(0, 7);
+              const shortShaVersion = parts.join('-');
+              r = { version: shortShaVersion, tags: shortShaVersion };
+            } else {
+              const [major, minor] = version.split('.');
+              if (!major || !minor) {
+                return core.setFailed(`Unknown major or minor in version "${version}"!`);
+              }
+              r = { version, tags: `latest,${major},${major}.${minor},${version}` };
+            }
+            console.log(r);
+            return r;
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Build
+        run: yarn build
+      - name: Bundle
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: yarn workspace @graphql-hive/gateway bundle
+      - name: Inject version
+        run: yarn workspace @graphql-hive/gateway tsx scripts/inject-version ${{ fromJSON(steps.ver-gateway.outputs.result).version }}
+      - name: Bake and Push
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        env:
+          GATEWAY_TAGS: ${{ fromJSON(steps.ver-gateway.outputs.result).tags }}
+        with:
+          source: .
+          targets: gateway${{ matrix.runtime == 'Bun' && '_bun' || '' }}
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          push: true
+      - if: github.event_name == 'pull_request'
+        name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          # match pr comment like with changesets-snapshot-action from the guild's shared-config
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          header: snapshot-release-${{ matrix.runtime == 'Bun' && 'bun-' || '' }}docker-image
+          message: |
+            ### 🚀 Snapshot Release (${{matrix.runtime}} Docker Image)
+
+            The latest changes of this PR are available as image on GitHub Container Registry (based on the declared `changesets`):
+            ```
+            ghcr.io/graphql-hive/gateway:${{ fromJSON(steps.ver-gateway.outputs.result).version }}${{ matrix.runtime == 'Bun' && '-bun' || '' }}
+            ```
+
+  bin:
+    name: Binary built on ${{ matrix.os }}
+    needs: [stable, snapshot]
+    if: always() && (
+      contains(needs.stable.outputs.publishedPackages, '@graphql-hive/gateway') ||
+      contains(needs.snapshot.outputs.publishedPackages, '@graphql-hive/gateway')
+      )
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          [
+            ubuntu-latest,
+            macos-15-intel,
+            macos-15,
+            windows-latest,
+            ubuntu-24.04-arm,
+          ]
+    steps:
+      - name: Version
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v7
+        id: ver-gateway
+        with:
+          result-encoding: string
+          script: |
+            const publishedPackages = ${{ needs.stable.outputs.publishedPackages || needs.snapshot.outputs.publishedPackages }};
+            const gateway = publishedPackages.find((p) => p.name === '@graphql-hive/gateway');
+            if (!gateway) {
+              return core.setFailed('@graphql-hive/gateway was not published!');
+            }
+            const { version } = gateway;
+            console.log({ version });
+            return version;
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version: 25.2.0
+          # we skip-build on ubuntu arm because the "canvas" package wont build and there are no prebuilts
+          install-command: ${{ matrix.os == 'ubuntu-24.04-arm' && 'yarn install --immutable --mode=skip-build' || '' }}
+      - name: Build
+        run: yarn build
+      - name: Bundle
+        env:
+          NODE_OPTIONS: '--max-old-space-size=6144'
+        run: yarn workspace @graphql-hive/gateway bundle
+      - name: Inject version
+        run: yarn workspace @graphql-hive/gateway tsx scripts/inject-version "${{ steps.ver-gateway.outputs.result }}"
+      - name: Package binary
+        run: yarn workspace @graphql-hive/gateway tsx scripts/package-binary
+      - name: Set binary info
+        id: binary
+        run: |
+          echo "name=hive-gateway-${{ runner.os }}-${{ runner.arch }}${{ runner.os == 'Windows' && '.exe' || ''}}" >> ${{ runner.os == 'Windows' && '$ENV:GITHUB_OUTPUT' || '$GITHUB_OUTPUT' }}
+          echo "path=packages/gateway/hive-gateway${{ runner.os == 'Windows' && '.exe' || '' }}" >> ${{ runner.os == 'Windows' && '$ENV:GITHUB_OUTPUT' || '$GITHUB_OUTPUT' }}
+      - if: github.ref == 'refs/heads/main'
+        name: Compress binary
+        id: compressed-binary
+        run: |
+          gzip -9 ${{ steps.binary.outputs.path }}
+          echo "name=${{ steps.binary.outputs.name }}.gz" >> ${{ runner.os == 'Windows' && '$ENV:GITHUB_OUTPUT' || '$GITHUB_OUTPUT' }}
+          echo "path=${{ steps.binary.outputs.path }}.gz" >> ${{ runner.os == 'Windows' && '$ENV:GITHUB_OUTPUT' || '$GITHUB_OUTPUT' }}
+      - if: github.ref == 'refs/heads/main'
+        name: Upload release
+        uses: svenstaro/upload-release-action@29e53e917877a24fad85510ded594ab3c9ca12de # v2
+        with:
+          repo_token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          tag: hive-gateway@${{ steps.ver-gateway.outputs.result }}
+          release_name: hive-gateway@${{ steps.ver-gateway.outputs.result }}
+          asset_name: ${{ steps.compressed-binary.outputs.name }}
+          file: ${{ steps.compressed-binary.outputs.path }}
+          body: Pre-built binaries of the Hive Gateway for the **@graphql-hive/gateway@${{ steps.ver-gateway.outputs.result }}** release.
+          overwrite: true
+      - if: github.event_name == 'pull_request'
+        name: Upload artifact
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        with:
+          name: ${{ steps.binary.outputs.name }}
+          path: ${{ steps.binary.outputs.path }}
+      - if: github.event_name == 'pull_request'
+        name: Comment on PR
+        uses: marocchino/sticky-pull-request-comment@5770ad5eb8f42dd2c4f34da00c94c5381e49af88 # v3.0.5
+        with:
+          # match pr comment like with changesets-snapshot-action from the guild's shared-config
+          GITHUB_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+          header: snapshot-release-binary-${{ runner.os }}-${{ runner.arch }}
+          message: |
+            ### 🚀 Snapshot Release (Binary for `${{ runner.os }}-${{ runner.arch }}`)
+
+            The latest changes of this PR are available for download (based on the declared `changesets`).
+
+            [![Download](https://custom-icon-badges.demolab.com/badge/-Download-blue?style=for-the-badge&logo=download&logoColor=white "Download")](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload.outputs.artifact-id }})
+
+  examples:
+    name: Examples
+    needs: [stable, snapshot]
+    if: always() && (github.event.pull_request.title != 'Upcoming Release Changes') && (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'graphql-hive/gateway' || github.ref == 'refs/heads/main')
+    uses: graphql-hive/gateway/.github/workflows/examples.yml@main
+    # NOTE: it's possible to use snapshot releases in examples on PRs but we dont because
+    #       want the main branch to always use examples of stable releases. yeah sure, the examples
+    #       workflow will open a PR to update the examples to stable ones - but there will be some window
+    #       during which the examples on main will use snapshots and we want to avoid that
+    # with:
+    #   publishedPackages: ${{needs.stable.outputs.publishedPackages || needs.snapshot.outputs.publishedPackages}}
+    secrets:
+      token: ${{secrets.BOT_GITHUB_TOKEN}}

@@ -1,0 +1,28 @@
+name: test
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/setup@v1
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Prepare Playground
+        run: pnpm nuxt prepare playground
+
+      - name: Prepare E2E Fixture
+        run: pnpm nuxt prepare test/named-layout-slots/e2e/fixture
+
+      - name: Run Tests
+        run: pnpm run test

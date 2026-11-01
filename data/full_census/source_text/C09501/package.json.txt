@@ -1,0 +1,47 @@
+{
+  "name": "remark-highlight-mark",
+  "version": "0.0.1",
+  "description": "remark extension to support highlight mark",
+  "license": "MIT",
+  "keywords": [
+    "micromark",
+    "micromark-extension",
+    "remark",
+    "remark-extension",
+    "mark",
+    "highlight",
+    "markdown",
+    "unified"
+  ],
+  "sideEffects": false,
+  "type": "module",
+  "files": [
+    "lib/",
+    "src/"
+  ],
+  "exports": {
+    "development": "./src/index.ts",
+    "default": "./lib/index.js",
+    "types": "./lib/index.js"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.7",
+    "@tsconfig/node-lts": "^22.0.0",
+    "@types/node": "^20.14.13",
+    "c8": "^10.0.0",
+    "tsup": "^8.2.3",
+    "type-coverage": "^2.29.1",
+    "typescript": "^5.5.4"
+  },
+  "scripts": {
+    "build": "pnpm -F micromark-extension-highlight-mark test && pnpm -F mdast-util-highlight-mark test && pnpm -F remark-highlight-mark build",
+    "ci:publish": "pnpm build && pnpm publish -r --no-git-checks --tag latest",
+    "ci:version": "pnpm changeset version"
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "detail": true,
+    "strict": true,
+    "ignoreCatch": true
+  }
+}

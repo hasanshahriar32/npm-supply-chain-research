@@ -1,0 +1,56 @@
+{
+  "name": "shepherd-monorepo",
+  "private": "true",
+  "description": "The monorepo for Shepherd",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shipshapecode/shepherd.git"
+  },
+  "license": "AGPL-3.0",
+  "scripts": {
+    "build": "pnpm -F shepherd.js build && pnpm -F '!shepherd.js' -F !landing -F !shepherd-docs build",
+    "cypress:install": "pnpm -F shepherd.js cypress:install",
+    "dev": "pnpm watch",
+    "lint": "pnpm -F '*' lint",
+    "lint:fix": "pnpm -F '*' lint:fix",
+    "lint:js": "pnpm -F '*' lint:js",
+    "lint:prettier": "pnpm -F '*' lint:prettier",
+    "lint:prettier:fix": "pnpm -F '*' lint:prettier:fix",
+    "prepare": "pnpm -F shepherd.js build",
+    "start": "pnpm watch",
+    "test:ci": "pnpm build && pnpm -F shepherd.js test:ci",
+    "test:cy:ci": "pnpm -F shepherd.js test:cy:ci",
+    "test:cy:watch": "pnpm -F shepherd.js test:cy:watch",
+    "test:unit:ci": "pnpm -F shepherd.js test:unit:ci",
+    "test:unit:watch": "pnpm -F shepherd.js test:unit:watch",
+    "types:check": "pnpm -F shepherd.js types:check",
+    "view-coverage": "pnpm -F shepherd.js view-coverage",
+    "watch": "pnpm -F shepherd.js watch"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@eslint/js": "^10.0.1",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
+    "autoprefixer": "^10.5.4",
+    "concurrently": "^10.0.5",
+    "del": "^8.0.1",
+    "eslint": "^10.11.0",
+    "postcss": "^8.5.26",
+    "prettier": "3.9.10",
+    "prettier-plugin-astro": "^0.14.1",
+    "release-plan": "^0.18.0",
+    "replace": "^1.2.2",
+    "shepherd.js": "workspace:*",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">= 22.12"
+  },
+  "authors": [
+    "Robbie Wagner <rwwagner90@gmail.com>",
+    "Chuck Carpenter <chuck@shipshape.io>"
+  ]
+}

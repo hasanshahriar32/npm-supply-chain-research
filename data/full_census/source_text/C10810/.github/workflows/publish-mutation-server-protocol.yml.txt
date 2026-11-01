@@ -1,0 +1,26 @@
+name: Publish Mutation Server Protocol
+
+on:
+  push:
+    tags:
+      - 'mutation-server-protocol@*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # to enable use of OIDC for npm provenance
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm ci
+      - name: Build
+        run: pnpm run build
+      - name: Release
+        run: pnpm lerna publish from-git --yes --pre-dist-tag next

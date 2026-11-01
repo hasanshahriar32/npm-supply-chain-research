@@ -1,0 +1,25 @@
+name: Unit-Tests
+on:
+  push:
+  pull_request:
+    branches:
+      - dev
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: selenium/node-chrome:latest
+      # use root due to installing stuff and more
+      options: --user root
+      env:
+        CHROME_BIN: /opt/google/chrome/chrome
+        INSIDE_DOCKER: 1
+        NVM_DIR: /usr/local/nvm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test

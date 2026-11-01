@@ -1,0 +1,97 @@
+{
+  "name": "response-iterator",
+  "version": "1.0.14",
+  "description": "Creates an async iterator for a variety of inputs in the browser and node. Supports fetch, node-fetch, and cross-fetch",
+  "keywords": [
+    "Symbol",
+    "Symbol.asyncIterator",
+    "array",
+    "arrayBuffer",
+    "asyncIterator",
+    "axios",
+    "blob",
+    "body",
+    "browser",
+    "cross-fetch",
+    "fetch",
+    "got",
+    "isomorphic-fetch",
+    "iteration",
+    "iterator",
+    "node",
+    "node-fetch",
+    "response",
+    "stream",
+    "typescript",
+    "undici"
+  ],
+  "homepage": "https://github.com/kmalakoff/response-iterator#README.md",
+  "bugs": {
+    "url": "https://github.com/kmalakoff/response-iterator/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/kmalakoff/response-iterator.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Kevin Malakoff",
+    "email": "kmalakoff@gmail.com",
+    "url": "https://github.com/kmalakoff"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    },
+    "./package.json": "./package.json",
+    "./umd": "./dist/umd/response-iterator.cjs"
+  },
+  "main": "dist/cjs/index.js",
+  "source": "src/index.ts",
+  "types": "dist/cjs/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsds build",
+    "docs": "tsds docs",
+    "format": "tsds format",
+    "prepublishOnly": "tsds validate",
+    "test": "tsds test:browser --config wtr.config.mjs && tsds test:browser --config wtr.config.mjs \"test/**/*.test-browser.*\" && tsds test:node --no-timeouts \"test/**/*.test.*\" && tsds test:node --no-timeouts \"test/**/*.test-node.*\"",
+    "test:engines": "tsds test:browser --config wtr.config.mjs && tsds test:browser --config wtr.config.mjs \"test/**/*.test-browser.*\" && nvu engines tsds test:node --no-timeouts \"test/**/*.test.*\" \"test/unit/index.test-node.ts\" && tsds test:node --no-timeouts \"test/integration/node-adapters.test-node.ts\"",
+    "version": "tsds version"
+  },
+  "devDependencies": {
+    "@types/isomorphic-fetch": "^0.0.39",
+    "@types/mocha": "*",
+    "@types/node": "*",
+    "@web/dev-server-import-maps": "^0.3.0",
+    "axios": "^1.13.2",
+    "cross-fetch": "^4.1.0",
+    "get-remote": "^2.3.4",
+    "isomorphic-fetch": "^3.0.0",
+    "node-fetch": "^3.3.2",
+    "node-version-use": "*",
+    "pinkie-promise": "*",
+    "readable-stream": "2.3.8",
+    "ts-dev-stack": "*",
+    "tsds-config": "*",
+    "tsds-web-test-runner": "*",
+    "undici": "^8.3.0"
+  },
+  "engines": {
+    "node": ">=0.8"
+  },
+  "allowScripts": {
+    "esbuild": true
+  },
+  "tsds": {
+    "targets": [
+      "cjs",
+      "esm",
+      "umd"
+    ]
+  }
+}

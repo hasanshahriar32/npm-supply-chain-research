@@ -1,0 +1,51 @@
+{
+  "name": "csrf",
+  "description": "primary logic behind csrf tokens",
+  "version": "3.1.0",
+  "author": "Jonathan Ong <me@jongleberry.com> (http://jongleberry.com)",
+  "contributors": [
+    "Douglas Christopher Wilson <doug@somethingdoug.com>"
+  ],
+  "license": "MIT",
+  "repository": "pillarjs/csrf",
+  "dependencies": {
+    "rndm": "1.2.0",
+    "tsscmp": "1.0.6",
+    "uid-safe": "2.1.5"
+  },
+  "devDependencies": {
+    "beautify-benchmark": "0.2.4",
+    "benchmark": "2.1.4",
+    "bluebird": "3.7.2",
+    "eslint": "8.20.0",
+    "eslint-config-standard": "14.1.1",
+    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-markdown": "3.0.0",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-promise": "4.3.1",
+    "eslint-plugin-standard": "4.1.0",
+    "mocha": "9.2.1",
+    "nyc": "15.1.0"
+  },
+  "files": [
+    "LICENSE",
+    "HISTORY.md",
+    "README.md",
+    "index.d.ts",
+    "index.js"
+  ],
+  "engines": {
+    "node": ">= 0.8"
+  },
+  "scripts": {
+    "bench": "node benchmark/index.js",
+    "lint": "eslint .",
+    "test": "mocha --trace-deprecation --reporter spec --bail --check-leaks test/",
+    "test-ci": "nyc --reporter=lcovonly --reporter=text npm test",
+    "test-cov": "nyc --reporter=html --reporter=text npm test"
+  },
+  "keywords": [
+    "csrf",
+    "tokens"
+  ]
+}

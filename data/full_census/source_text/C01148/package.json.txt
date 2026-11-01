@@ -1,0 +1,82 @@
+{
+  "name": "react-simple-animate",
+  "version": "4.1.0",
+  "packageManager": "pnpm@12.14.0",
+  "description": "react simple animate",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "keywords": [
+    "react",
+    "animation",
+    "transition-animation",
+    "animate-css",
+    "animation-controller",
+    "animation-sequence",
+    "keyframes-animation",
+    "animate"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist/*",
+    "build": "rollup -c",
+    "watch": "rollup -c --watch",
+    "release": "npm version",
+    "lint": "biome check src setup.ts vitest.config.mts rollup.config.mjs biome.json package.json",
+    "format": "biome format --write src setup.ts vitest.config.mts rollup.config.mjs biome.json package.json",
+    "format:check": "biome format src setup.ts vitest.config.mts rollup.config.mjs biome.json package.json",
+    "typecheck": "tsc --noEmit",
+    "coverage": "vitest run --coverage",
+    "postrelease": "pnpm publish && git push --follow-tags",
+    "test": "vitest run",
+    "postversion": "git push && git push --tags",
+    "test:watch": "vitest",
+    "prepare": "husky",
+    "prepublishOnly": "pnpm test && pnpm clean && pnpm build"
+  },
+  "repository": "https://github.com/bluebill1049/react-simple-animation.git",
+  "homepage": "https://react-simple-animate.now.sh",
+  "author": "beier luo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bluebill1049/react-simple-animate/issues"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@rollup/plugin-typescript": "^12.3.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^4.0.15",
+    "husky": "^9.1.7",
+    "jsdom": "^29.0.0",
+    "lint-staged": "^16.2.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "rollup": "^4.65.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "peerDependencies": {
+    "react": "^16.8.0 || ^17 || ^18 || ^19"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,jsonc}": "biome check --write --no-errors-on-unmatched"
+  }
+}

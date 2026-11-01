@@ -1,0 +1,82 @@
+{
+  "name": "monorepo-root",
+  "version": "7.5.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.19.4"
+  },
+  "scripts": {
+    "setup": "yarn workspace lottie-react-native build",
+    "release": "release-it",
+    "fabric:android": "yarn workspace example fabric:android",
+    "fabric:build:android": "yarn workspace example ci:fabric:android",
+    "fabric:build:ios": "yarn workspace example ci:fabric:ios",
+    "fabric:build:ios-static-framework": "yarn workspace example ci:fabric:ios-static-framework",
+    "fabric:build:ios-dynamic-framework": "yarn workspace example ci:fabric:ios-dynamic-framework",
+    "run:bundler": "yarn workspace example start",
+    "run:web": "yarn workspace example web",
+    "lint:swift": "yarn workspace lottie-react-native lint:swift",
+    "lint:spm-parity": "yarn workspace lottie-react-native lint:spm-parity",
+    "tsc": "yarn workspace example tsc",
+    "nitro:codegen": "yarn workspace lottie-react-native-nitro nitrogen",
+    "nitro:tsc:lib": "yarn workspace lottie-react-native-nitro typecheck",
+    "nitro:tsc": "yarn workspace example-v8 tsc",
+    "nitro:pods": "yarn workspace example-v8 pods",
+    "nitro:ios": "yarn workspace example-v8 ios",
+    "nitro:android": "yarn workspace example-v8 android",
+    "nitro:run:bundler": "yarn workspace example-v8 start",
+    "nitro:run:web": "yarn workspace example-v8 web",
+    "nitro:build:web": "yarn workspace example-v8 build:web",
+    "nitro:lint:swift": "yarn workspace lottie-react-native-nitro lint:swift",
+    "nitro:build:android": "yarn workspace example-v8 build:android",
+    "nitro:build:ios": "yarn workspace example-v8 build:ios",
+    "nitro:ci:android": "yarn workspace example-v8 ci:android",
+    "nitro:ci:ios": "yarn workspace example-v8 ci:ios"
+  },
+  "devDependencies": {
+    "@release-it-plugins/workspaces": "^5.0.3",
+    "@release-it/conventional-changelog": "^10.0.1",
+    "release-it": "^19.0.3"
+  },
+  "resolutions": {
+    "@types/react": "^19.2.18",
+    "lodash": "4.17.12",
+    "fast-xml-parser": "4.5.4",
+    "minimist": "0.2.4",
+    "form-data": "2.5.4"
+  },
+  "workspaces": [
+    "./packages/*",
+    "./example",
+    "./example-v8"
+  ],
+  "release-it": {
+    "git": {
+      "commitMessage": "chore: release ${version} [skip ci]",
+      "tagName": "v${version}"
+    },
+    "npm": false,
+    "github": {
+      "release": true,
+      "comments": {
+        "submit": true,
+        "issue": ":rocket: _This issue has been resolved in v${version}. See [${releaseName}](${releaseUrl}) for release notes._",
+        "pr": ":rocket: _This pull request is included in v${version}. See [${releaseName}](${releaseUrl}) for release notes._"
+      }
+    },
+    "plugins": {
+      "@release-it-plugins/workspaces": {
+        "workspaces": [
+          "packages/*"
+        ],
+        "skipChecks": true,
+        "publishCommand": "yarn workspace lottie-react-native release"
+      },
+      "@release-it/conventional-changelog": {
+        "preset": "angular",
+        "infile": "CHANGELOG.md"
+      }
+    }
+  },
+  "packageManager": "yarn@4.14.1"
+}

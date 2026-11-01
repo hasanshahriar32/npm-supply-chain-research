@@ -1,0 +1,96 @@
+{
+  "name": "@redocly/cli",
+  "version": "2.0.0",
+  "description": "",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0 || >=20.19.0 <21.0.0",
+    "npm": ">=11"
+  },
+  "engineStrict": true,
+  "scripts": {
+    "test": "npm run compile && npm run typecheck && npm run unit && npm run unit:types && npm run e2e",
+    "unit": "vitest run --project unit --coverage",
+    "unit:types": "vitest run --project types",
+    "e2e": "vitest run --project e2e",
+    "client-generators": "vitest run --project 'client-generators*'",
+    "smoke:rebilly": "vitest run --project smoke-rebilly",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "lint": "oxlint ./packages ./tests",
+    "lint:fix": "oxlint --fix",
+    "clear": "rm -rf packages/**/lib packages/**/node_modules packages/**/*.tsbuildinfo node_modules && git checkout package-lock.json",
+    "typecheck": "tsc --noEmit --skipLibCheck --allowImportingTsExtensions",
+    "compile": "npm run prepare -w @redocly/client-generator && tsc -b tsconfig.build.json && npm run respect:parser:generate && npm run compile:cli:bundle",
+    "compile:cli:bundle": "npm --workspace packages/cli run build",
+    "prepare": "husky && npm run compile",
+    "cli": "node --import tsx packages/cli/src/index.ts",
+    "precli": "npm run compile",
+    "release": "node ./scripts/release-publish.mjs",
+    "pack:prepare": "./scripts/local-pack.sh",
+    "respect:parser:generate": "pegjs --format es --output packages/respect-core/lib/modules/runtime-expressions/abnf-parser.js packages/respect-core/src/modules/runtime-expressions/abnf-parser.pegjs && cp packages/respect-core/lib/modules/runtime-expressions/abnf-parser.js packages/respect-core/src/modules/runtime-expressions/abnf-parser.js"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Redocly/redocly-cli.git"
+  },
+  "keywords": [
+    "linter",
+    "OpenAPI",
+    "Swagger",
+    "OpenAPI linter",
+    "Swagger linter",
+    "AsyncAPI linter",
+    "Arazzo linter",
+    "oas"
+  ],
+  "contributors": [
+    "Roman Hotsiy <roman@redocly.com> (https://redocly.com/)"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.26.2",
+    "@faker-js/faker": "^10.6.0",
+    "@redocly/mock-server": "0.11.0-next.2",
+    "@tanstack/react-query": "^5.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint-plugin-sonarjs": "^4.2.0",
+    "husky": "^9.1.7",
+    "jsdom": "^27.2.0",
+    "json-schema-to-ts": "^3.0.0",
+    "knip": "^6.37.0",
+    "lint-staged": "^16.4.0",
+    "msw": "^2.14.6",
+    "outdent": "^0.7.1",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.48.0",
+    "pegjs": "0.11.0-master.b7b87ea",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "slackify-markdown": "^4.3.1",
+    "swr": "^2.4.1",
+    "tsx": "^4.19.3",
+    "typescript": "6.0.2",
+    "typescript7": "npm:typescript@7.0.2",
+    "valibot": "^1.4.2",
+    "vitest": "^4.1.11",
+    "zod": "^4.0.0"
+  },
+  "lint-staged": {
+    "**/*.{ts,js,yaml,yml,json,md}": [
+      "npm run lint",
+      "oxfmt --write"
+    ],
+    "packages/**/*.ts": [
+      "npm run lint:fix"
+    ]
+  }
+}

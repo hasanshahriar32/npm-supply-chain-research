@@ -1,0 +1,148 @@
+name: Publish Packages (or Tag Release Manually upon manual dispatch)
+
+on:
+  workflow_dispatch:
+    branches:
+      - main
+      - backport/**
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        type: string
+      tag:
+        description: 'Tag name'
+        required: true
+        type: string
+  push:
+    branches:
+      - main
+      - backport/**
+
+permissions:
+  contents: read
+
+env:
+  # Among other things, opts out of Turborepo telemetry
+  # See https://consoledonottrack.com/
+  DO_NOT_TRACK: '1'
+  # Enables Turborepo Remote Caching.
+  TURBO_REMOTE_CACHE_SIGNATURE_KEY: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  build-and-publish-to-npm:
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+
+      - name: Setup Solana Test Validator
+        id: start-test-validator
+        uses: ./.github/workflows/actions/setup-validator
+
+      - name: Build And Test (bypass cache)
+        run: pnpm build --force
+
+      - name: Create Changesets Pull Request or Publish to NPM
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          publish: pnpm changeset:publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_TAG: latest
+          # Some tasks slow down considerably on GitHub Actions runners when concurrency is high
+          TURBO_CONCURRENCY: 1
+
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          cd ./packages/build-scripts/
+          ./create-github-release.ts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Stop Test Validator
+        if: always() && steps.start-test-validator.outcome == 'success'
+        run: kill ${{ steps.start-test-validator.outputs.pid }}
+
+  build-and-publish-snapshots-to-npm:
+    permissions:
+      id-token: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+
+      - name: Setup Solana Test Validator
+        id: start-test-validator
+        uses: ./.github/workflows/actions/setup-validator
+
+      - name: Run Build Step
+        run: pnpm build
+
+      - name: Publish Canary Releases
+        run: |
+          if [ -n "$(find .changeset -name '*.md')" ]; then
+            pnpm changeset version --snapshot canary
+            pnpm changeset:publish
+          else
+            echo "No changesets found, skipping canary publish"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_TAG: canary
+
+      - name: Stop Test Validator
+        if: always() && steps.start-test-validator.outcome == 'success'
+        run: kill ${{ steps.start-test-validator.outputs.pid }}
+
+  validate-version-exists:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+
+      - name: Validate that a package at the given version has already been published
+        run: |
+          echo '${{ github.event.inputs.version }}' | grep -E "^([0-9]+\.){0,2}[0-9]+$" > /dev/null || echo 'Version must be of the form X.Y.Z'
+          pnpm view '@solana/kit@${{ github.event.inputs.version }}'
+
+  tag-release-manually:
+    permissions:
+      contents: write
+      id-token: write
+    needs: validate-version-exists
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Dependencies
+        uses: ./.github/workflows/actions/install-dependencies
+
+      - name: Tag Release Manually
+        run: ./packages/build-scripts/tag-release-manually.ts --version '${{ github.event.inputs.version }}' --tag '${{ github.event.inputs.tag }}'

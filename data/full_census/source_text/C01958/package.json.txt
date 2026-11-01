@@ -1,0 +1,45 @@
+{
+  "name": "blake-hash",
+  "version": "2.0.0",
+  "description": "SHA-3 proposal Blake",
+  "keywords": [
+    "blake"
+  ],
+  "bugs": {
+    "url": "https://github.com/cryptocoinjs/blake-hash/issues"
+  },
+  "license": "MIT",
+  "contributors": [
+    "Kirill Fomichev <fanatid@ya.ru> (https://github.com/fanatid)"
+  ],
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cryptocoinjs/blake-hash.git"
+  },
+  "scripts": {
+    "install": "node-gyp-build || exit 0"
+  },
+  "dependencies": {
+    "node-addon-api": "^3.0.0",
+    "node-gyp-build": "^4.2.2",
+    "readable-stream": "^3.6.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^6.1.0",
+    "nyc": "^15.0.1",
+    "prebuildify": "^4.0.0",
+    "standard": "^14.3.3",
+    "tap-dot": "^2.0.0",
+    "tape": "^5.0.0",
+    "xorshift.js": "^2.0.1",
+    "yargs": "^15.3.1"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "gypfile": true,
+  "browser": {
+    "./index.js": "./js.js"
+  }
+}

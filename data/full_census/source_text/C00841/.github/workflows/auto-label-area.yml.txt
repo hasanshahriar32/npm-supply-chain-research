@@ -1,0 +1,26 @@
+name: Auto-label area
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  add-area-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add area label
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const AREA_LABEL = "area:nodejs-functions";
+            const labels = context.payload.issue.labels.map(l => l.name);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: [AREA_LABEL],
+              });
+            }

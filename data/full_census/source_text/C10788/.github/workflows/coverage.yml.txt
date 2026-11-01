@@ -1,0 +1,87 @@
+name: Coverage
+on:
+  pull_request:
+    paths:
+      - '/*.js'
+      - '*.ts'
+      - '*-lock.yaml'
+      - 'package.json'
+      - 'packages/**/*-lock.yaml'
+      - 'packages/**/*.js'
+      - 'packages/**/*.ts'
+      - 'packages/**/*.mts'
+      - 'packages/**/package.json'
+      - '.github/workflows/coverage.yml'
+      - '!website/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/package.json'
+      - '**/*-lock.yaml'
+      - '**/*.ts'
+      - '**/*.mts'
+      - '**/*.js'
+      - '.github/workflows/coverage.yml'
+      - '!website/**'
+  workflow_dispatch:
+    inputs:
+      NODE_VERSION:
+        description: 'Node Version'
+        required: true
+        default: '22.x'
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_OPTIONS: '--enable-source-maps' # coverage report is wrong if this in not set.
+  NODE_VERSION: ${{ inputs.NODE_VERSION || '22.x' }}
+
+jobs:
+  coverage:
+    permissions:
+      checks: write # for coverallsapp/github-action to create new checks
+      contents: read # for actions/checkout to fetch code
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install and Build
+        uses: ./.github/actions/install-build
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: pnpm run setup-yarn
+
+      - run: pnpm run coverage
+        env:
+          CSPELL_TEST_YARN: 'true'
+
+      - name: Upload coverage Coveralls
+        id: coveralls
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # 2.3.8
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./lcov.info
+
+      - name: Upload coverage to Codecov
+        id: codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        continue-on-error: true
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: '.'
+          files: ./lcov.info
+
+      - name: Show Summary
+        uses: streetsidesoftware/actions/public/summary@v1
+        with:
+          text: |
+            Coveralls: ${{ steps.coveralls.outcome }}
+            Codecov: ${{ steps.codecov.outcome }}

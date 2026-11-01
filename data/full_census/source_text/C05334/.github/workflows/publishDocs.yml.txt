@@ -1,0 +1,41 @@
+name: publish-docs
+
+on: workflow_call
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ github.token }}
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+          cache: npm
+      - name: install deps
+        run: npm i
+      - name: build
+        run: npm run clean && npm run build
+      - uses: salesforcecli/github-workflows/.github/actions/gitConfig@main
+      - name: build docs
+        run: |
+          rm -rf docs
+          git worktree prune
+          git fetch origin gh-pages:gh-pages
+          git worktree add docs gh-pages
+          npx typedoc --out docs/tmp
+          cp -r docs/tmp/* docs/tmp/..
+          rm -rf docs/tmp
+      - name: send to git
+        run: |
+          cd docs
+          git add .
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m 'docs: publishing gh-pages [skip ci]' --no-verify
+          git push origin gh-pages --no-verify

@@ -1,0 +1,40 @@
+name: Create release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build browser bundles
+        run: |
+          npm install --no-audit --no-fund
+          npx jake build
+
+      - name: Create release with bundles attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" ejs.js ejs.min.js --clobber
+          else
+            gh release create "$TAG" ejs.js ejs.min.js \
+              --title "$TAG" --notes "Version ${TAG#v}"
+          fi

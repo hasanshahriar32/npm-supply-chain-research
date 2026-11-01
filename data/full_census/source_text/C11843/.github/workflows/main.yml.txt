@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Testing on Node ${{matrix.node_version}}
+    uses: the-guild-org/shared-config/.github/workflows/ci-node-matrix.yml@main
+    with:
+      script: yarn test
+      nodeVersions: '[22,24]'
+
+  test-graphql-versions:
+    name: Testing against graphql-${{matrix.graphql-version}}
+    uses: the-guild-org/shared-config/.github/workflows/ci-node-matrix.yml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        graphql-version: ['16']
+    with:
+      script: yarn vitest run --mode graphql-${{matrix.graphql-version}}
+      nodeVersions: '[24]'
+
+  lint:
+    uses: the-guild-org/shared-config/.github/workflows/lint.yml@main
+    with:
+      script: yarn ci:lint
+    secrets:
+      githubToken: ${{ secrets.GITHUB_TOKEN }}

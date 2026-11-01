@@ -1,0 +1,688 @@
+---
+name: CI
+on:
+  push:
+    paths:
+      # Core source files
+      - "src/**"
+      - "binding.gyp"
+      - "scripts/**"
+      - "test/**"
+      - "packages/**"
+      # Build configuration
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "biome.json"
+      - "xz-version.json"
+      # Workflow files themselves
+      - ".github/workflows/ci.yml"
+      # Exclude documentation and non-critical files
+      - "!**/*.md"
+      - "!docs/**"
+      - "!.vscode/**"
+      - "!.idea/**"
+      - "!*.txt"
+      - "!LICENSE*"
+      - "!.gitignore"
+      - "!.editorconfig"
+    branches:
+      - master
+      - "release/**"
+  pull_request:
+    paths:
+      - "src/**"
+      - "binding.gyp"
+      - "scripts/**"
+      - "test/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "biome.json"
+      - "xz-version.json"
+      - ".github/workflows/ci.yml"
+      - "!**/*.md"
+      - "!docs/**"
+    branches:
+      - master
+      - "release/**"
+  workflow_dispatch:
+    inputs:
+      xz_version:
+        description: >-
+          XZ version (e.g., v5.8.1, v5.4.0, latest, or empty for default)
+        required: false
+        type: string
+      run_full_matrix:
+        description: 'Run full test matrix (otherwise smoke tests only)'
+        required: false
+        default: false
+        type: boolean
+permissions:
+  contents: read
+
+env:
+  # Global environment variables
+  NODE_OPTIONS: '--max-old-space-size=4096'
+  NODE_VERSION: '24'
+
+jobs:
+  # Determine what to run based on trigger and changes
+  setup:
+    name: Setup and Detection
+    runs-on: ubuntu-latest
+    outputs:
+      run-smoke-only: ${{ steps.detect.outputs.run-smoke-only }}
+      run-full-matrix: ${{ steps.detect.outputs.run-full-matrix }}
+      changed-files: ${{ steps.detect.outputs.changed-files }}
+      xz-version: ${{ steps.detect.outputs.xz-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes and scope
+        id: detect
+        run: |
+          # Determine XZ version
+          XZ_VERSION="${{ github.event.inputs.xz_version || '' }}"
+          echo "xz-version=$XZ_VERSION" >> $GITHUB_OUTPUT
+
+          # Check if this is a PR or manual dispatch requesting smoke only
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            RUN_SMOKE_ONLY="true"
+            RUN_FULL_MATRIX="false"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            RUN_SMOKE_ONLY="${{ github.event.inputs.run_full_matrix == 'false' }}"
+            RUN_FULL_MATRIX="${{ github.event.inputs.run_full_matrix }}"
+          else
+            # Push to main branches - check if changes are minimal
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD || echo "")
+            echo "changed-files<<EOF" >> $GITHUB_OUTPUT
+            echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+
+            # Check if changes are significant (require full CI)
+            # Significant: src/, binding.gyp, scripts/, test/, build configs
+            if echo "$CHANGED_FILES" | grep -qE '^(src/|binding\.gyp|scripts/|test/|package\.json|pnpm-lock\.yaml|tsconfig\.json|biome\.json|xz-version\.json|\.github/workflows/ci-unified\.yml)'; then
+              RUN_SMOKE_ONLY="false"
+              RUN_FULL_MATRIX="true"
+              echo "📋 Significant changes detected - running full matrix"
+            else
+              RUN_SMOKE_ONLY="true"
+              RUN_FULL_MATRIX="false"
+              echo "📄 Only docs/config changes - running smoke tests only"
+            fi
+          fi
+
+          echo "run-smoke-only=$RUN_SMOKE_ONLY" >> $GITHUB_OUTPUT
+          echo "run-full-matrix=$RUN_FULL_MATRIX" >> $GITHUB_OUTPUT
+
+          echo "🔍 Detection results:"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Smoke only: $RUN_SMOKE_ONLY"
+          echo "  Full matrix: $RUN_FULL_MATRIX"
+          echo "  XZ version: $XZ_VERSION"
+
+  # Single job to download XZ sources (shared across all OS)
+  download-xz:
+    name: Download XZ Sources
+    runs-on: ubuntu-latest
+    needs: setup
+    if: >-
+      needs.setup.outputs.run-smoke-only == 'true' ||
+      needs.setup.outputs.run-full-matrix == 'true'
+    outputs:
+      xz-cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          XZ_VERSION="${{ needs.setup.outputs.xz-version }}"
+          CACHE_KEY="xz-sources-$XZ_VERSION-${{ hashFiles('scripts/download_xz_from_github.py', 'xz-version.json') }}"
+          echo "key=$CACHE_KEY" >> $GITHUB_OUTPUT
+          echo "🔑 XZ cache key: $CACHE_KEY"
+
+      - name: Cache XZ sources
+        id: cache-xz
+        uses: actions/cache@v6
+        with:
+          path: |
+            deps/xz
+            deps/xz.tar.gz
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            xz-sources-${{ needs.setup.outputs.xz-version }}-
+            xz-sources-
+
+      - name: Setup Python
+        if: steps.cache-xz.outputs.cache-hit != 'true'
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Download XZ sources
+        if: steps.cache-xz.outputs.cache-hit != 'true'
+        run: |
+          echo "📥 Downloading XZ sources..."
+          python scripts/download_xz_from_github.py deps/xz.tar.gz deps/
+          ls -la deps/
+        env:
+          XZ_VERSION: ${{ needs.setup.outputs.xz-version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload XZ sources as artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: xz-sources
+          path: |
+            deps/xz
+            deps/xz.tar.gz
+          retention-days: 1
+          compression-level: 1
+
+  # Build WASM artifacts (once on Linux, shared across all test jobs)
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Download XZ sources
+        run: python scripts/download_xz_from_github.py deps/xz.tar.gz deps/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+          actions-cache-folder: emsdk-cache
+
+      - name: Build WASM
+        run: bash src/wasm/build.sh
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-build
+          path: |
+            src/wasm/liblzma.wasm
+            src/wasm/liblzma.js
+          retention-days: 1
+
+  # Lint and format job (run once, not per matrix combination)
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    if: >-
+      needs.setup.outputs.run-smoke-only == 'true' ||
+      needs.setup.outputs.run-full-matrix == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache-prefix: 'quality'
+          enable-ccache: 'false'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build TypeScript
+        run: pnpm run build && pnpm -r --filter './packages/*' run build
+
+      - name: Type check
+        run: pnpm run type-check
+
+      - name: Lint and format check
+        run: pnpm run check
+
+  # Code coverage (single run on Ubuntu, uploads to Codecov)
+  coverage:
+    name: Code Coverage
+    needs: [setup, download-xz, build-wasm, quality]
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download XZ sources
+        uses: actions/download-artifact@v8
+        with:
+          name: xz-sources
+          path: .
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-build
+          path: src/wasm
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+        with:
+          use-global-liblzma: 'false'
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache-prefix: 'coverage'
+          ccache-max-size: '200M'
+
+      - name: Cache build artifacts
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/liblzma
+            prebuilds
+          key: >-
+            coverage-${{ runner.os }}-build-static-no-${{ needs.download-xz.outputs.xz-cache-key }}
+          restore-keys: |
+            coverage-${{ runner.os }}-build-static-no-
+            smoke-${{ runner.os }}-build-static-no-
+
+      - name: Install and build
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_GLOBAL: 'false'
+          RUNTIME_LINK: static
+          ENABLE_THREAD_SUPPORT: 'yes'
+
+      - name: Build TypeScript
+        run: pnpm run build && pnpm -r --filter './packages/*' run build
+
+      - name: Run tests with coverage
+        run: pnpm vitest run --coverage
+
+      - name: Run tar-xz tests with coverage
+        run: pnpm --filter tar-xz exec vitest run --coverage
+
+      - name: Run nxz tests with coverage
+        run: pnpm --filter @oorabona/nxz exec vitest run --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info,packages/tar-xz/coverage/lcov.info,packages/nxz/coverage/lcov.info
+          flags: unittests
+          fail_ci_if_error: false
+
+  # Smoke tests (fast, essential combinations only)
+  smoke-test:
+    name: Smoke Test
+    needs: [setup, download-xz, build-wasm, quality]
+    if: needs.setup.outputs.run-smoke-only == 'true'
+    strategy:
+      fail-fast: true  # Fail fast on smoke tests to save CI minutes
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [24]
+        runtime_link: [static]
+        use_global_liblzma: [false]
+        enable_threads: [no]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download XZ sources
+        uses: actions/download-artifact@v8
+        with:
+          name: xz-sources
+          path: .
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-build
+          path: src/wasm
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+        with:
+          use-global-liblzma: ${{ matrix.use_global_liblzma }}
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: ${{ matrix.node }}
+          cache-prefix: 'smoke'
+          ccache-max-size: '200M'
+
+      - name: Cache build artifacts
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/liblzma
+            prebuilds
+          key: >-
+            smoke-${{ runner.os }}-build-${{ matrix.runtime_link }}-${{ matrix.enable_threads }}-${{ needs.download-xz.outputs.xz-cache-key }}
+          restore-keys: |
+            smoke-${{ runner.os }}-build-${{ matrix.runtime_link }}-${{ matrix.enable_threads }}-
+
+      - name: Install and build
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XZ_VERSION: ${{ needs.setup.outputs.xz-version }}
+          USE_GLOBAL: ${{ matrix.use_global_liblzma }}
+          RUNTIME_LINK: ${{ matrix.runtime_link }}
+          ENABLE_THREAD_SUPPORT: ${{ matrix.enable_threads }}
+          CC: >-
+            ${{ runner.os == 'Linux' && 'ccache gcc' ||
+            (runner.os == 'macOS' && 'ccache clang' || '') }}
+          CXX: >-
+            ${{ runner.os == 'Linux' && 'ccache g++' ||
+            (runner.os == 'macOS' && 'ccache clang++' || '') }}
+
+      - name: Build TypeScript
+        run: pnpm run build && pnpm -r --filter './packages/*' run build
+
+      - name: Run tests
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          retry_on: error
+          command: pnpm test
+
+  # Full matrix (comprehensive testing)
+  full-test:
+    name: Full Test Matrix
+    needs: [setup, download-xz, build-wasm, quality]
+    if: needs.setup.outputs.run-full-matrix == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['22', '24', '26']
+        config:
+          - {runtime_link: 'static', use_global_liblzma: false, enable_threads: 'no'}
+          - {runtime_link: 'shared', use_global_liblzma: false, enable_threads: 'no'}
+          - {runtime_link: 'static', use_global_liblzma: true, enable_threads: 'no'}
+        exclude:
+          # Windows doesn't have system liblzma
+          - os: windows-latest
+            config: {use_global_liblzma: true}
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download XZ sources
+        uses: actions/download-artifact@v8
+        with:
+          name: xz-sources
+          path: .
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-build
+          path: src/wasm
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+        with:
+          use-global-liblzma: ${{ matrix.config.use_global_liblzma }}
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: ${{ matrix.node }}
+          cache-prefix: 'full'
+          ccache-max-size: '500M'
+
+      - name: Cache build artifacts
+        if: matrix.config.use_global_liblzma == false
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/liblzma
+            prebuilds
+          key: >-
+            full-${{ runner.os }}-build-${{ matrix.config.runtime_link }}-${{ matrix.config.enable_threads }}-${{ needs.download-xz.outputs.xz-cache-key }}
+          restore-keys: |
+            full-${{ runner.os }}-build-${{ matrix.config.runtime_link }}-${{ matrix.config.enable_threads }}-
+            smoke-${{ runner.os }}-build-${{ matrix.config.runtime_link }}-${{ matrix.config.enable_threads }}-
+
+      - name: Install and build
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XZ_VERSION: ${{ needs.setup.outputs.xz-version }}
+          USE_GLOBAL: ${{ matrix.config.use_global_liblzma }}
+          RUNTIME_LINK: ${{ matrix.config.runtime_link }}
+          ENABLE_THREAD_SUPPORT: ${{ matrix.config.enable_threads }}
+          CC: >-
+            ${{ runner.os == 'Linux' && 'ccache gcc' ||
+            (runner.os == 'macOS' && 'ccache clang' || '') }}
+          CXX: >-
+            ${{ runner.os == 'Linux' && 'ccache g++' ||
+            (runner.os == 'macOS' && 'ccache clang++' || '') }}
+
+      - name: Build TypeScript
+        run: pnpm run build && pnpm -r --filter './packages/*' run build
+
+      - name: Run tests
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          retry_on: error
+          command: pnpm test
+
+  # Multi-threading capability tests (separate job due to complexity)
+  threading-test:
+    name: Threading Tests
+    needs: [setup, download-xz, build-wasm, quality]
+    if: needs.setup.outputs.run-full-matrix == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        # Threading tests only on Unix platforms (Windows threading tested in full-test)
+        os: [ubuntu-latest, macos-latest]
+        node: [24]  # Latest Node only for threading tests
+        config:
+          - {runtime_link: "static", use_global_liblzma: false, enable_threads: "yes"}
+          - {runtime_link: "shared", use_global_liblzma: false, enable_threads: "yes"}
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download XZ sources
+        uses: actions/download-artifact@v8
+        with:
+          name: xz-sources
+          path: .
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-build
+          path: src/wasm
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-system-deps
+        with:
+          use-global-liblzma: ${{ matrix.config.use_global_liblzma }}
+
+      - name: Setup build environment
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: ${{ matrix.node }}
+          cache-prefix: 'threading'
+          ccache-max-size: '300M'
+
+      - name: Cache build artifacts
+        uses: actions/cache@v6
+        with:
+          path: |
+            build/liblzma
+            prebuilds
+          key: >-
+            threading-${{ runner.os }}-build-${{ matrix.config.runtime_link }}-${{ matrix.config.enable_threads }}-${{ needs.download-xz.outputs.xz-cache-key }}
+          restore-keys: |
+            threading-${{ runner.os }}-build-${{ matrix.config.runtime_link }}-${{ matrix.config.enable_threads }}-
+
+      - name: Install and build
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          XZ_VERSION: ${{ needs.setup.outputs.xz-version }}
+          USE_GLOBAL: ${{ matrix.config.use_global_liblzma }}
+          RUNTIME_LINK: ${{ matrix.config.runtime_link }}
+          ENABLE_THREAD_SUPPORT: ${{ matrix.config.enable_threads }}
+          CC: >-
+            ${{ runner.os == 'Linux' && 'ccache gcc' ||
+            (runner.os == 'macOS' && 'ccache clang' || '') }}
+          CXX: >-
+            ${{ runner.os == 'Linux' && 'ccache g++' ||
+            (runner.os == 'macOS' && 'ccache clang++' || '') }}
+
+      - name: Build TypeScript
+        run: pnpm run build && pnpm -r --filter './packages/*' run build
+
+      - name: Run tests
+        uses: nick-fields/retry@v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          retry_on: error
+          command: pnpm test
+
+  # WASM runtime compatibility: the .xz i64 boundary (memlimit) must work on
+  # strict-BigInt engines. Node <=24 silently coerced BigInt->Number at the
+  # legalized i64 boundary; Node 26 and Deno throw. Built with WASM_BIGINT, the
+  # decoder accepts BigInt natively. This job locks the regression on both
+  # runtimes (the rest of the matrix only covers Node 22/24). See issue #165.
+  wasm-runtime-compat:
+    name: WASM runtime compat (Node 26 + Deno)
+    needs: [setup, build-wasm]
+    if: >-
+      needs.setup.outputs.run-smoke-only == 'true' ||
+      needs.setup.outputs.run-full-matrix == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: wasm-build
+          path: src/wasm
+
+      - name: Setup build environment (Node 26)
+        uses: ./.github/actions/setup-env
+        with:
+          node-version: '26'
+          cache-prefix: 'wasm-compat'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build (tsc + copy WASM artifacts)
+        run: pnpm build
+
+      - name: WASM smoke on Node 26
+        run: node test/wasm/runtime-smoke.mjs
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: WASM smoke on Deno
+        run: deno run -A test/wasm/runtime-smoke.mjs
+
+  # Final summary
+  summary:
+    name: CI Summary
+    needs: [setup, quality, build-wasm, coverage, smoke-test, full-test, threading-test, wasm-runtime-compat]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🚀 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Configuration
+          echo "### Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Smoke only**: ${{ needs.setup.outputs.run-smoke-only }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Full matrix**: ${{ needs.setup.outputs.run-full-matrix }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **XZ version**: ${{ needs.setup.outputs.xz-version || 'default' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Results
+          echo "### Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Quality**: ${{ needs.quality.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Coverage**: ${{ needs.coverage.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Smoke Tests**: ${{ needs.smoke-test.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Full Tests**: ${{ needs.full-test.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Threading Tests**: ${{ needs.threading-test.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **WASM runtime compat**: ${{ needs.wasm-runtime-compat.result || 'skipped' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Overall status
+          QUALITY_OK="${{ needs.quality.result == 'success' }}"
+          COVERAGE_OK="${{ needs.coverage.result == 'success' || needs.coverage.result == 'skipped' }}"
+          SMOKE_OK="${{ needs.smoke-test.result == 'success' || needs.smoke-test.result == 'skipped' }}"
+          FULL_OK="${{ needs.full-test.result == 'success' || needs.full-test.result == 'skipped' }}"
+          THREADING_OK="${{ needs.threading-test.result == 'success' || needs.threading-test.result == 'skipped' }}"
+          WASM_COMPAT_OK="${{ needs.wasm-runtime-compat.result == 'success' || needs.wasm-runtime-compat.result == 'skipped' }}"
+
+          # Ensure at least one test suite actually ran (not just skipped)
+          SMOKE_RAN="${{ needs.smoke-test.result == 'success' }}"
+          FULL_RAN="${{ needs.full-test.result == 'success' }}"
+
+          if [[ "$SMOKE_RAN" != "true" && "$FULL_RAN" != "true" ]]; then
+            echo "### ❌ No test suite executed!" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          if [[ "$QUALITY_OK" == "true" && "$COVERAGE_OK" == "true" && "$SMOKE_OK" == "true" && "$FULL_OK" == "true" && "$THREADING_OK" == "true" && "$WASM_COMPAT_OK" == "true" ]]; then
+            echo "### ✅ All checks passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Some checks failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi

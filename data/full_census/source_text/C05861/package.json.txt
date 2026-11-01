@@ -1,0 +1,62 @@
+{
+  "name": "abstract-leveldown",
+  "version": "7.2.0",
+  "description": "An abstract prototype matching the LevelDOWN API",
+  "license": "MIT",
+  "main": "index.js",
+  "browser": {
+    "./next-tick.js": "./next-tick-browser.js"
+  },
+  "scripts": {
+    "test": "standard && hallmark && nyc node test/self.js",
+    "test-browsers-local": "airtap --coverage test/self.js",
+    "coverage": "nyc report -r lcovonly",
+    "hallmark": "hallmark fix",
+    "dependency-check": "dependency-check --no-dev -i buffer -i queue-microtask . test/*.js",
+    "prepublishOnly": "npm run dependency-check"
+  },
+  "files": [
+    "abstract-chained-batch.js",
+    "abstract-iterator.js",
+    "abstract-leveldown.js",
+    "index.js",
+    "lib",
+    "next-tick-browser.js",
+    "next-tick.js",
+    "test",
+    "CHANGELOG.md",
+    "UPGRADING.md"
+  ],
+  "dependencies": {
+    "buffer": "^6.0.3",
+    "catering": "^2.0.0",
+    "is-buffer": "^2.0.5",
+    "level-concat-iterator": "^3.0.0",
+    "level-supports": "^2.0.1",
+    "queue-microtask": "^1.2.3"
+  },
+  "devDependencies": {
+    "airtap": "^4.0.3",
+    "airtap-playwright": "^1.0.1",
+    "dependency-check": "^4.1.0",
+    "hallmark": "^4.0.0",
+    "nyc": "^15.1.0",
+    "sinon": "^13.0.1",
+    "standard": "^17.0.0",
+    "tape": "^5.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Level/abstract-leveldown.git"
+  },
+  "homepage": "https://github.com/Level/abstract-leveldown",
+  "keywords": [
+    "level",
+    "leveldb",
+    "leveldown",
+    "levelup"
+  ],
+  "engines": {
+    "node": ">=10"
+  }
+}

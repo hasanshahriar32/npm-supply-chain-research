@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Allow one concurrent deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install -f
+      - name: Lint
+        run: npm run lint
+      - name: tsc
+        run: npm run tsc
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install -f
+      - name: Build
+        run: npm run build
+      - name: Archive lib
+        uses: actions/upload-artifact@v7
+        id: lib-upload
+        with:
+          name: lib
+          path: ./lib/
+          retention-days: 1
+  test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 21.x, 22.x]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Packages
+        run: npm install -f
+      - name: Download lib
+        uses: actions/download-artifact@v8
+        with:
+          name: lib
+          path: ./lib/
+      - name: Test
+        run: |+
+          export CI=true
+          node lib/index.cjs
+          npm test
+  test-with-eslint8:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Install Target Packages
+        run: |+
+          npm install -f
+          npm i -D eslint@^8 -f
+      - name: Download lib
+        uses: actions/download-artifact@v8
+        with:
+          name: lib
+          path: ./lib/
+      - name: Test
+        run: |+
+          export CI=true
+          npm test
+  load-test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Target Packages
+        run: npm install -f
+      - name: Download lib
+        uses: actions/download-artifact@v8
+        with:
+          name: lib
+          path: ./lib/
+      - name: Test
+        run: |+
+          export CI=true
+          node lib/index.cjs

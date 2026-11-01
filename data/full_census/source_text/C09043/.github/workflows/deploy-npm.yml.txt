@@ -1,0 +1,609 @@
+name: Deploy to NPM
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      base_version:
+        type: string
+        required: false
+      head_version:
+        type: string
+        required: false
+      version_suffix:
+        type: string
+        required: false
+      bugsnag_release_stage:
+        description: 'Bugsnag release stage'
+        type: string
+        required: false
+      environment:
+        type: string
+        required: false
+        default: 'production'
+      trigger_source:
+        description: 'Description of what/who triggered the workflow chain'
+        type: string
+        required: false
+      monorepo_release_version:
+        description: 'Monorepo release version for artifact lookup'
+        type: string
+        required: false
+      release_ticket_id:
+        description: 'Release ticket for artifact lookup'
+        type: string
+        required: false
+      base_cdn_url:
+        type: string
+        required: false
+        default: 'https://cdn.rudderlabs.com'
+    secrets:
+      RS_PROD_BUGSNAG_API_KEY:
+        required: true
+      SLACK_BOT_TOKEN:
+        required: true
+      SLACK_RELEASE_CHANNEL_ID:
+        required: true
+      RELEASE_PRIVATE_KEY:
+        required: true
+      NPM_TOKEN:
+        required: true
+
+permissions:
+  id-token: write # Allows the JWT to be requested from GitHub's OIDC provider
+  contents: read # Required for actions/checkout
+
+env:
+  NODE_OPTIONS: '--no-warnings'
+
+jobs:
+  validate-actor:
+    permissions:
+      contents: read
+    # Manual runs only from release tags; github.workflow_ref names the caller when invoked via workflow_call
+    if: contains(github.workflow_ref, '/.github/workflows/deploy-npm.yml@') && startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/validate-actor.yml
+    with:
+      team_names: 'sdk_team,integrations'
+    secrets:
+      RELEASE_PRIVATE_KEY: ${{ secrets.RELEASE_PRIVATE_KEY }}
+
+  determine-affected:
+    name: Determine Affected Publishable Projects
+    needs: validate-actor
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() && (needs.validate-actor.result == 'success' || !contains(github.workflow_ref, '/.github/workflows/deploy-npm.yml@')) }}
+    outputs:
+      projects: ${{ steps.affected-projects.outputs.projects }}
+      base_version: ${{ steps.resolve-versions.outputs.base_version }}
+      head_version: ${{ steps.resolve-versions.outputs.head_version }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve base and head versions
+        id: resolve-versions
+        env:
+          INPUT_BASE_VERSION: ${{ inputs.base_version }}
+          INPUT_HEAD_VERSION: ${{ inputs.head_version }}
+        run: |
+          # Resolve a ref to a locally available git reference.
+          # Branch names from inputs (e.g. "develop") only exist as remote refs
+          # (origin/develop) after checkout, so we need to resolve them.
+          resolve_ref() {
+            local ref="$1"
+            # Already resolvable locally (tag, SHA, HEAD~N, etc.)
+            if git rev-parse --verify "$ref" >/dev/null 2>&1; then
+              echo "$ref"
+            # Try as a remote branch
+            elif git rev-parse --verify "origin/$ref" >/dev/null 2>&1; then
+              echo "origin/$ref"
+            else
+              echo "$ref"
+            fi
+          }
+
+          if [ -n "$INPUT_BASE_VERSION" ] && [ -n "$INPUT_HEAD_VERSION" ]; then
+            BASE_VERSION=$(resolve_ref "$INPUT_BASE_VERSION")
+            HEAD_VERSION=$(resolve_ref "$INPUT_HEAD_VERSION")
+          else
+            TAGS=$(git tag -l "v3*" --sort=-version:refname)
+            HEAD_VERSION=$(echo "$TAGS" | head -n 1)
+            BASE_VERSION=$(echo "$TAGS" | head -n 2 | awk 'NR == 2 { print $1 }')
+          fi
+
+          if [ -z "$HEAD_VERSION" ]; then
+            echo "::warning::No v3* tag found; defaulting HEAD_VERSION to HEAD"
+            HEAD_VERSION="HEAD"
+          fi
+
+          if [ -z "$BASE_VERSION" ]; then
+            echo "::warning::No previous v3* tag found; defaulting BASE_VERSION to HEAD~1"
+            BASE_VERSION="HEAD~1"
+          fi
+
+          echo "Base version: $BASE_VERSION"
+          echo "Head version: $HEAD_VERSION"
+
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "head_version=$HEAD_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        env:
+          HUSKY: 0
+        run: npm ci --ignore-scripts
+
+      - name: Determine affected publishable projects
+        id: affected-projects
+        run: |
+          BASE_VERSION="${{ steps.resolve-versions.outputs.base_version }}"
+          HEAD_VERSION="${{ steps.resolve-versions.outputs.head_version }}"
+
+          # Get affected projects between base and head versions
+          AFFECTED=""
+          if ! NX_OUTPUT=$(npx nx show projects --affected --base="$BASE_VERSION" --head="$HEAD_VERSION" 2>&1); then
+            echo "::error::Failed to determine affected projects with nx:"
+            echo "$NX_OUTPUT"
+            exit 1
+          fi
+          AFFECTED="$NX_OUTPUT"
+
+          echo "All affected projects:"
+          echo "$AFFECTED"
+
+          # Filter to only publishable (non-private) packages
+          PUBLISHABLE_PROJECTS=""
+          while IFS= read -r project; do
+            [ -z "$project" ] && continue
+
+            PROJECT_INFO=$(npx nx show project "$project" --json 2>&1)
+            if [ $? -ne 0 ]; then
+              echo "::warning::Failed to get nx config for project '$project': $PROJECT_INFO"
+              continue
+            fi
+
+            PROJECT_ROOT=$(echo "$PROJECT_INFO" | jq -r '.root // empty')
+            if [ -z "$PROJECT_ROOT" ] || [ ! -f "$PROJECT_ROOT/package.json" ]; then
+              echo "::warning::No package.json found for project '$project' at '$PROJECT_ROOT'"
+              continue
+            fi
+
+            IS_PRIVATE=$(jq -r '.private // "false"' "$PROJECT_ROOT/package.json")
+            if [ "$IS_PRIVATE" != "true" ]; then
+              PACKAGE_NAME=$(jq -r '.name // empty' "$PROJECT_ROOT/package.json")
+              if [ -z "$PACKAGE_NAME" ]; then
+                echo "::warning::No name found in $PROJECT_ROOT/package.json; skipping"
+                continue
+              fi
+
+              echo "Affected publishable project: $project"
+              if [ -n "$PUBLISHABLE_PROJECTS" ]; then
+                PUBLISHABLE_PROJECTS="$PUBLISHABLE_PROJECTS,$project"
+              else
+                PUBLISHABLE_PROJECTS="$project"
+              fi
+            fi
+          done <<< "$AFFECTED"
+
+          echo "Publishable affected projects: $PUBLISHABLE_PROJECTS"
+          echo "projects=$PUBLISHABLE_PROJECTS" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: Deploy to NPM
+    needs: determine-affected
+    if: ${{ !cancelled() && needs.determine-affected.result == 'success' && needs.determine-affected.outputs.projects != '' }}
+    # As we publish the NPM package with provenance, we must use GitHub-hosted runners
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+
+      - name: Validate re-run actor
+        uses: ./.github/actions/assert-rerun-actor
+        with:
+          app_id: ${{ vars.RELEASE_APP_ID }}
+          private_key: ${{ secrets.RELEASE_PRIVATE_KEY }}
+          team_names: 'sdk_team,integrations'
+
+      - name: Modify package versions
+        if: inputs.version_suffix != ''
+        env:
+          VERSION_SUFFIX: ${{ inputs.version_suffix }}
+        run: |
+          # Every publishable package must get the suffix, not just a hardcoded couple of
+          # them. A package that keeps its released version is skipped by nx at publish
+          # time in favour of "npm dist-tag add", and a failure there aborts the whole
+          # release, including the packages whose versions were perfectly valid.
+          # The private check mirrors the filter used to determine affected projects.
+          echo "Updating versions:"
+
+          for PACKAGE_JSON in packages/*/package.json; do
+            # Guards against an unmatched glob, which would otherwise be passed to jq verbatim
+            if [ ! -f "$PACKAGE_JSON" ]; then
+              continue
+            fi
+
+            IS_PRIVATE=$(jq -r '.private // "false"' "$PACKAGE_JSON")
+            if [ "$IS_PRIVATE" = "true" ]; then
+              continue
+            fi
+
+            PACKAGE_NAME=$(jq -r '.name // empty' "$PACKAGE_JSON")
+            if [ -z "$PACKAGE_NAME" ]; then
+              echo "::warning::No name found in $PACKAGE_JSON; skipping"
+              continue
+            fi
+
+            CURRENT_VERSION=$(jq -r '.version // empty' "$PACKAGE_JSON")
+            if [ -z "$CURRENT_VERSION" ]; then
+              echo "::warning::No version found in $PACKAGE_JSON; skipping"
+              continue
+            fi
+
+            NEW_VERSION="${CURRENT_VERSION}-${VERSION_SUFFIX}"
+            echo "$PACKAGE_NAME: $CURRENT_VERSION -> $NEW_VERSION"
+
+            # --arg rather than interpolating into the jq program, so a suffix containing
+            # quotes or backslashes cannot corrupt or inject into it
+            TMP_FILE=$(mktemp)
+            jq --arg version "$NEW_VERSION" '.version = $version' "$PACKAGE_JSON" > "$TMP_FILE" && mv "$TMP_FILE" "$PACKAGE_JSON"
+          done
+
+      - name: Get new version number
+        run: |
+          current_version_v1=$(jq -r .version packages/analytics-v1.1/package.json)
+          current_version_sw=$(jq -r .version packages/analytics-js-service-worker/package.json)
+          current_version_cookie_utils=$(jq -r .version packages/analytics-js-cookies/package.json)
+          current_version=$(jq -r .version packages/analytics-js/package.json)
+          echo "CURRENT_VERSION_V1_VALUE=$current_version_v1" >> $GITHUB_ENV
+          echo "CURRENT_VERSION_SW_VALUE=$current_version_sw" >> $GITHUB_ENV
+          echo "CURRENT_VERSION_COOKIE_UTILS_VALUE=$current_version_cookie_utils" >> $GITHUB_ENV
+          echo "CURRENT_VERSION_VALUE=$current_version" >> $GITHUB_ENV
+
+      - name: Get versions in NPM
+        run: |
+          # Get latest version across all tags (most recently published)
+          current_npm_version=$(npm view @rudderstack/analytics-js time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "CURRENT_NPM_VERSION=$current_npm_version" >> $GITHUB_ENV
+
+          current_npm_version_sw=$(npm view @rudderstack/analytics-js-service-worker time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "CURRENT_NPM_VERSION_SW=$current_npm_version_sw" >> $GITHUB_ENV
+
+          current_npm_version_cookie_utils=$(npm view @rudderstack/analytics-js-cookies time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "CURRENT_NPM_VERSION_COOKIE_UTILS=$current_npm_version_cookie_utils" >> $GITHUB_ENV
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Setup workspace
+        env:
+          HUSKY: 0
+          REMOTE_MODULES_BASE_PATH: "${{ inputs.base_cdn_url || 'https://cdn.rudderlabs.com' }}/v3/modern/plugins"
+          BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+          LOCK_DEPS_VERSION: ${{ (inputs.environment || 'production') == 'production' && 'true' || 'false' }}
+          BUGSNAG_RELEASE_STAGE: ${{ inputs.bugsnag_release_stage || 'production' }}
+        run: |
+          npm run setup:ci
+
+      - name: Build release artifacts
+        env:
+          BUGSNAG_API_KEY: ${{ secrets.RS_PROD_BUGSNAG_API_KEY }}
+          BUGSNAG_RELEASE_STAGE: ${{ inputs.bugsnag_release_stage || 'production' }}
+          LOCK_DEPS_VERSION: ${{ (inputs.environment || 'production') == 'production' && 'true' || 'false' }}
+        run: |
+          npm run build:package
+          npm run build:package:modern
+
+      - name: Publish package to NPM
+        env:
+          HUSKY: 0
+          NPM_CONFIG_PROVENANCE: true
+          PUBLISH_PROJECTS: ${{ needs.determine-affected.outputs.projects }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          # Remove unnecessary fields from package.json before publishing
+          ./scripts/make-package-json-publish-ready.sh
+
+          TAG_OPTION=""
+          if [[ "$ENVIRONMENT" == "beta" ]]; then
+            TAG_OPTION="--tag=beta"
+          fi
+
+          echo "Publishing projects: $PUBLISH_PROJECTS"
+          echo "DATE=$(date)" >> $GITHUB_ENV
+
+          npx nx release publish --verbose --projects="$PUBLISH_PROJECTS" $TAG_OPTION
+
+          # Reset the changes made to package.json
+          git reset --hard
+          git clean -fd
+
+      - name: Wait for NPM propagation
+        timeout-minutes: 13
+        env:
+          PUBLISH_PROJECTS: ${{ needs.determine-affected.outputs.projects }}
+        run: |
+          # The registry records a version minutes after npm publish returns (observed up to ~4 min),
+          # so poll for the exact published versions instead of sleeping a fixed time.
+          declare -A versions=(
+            ["@rudderstack/analytics-js"]="$CURRENT_VERSION_VALUE"
+            ["@rudderstack/analytics-js-service-worker"]="$CURRENT_VERSION_SW_VALUE"
+            ["@rudderstack/analytics-js-cookies"]="$CURRENT_VERSION_COOKIE_UTILS_VALUE"
+            ["rudder-sdk-js"]="$CURRENT_VERSION_V1_VALUE"
+          )
+
+          deadline=$((SECONDS + 600))
+          IFS=',' read -ra projects <<< "$PUBLISH_PROJECTS"
+          for project in "${projects[@]}"; do
+            version="${versions[$project]:-}"
+            [ -z "$version" ] && continue
+
+            # npm's own fetch timeout and retries can stall for minutes, so cap each attempt
+            until timeout 30 npm view "$project@$version" version --prefer-online >/dev/null 2>&1; do
+              if [ "$SECONDS" -ge "$deadline" ]; then
+                echo "::warning::$project@$version not visible on NPM after 10 minutes"
+                # Past the deadline, the remaining projects still get one attempt each
+                continue 2
+              fi
+              echo "Waiting for $project@$version..."
+              sleep 20
+            done
+            echo "$project@$version is available"
+          done
+
+      - name: Get versions in NPM after publish
+        run: |
+          npm cache clean --force
+
+          # Get latest version across all tags (most recently published)
+          new_npm_version=$(npm view @rudderstack/analytics-js time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "NEW_NPM_VERSION=$new_npm_version" >> $GITHUB_ENV
+
+          new_npm_version_sw=$(npm view @rudderstack/analytics-js-service-worker time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "NEW_NPM_VERSION_SW=$new_npm_version_sw" >> $GITHUB_ENV
+
+          new_npm_version_cookie_utils=$(npm view @rudderstack/analytics-js-cookies time --json 2>/dev/null | jq -r 'to_entries | map(select(.key != "modified" and .key != "created")) | sort_by(.value) | last.key' || echo "not found")
+          echo "NEW_NPM_VERSION_COOKIE_UTILS=$new_npm_version_cookie_utils" >> $GITHUB_ENV
+
+      - name: Debug environment variables
+        continue-on-error: true
+        run: |
+          echo "CURRENT_NPM_VERSION=${{ env.CURRENT_NPM_VERSION }}"
+          echo "NEW_NPM_VERSION=${{ env.NEW_NPM_VERSION }}"
+
+          echo "CURRENT_NPM_VERSION_SW=${{ env.CURRENT_NPM_VERSION_SW }}"
+          echo "NEW_NPM_VERSION_SW=${{ env.NEW_NPM_VERSION_SW }}"
+
+          echo "CURRENT_NPM_VERSION_COOKIE_UTILS=${{ env.CURRENT_NPM_VERSION_COOKIE_UTILS }}"
+          echo "NEW_NPM_VERSION_COOKIE_UTILS=${{ env.NEW_NPM_VERSION_COOKIE_UTILS }}"
+
+      - name: Deprecate the legacy SDK NPM package
+        continue-on-error: true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # deprecate is not covered by trusted publishing (OIDC), so it needs the token
+          npm set //registry.npmjs.org/:_authToken="$NODE_AUTH_TOKEN"
+          npm deprecate rudder-sdk-js "This package is deprecated and no longer maintained. While your events are still being tracked and delivered, we strongly recommend you to migrate to the latest package, @rudderstack/analytics-js (https://www.npmjs.com/package/@rudderstack/analytics-js), for the latest features, security updates, and improved performance. For more details, visit the migration guide: https://www.rudderstack.com/docs/sources/event-streams/sdks/rudderstack-javascript-sdk/migration-guide/."
+
+      - name: Get Job URL
+        id: get-job-url
+        continue-on-error: true
+        uses: ./.github/actions/get-job-url
+
+      - name: Send message to Slack channel
+        if: env.CURRENT_NPM_VERSION != env.NEW_NPM_VERSION && env.NEW_NPM_VERSION != 'not found'
+        id: slack
+        continue-on-error: true
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
+        env:
+          PROJECT_NAME: ${{ format('JS SDK NPM Package{0}', (inputs.environment == 'staging' && ' - Staging') || (inputs.environment == 'development' && ' - Development') || (inputs.environment == 'beta' && ' - Beta') || '') }}
+          NPM_PACKAGE_URL: ${{ format('https://www.npmjs.com/package/@rudderstack/analytics-js/v/{0}', env.CURRENT_VERSION_VALUE) }}
+          RELEASES_URL: 'https://github.com/rudderlabs/rudder-sdk-js/releases/tag/@rudderstack/analytics-js@'
+          GITHUB_RUN_URL: ${{ steps.get-job-url.outputs.job_url }}
+          ACTOR_URL: ${{ format('{0}/{1}', github.server_url, github.actor) }}
+          ACTOR: ${{ github.actor }}
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload-templated: true
+          retries: rapid
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_RELEASE_CHANNEL_ID }}",
+              "text": "*:rocket: Published - ${{ env.PROJECT_NAME }} - <${{ env.NPM_PACKAGE_URL }}|${{ env.CURRENT_VERSION_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SHJ20350>",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rocket: Published - ${{ env.PROJECT_NAME }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*<${{ env.NPM_PACKAGE_URL }}|v${{ env.CURRENT_VERSION_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SW7DM8P3> <!subteam^S03SHJ20350>"
+                  },
+                  "accessory": {
+                    "type": "image",
+                    "image_url": "https://img.icons8.com/color/452/npm.png",
+                    "alt_text": "NPM Icon"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": ":package: ${{ inputs.trigger_source || format('Published by <{0}|{1}>', env.ACTOR_URL, env.ACTOR) }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": ":gear: <${{ env.GITHUB_RUN_URL }}|View workflow run details>"
+                    }${{ inputs.environment == 'production' && format(',{{"type": "mrkdwn", "text": ":book: <{0}{1}|View release notes>"}}', env.RELEASES_URL, env.CURRENT_VERSION_VALUE) || ''  }}
+                  ]
+                }
+              ]
+            }
+
+      - name: Post NPM packages publish notification to release thread
+        continue-on-error: true
+        if: ${{ steps.slack.outcome == 'success' && inputs.monorepo_release_version != '' && inputs.release_ticket_id != '' }}
+        uses: ./.github/actions/release-thread-integration
+        with:
+          monorepo_release_version: ${{ inputs.monorepo_release_version }}
+          release_ticket_id: ${{ inputs.release_ticket_id }}
+          slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          title: ':white_check_mark: JS SDK NPM Package deployment completed'
+          link_text: 'View deployment details'
+          slack_api_response: ${{ steps.slack.outputs.response }}
+
+      - name: Send message to Slack channel for Service Worker
+        if: env.CURRENT_NPM_VERSION_SW != env.NEW_NPM_VERSION_SW && env.NEW_NPM_VERSION_SW != 'not found'
+        id: slackSw
+        continue-on-error: true
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
+        env:
+          PROJECT_NAME: ${{ format('JS SDK Service Worker NPM Package{0}', (inputs.environment == 'staging' && ' - Staging') || (inputs.environment == 'development' && ' - Development') || (inputs.environment == 'beta' && ' - Beta') || '') }}
+          NPM_PACKAGE_URL: ${{ format('https://www.npmjs.com/package/@rudderstack/analytics-js-service-worker/v/{0}', env.CURRENT_VERSION_SW_VALUE) }}
+          RELEASES_URL: 'https://github.com/rudderlabs/rudder-sdk-js/releases/tag/@rudderstack/analytics-js-service-worker@'
+          GITHUB_RUN_URL: ${{ steps.get-job-url.outputs.job_url }}
+          ACTOR_URL: ${{ format('{0}/{1}', github.server_url, github.actor) }}
+          ACTOR: ${{ github.actor }}
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload-templated: true
+          retries: rapid
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_RELEASE_CHANNEL_ID }}",
+              "text": "*:rocket: Published - ${{ env.PROJECT_NAME }} - <${{ env.NPM_PACKAGE_URL }}|${{ env.CURRENT_VERSION_SW_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SHJ20350>",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rocket: Published - ${{ env.PROJECT_NAME }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*<${{ env.NPM_PACKAGE_URL }}|v${{ env.CURRENT_VERSION_SW_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SW7DM8P3> <!subteam^S03SHJ20350>"
+                  },
+                  "accessory": {
+                    "type": "image",
+                    "image_url": "https://img.icons8.com/color/452/npm.png",
+                    "alt_text": "NPM Icon"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": ":package: ${{ inputs.trigger_source || format('Published by <{0}|{1}>', env.ACTOR_URL, env.ACTOR) }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": ":gear: <${{ env.GITHUB_RUN_URL }}|View workflow run details>"
+                    }${{ inputs.environment == 'production' && format(',{{"type": "mrkdwn", "text": ":book: <{0}{1}|View release notes>"}}', env.RELEASES_URL, env.CURRENT_VERSION_SW_VALUE) || ''  }}
+                  ]
+                }
+              ]
+            }
+
+      - name: Send message to Slack channel for cookie utilities
+        if: env.CURRENT_NPM_VERSION_COOKIE_UTILS != env.NEW_NPM_VERSION_COOKIE_UTILS && env.NEW_NPM_VERSION_COOKIE_UTILS != 'not found'
+        id: slack-cookie-utils
+        continue-on-error: true
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d  # v4.0.0
+        env:
+          PROJECT_NAME: ${{ format('JS SDK Cookies Utilities{0}', (inputs.environment == 'staging' && ' - Staging') || (inputs.environment == 'development' && ' - Development') || (inputs.environment == 'beta' && ' - Beta') || '') }}
+          NPM_PACKAGE_URL: ${{ format('https://www.npmjs.com/package/@rudderstack/analytics-js-cookies/v/{0}', env.CURRENT_VERSION_COOKIE_UTILS_VALUE) }}
+          RELEASES_URL: 'https://github.com/rudderlabs/rudder-sdk-js/releases/tag/@rudderstack/analytics-js-cookies@'
+          GITHUB_RUN_URL: ${{ steps.get-job-url.outputs.job_url }}
+          ACTOR_URL: ${{ format('{0}/{1}', github.server_url, github.actor) }}
+          ACTOR: ${{ github.actor }}
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload-templated: true
+          retries: rapid
+          payload: |
+            {
+              "channel": "${{ secrets.SLACK_RELEASE_CHANNEL_ID }}",
+              "text": "*:rocket: Published - ${{ env.PROJECT_NAME }} - <${{ env.NPM_PACKAGE_URL }}|${{ env.CURRENT_VERSION_COOKIE_UTILS_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SHJ20350>",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rocket: Published - ${{ env.PROJECT_NAME }}"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*<${{ env.NPM_PACKAGE_URL }}|v${{ env.CURRENT_VERSION_COOKIE_UTILS_VALUE }}>*\n${{ env.DATE }}\nCC: <!subteam^S0555JBV36D> <!subteam^S03SW7DM8P3> <!subteam^S03SHJ20350>"
+                  },
+                  "accessory": {
+                    "type": "image",
+                    "image_url": "https://img.icons8.com/color/452/npm.png",
+                    "alt_text": "NPM Icon"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": ":package: ${{ inputs.trigger_source || format('Published by <{0}|{1}>', env.ACTOR_URL, env.ACTOR) }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": ":gear: <${{ env.GITHUB_RUN_URL }}|View workflow run details>"
+                    }${{ inputs.environment == 'production' && format(',{{"type": "mrkdwn", "text": ":book: <{0}{1}|View release notes>"}}', env.RELEASES_URL, env.CURRENT_VERSION_COOKIE_UTILS_VALUE) || ''  }}
+                  ]
+                }
+              ]
+            }

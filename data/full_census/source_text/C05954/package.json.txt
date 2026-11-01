@@ -1,0 +1,58 @@
+{
+  "name": "lockfile-lint",
+  "version": "0.0.0",
+  "private": true,
+  "author": {
+    "name": "Liran Tal",
+    "email": "liran.tal@gmail.com",
+    "url": "https://github.com/lirantal"
+  },
+  "scripts": {
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "version": "changeset version",
+    "release": "changeset publish",
+    "prepare": "husky install"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lirantal/lockfile-lint.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@commitlint/cli": "17.6.7",
+    "@commitlint/config-conventional": "17.6.7",
+    "commitizen": "4.3.0",
+    "cz-conventional-changelog": "3.3.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.3",
+    "node-notifier": "^10.0.1",
+    "turbo": "1.10.12"
+  },
+  "lint-staged": {
+    "**/*.js": [
+      "prettier-standard"
+    ]
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "dependencies": {
+    "@changesets/changelog-github": "^0.4.8",
+    "@changesets/cli": "^2.27.5"
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.10.0"
+  }
+}

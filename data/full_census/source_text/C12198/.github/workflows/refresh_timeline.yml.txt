@@ -1,0 +1,77 @@
+name: Refresh data sources
+
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch:
+
+env:
+  package_dir: "/"
+
+jobs:
+  refresh-data-sources:
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install environment
+        run: npm ci
+
+      - name: check for BCD and web-features updates
+        id: update-bcd-and-web-features
+        run: npm run update-data-dependencies
+
+      - name: Run refresh-downstream.ts
+        if: steps.update-bcd-and-web-features.outcome == 'success'
+        id: refresh-downstream-script
+        run: npm run refresh-downstream
+        env:
+          API_KEY: ${{ secrets.USERAGENTSIOKEY }}
+
+      - name: Attempt to update timeline.js file
+        if: steps.refresh-downstream-script.outcome == 'success'
+        id: update-timeline-file
+        run: npm run update-timeline
+
+      - name: Check for changes to ./src/data/timeline.js
+        if: steps.update-timeline-file.outcome == 'success'
+        id: check-timeline-changes
+        run: npm run check-timeline-changes -s >> $GITHUB_OUTPUT
+
+      - name: Run tests and linting
+        if: steps.check-timeline-changes.outputs.changes-available == 'TRUE'
+        id: lint-and-test
+        run: npm run test
+
+      - name: Push changes to main
+        if: steps.lint-and-test.outcome == 'success'
+        id: push-to-branch
+        run: |
+          echo "Data changes have occurred, committing to main"
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .
+          git commit -m "Browser or feature data changed"
+          git push origin
+
+      - name: Tag release for publishing
+        if: steps.push-to-branch.outcome == 'success'
+        id: tag-release
+        run: |
+          npm version patch -m "Patch to %s because browser or feature data changed"
+          git push && git push --tags
+
+      - name: Trigger publish workflow
+        if: steps.tag-release.outcome == 'success'
+        run: gh workflow run publish.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

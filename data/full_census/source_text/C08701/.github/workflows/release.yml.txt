@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: Release
+  cancel-in-progress: false
+
+jobs:
+  lint_js:
+    uses: ./.github/workflows/lint-js.yml
+  lint_knip:
+    uses: ./.github/workflows/lint-knip.yml
+  lint_markdown:
+    uses: ./.github/workflows/lint-markdown.yml
+  lint_packages:
+    uses: ./.github/workflows/lint-packages.yml
+  lint_spelling:
+    uses: ./.github/workflows/lint-spelling.yml
+  test_js:
+    uses: ./.github/workflows/test-js.yml
+  test_types:
+    uses: ./.github/workflows/test-types.yml
+  type_check:
+    uses: ./.github/workflows/typecheck.yml
+
+  release:
+    needs:
+      - lint_js
+      - lint_knip
+      - lint_markdown
+      - lint_packages
+      - lint_spelling
+      - test_js
+      - test_types
+      - type_check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: ./.github/actions/prepare
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Release
+        run: pnpm run release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,78 @@
+name: Verify Commit Hooks
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base branch used for commit validation
+        required: true
+        default: main
+
+jobs:
+  verify-hooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Validate Commit Messages
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF"
+          commits=$(git rev-list "origin/$BASE_REF"..HEAD)
+
+          for commit in $commits; do
+            echo "Validating commit: $(git log -1 --oneline $commit)"
+            msg_file=$(mktemp)
+            git log -1 --format=%B $commit > "$msg_file"
+            JS_BINARY__CHDIR="$PWD" bazel run -c opt //:lefthook -- run commit-msg "$msg_file"
+            rm "$msg_file"
+          done
+
+  publish-verify-status:
+    needs: verify-hooks
+    if: >-
+      always() &&
+      github.event_name == 'workflow_dispatch' &&
+      github.actor == 'github-actions[bot]' &&
+      startsWith(github.ref_name, 'renovate/')
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    env:
+      CHECK_STATE: ${{ needs['verify-hooks'].result == 'success' && 'success' || 'failure' }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Publish Required Check Status
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$CHECK_STATE" \
+            -f context=verify-hooks \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            -f description="Dispatched verify-hooks workflow $CHECK_STATE"

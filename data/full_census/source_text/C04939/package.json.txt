@@ -1,0 +1,60 @@
+{
+  "name": "rollup-plugin-import-css",
+  "type": "module",
+  "version": "4.2.1",
+  "description": "A Rollup plugin to import CSS into JavaScript",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "types/index.d.ts",
+  "engines": {
+    "node": ">=16"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "lint": "eslint src",
+    "test": "node --test test/index.test.js",
+    "prepublishOnly": "npm run lint && npm run build && npm run test"
+  },
+  "keywords": [
+    "rollup",
+    "rollup-plugin",
+    "css",
+    "import",
+    "modules"
+  ],
+  "files": [
+    "dist",
+    "types"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jleeson/rollup-plugin-import-css.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jleeson/rollup-plugin-import-css/issues"
+  },
+  "homepage": "https://github.com/jleeson/rollup-plugin-import-css#readme",
+  "author": "Jacob Leeson <jleeson2000@gmail.com> (https://twitter.com/jleesons)",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.0",
+    "eslint": "^10.2.0",
+    "globals": "^17.5.0",
+    "rollup": "^4.60.1",
+    "rollup-plugin-esbuild": "^6.2.1"
+  },
+  "dependencies": {
+    "@rollup/pluginutils": "^5.3.0"
+  },
+  "peerDependencies": {
+    "rollup": "^2.x.x || ^3.x.x || ^4.x.x"
+  }
+}

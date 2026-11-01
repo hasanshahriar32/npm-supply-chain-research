@@ -1,0 +1,30 @@
+name: publish
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Build zig library
+        run: zig build wasm_bindings
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.18
+          registry-url: "https://registry.npmjs.org"
+      - name: Install Dependencies
+        run: zig build install_npm_deps
+      - name: Pack and Publish
+        run: |
+          zig build publish

@@ -1,0 +1,246 @@
+name: Lint, Test & Release
+
+on:
+  push:
+    branches-ignore:
+      - 'dependabot/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Lint commits
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 18.x
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm clean-install
+      - name: Lint commit
+        if: github.event_name == 'push'
+        run: npx commitlint --from HEAD~1 --to HEAD --verbose
+      - name: Lint commits
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
+  codelint:
+    name: Lint code
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 18.x
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm clean-install
+      - name: Lint code
+        run: npm run lint
+  test-linux:
+    name: Run tests
+    runs-on: ${{ matrix.os }}
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/${{ matrix.sqlserver == 'edge' && 'azure-sql-edge' || 'mssql/server' }}:${{ matrix.sqlserver == 'edge' && 'latest' || format('{0}-latest', matrix.sqlserver ) }}
+        ports:
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: ${{ env.MSSQL_PASSWORD }}
+    needs:
+      - commitlint
+      - codelint
+    env:
+      MSSQL_PASSWORD: 'yourStrong(!)Password'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+        node: [18.x, 20.x, 22.x, 24.x]
+        sqlserver: [2019, 2022, 2025]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm clean-install
+      - name: Run unit tests
+        run: npm run test-unit
+      - name: Store test config
+        run: echo "{\"user\":\"sa\",\"password\":\"$MSSQL_PASSWORD\",\"server\":\"localhost\",\"port\":1433,\"database\":\"master\",\"options\":{\"trustServerCertificate\":true}}" > ./test/.mssql.json
+      - name: Run tedious tests
+        run: npm run test-tedious
+      - name: Run cli tests
+        run: npm run test-cli
+      - name: Install tedious 20
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm install --no-save tedious@^20.0.0
+      - name: Run tedious 20 tests
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm run test-tedious
+#      - name: Install OBDC 17 driver
+#        run: |
+#          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+#          sudo curl -o /etc/apt/sources.list.d/mssql-release.list https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list
+#          sudo apt-get update
+#          sudo apt-get install -y msodbcsql17
+#        env:
+#          ACCEPT_EULA: Y
+#      - name: Install msnodesqlv8
+#        run: npm install --no-save msnodesqlv8@^2
+#      - name: Run msnodesqlv8 tests
+#        run: npm run test-msnodesqlv8
+  test-windows:
+    name: Run tests
+    needs:
+      - commitlint
+      - codelint
+      - test-linux
+    runs-on: ${{ matrix.os }}
+    env:
+      MSSQL_PASSWORD: 'yourStrong(!)Password'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+        node: [18.x, 20.x, 22.x, 24.x]
+        sqlserver: [2016, 2017, 2019, 2022]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm clean-install
+      - name: Run unit tests
+        run: npm run test-unit
+      - name: Setup SQL Server
+        uses: tediousjs/setup-sqlserver@34a6288c6260c5016590b41842de30a1b87164fb # v4.0.1
+        with:
+          sqlserver-version: ${{ matrix.sqlserver }}
+          sa-password: ${{ env.MSSQL_PASSWORD }}
+          native-client-version: 11
+      - name: Store test config
+        shell: bash
+        run: echo "{\"user\":\"sa\",\"password\":\"$MSSQL_PASSWORD\",\"server\":\"localhost\",\"port\":1433,\"database\":\"master\",\"requestTimeout\":30000,\"options\":{\"abortTransactionOnError\":true,\"encrypt\":false}}" > ./test/.mssql.json
+      - name: Run tedious tests
+        run: npm run test-tedious
+      - name: Run cli tests
+        run: npm run test-cli
+      - name: Install tedious 20
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm install --no-save tedious@^20.0.0
+      - name: Run tedious 20 tests
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm run test-tedious
+      # msnodesqlv8 is exercised across its supported major versions. Each major
+      # is gated to the Node versions it ships prebuilt win32-x64 binaries for —
+      # a combo without a prebuild falls back to a node-gyp source build, which is
+      # brittle on the GitHub Windows images (e.g. the VS 2026 rollout on
+      # windows-2025 that node-gyp cannot detect). Coverage:
+      #   v2: Node 18    v3: Node 18-20    v4: Node 18-24    v5: Node 20-24    v6: Node 22-24
+      #
+      # v5 is split: msnodesqlv8 5.2.2 dropped the Node 20 (ABI 115) win32-x64
+      # prebuild, so `@^5` is gated to Node 22-24 and Node 20 is pinned to 5.2.1,
+      # the last release before that drop. A combination without a prebuild
+      # source-builds via node-gyp, which is slow on windows-2022 and fails
+      # outright on windows-2025. From 5.3.0 msnodesqlv8 ships a single Node-API
+      # binary instead of one per ABI, which may load on Node 20 again but has not
+      # been tried here.
+      #
+      # v6 needs Node 22 or later (its `engines`), and ships its Node-API binary
+      # inside the npm package, so it installs without a download or a build.
+      - name: Install msnodesqlv8 v2
+        if: ${{ matrix.node == '18.x' }}
+        run: npm install --no-save msnodesqlv8@^2
+      - name: Run msnodesqlv8 v2 tests
+        if: ${{ matrix.node == '18.x' }}
+        run: npm run test-msnodesqlv8
+      - name: Install msnodesqlv8 v3
+        if: ${{ matrix.node == '18.x' || matrix.node == '20.x' }}
+        run: npm install --no-save msnodesqlv8@^3
+      - name: Run msnodesqlv8 v3 tests
+        if: ${{ matrix.node == '18.x' || matrix.node == '20.x' }}
+        run: npm run test-msnodesqlv8
+      - name: Install msnodesqlv8 v4
+        if: ${{ matrix.node == '18.x' || matrix.node == '20.x' || matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm install --no-save msnodesqlv8@^4
+      - name: Run msnodesqlv8 v4 tests
+        if: ${{ matrix.node == '18.x' || matrix.node == '20.x' || matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm run test-msnodesqlv8
+      - name: Install msnodesqlv8 v5 (Node 20, pinned)
+        if: ${{ matrix.node == '20.x' }}
+        run: npm install --no-save msnodesqlv8@5.2.1
+      - name: Run msnodesqlv8 v5 tests (Node 20, pinned)
+        if: ${{ matrix.node == '20.x' }}
+        run: npm run test-msnodesqlv8
+      - name: Install msnodesqlv8 v5
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm install --no-save msnodesqlv8@^5
+      - name: Run msnodesqlv8 v5 tests
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm run test-msnodesqlv8
+      - name: Install msnodesqlv8 v6
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm install --no-save msnodesqlv8@^6
+      - name: Run msnodesqlv8 v6 tests
+        if: ${{ matrix.node == '22.x' || matrix.node == '24.x' }}
+        run: npm run test-msnodesqlv8
+  release:
+    name: Release
+    concurrency: release
+    if: ${{ github.repository_owner == 'tediousjs' && github.event_name == 'push' && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - commitlint
+      - codelint
+      - test-linux
+      - test-windows
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm publishing & provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.x"
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm clean-install
+      - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+        run: npm audit signatures
+      - name: Release
+        env:
+          NPM_CONFIG_PROVENANCE: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release

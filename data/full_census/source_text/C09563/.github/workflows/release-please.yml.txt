@@ -1,0 +1,53 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+  # Allows manually re-running the publish step for the current release,
+  # e.g. to recover from a transient npm failure.
+  workflow_dispatch:
+
+# Restrict the default token; each job opts into what it needs.
+permissions: {}
+
+jobs:
+  # Maintains a "release PR" that bumps the version and updates the changelog
+  # from the conventional commits merged into main. Merging that PR tags the
+  # release and creates the GitHub release, which triggers the publish job.
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+
+  # Publishes to npm only once release-please has cut a release. Uses npm
+  # trusted publishing (OIDC) so no long-lived token is stored in the repo;
+  # the trusted publisher must be configured for pidtree on npmjs.com.
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      # Intentionally NOT setting registry-url: it makes setup-node write a
+      # placeholder auth token to .npmrc, which npm would use instead of
+      # OIDC. npm defaults to the public registry and uses trusted
+      # publishing when no token is present.
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      # Trusted publishing requires npm >= 11.5.1 (Node >= 22.14).
+      - run: npm install -g npm@latest
+      # No token and no --provenance flag: with trusted publishing npm
+      # authenticates via OIDC and attaches provenance automatically.
+      - run: npm publish

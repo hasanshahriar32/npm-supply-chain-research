@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: "Test - Node v${{matrix.node-version}}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [10, 12, 14]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{matrix.node-version}}
+      - run: yarn install --frozen-lockfile
+      - run: yarn test:node
+
+  build:
+    name: "Build - Node v${{matrix.node-version}} - ${{matrix.os}}"
+    needs: [test]
+    runs-on: "${{matrix.os}}-latest"
+
+    strategy:
+      matrix:
+        node-version: [10, 12, 14]
+        os: [windows, ubuntu]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{matrix.node-version}}
+      - run: yarn install --frozen-lockfile
+      - run: yarn test

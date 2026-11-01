@@ -1,0 +1,106 @@
+name: Update Google Fonts
+
+on:
+  schedule:
+    - cron: '30 22 14 * *' # 8:30am on 15th of every month (AEST)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Log what would happen without creating a PR'
+        type: boolean
+        default: false
+
+jobs:
+  update-google-fonts:
+    name: Update Google Fonts Metrics
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.SEEK_OSS_CI_GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: 'package.json'
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm i
+
+      - name: Build @capsizecss/unpack
+        run: pnpm --filter=@capsizecss/unpack build
+
+      - name: Download Google Fonts data
+        run: pnpm metrics:download
+        env:
+          GOOGLE_FONTS_API_KEY: ${{ secrets.GOOGLE_FONTS_API_KEY }}
+
+      - name: Extract metrics
+        run: pnpm metrics:extract
+
+      - name: Generate metrics package
+        run: pnpm metrics:generate
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create changeset
+        if: steps.changes.outputs.has_changes == 'true'
+        id: changeset
+        run: |
+          CHANGESET_PATH=$(pnpm --silent metrics:changeset)
+          SUMMARY=$(sed '1,/^---$/{ /^---$/d; d; }' "$CHANGESET_PATH")
+          {
+            echo "summary<<EOF"
+            echo "$SUMMARY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true' && inputs.dry_run == false
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.SEEK_OSS_CI_GITHUB_TOKEN }}
+          commit-message: 'metrics: Update Google Fonts'
+          branch: update-google-fonts
+          title: 'metrics: Update Google Fonts'
+          body: ${{ steps.changeset.outputs.summary }}
+          base: master
+          delete-branch: true
+
+      - name: Dry run summary
+        if: inputs.dry_run == true
+        run: |
+          echo "=== Dry Run Summary ==="
+          echo ""
+          echo "Has changes: ${{ steps.changes.outputs.has_changes }}"
+          echo ""
+          if [ "${{ steps.changes.outputs.has_changes }}" == "true" ]; then
+            echo "Would create PR:"
+            echo "  Title: metrics: Update Google Fonts"
+            echo "  Branch: update-google-fonts"
+            echo "  Base: master"
+            echo ""
+            echo "Description:"
+            printf '%s\n' "${{ steps.changeset.outputs.summary }}"
+            echo ""
+            echo "Changed files:"
+            git add --all && git diff --cached --stat
+          else
+            echo "No changes detected — no PR would be created."
+          fi

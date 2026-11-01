@@ -1,0 +1,142 @@
+name: Tests
+
+env:
+  NODE_NO_WARNINGS: true
+  NODE_OPTIONS: '--max-old-space-size=8192'
+  CI: true
+
+concurrency:
+  # Prefer PR number so synchronize events share one group; cancel older pushes.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  typecheck-16:
+    name: Type Check on GraphQL v16
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+
+      - name: Use GraphQL v16
+        run: |
+          node ./scripts/match-graphql.js 16
+          npm install
+          git checkout package-lock.json
+          npx rimraf packages/**/*/node_modules/graphql
+          npx rimraf packages/executor/node_modules/graphql
+      - name: Type Check
+        run: npm run ts:check
+  check:
+    # Uses the lockfile GraphQL version (17.x on this branch).
+    name: Full Check on GraphQL v17
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Prettier
+        run: npm run prettier:check
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Test ESM and CJS integrity
+        run: npx bob check
+  test:
+    name:
+      Test on Node ${{matrix.node-version}} (${{matrix.os}}) and GraphQL
+      v${{matrix.graphql_version}}
+    runs-on: ${{matrix.os}}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows runners are scarce in the shared queue; keep them on master only.
+        # `matrix` is not available in job-level `if`, so select OS here.
+        os:
+          ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' &&
+          fromJSON('["ubuntu-latest","windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
+        node-version: [22, 24]
+        graphql_version:
+          - 16
+          - 17
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Skip Puppeteer browser download on Windows
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=true" >> "$GITHUB_ENV"
+
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version: ${{matrix.node-version}}
+
+      - name: Use GraphQL v${{matrix.graphql_version}}
+        run: |
+          node ./scripts/match-graphql.js ${{matrix.graphql_version}}
+          npm install
+          git checkout package-lock.json
+          npx rimraf packages/**/*/node_modules/graphql
+          npx rimraf packages/executor/node_modules/graphql
+      - name: Cache Jest
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: .cache/jest
+          key:
+            ${{ runner.os }}-${{matrix.node-version}}-${{matrix.graphql_version}}-jest-${{
+            hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-${{matrix.node-version}}-${{matrix.graphql_version}}-jest-
+      - name: Build
+        run: npm run build
+      - name: Babel template lifecycle
+        run: npm run test:template-lifecycle
+      - parallel:
+          - name: Unit Tests
+            uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4
+            with:
+              timeout_minutes: 10
+              max_attempts: 5
+              command: npm run test --ci
+          - name: Leak Tests
+            uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4
+            with:
+              timeout_minutes: 10
+              max_attempts: 10
+              command: npm run test:leaks --ci
+
+  test-bun:
+    name: Unit Test on Bun
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Build
+        run: npm run build
+      - name: Unit Tests
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4
+        with:
+          timeout_minutes: 10
+          max_attempts: 5
+          command: npm run test:bun --ci

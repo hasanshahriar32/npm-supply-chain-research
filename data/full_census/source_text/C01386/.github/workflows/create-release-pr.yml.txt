@@ -1,0 +1,278 @@
+name: create-release-pr
+run-name: create-release-pr
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        type: choice
+        required: true
+        default: "jco"
+        options:
+          - jco
+          - bare-jco
+          - jco-node-fs
+          - jco-transpile
+          - jco-cm-runtime
+          - jco-std
+          - js-component-bindgen
+          - preview2-shim
+          - preview3-shim
+          - rolldown-plugin-jco
+        description: |
+          Project to prep for release (ex. `0.1.0`)
+
+      version:
+        type: string
+        required: true
+        description: |
+          Version to prep for release (ex. `0.1.0`, `0.1.0-rc.0`)
+
+permissions:
+  contents: none
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write
+      pull-requests: write
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Install Rust deps
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: install just
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: just
+      - name: install git-cliff
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: git-cliff
+      - name: install cargo-get
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: cargo-get
+      - name: install cargo-edit
+        uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: cargo-edit
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11
+
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          key: node-modules-dev-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+          path: |
+            node_modules
+
+      - name: Install debug packages
+        run: |
+          pnpm install
+
+      - name: Gather project metadata
+        id: project-meta
+        env:
+          NEXT_VERSION: ${{ inputs.version }}
+          PROJECT: ${{ inputs.project }}
+        shell: bash
+        run: |
+          if [[ "$NEXT_VERSION" == v* ]]; then
+            echo "::error::next version [$NEXT_VERSION] starts with 'v' -- enter only the semver version (ex. '0.1.0', not 'v0.1.0')";
+            exit 1;
+          fi
+
+          case "$PROJECT" in
+            jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            bare-jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            jco-node-fs)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_NAPI_PROJECT=true;
+              ;;
+            jco-transpile)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            jco-cm-runtime)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            jco-std)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            preview2-shim)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            preview3-shim)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            rolldown-plugin-jco)
+              export PROJECT_DIR="$PWD/packages/$PROJECT";
+              CURRENT_VERSION="$(node -e "process.stdout.write(require(process.env.PROJECT_DIR + '/package.json').version)")";
+              export CURRENT_VERSION;
+              export IS_JS_PROJECT=true;
+              ;;
+            js-component-bindgen)
+              export PROJECT_DIR="$PWD/crates/$PROJECT";
+              CURRENT_VERSION="$(cargo get  package.version --terminator Nul --entry=crates/js-component-bindgen)";
+              export CURRENT_VERSION;
+              export IS_RUST_PROJECT=true;
+              ;;
+            *)
+              echo "unexpected project type";
+              exit 1;
+          esac
+
+          IS_PRERELEASE="$(node scripts/semver-is-prerelease.mjs "$NEXT_VERSION")"
+          export IS_PRERELEASE;
+
+          echo -e "project=$PROJECT"
+          echo -e "project-dir=$PROJECT_DIR"
+          echo -e "current-version=$CURRENT_VERSION"
+          echo -e "next-version=$NEXT_VERSION"
+          echo -e "is-rust-project=$IS_RUST_PROJECT"
+          echo -e "is-js-project=$IS_JS_PROJECT"
+          echo -e "is-napi-project=$IS_NAPI_PROJECT"
+          echo -e "is-prerelease=$IS_PRERELEASE"
+
+          {
+              echo -e "project=$PROJECT";
+              echo -e "project-dir=$PROJECT_DIR";
+              echo -e "current-version=$CURRENT_VERSION";
+              echo -e "next-version=$NEXT_VERSION";
+              echo -e "is-rust-project=$IS_RUST_PROJECT";
+              echo -e "is-js-project=$IS_JS_PROJECT";
+              echo -e "is-napi-project=$IS_NAPI_PROJECT";
+              echo -e "is-prerelease=$IS_PRERELEASE";
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Ensure next version is after current
+        env:
+          CURRENT_VERSION: ${{ steps.project-meta.outputs.current-version }}
+          NEXT_VERSION: ${{ steps.project-meta.outputs.next-version }}
+          PROJECT: ${{ steps.project-meta.outputs.project }}
+        run: |
+          IS_AFTER=$(node scripts/semver-lt.mjs "$CURRENT_VERSION" "$NEXT_VERSION");
+          if [ "$IS_AFTER" == "false" ]; then \
+            echo "::error::project [$PROJECT] next version [$NEXT_VERSION] is not after current version [$CURRENT_VERSION]";
+            exit 1;
+          fi
+
+      # Set project version
+      - name: Set project version
+        working-directory: ${{ steps.project-meta.outputs.project-dir }}
+        shell: bash
+        env:
+          PROJECT: ${{ steps.project-meta.outputs.project }}
+          CURRENT_VERSION: ${{ steps.project-meta.outputs.current-version }}
+          NEXT_VERSION: ${{ steps.project-meta.outputs.next-version }}
+          IS_RUST_PROJECT: ${{ steps.project-meta.outputs.is-rust-project }}
+          IS_JS_PROJECT: ${{ steps.project-meta.outputs.is-js-project }}
+          IS_NAPI_PROJECT: ${{ steps.project-meta.outputs.is-napi-project }}
+        run: |
+          if [ "true" == "$IS_NAPI_PROJECT" ]; then
+            npm pkg set "version=$NEXT_VERSION";
+            cargo set-version -p "$PROJECT" "$NEXT_VERSION";
+          elif [ "true" == "$IS_RUST_PROJECT" ]; then
+            cargo set-version -p "$PROJECT" "$NEXT_VERSION";
+          elif [ "true" == "$IS_JS_PROJECT" ]; then
+            npm pkg set "version=$NEXT_VERSION";
+          fi
+
+          if [ "jco" == "$PROJECT" ]; then
+            node "$GITHUB_WORKSPACE/scripts/update-jco-version.mjs";
+          fi
+
+      # Generate changelog
+      #
+      # NOTE: we use the 'latest' tag here, because starting from an rc/alpha/beta release
+      # the rc/alpha/beta release tags are ignored and the "latest" tag is the previous stable version
+      - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          PROJECT_DIR: ${{ steps.project-meta.outputs.project-dir }}
+          PROJECT_VERSION_TAG: ${{ steps.project-meta.outputs.project }}-v${{ steps.project-meta.outputs.next-version }}
+          IS_PRERELEASE: ${{ steps.project-meta.outputs.is-prerelease }}
+          DEFAULT_TAG_PATTERN: "^${{ steps.project-meta.outputs.project }}-v[0-9]+.[0-9]+.[0-9]+$"
+          PRERELEASE_TAG_PATTERN: "^${{ steps.project-meta.outputs.project }}-v[0-9]+.[0-9]+.[0-9]+(-beta|-rc|-alpha)?"
+        run: |
+          export OPT_TAG="--tag=$PROJECT_VERSION_TAG";
+
+          export OPT_TAG_PATTERN="--tag-pattern=$DEFAULT_TAG_PATTERN";
+          if [ "true" == "$IS_PRERELEASE" ]; then
+            export OPT_TAG_PATTERN="--tag-pattern=$PRERELEASE_TAG_PATTERN";
+          fi
+
+          # NOTE: we use a custom local-only tag here to force git cliff to
+          # use the version we expect rather than built-in bump logic
+          git tag -- "$PROJECT_VERSION_TAG"
+
+          git cliff \
+            --repository="$GITHUB_WORKSPACE/.git" \
+            --config="$PROJECT_DIR/cliff.toml" \
+            --latest \
+            "$OPT_TAG" \
+            "$OPT_TAG_PATTERN" \
+            --prepend="$PROJECT_DIR/CHANGELOG.md"
+
+      - name: fmt
+        run: |
+          pnpm fmt
+
+      # Create release PR
+      - name: Create release prep PR
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          branch: prep-release-${{ steps.project-meta.outputs.project}}-v${{ steps.project-meta.outputs.next-version }}
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          commit-message: |
+            release: ${{ steps.project-meta.outputs.project }} v${{ steps.project-meta.outputs.next-version }}
+          title: |
+            release: ${{ steps.project-meta.outputs.project }} v${{ steps.project-meta.outputs.next-version }}
+          labels: |
+            release-pr
+          assignees: |
+            vados-cosmonic
+          signoff: true
+          body: |
+            This is a release prep branch for `${{ steps.project-meta.outputs.project }}` release `v${{ steps.project-meta.outputs.next-version }}`.
+
+            To ensure this release is ready to be merged:
+              - [ ] Review updated CHANGELOG(s)
+
+            After this PR is merged tagging, artifact builds and releasing will run automatically.

@@ -1,0 +1,183 @@
+---
+name: Run CI Tests
+
+on:
+  push:
+    branches-ignore: ['dependabot/**']
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TEST_DB_HOST: mariadb.example.com
+  TEST_DB_PORT: 3306
+  TEST_DB_USER: testuser
+  TEST_DB_PASSWORD: "heyPassw-!*20oRd"
+  TEST_DB_DATABASE: testn
+jobs:
+  # Fast static checks (lint + security lint + prettier + type checks). Runs
+  # first and gates everything below, so a lint/security issue fails the build
+  # in seconds without spinning up any database server.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install dependencies
+        # npm 10 (bundled with Node 20/22) crashes with "Cannot read properties
+        # of null (reading 'edgesOut')" on the vitest 4 peer set since vitest 5
+        # was published. Run the install through npm 11 via npx: no global
+        # install, so it also works where node lives under /usr/local.
+        run: npx -y npm@11 install
+      - name: Lint (eslint + eslint-plugin-security)
+        run: npm run test:lint
+      - name: Type checks
+        run: npm run test:tsc && npm run test:types
+
+  # CycloneDX 1.6 SBOM of the published package (CONJS-373): generated from
+  # the installed production dependency tree, validated (1.6 schema, purls,
+  # SPDX licenses, package-lock.json cross-check) and kept as a workflow
+  # artifact. A validation finding fails the build.
+  sbom:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install dependencies
+        # see lint job: npm 10 crashes on the vitest 4 peer set
+        run: npx -y npm@11 install
+      - name: Generate SBOM
+        run: npm run sbom
+      - name: Validate SBOM
+        run: npm run sbom:validate
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: sbom/*.cdx.json
+          if-no-files-found: error
+
+  setup:
+    needs: lint
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name != 'schedule' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/develop')  ||
+      startsWith(github.ref, 'refs/heads/maintenance/3.2') ||
+      startsWith(github.ref, 'refs/heads/maintenance/3.3') ||
+      startsWith(github.ref, 'refs/heads/maintenance/3.4')
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.final-matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: set-matrix
+        name: build matrix
+        uses: mariadb-corporation/connector-ci-build-matrix@main
+        with:
+          additional-matrix: '[{"name": "MariaDB 11.4", "os": "ubuntu-latest", "db-type": "community", "db-tag": "11.4", "node": 26},{"name": "MariaDB 11.4", "os": "ubuntu-latest", "db-type": "community", "db-tag": "11.4", "node": 24}, {"name": "MariaDB 11.4", "os": "ubuntu-latest", "db-type": "community", "db-tag": "11.4", "node": 20}, {"name": "MariaDB 11.4 - DENO", "os": "ubuntu-latest", "db-type": "community", "db-tag": "11.4", "deno": "v2.x"}]'
+
+  ci:
+    name: ${{ matrix.name }}${{ !matrix.deno && matrix.node != 22 && format(' - node {0}', matrix.node) || '' }}
+    needs: setup
+    timeout-minutes: 50
+    strategy:
+      # one failing entry must not cancel the others
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.continue-on-error || false }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Test Environment
+        id: setup-env
+        uses: mariadb-corporation/connector-ci-setup@master
+        with:
+          db-type: ${{ matrix.db-type }}
+          db-tag: ${{ matrix.db-tag }}
+          test-db-password: ${{ env.TEST_DB_PASSWORD }}
+          test-db-database: ${{ env.TEST_DB_DATABASE }}
+          test-db-port: ${{ env.TEST_DB_PORT }}
+          additional-conf: ${{ matrix.additional-conf || '' }}
+          registry-user: ${{ matrix.db-type == 'enterprise' && secrets.ENTERPRISE_USER || (secrets.DOCKER_TOKEN != '' && secrets.DOCKER_LOGIN || '') }}
+          registry-password: ${{ matrix.db-type == 'enterprise' && secrets.ENTERPRISE_TOKEN || secrets.DOCKER_TOKEN }}
+          os: ${{ matrix.os }}
+          maxscale-tag: ${{ matrix.maxscale-tag || ''}}
+
+      - uses: actions/setup-node@v6
+        if: ${{ !matrix.deno }}
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        if: ${{ matrix.deno }}
+        with:
+          deno-version: ${{ matrix.deno }}
+
+      - name: Install dependencies
+        # see lint job: npm 10 crashes on the vitest 4 peer set
+        run: npx -y npm@11 install
+
+      - name: Run ESM/CJS import smoke tests
+        if: ${{ !matrix.deno }}
+        run: npm run test:imports
+
+      - name: Run Tests node
+        if: ${{ !matrix.deno }}
+        # coverage/lcov.info (vitest v8 coverage) + coverage/junit.xml (test results) for Codecov
+        run: npm run coverage:test -- --reporter=junit --outputFile.junit=coverage/junit.xml
+        env:
+          LOCAL_DB: ${{ steps.setup-env.outputs.database-type }}
+          DB_TYPE: ${{ matrix.db-type }}
+          TEST_DB_SERVER_CERT: ${{ matrix.db-type == 'container' && './.github/workflows/certs/ca_server.crt' || '' }}
+          DB_VERSION: ${{ matrix.db-tag }}
+          TEST_TRACE: 'true'
+          LOCAL_SOCKET_AVAILABLE: ${{ steps.setup-env.outputs.database-type }}
+
+      - name: Run Tests deno
+        if: ${{ matrix.deno }}
+        continue-on-error: true
+        run: |
+          deno task test
+        env:
+          LOCAL_DB: ${{ steps.setup-env.outputs.database-type }}
+          DB_TYPE: ${{ matrix.db-type }}
+          TEST_DB_SERVER_CERT: ${{ matrix.db-type == 'container' && './.github/workflows/certs/ca_server.crt' || '' }}
+          DB_VERSION: ${{ matrix.db-tag }}
+          TEST_TRACE: 'true'
+          LOCAL_SOCKET_AVAILABLE: ${{ steps.setup-env.outputs.database-type }}
+
+      - name: Upload coverage to Codecov
+        if: ${{ !matrix.deno && !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          disable_search: true
+          name: ${{ matrix.name }}
+
+      - name: Upload test results to Codecov
+        if: ${{ !matrix.deno && !cancelled() }}
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          files: ./coverage/junit.xml
+          disable_search: true
+          name: ${{ matrix.name }}

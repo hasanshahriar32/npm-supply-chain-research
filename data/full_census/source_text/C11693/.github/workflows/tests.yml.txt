@@ -1,0 +1,38 @@
+name: Node.js CI
+
+on:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Node.js ${{matrix.node-version}} on ${{matrix.os}}
+    runs-on: ${{matrix.os}}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+        node-version: [22, 24, 26]
+
+    steps:
+      # Fetch only the vendor submodules the build needs — not the wiki, whose
+      # unpushed commits would otherwise fail checkout across the whole matrix.
+      - uses: actions/checkout@v7
+      - name: Check out build submodules
+        run: git submodule update --init vendor/re2 vendor/abseil-cpp
+      - name: Setup Node.js ${{matrix.node-version}}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{matrix.node-version}}
+      - name: Install the package and run tests
+        env:
+          DEVELOPMENT_SKIP_GETTING_ASSET: true
+        run: |
+          npm i
+          npm run build --if-present
+          npm test

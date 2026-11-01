@@ -1,0 +1,93 @@
+# N.B.: This won't run on releases because of
+# https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow.
+# However, we also have a companion deploy that's part of the release.yml workflow.
+name: Companion Edge Deploy
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'Dockerfile'
+      - 'packages/@uppy/companion/**'
+      - '.github/workflows/companion-deploy.yml'
+
+env:
+  YARN_ENABLE_GLOBAL_CACHE: false
+
+jobs:
+  npm:
+    name: Generate npm tarball
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26.12.1'
+      - name: Install Corepack
+        run: npm install --global corepack@0.36.0
+      - name: Set SHA commit in version
+        run:
+          (cd packages/@uppy/companion && node -e 'const
+          pkg=require("./package.json");pkg.version+="+${{ github.sha
+          }}";fs.writeFileSync("package.json",JSON.stringify(pkg, undefined,
+          2)+"\n")')
+      - name: Create Companion tarball
+        run:
+          corepack yarn workspace @uppy/companion pack --install-if-needed -o
+          /tmp/companion-${{ github.sha }}.tar.gz
+      - name: Upload artifact
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: companion-${{ github.sha }}.tar.gz
+          path: /tmp/companion-${{ github.sha }}.tar.gz
+
+  docker:
+    name: DockerHub (${{ matrix.platform }})
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+            platform_tag: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            platform_tag: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Log in to DockerHub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          push: true
+          context: .
+          platforms: ${{ matrix.platform }}
+          file: Dockerfile
+          tags: transloadit/companion:edge-${{ matrix.platform_tag }}
+
+  docker-manifest:
+    name: DockerHub manifest
+    needs: docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
+      - name: Log in to DockerHub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Publish edge manifest
+        run: |
+          docker buildx imagetools create \
+            --tag transloadit/companion:edge \
+            transloadit/companion:edge-amd64 \
+            transloadit/companion:edge-arm64

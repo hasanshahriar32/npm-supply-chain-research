@@ -1,0 +1,125 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+name: Test
+
+jobs:
+  host_tests:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-2022, macos-26-intel]
+        node: [20.19.0, 22.x, 24.x]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Cache zstd build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
+        with:
+          path: deps
+          key: zstd-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package.json', 'package-lock.json', 'etc/install-zstd.sh') }}
+
+      - name: Install zstd
+        run: npm run install-zstd
+        shell: bash
+
+      - name: install dependencies and compile
+        run: npm install --ignore-scripts --loglevel verbose && npm run prebuild
+        shell: bash
+
+      - name: Test ${{ matrix.os }}
+        shell: bash
+        run: npm test
+
+  container_tests_glibc:
+    runs-on: ubuntu-latest
+    # QEMU-emulated builds occasionally hang; fail fast rather than burning the
+    # 6-hour default timeout. Successful runs complete in ~15 min.
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        linux_arch: [s390x, arm64, amd64]
+        node: [20.19.0, 22.x, 24.x]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Get Full Node.js Version
+        id: get_nodejs_version
+        shell: bash
+        run: |
+          echo "version=$(node --print 'process.version.slice(1)')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # 4.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # 4.3.0
+
+      - name: Run Buildx
+        run: |
+          docker buildx create --name builder --bootstrap --use
+          docker buildx build \
+            --platform linux/${{ matrix.linux_arch }} \
+            --build-arg="NODE_ARCH=${{ matrix.linux_arch == 'amd64' && 'x64' || matrix.linux_arch }}" \
+            --build-arg="NODE_VERSION=${{ steps.get_nodejs_version.outputs.version }}" \
+            --build-arg="RUN_TEST=true" \
+            --output type=local,dest=./prebuilds,platform-split=false \
+            -f ./.github/docker/Dockerfile.glibc \
+            .
+
+  container_tests_musl:
+    runs-on: ubuntu-latest
+    # QEMU-emulated builds occasionally hang; fail fast rather than burning the
+    # 6-hour default timeout. Successful runs complete in ~15 min.
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        linux_arch: [amd64, arm64]
+        node: [20.19.0, 22.x, 24.x]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Get Full Node.js Version
+        id: get_nodejs_version
+        shell: bash
+        run: |
+          echo "version=$(node --print 'process.version.slice(1)')" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # 4.2.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # 4.3.0
+
+      - name: Run Buildx
+        run: |
+          docker buildx create --name builder --bootstrap --use
+          docker --debug buildx build --progress=plain --no-cache \
+            --platform linux/${{ matrix.linux_arch }} \
+            --build-arg="PLATFORM=${{ matrix.linux_arch == 'arm64' && 'arm64v8' || matrix.linux_arch }}" \
+            --build-arg="NODE_VERSION=${{ steps.get_nodejs_version.outputs.version }}" \
+            --build-arg="RUN_TEST=true" \
+            --output type=local,dest=./prebuilds,platform-split=false \
+            -f ./.github/docker/Dockerfile.musl \
+            .

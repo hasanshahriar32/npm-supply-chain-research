@@ -1,0 +1,19 @@
+name: Check Dependencies
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Node and dependencies
+        uses: mongodb-labs/drivers-github-tools/node/setup@v3
+      - run: npm run check:dependencies

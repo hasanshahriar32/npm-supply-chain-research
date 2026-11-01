@@ -1,0 +1,35 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "benchmark/**"
+      - "src/**"
+      - ".config/tsup.config.ts"
+      - ".github/workflows/benchmark.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        uses: ./.github/actions/install
+
+      - name: Run Benchmark
+        run: pnpm benchmark

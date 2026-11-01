@@ -1,0 +1,91 @@
+# Test All Node.js Versions Workflow
+#
+# This workflow ensures the package is compatible across different Node.js versions.
+# It performs the following steps:
+# - Builds the package on Node.js 22.x
+# - Runs all tests to ensure functionality
+# - Creates a package tarball
+# - Tests the packaged version across multiple Node.js versions (16.x, 18.x, 20.x, 22.x, 26.x)
+# - Verifies the package can be installed and used correctly on each Node.js version
+#
+# This ensures backward compatibility and that the package works for users on different Node.js versions.
+#
+# Triggers: Push to master, pull requests to master
+
+name: Test All Node.js Versions
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.22.1
+
+      - name: Install all dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build package
+        run: yarn build
+
+      - name: Run project tests
+        run: yarn test
+
+      - name: Pack package
+        run: npm pack
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: package-dist-${{ matrix.os }}
+          path: |
+            console-table-printer-*.tgz
+            test/githubActionsTest/package-test.js
+            dist/
+
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [16.x, 18.x, 20.x, 22.x, 26.x]
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: package-dist-${{ matrix.os }}
+
+      - name: Test package
+        shell: bash
+        run: |
+          mkdir test-pkg && cd test-pkg
+          mv ../console-table-printer-*.tgz ./
+          mv ../test/githubActionsTest/package-test.js ./
+          yarn init -y
+          yarn add ./console-table-printer-*.tgz
+          echo "Running tests on Node.js ${{ matrix.node-version }}..."
+          node package-test.js

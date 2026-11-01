@@ -1,0 +1,68 @@
+{
+  "name": "rollup-plugin-copy",
+  "description": "Copy files and folders using Rollup",
+  "version": "3.5.0",
+  "author": "Vlad Shcherbin <vlad.shcherbin@gmail.com>",
+  "repository": "vladshcherbin/rollup-plugin-copy",
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "scripts": {
+    "build": "tsdown",
+    "coverage": "node --test --experimental-test-coverage",
+    "lint": "eslint",
+    "prepublishOnly": "pnpm lint && pnpm test && pnpm build",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@sindresorhus/is": "^7.1.1",
+    "globby": "16.1.0"
+  },
+  "peerDependencies": {
+    "@types/node": "*",
+    "rollup": "*"
+  },
+  "devDependencies": {
+    "@shcherbin/eslint-config-node": "^0.4.1",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^25.0.3",
+    "eslint": "^9.39.2",
+    "fs-extra": "^11.3.3",
+    "replace-in-file": "^8.4.0",
+    "rollup": "^4.54.0",
+    "tsdown": "^0.18.2",
+    "typescript": "^5.9.3"
+  },
+  "files": [
+    "dist",
+    "readme.md"
+  ],
+  "keywords": [
+    "rollup",
+    "rollup-plugin",
+    "copy",
+    "cp",
+    "asset",
+    "assets",
+    "file",
+    "files",
+    "folder",
+    "folders",
+    "glob"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "unrs-resolver"
+    ]
+  },
+  "engines": {
+    "node": ">= 20"
+  },
+  "sideEffects": false,
+  "type": "module",
+  "license": "MIT"
+}

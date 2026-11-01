@@ -1,0 +1,31 @@
+on:
+  push:
+    paths-ignore:
+      - cache/**
+      - generated/**
+name: Dry-run the update process
+env:
+  NODE_OPTIONS: --max-old-space-size=8192
+jobs:
+  update_dry_run:
+    runs-on: ubuntu-latest
+    # These steps should be kept in sync with `update.yml` - minus the code that actually
+    # commits, pushes and creates a PR.
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          cache: npm
+          node-version: lts/*
+      - run: npm ci
+      - run: npm run download
+      # - uses: actions/checkout@v3 # tag=v3
+      #   with:
+      #     repository: xuorig/anicca
+      #     path: anicca
+      # - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # tag=v1
+      #   with:
+      #     toolchain: stable
+      # - run: cargo build
+      #   working-directory: anicca
+      - run: npm run build

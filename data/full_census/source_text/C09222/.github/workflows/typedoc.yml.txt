@@ -1,0 +1,20 @@
+name: typedoc-check
+
+on:
+  pull_request: ~
+  push:
+    branches: ['main']
+    tags: ['v*']
+    paths-ignore:
+      - 'docs/**'
+
+permissions: {}
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: $/.github/actions/setup
+      - run: pnpm run doc

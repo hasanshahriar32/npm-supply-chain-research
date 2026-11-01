@@ -1,0 +1,158 @@
+{
+  "name": "wretch",
+  "version": "3.0.9",
+  "type": "module",
+  "description": "A tiny wrapper built around fetch with an intuitive syntax.",
+  "keywords": [
+    "wretch",
+    "fetch",
+    "ajax",
+    "request"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "homepage": "https://elbywan.github.io/wretch",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elbywan/wretch"
+  },
+  "bugs": {
+    "url": "https://github.com/elbywan/wretch/issues"
+  },
+  "main": "./dist/bundle/wretch.min.cjs",
+  "unpkg": "./dist/bundle/wretch.min.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/*",
+        "dist/*/index.d.ts",
+        "dist/index.d.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "./all": {
+      "require": {
+        "types": "./dist/cjs/index.all.d.ts",
+        "default": "./dist/cjs/index.all.js"
+      },
+      "import": {
+        "types": "./dist/index.all.d.ts",
+        "default": "./dist/index.all.js"
+      }
+    },
+    "./addons": {
+      "require": {
+        "types": "./dist/cjs/addons/index.d.ts",
+        "default": "./dist/cjs/addons/index.js"
+      },
+      "import": {
+        "types": "./dist/addons/index.d.ts",
+        "default": "./dist/addons/index.js"
+      }
+    },
+    "./addons/*": {
+      "require": {
+        "types": "./dist/cjs/addons/*.d.ts",
+        "default": "./dist/cjs/addons/*.js"
+      },
+      "import": {
+        "types": "./dist/addons/*.d.ts",
+        "default": "./dist/addons/*.js"
+      }
+    },
+    "./middlewares": {
+      "require": {
+        "types": "./dist/cjs/middlewares/index.d.ts",
+        "default": "./dist/cjs/middlewares/index.js"
+      },
+      "import": {
+        "types": "./dist/middlewares/index.d.ts",
+        "default": "./dist/middlewares/index.js"
+      }
+    },
+    "./middlewares/*": {
+      "require": {
+        "types": "./dist/cjs/middlewares/*.d.ts",
+        "default": "./dist/cjs/middlewares/*.js"
+      },
+      "import": {
+        "types": "./dist/middlewares/*.d.ts",
+        "default": "./dist/middlewares/*.js"
+      }
+    },
+    "./package.json": "./package.json",
+    "./*.mjs": {
+      "default": "./dist/*.mjs"
+    },
+    "./*.cjs": {
+      "default": "./dist/*.cjs"
+    },
+    "./*": {
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "start": "npm run build && npm run test",
+    "lint": "eslint '{src,test}/**/*.{js,ts}'",
+    "lint:fix": "eslint --fix '{src,test}/**/*.{js,ts}'",
+    "prebuild": "rimraf dist && rimraf coverage && npm run lint",
+    "build": "tsc && tsc --project tsconfig.cjs.json && echo '{\"type\": \"commonjs\"}' > ./dist/cjs/package.json && rolldown -c ./rolldown.config.ts",
+    "mock": "node scripts/mockServer.js",
+    "test": "npm run test:node && npm run test:browser && npm run test:deno && npm run test:bun && npm run test:snippets && npm run test:types",
+    "test:node": "node scripts/runWithMockServer.js \"c8 node --import tsx --test test/node/*.spec.ts --test test/node/**/*.spec.ts\"",
+    "test:browser": "node scripts/runWithMockServer.js web-test-runner",
+    "test:browser:watch": "node scripts/runWithMockServer.js \"web-test-runner --watch\"",
+    "test:deno": "node scripts/runWithMockServer.js \"deno test --allow-net --allow-read --no-check --sloppy-imports --config test/deno/deno.json test/deno/wretch.spec.ts\"",
+    "test:bun": "node scripts/runWithMockServer.js \"bun test test/bun/wretch.spec.ts\"",
+    "test:snippets": "node --experimental-vm-modules --import tsx --test test/snippets/snippets.spec.ts",
+    "test:types": "tsc -b tsconfig.type-tests.json",
+    "changelog": "conventional-changelog -p wretch -i CHANGELOG.md -s -r 0",
+    "doc": "typedoc --out docs/api --readme none --excludeInternal src/index.ts 'src/addons/*.ts' 'src/middlewares/*.ts'",
+    "prepare": "npm run build",
+    "prepare:release": "npm run start && npm run doc && npm run changelog"
+  },
+  "author": "Julien Elbaz",
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@fastify/basic-auth": "^6.2.0",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/formbody": "^8.0.2",
+    "@fastify/multipart": "^10.0.0",
+    "@types/node": "^25.8.0",
+    "@web/dev-server-esbuild": "^1.0.5",
+    "@web/test-runner": "^0.20.2",
+    "@web/test-runner-playwright": "^0.11.1",
+    "c8": "^11.0.0",
+    "conventional-changelog-cli": "^2.2.2",
+    "conventional-changelog-wretch": "file:scripts/conventional-changelog-wretch",
+    "eslint": "^10.4.0",
+    "fastify": "^5.8.5",
+    "globals": "^17.6.0",
+    "rimraf": "^6.1.3",
+    "rolldown": "^1.0.1",
+    "tslib": "^2.8.1",
+    "tsx": "^4.22.0",
+    "typedoc": "^0.28.19",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.3"
+  }
+}

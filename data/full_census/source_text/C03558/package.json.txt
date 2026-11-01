@@ -1,0 +1,70 @@
+{
+  "private": true,
+  "name": "@fullcalendar-monorepos/root",
+  "version": "7.1.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fullcalendar/fullcalendar-workspace.git"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.1",
+    "@fullcalendar-scripts/standard": "workspace:*",
+    "@fullcalendar-scripts/workspace": "workspace:*"
+  },
+  "scripts": {
+    "pnpm:devPreinstall": "./scripts/bin/prepare-dist-dirs.sh",
+    "postinstall": "workspace-scripts postinstall",
+    "meta:hide": "workspace-scripts meta:hide",
+    "meta:show": "workspace-scripts meta:show",
+    "meta:update": "workspace-scripts meta:update",
+    "lint": "standard-scripts lint",
+    "build": "standard-scripts build",
+    "dev": "pnpm run dev:pre && pnpm run dev:pre:scheduler && standard-scripts dev",
+    "dev:pre": "cd standard/packages/react && pnpm run src:generate",
+    "dev:pre:scheduler": "cd premium/packages/react-scheduler && pnpm run src:generate",
+    "test": "standard-scripts test",
+    "test:dev": "standard-scripts test --dev",
+    "clean": "standard-scripts clean",
+    "release-prep": "./scripts/bin/release-prep.sh",
+    "version-bump": "changeset version",
+    "version-sync": "workspace-scripts version-sync",
+    "sync-repos": "workspace-scripts sync-repos",
+    "pull-from-subrepos": "workspace-scripts pull-from-subrepos",
+    "archive": "pnpm -r run archive",
+    "tag-and-release": "workspace-scripts tag-and-release",
+    "publish": "changeset publish --no-git-tag",
+    "classnames": "workspace-scripts classnames",
+    "filesizes": "workspace-scripts filesizes",
+    "cb": "./scripts/bin/clean-and-build.sh"
+  },
+  "type": "module",
+  "monorepoConfig": {
+    "filterSubtrees": [
+      "./standard",
+      "./premium",
+      "./theming",
+      "./scripts"
+    ]
+  },
+  "engines": {
+    "pnpm": ">=10.15.0"
+  },
+  "pnpm": {
+    "packageExtensions": {
+      "@angular-devkit/build-angular@16": {
+        "peerDependencies": {
+          "@angular/compiler": "^16.0.0"
+        }
+      }
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "ng-packagr@13>typescript": "^4.4.0"
+      }
+    },
+    "patchedDependencies": {
+      "@angular/build@18.2.21": "scripts/patches/@angular__build@18.patch",
+      "jasmine-jquery@2.1.1": "standard/scripts/patches/jasmine-jquery@2.1.1.patch"
+    }
+  }
+}

@@ -1,0 +1,373 @@
+name: Crates Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run cargo publish --dry-run without requesting a crates.io token'
+        type: boolean
+        required: false
+        default: true
+      crate:
+        description: 'Crate to release'
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - formatjs_apple_printf_parser
+          - formatjs_java_printf_parser
+          - formatjs_icu_skeleton_parser
+          - formatjs_icu_messageformat_parser
+          - formatjs_icu_messageformat
+          - formatjs_intl_macros
+          - formatjs_intl
+          - formatjs_intl_collator
+          - formatjs_intl_data
+          - formatjs_intl_data_build
+          - formatjs_intl_datetimeformat
+          - formatjs_intl_datetimeformat_calendars
+          - formatjs_intl_displaynames
+          - formatjs_intl_durationformat
+          - formatjs_intl_getcanonicallocales
+          - formatjs_intl_hermes
+          - formatjs_intl_listformat
+          - formatjs_intl_locale
+          - formatjs_intl_localematcher
+          - formatjs_intl_numberformat
+          - formatjs_intl_pluralrules
+          - formatjs_intl_relativetimeformat
+          - formatjs_intl_segmenter
+          - formatjs_intl_supportedvaluesof
+
+concurrency:
+  group: ${{ github.workflow }}
+  queue: max
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release Crates
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'formatjs_') || startsWith(github.event.release.tag_name, 'icu_') || startsWith(github.event.release.tag_name, 'crates/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref }}
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+
+      - name: Select Crates
+        id: crates
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_CRATE: ${{ inputs.crate || 'all' }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          intl_crates=(
+            formatjs_intl_collator
+            formatjs_intl_data
+            formatjs_intl_data_build
+            formatjs_intl_datetimeformat
+            formatjs_intl_datetimeformat_calendars
+            formatjs_intl_displaynames
+            formatjs_intl_durationformat
+            formatjs_intl_getcanonicallocales
+            formatjs_intl_hermes
+            formatjs_intl_listformat
+            formatjs_intl_locale
+            formatjs_intl_localematcher
+            formatjs_intl_numberformat
+            formatjs_intl_pluralrules
+            formatjs_intl_relativetimeformat
+            formatjs_intl_segmenter
+            formatjs_intl_supportedvaluesof
+          )
+          all_crates=(
+            formatjs_apple_printf_parser
+            formatjs_java_printf_parser
+            formatjs_icu_skeleton_parser
+            formatjs_icu_messageformat_parser
+            formatjs_icu_messageformat
+            formatjs_intl_macros
+            formatjs_intl
+            "${intl_crates[@]}"
+          )
+          contains_crate() {
+            local candidate="$1"
+            local allowed
+            shift
+            for allowed in "$@"; do
+              if [ "$allowed" = "$candidate" ]; then return 0; fi
+            done
+            return 1
+          }
+          dry_run="$INPUT_DRY_RUN"
+
+          case "$EVENT_NAME" in
+            release)
+              dry_run=false
+              case "$RELEASE_TAG" in
+                formatjs_apple_printf_parser_v*|crates/apple_printf_parser_v*)
+                  crates=(formatjs_apple_printf_parser)
+                  ;;
+                formatjs_java_printf_parser_v*|crates/java_printf_parser_v*)
+                  crates=(formatjs_java_printf_parser)
+                  ;;
+                formatjs_icu_skeleton_parser_v*|icu_skeleton_parser_v*|crates/icu_skeleton_parser_v*)
+                  crates=(formatjs_icu_skeleton_parser)
+                  ;;
+                formatjs_icu_messageformat_parser_v*|icu_messageformat_parser_v*|crates/icu_messageformat_parser_v*)
+                  crates=(formatjs_icu_messageformat_parser)
+                  ;;
+                formatjs_icu_messageformat_v*|icu_messageformat_v*|crates/icu_messageformat_v*)
+                  crates=(formatjs_icu_messageformat)
+                  ;;
+                formatjs_intl_macros_v*|crates/formatjs_intl_macros_v*)
+                  crates=(formatjs_intl_macros)
+                  ;;
+                formatjs_intl_v*|crates/formatjs_intl_v*)
+                  crates=(formatjs_intl)
+                  ;;
+                formatjs_intl_*_v*|intl_*_v*|crates/intl_*_v*)
+                  crate="${RELEASE_TAG##*/}"
+                  crate="${crate%_v*}"
+                  if [[ "$crate" == intl_* ]]; then crate="formatjs_$crate"; fi
+                  if contains_crate "$crate" "${intl_crates[@]}"; then
+                    crates=("$crate")
+                  else
+                    crates=()
+                  fi
+                  ;;
+                *)
+                  crates=()
+                  ;;
+              esac
+              ;;
+            workflow_dispatch)
+              if [ "$INPUT_CRATE" = all ]; then
+                crates=("${all_crates[@]}")
+              elif contains_crate "$INPUT_CRATE" "${all_crates[@]}"; then
+                crates=("$INPUT_CRATE")
+              else
+                echo "Unknown crate: $INPUT_CRATE" >&2
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Unsupported event: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
+
+          if [ "${#crates[@]}" -eq 0 ]; then
+            echo "No crates selected for this event"
+            echo "has_crates=false" >> "$GITHUB_OUTPUT"
+            echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          has_intl=false
+          for crate in "${crates[@]}"; do
+            if contains_crate "$crate" "${intl_crates[@]}"; then has_intl=true; fi
+          done
+          {
+            echo "has_intl=$has_intl"
+            echo "has_crates=true"
+            echo "dry_run=$dry_run"
+            echo "names<<EOF"
+            printf '%s\n' "${crates[@]}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Setup Cargo Toolchain
+        if: ${{ steps.crates.outputs.has_crates == 'true' }}
+        run: |
+          rustup toolchain install 1.97.0 --profile minimal
+          echo "RUSTUP_TOOLCHAIN=1.97.0" >> "$GITHUB_ENV"
+
+      - name: Validate Rust Crates
+        if: ${{ steps.crates.outputs.has_crates == 'true' }}
+        run: |
+          set -euo pipefail
+
+          targets=(
+            //crates/apple_printf_parser:apple_printf_parser_test
+            //crates/apple_printf_parser:doc_test
+            //crates/java_printf_parser:java_printf_parser_test
+            //crates/java_printf_parser:java_conformance_test
+            //crates/java_printf_parser:doc_test
+            //crates/icu_skeleton_parser:icu_skeleton_parser_test
+            //crates/icu_messageformat_parser:icu_messageformat_parser_test
+            //crates/icu_messageformat:icu_messageformat_test
+            //crates/formatjs_intl:formatjs_intl_test
+          )
+
+          if [ "${{ steps.crates.outputs.has_intl }}" = true ]; then
+            targets+=(//tools/cargo:release_package_test)
+          fi
+
+          if [ -n "${{ secrets.BUILDBUDDY_ORG_API_KEY }}" ]; then
+            bazel test \
+              --config=ci \
+              --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_ORG_API_KEY }} \
+              "${targets[@]}"
+          else
+            bazel test "${targets[@]}"
+          fi
+
+      - name: Assemble Intl Cargo Packages
+        if: ${{ steps.crates.outputs.has_intl == 'true' }}
+        env:
+          BUILDBUDDY_ORG_API_KEY: ${{ secrets.BUILDBUDDY_ORG_API_KEY }}
+        run: |
+          set -euo pipefail
+          bazel_args=()
+          if [ -n "$BUILDBUDDY_ORG_API_KEY" ]; then
+            bazel_args+=(--config=ci "--remote_header=x-buildbuddy-api-key=$BUILDBUDDY_ORG_API_KEY")
+          fi
+          bazel build "${bazel_args[@]}" //crates:intl_release
+          package_path="$(bazel cquery "${bazel_args[@]}" --output=files //crates:intl_release)"
+          release_dir="$RUNNER_TEMP/intl-crates"
+          mkdir -p "$release_dir"
+          git archive HEAD | tar -x -C "$release_dir"
+          cp -RL "$package_path/crates/." "$release_dir/crates/"
+          chmod -R u+w "$release_dir"
+          echo "INTL_RELEASE_DIR=$release_dir" >> "$GITHUB_ENV"
+
+      - name: Dry-run Crate Publish
+        if: ${{ steps.crates.outputs.has_crates == 'true' && steps.crates.outputs.dry_run == 'true' }}
+        run: |
+          set -euo pipefail
+
+          intl_packages=()
+          while IFS= read -r crate; do
+            if [ -n "${INTL_RELEASE_DIR:-}" ] && [ -f "$INTL_RELEASE_DIR/crates/${crate#formatjs_}/Cargo.toml" ]; then
+              intl_packages+=(-p "$crate")
+            else
+              cargo publish --locked --dry-run -p "$crate"
+            fi
+          done <<< "${{ steps.crates.outputs.names }}"
+          if [ "${#intl_packages[@]}" -gt 0 ]; then
+            (cd "$INTL_RELEASE_DIR" && cargo publish --locked --dry-run --all-features "${intl_packages[@]}")
+          fi
+
+      - name: Authenticate with crates.io
+        id: auth
+        if: ${{ steps.crates.outputs.has_crates == 'true' && steps.crates.outputs.dry_run != 'true' }}
+        # Pin a Node 24 runtime commit until rust-lang/crates-io-auth-action tags it.
+        uses: rust-lang/crates-io-auth-action@1d2b8f3552d69b407d7790fa3ec7c39041305a61
+
+      - name: Publish Crates
+        if: ${{ steps.crates.outputs.has_crates == 'true' && steps.crates.outputs.dry_run != 'true' }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: |
+          set -euo pipefail
+
+          wait_for_crate() {
+            local crate="$1"
+            local version="$2"
+            local url="https://crates.io/api/v1/crates/$crate/$version"
+
+            for attempt in $(seq 1 30); do
+              if curl \
+                --fail \
+                --silent \
+                --show-error \
+                --header "Accept: application/json" \
+                --user-agent "formatjs-crates-release (https://github.com/formatjs/formatjs)" \
+                "$url" > /dev/null; then
+                echo "$crate $version is available on crates.io"
+                return 0
+              fi
+
+              if [ "$attempt" -lt 30 ]; then
+                sleep 20
+              fi
+            done
+
+            echo "$crate $version did not become available on crates.io" >&2
+            return 1
+          }
+
+          publishes_crate() {
+            local crate="$1"
+
+            while IFS= read -r selected_crate; do
+              if [ "$selected_crate" = "$crate" ]; then
+                return 0
+              fi
+            done <<< "${{ steps.crates.outputs.names }}"
+
+            return 1
+          }
+
+          wait_if_published_by_this_run() {
+            local crate="$1"
+            local version="$2"
+
+            if publishes_crate "$crate"; then
+              wait_for_crate "$crate" "$version"
+            else
+              echo "$crate is not selected in this run; skipping crates.io availability wait"
+            fi
+          }
+
+          dependency_version() {
+            local manifest="$1"
+            local crate="$2"
+            sed -n "s/^$crate = .*version = \"\\([^\"]*\\)\".*/\\1/p" "$manifest" | head -1
+          }
+
+          intl_packages=()
+          while IFS= read -r crate; do
+            if [ -n "${INTL_RELEASE_DIR:-}" ] && [ -f "$INTL_RELEASE_DIR/crates/${crate#formatjs_}/Cargo.toml" ]; then
+              intl_packages+=(-p "$crate")
+              continue
+            fi
+            case "$crate" in
+              formatjs_icu_messageformat_parser)
+                wait_if_published_by_this_run \
+                  formatjs_icu_skeleton_parser \
+                  "$(dependency_version crates/icu_messageformat_parser/Cargo.toml formatjs_icu_skeleton_parser)"
+                ;;
+              formatjs_icu_messageformat)
+                wait_if_published_by_this_run \
+                  formatjs_icu_skeleton_parser \
+                  "$(dependency_version crates/icu_messageformat/Cargo.toml formatjs_icu_skeleton_parser)"
+                wait_if_published_by_this_run \
+                  formatjs_icu_messageformat_parser \
+                  "$(dependency_version crates/icu_messageformat/Cargo.toml formatjs_icu_messageformat_parser)"
+                ;;
+              formatjs_intl)
+                wait_if_published_by_this_run \
+                  formatjs_intl_macros \
+                  "$(dependency_version crates/formatjs_intl/Cargo.toml formatjs_intl_macros)"
+                wait_if_published_by_this_run \
+                  formatjs_icu_messageformat \
+                  "$(dependency_version crates/formatjs_intl/Cargo.toml formatjs_icu_messageformat)"
+                ;;
+            esac
+
+            cargo publish --locked -p "$crate"
+          done <<< "${{ steps.crates.outputs.names }}"
+          if [ "${#intl_packages[@]}" -gt 0 ]; then
+            (cd "$INTL_RELEASE_DIR" && cargo publish --locked --all-features "${intl_packages[@]}")
+          fi

@@ -1,0 +1,76 @@
+name: CD
+
+concurrency: production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
+
+  release:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - uses: google-github-actions/release-please-action@v4
+        id: release
+        with:
+          config-file: .github/release-please/release-please-config.json
+          manifest-file: .github/release-please/.release-please-manifest.json
+
+      # Publish when release-please cuts a new release, or when the workflow is
+      # run manually to retry a release whose npm publish failed. publish-packages
+      # skips any version already on the registry, so a manual run is a safe no-op
+      # when everything is already published.
+      - id: should_publish
+        run: echo "result=${{ steps.release.outputs.releases_created == 'true' || github.event_name == 'workflow_dispatch' }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: ${{ steps.should_publish.outputs.result == 'true' }}
+
+      # No registry-url here on purpose: it makes setup-node write an .npmrc with
+      # `_authToken=${NODE_AUTH_TOKEN}` plus a placeholder token, which npm falls
+      # back to and fails with a misleading E404 when OIDC is not accepted.
+      # Publishing authenticates via trusted publishing (OIDC) instead.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+        if: ${{ steps.should_publish.outputs.result == 'true' }}
+
+      - run: npm ci
+        if: ${{ steps.should_publish.outputs.result == 'true' }}
+
+      - run: npm run build
+        if: ${{ steps.should_publish.outputs.result == 'true' }}
+
+      - run: npm exec -c publish-packages
+        if: ${{ steps.should_publish.outputs.result == 'true' }}

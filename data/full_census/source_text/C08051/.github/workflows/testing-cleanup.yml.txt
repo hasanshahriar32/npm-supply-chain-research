@@ -1,0 +1,27 @@
+name: 'Cleanup test resources'
+
+# See testing-cleanup.md in this directory for the working theory on why the schedule below
+# never fired (#57) and how to trigger this manually until it's confirmed fixed.
+on:
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [cleanup-test-resources]
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Delete all indexes and collections in sdk-node-testing project
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Cleanup
+        run: npm run test:integration:cleanup
+        env:
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}

@@ -1,0 +1,274 @@
+name: Package Preview Publish
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# This workflow deliberately does NOT run the Wix gateway proxy: the gateway
+# cannot carry `npm publish` (it rejects `PUT /<package>`), so per secplatform's
+# interim policy for OSS repos this job relies on `npm ci` against the committed
+# package-lock.json plus .npmrc's min-release-age instead. It resolves nothing,
+# so dropping the gateway does not widen what it can pull. Exemption lives in
+# .github/scripts/check_wix_proxy_steps.py.
+jobs:
+  # Which packages get a preview. @base44/sdk always does (unchanged behaviour);
+  # @base44/platform only when the PR touches packages/platform/. It installs
+  # nothing, so it needs no gateway either.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      packages: ${{ steps.packages.outputs.packages }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Select packages
+        id: packages
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          PACKAGES='"sdk"'
+          if ! git diff --quiet "$BASE_SHA" HEAD -- packages/platform; then
+            PACKAGES="$PACKAGES,\"platform\""
+          fi
+          echo "packages=[$PACKAGES]" >> "$GITHUB_OUTPUT"
+          echo "Previewing: [$PACKAGES]"
+
+  publish-preview:
+    needs: changes
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.changes.outputs.packages) }}
+    permissions:
+      # id-token: write for npm trusted publishing (OIDC).
+      # pull-requests: write for the install-instructions comment.
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Enable corepack
+        run: corepack enable
+
+      # Node 24, not 20: its bundled npm (>= 11.17) already covers trusted
+      # publishing (needs >= 11.5.1) and reads .npmrc's min-release-age (needs
+      # >= 11.10.0), so there is no `npm install -g npm@11` fetching a floating
+      # npm release outside the cooldown.
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      # `npm ci`, not `npm install`: without the gateway in front of this job, a
+      # resolving install is the one thing that could pull a fresh release. `npm ci`
+      # installs exactly what package-lock.json pins and resolves nothing.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build -w @base44/${{ matrix.package }}
+
+      - name: Generate preview package name and version
+        working-directory: packages/${{ matrix.package }}
+        id: preview_info
+        run: |
+          PR_NUMBER="${{ github.event.number }}"
+          COMMIT_HASH="${{ github.sha }}"
+          SHORT_COMMIT="${COMMIT_HASH:0:7}"
+
+          # Get current version from package.json
+          BASE_VERSION=$(node -p "require('./package.json').version")
+
+          if [ ! -z "$PR_NUMBER" ]; then
+            # Format: 0.3.0-pr.123.abc1234 (valid semver prerelease)
+            PREVIEW_VERSION="$BASE_VERSION-pr.$PR_NUMBER.$SHORT_COMMIT"
+          else
+            # Format: 0.3.0-dev.abc1234 (valid semver prerelease)
+            PREVIEW_VERSION="$BASE_VERSION-dev.$SHORT_COMMIT"
+          fi
+
+          echo "version=$PREVIEW_VERSION" >> $GITHUB_OUTPUT
+          echo "package_name=@base44-preview/${{ matrix.package }}" >> $GITHUB_OUTPUT
+          echo "full_package=@base44-preview/${{ matrix.package }}@$PREVIEW_VERSION" >> $GITHUB_OUTPUT
+          echo "official_package=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
+
+      - name: Update package.json for preview
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          # Create a backup of original package.json
+          cp package.json package.json.bak
+
+          # Get the official package name for safety checks
+          OFFICIAL_PACKAGE=$(node -p "require('./package.json').name")
+          PREVIEW_PACKAGE="${{ steps.preview_info.outputs.package_name }}"
+
+          echo "Official package: $OFFICIAL_PACKAGE"
+          echo "Preview package: $PREVIEW_PACKAGE"
+
+          # Safety check: Ensure we're not accidentally using the official package name
+          if [ "$PREVIEW_PACKAGE" = "$OFFICIAL_PACKAGE" ]; then
+            echo "❌ ERROR: Preview package name matches official package name!"
+            echo "This would overwrite the official package. Aborting."
+            exit 1
+          fi
+
+          # Update name with error handling
+          if ! npm pkg set name="$PREVIEW_PACKAGE"; then
+            echo "❌ ERROR: Failed to set package name to $PREVIEW_PACKAGE"
+            exit 1
+          fi
+
+          # Update version with error handling
+          if ! npm pkg set version="${{ steps.preview_info.outputs.version }}"; then
+            echo "❌ ERROR: Failed to set package version to ${{ steps.preview_info.outputs.version }}"
+            exit 1
+          fi
+
+          echo "✅ Package.json updated successfully"
+
+      - name: Final safety check before publish
+        working-directory: packages/${{ matrix.package }}
+        run: |
+          # Double-check package name one more time before publishing
+          CURRENT_PACKAGE_NAME=$(node -p "require('./package.json').name")
+          OFFICIAL_PACKAGE=$(jq -r '.name' package.json.bak)
+
+          echo "About to publish: $CURRENT_PACKAGE_NAME"
+
+          if [ "$CURRENT_PACKAGE_NAME" = "$OFFICIAL_PACKAGE" ]; then
+            echo "❌ CRITICAL ERROR: About to publish to official package name!"
+            echo "This is not allowed. Check the workflow configuration."
+            exit 1
+          fi
+
+          echo "✅ Safety check passed. Package name is safe to publish."
+
+      - name: Publish preview package
+        working-directory: packages/${{ matrix.package }}
+        # Authenticates via npm trusted publishing (OIDC), so no NPM_TOKEN reaches
+        # the build. Needs a trusted publisher for each `@base44-preview/<package>` on
+        # npmjs.com registered against this repo and this workflow filename — the
+        # registry keys on the filename, so this needs its own entry, separate from
+        # manual-publish.yml.
+        run: |
+          if npm publish --tag preview; then
+            echo "✅ Package published successfully"
+          else
+            echo "❌ Package publish failed"
+            exit 1
+          fi
+
+      - name: Restore original package.json
+        working-directory: packages/${{ matrix.package }}
+        if: always()
+        run: |
+          if [ -f package.json.bak ]; then
+            mv package.json.bak package.json
+            echo "✅ Original package.json restored"
+          else
+            echo "❌ WARNING: Backup file package.json.bak not found"
+            echo "This could indicate an earlier step failed"
+          fi
+
+      - name: Comment PR with install instructions
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            const fullPackage = '${{ steps.preview_info.outputs.full_package }}';
+            const officialPackage = '${{ steps.preview_info.outputs.official_package }}';
+            const installCmd = `npm i ${fullPackage}`;
+            const aliasInstallCmd = `npm i "${officialPackage}@npm:${fullPackage}"`;
+            // One comment per package. The SDK keeps its old header so open PRs update their existing comment.
+            const marker = `<!-- package-preview:${{ matrix.package }} -->`;
+            const header = officialPackage === '@base44/sdk'
+              ? '### 🚀 Package Preview Available!'
+              : `### 🚀 Package Preview Available! (\`${officialPackage}\`)`;
+
+            const body = `${marker}
+            ${header}
+
+            ---
+
+            **Install this PR's preview build with npm:**
+
+            \`\`\`sh
+            ${installCmd}
+            \`\`\`
+
+            **Prefer not to change any import paths? Install using npm alias so your code still imports \`${officialPackage}\`:**
+
+            \`\`\`sh
+            ${aliasInstallCmd}
+            \`\`\`
+
+            Or add it to your \`package.json\` dependencies:
+
+            \`\`\`json
+            {
+              "dependencies": {
+                "${officialPackage}": "npm:${fullPackage}"
+              }
+            }
+            \`\`\`
+
+            - 📦 **Preview Package**: \`${fullPackage}\`
+            - 🔗 [View this commit on GitHub](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+
+            ---
+            <sub>Preview published to npm registry — try new features instantly!</sub>`;
+
+            async function findBotComment(issueNumber) {
+              if (!issueNumber) return null;
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100,
+              });
+              return comments.data.find((comment) =>
+                comment.body.includes(marker) ||
+                // SDK comments posted before the marker existed.
+                (officialPackage === '@base44/sdk' && !comment.body.includes('<!-- package-preview:') && comment.body.includes(header))
+              );
+            }
+
+            async function createOrUpdateComment(issueNumber) {
+              if (!issueNumber) {
+                console.log('No issue number provided. Cannot post or update comment.');
+                return;
+              }
+
+              const existingComment = await findBotComment(issueNumber);
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existingComment.id,
+                  body: body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  issue_number: issueNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: body,
+                });
+              }
+            }
+
+            if (context.eventName === 'pull_request') {
+              if (context.issue.number) {
+                await createOrUpdateComment(context.issue.number);
+              }
+            }

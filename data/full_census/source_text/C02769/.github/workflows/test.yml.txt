@@ -1,0 +1,85 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '0 22 * * 3'
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      matrix:
+        node-version:
+          - '22.23.4'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "${{ matrix.node-version }}"
+          cache: 'yarn'
+      - name: Install
+        run: yarn install --immutable
+      - name: Generate self-signed signing identity
+        run: ./spec/ci/generate-identity.sh
+      - name: Test
+        run: yarn build && yarn test
+  test-linux:
+    name: Test JS packaging on Linux
+    strategy:
+      matrix:
+        node-version:
+          - '22.23.4'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "${{ matrix.node-version }}"
+          cache: 'yarn'
+      - name: Install
+        run: yarn install --immutable
+      - name: Build
+        run: yarn build
+      # The JS packaging implementation is cross-platform for unsigned
+      # packages; run its unit and flat() suites (native-parity specs
+      # self-skip off macOS), then exercise the shipped CLI end-to-end.
+      - name: Test
+        run: yarn vitest run spec/pkg-utils spec/flat.spec.ts
+      - name: CLI smoke test
+        run: node spec/ci/js-flat-smoke.mjs
+
+  required-ci:
+    needs:
+      - test
+      - test-linux
+    runs-on: ubuntu-latest
+    if: ${{ always() }}
+    steps:
+      - name: Fail if any required job failed or was cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          TEST_LINUX_RESULT: ${{ needs.test-linux.result }}
+        run: |
+          echo "One or more required jobs did not succeed:"
+          echo "  test: $TEST_RESULT"
+          echo "  test-linux: $TEST_LINUX_RESULT"
+          exit 1
+      - name: We are done
+        run: echo "Hello World"

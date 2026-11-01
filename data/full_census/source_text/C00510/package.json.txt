@@ -1,0 +1,85 @@
+{
+  "name": "eslint-plugin-command",
+  "type": "module",
+  "version": "4.0.0",
+  "packageManager": "pnpm@11.18.0",
+  "description": "Comment-as-command for one-off codemod with ESLint",
+  "author": "Anthony Fu <anthonyfu117@hotmail.com>",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/antfu",
+  "homepage": "https://github.com/antfu/eslint-plugin-command#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antfu/eslint-plugin-command.git"
+  },
+  "bugs": "https://github.com/antfu/eslint-plugin-command/issues",
+  "keywords": [
+    "eslint-plugin",
+    "codemod"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./commands": "./dist/commands.mjs",
+    "./config": "./dist/config.mjs",
+    "./types": "./dist/types.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^22.22.2 || >=24.15.0"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "tsdown && eslint .",
+    "prepublishOnly": "nr build",
+    "release": "bumpp",
+    "test": "vitest",
+    "docs": "nr -C docs docs:dev",
+    "docs:build": "nr -C docs docs:build",
+    "typecheck": "tsc --noEmit",
+    "prepare": "simple-git-hooks"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/typescript-estree": "*",
+    "@typescript-eslint/utils": "*",
+    "eslint": "*"
+  },
+  "dependencies": {
+    "@es-joy/jsdoccomment": "catalog:prod"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:dev",
+    "@antfu/ni": "catalog:dev",
+    "@antfu/utils": "catalog:dev",
+    "@eslint/config-inspector": "catalog:dev",
+    "@eslint/markdown": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@typescript-eslint/parser": "catalog:dev",
+    "@typescript-eslint/rule-tester": "catalog:dev",
+    "@typescript-eslint/types": "catalog:dev",
+    "@typescript-eslint/typescript-estree": "catalog:dev",
+    "@typescript-eslint/utils": "catalog:dev",
+    "@vitest/ui": "catalog:dev",
+    "bumpp": "catalog:dev",
+    "eslint": "catalog:dev",
+    "eslint-vitest-rule-tester": "catalog:dev",
+    "lint-staged": "catalog:dev",
+    "pnpm": "catalog:dev",
+    "simple-git-hooks": "catalog:dev",
+    "tinyglobby": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:dev",
+    "vite": "catalog:dev",
+    "vitest": "catalog:dev"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
+  }
+}

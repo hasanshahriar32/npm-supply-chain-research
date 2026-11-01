@@ -1,0 +1,30 @@
+{
+  "name": "@spotify/web-scripts-monorepo",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spotify/web-scripts.git"
+  },
+  "scripts": {
+    "postinstall": "./postinstall.sh",
+    "test": "lerna run test --stream",
+    "build": "lerna run build --stream",
+    "lint": "web-scripts lint --no-typecheck",
+    "format": "web-scripts format",
+    "commit": "web-scripts commit",
+    "bootstrap": "lerna bootstrap --use-workspaces",
+    "release": "./release.sh",
+    "prepare": "husky install"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@spotify/eslint-config-oss": "^1.0.0",
+    "@spotify/eslint-plugin": "^14.1.6",
+    "husky": "^8.0.1",
+    "lerna": "^6.6.2",
+    "typescript": "^5.0.4"
+  }
+}

@@ -1,0 +1,83 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Run tests (Node.js ${{ matrix.node-version }}, cssnano ${{ matrix.cssnano-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # See supported Node.js release schedule at https://github.com/nodejs/Release#release-schedule
+        node-version: ['22', '24', current]
+        cssnano-version: ['9']
+        include:
+          - node-version: '24'
+            cssnano-version: '7'
+          - node-version: '24'
+            cssnano-version: '8'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm install
+
+      # Lint against the development dependency types; cssnano 7 has untyped options.
+      - run: npm run lint
+
+      - run: npm install --no-save --package-lock=false cssnano@${{ matrix.cssnano-version }}
+
+      - run: |
+          npm run build
+          npm run test:types
+          # Skip npm's pretest hook because lint ran before changing cssnano.
+          npm run test --ignore-scripts
+          npm run posttest
+
+  test-package:
+    name: Check package health
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['lts/*']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm install
+
+      # publint + arethetypeswrong (attw); the script builds dist first
+      - run: npm run test:package
+
+  test-docs:
+    name: Run tests for docs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['lts/*']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install docs dependencies
+        run: npm ci
+        working-directory: docs
+
+      - name: Test docs build
+        run: npm run build
+        working-directory: docs

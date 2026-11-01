@@ -1,0 +1,181 @@
+name: Build Artifacts
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Git tag for GitHub Release upload'
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag for GitHub Release upload (e.g. v2.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  normalize-tag:
+    name: Normalize tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.normalize.outputs.value }}
+    steps:
+      - name: Normalize tag format
+        id: normalize
+        run: |
+          TAG="${{ inputs.tag }}"
+          # Add 'v' prefix if missing
+          if [[ ! "$TAG" =~ ^v ]]; then
+            TAG="v$TAG"
+            echo "ℹ️ Added 'v' prefix: $TAG"
+          fi
+          echo "value=$TAG" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: normalize-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            arch: x64
+          - os: macos-latest
+            target: darwin-arm64
+            arch: arm64
+          - os: windows-latest
+            target: win32-x64
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.target }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.normalize-tag.outputs.tag }}
+          submodules: recursive
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Use node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          architecture: ${{ matrix.arch }}
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Setup ccache (Linux/macOS)
+        if: ${{ runner.os != 'Windows' }}
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: build-${{ matrix.target }}-ccache
+          max-size: 500M
+      - name: Setup pnpm store cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.local/share/pnpm/store
+            ~/Library/pnpm/store
+            ~\AppData\Local\pnpm\store
+          key: build-${{ matrix.target }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            build-${{ matrix.target }}-pnpm-store-
+      - name: Setup xz deps cache
+        uses: actions/cache@v6
+        id: xz-cache
+        with:
+          path: |
+            deps/xz
+            deps/xz.tar.gz
+            build/liblzma
+          key: build-${{ matrix.target }}-xz-default-${{ hashFiles('scripts/download_xz_from_github.py', 'xz-version.json') }}
+          restore-keys: |
+            build-${{ matrix.target }}-xz-
+
+      - name: Download XZ from cache or GitHub
+        if: steps.xz-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -e
+          # Check if already in cache
+          if [ -f "deps/xz/CMakeLists.txt" ]; then
+            echo "✅ XZ found in cache"
+            exit 0
+          fi
+
+          # Download with the Python script using GITHUB_TOKEN
+          echo "⬇️ Downloading XZ via Python script with authenticated GitHub API"
+          python3 scripts/download_xz_from_github.py deps/xz.tar.gz deps/
+          echo "✅ XZ downloaded via Python script"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies (skip build scripts)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run prepare (git hooks + TypeScript build)
+        run: pnpm run prepare
+
+      - name: Install prebuildify and node-gyp globally
+        # node-gyp is no longer bundled with npm@11+ (default with Node 24);
+        # prebuildify spawns `node-gyp` by name and needs it in PATH.
+        run: npm install -g prebuildify node-gyp
+
+      - name: Prebuild native modules
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            pnpm run prebuildify:win
+          else
+            pnpm run prebuildify
+          fi
+        shell: bash
+        env:
+          USE_GLOBAL: false
+          RUNTIME_LINK: static
+          ENABLE_THREAD_SUPPORT: yes
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload prebuild artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: prebuilds-${{ matrix.target }}
+          path: prebuilds/
+          retention-days: 1
+
+  upload-to-release:
+    name: Upload to GitHub Release
+    needs: [normalize-tag, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all prebuild artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: prebuilds-*
+          path: prebuilds-temp/
+          merge-multiple: true
+
+      - name: Create platform-specific tar archives
+        run: |
+          mkdir -p prebuilds release-assets
+          cp -r prebuilds-temp/* prebuilds/
+          cd prebuilds
+
+          for dir in */; do
+            platform=$(basename "$dir")
+            tar czf "../release-assets/${platform}.tar.gz" "$dir"
+            echo "✅ Created ${platform}.tar.gz"
+          done
+
+          cd ..
+          echo "📦 Release assets created:"
+          ls -lh release-assets/
+
+      - name: Upload prebuilds to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: release-assets/*.tar.gz
+          tag_name: ${{ needs.normalize-tag.outputs.tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}

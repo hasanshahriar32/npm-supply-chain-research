@@ -1,0 +1,110 @@
+name: JsonStreamStringify-Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      ci_run_id:
+        description: CI workflow run ID (databaseId) to download build-artifact from (defaults to latest successful CI run for this ref's commit)
+        required: false
+      dry_run:
+        description: Verify auth and tarball with npm publish --dry-run instead of publishing
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write  # Required for OIDC trusted publishing
+  contents: read
+  actions: read    # Required to download artifacts from the CI workflow run
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: deploy
+    steps:
+      - name: Resolve CI workflow run
+        id: ci-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.ci_run_id }}" ]; then
+            run_id="${{ inputs.ci_run_id }}"
+            echo "Using explicit ci_run_id input"
+          else
+            echo "Waiting for successful CI on commit ${{ github.sha }}..."
+            for attempt in $(seq 1 60); do
+              run_json="$(gh run list \
+                --repo "${{ github.repository }}" \
+                --workflow=ci.yml \
+                --commit="${{ github.sha }}" \
+                --status=success \
+                --limit 1 \
+                --json databaseId,number,headSha)"
+              run_id="$(echo "$run_json" | jq -r '.[0].databaseId // empty')"
+              if [ -n "$run_id" ]; then
+                echo "CI succeeded (run id $run_id) after $attempt attempt(s)"
+                echo "$run_json" | jq -r '.[0] | "  run #\(.number) sha \(.headSha)"'
+                break
+              fi
+              if [ "$attempt" -eq 60 ]; then
+                echo "::error::Timed out waiting for CI success on commit ${{ github.sha }}"
+                exit 1
+              fi
+              sleep 30
+            done
+          fi
+
+          run_id="$(printf '%s' "$run_id" | tr -d '\r\n')"
+
+          if ! [[ "$run_id" =~ ^[0-9]+$ ]]; then
+            echo "::error::No successful CI run found. Run CI first or pass ci_run_id."
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using CI run id $run_id, artifact build-artifact-$run_id"
+
+      - name: Verify build artifact exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          artifact_name="build-artifact-${{ steps.ci-run.outputs.run_id }}"
+          count="$(gh api "repos/${{ github.repository }}/actions/runs/${{ steps.ci-run.outputs.run_id }}/artifacts" \
+            --jq "[.artifacts[] | select(.name == \"$artifact_name\")] | length")"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Artifact $artifact_name not found on CI run ${{ steps.ci-run.outputs.run_id }}"
+            exit 1
+          fi
+          echo "Found artifact: $artifact_name"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false  # never use caching in release builds
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-artifact-${{ steps.ci-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ steps.ci-run.outputs.run_id }}
+
+      - name: Verify artifact contents
+        run: |
+          test -f package.json
+          test -d lib
+          npm pkg get name version
+
+      - name: Publish to npm
+        if: ${{ !env.ACT }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Dry run — validating tarball and registry auth without publishing"
+            npm publish --dry-run
+          else
+            npm publish
+          fi

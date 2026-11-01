@@ -1,0 +1,39 @@
+name: auto fix lint
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  fix-lint:
+    if: ${{ github.event.pull_request.user.type != 'Bot' && github.repository == github.event.pull_request.head.repo.full_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.SAP_AI_SDK_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SAP_AI_SDK_BOT_PRIVATE_KEY }}
+          permission-contents: write
+      - uses: $/.github/actions/setup
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: true
+      - run: pnpm lint:fix
+      - name: Commit Changes if needed
+        env:
+          BOT_EMAIL: ${{ vars.SAP_AI_SDK_BOT_EMAIL }}
+          BOT_NAME: ${{ vars.SAP_AI_SDK_BOT_NAME }}
+        run: |
+          diff=`git diff`
+          if [ ! -z "$diff" ]; then
+            git config --global user.email "$BOT_EMAIL"
+            git config --global user.name "$BOT_NAME"
+            git commit -m "fix: Changes from lint" -a
+            git push
+          fi

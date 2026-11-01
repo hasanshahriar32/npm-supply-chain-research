@@ -1,0 +1,231 @@
+name: promote
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        description: 'Semver version to promote. Example: 2.1.1'
+      old-channel:
+        type: string
+        description: 'Existing channel to promote. Example: Promote **latest-rc** to latest'
+      new-channel:
+        type: string
+        description: 'The channel to promote to. Example: Promote latest-rc to **latest**'
+        required: true
+      use-ctc:
+        type: boolean
+        required: false
+        description: Open a change case for this promotion. Only needed for promotions to latest.
+      ignore-missing:
+        type: boolean
+        required: false
+        description: Ignore 'oclif promote' errors when a specific target is missing.
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: 'Semver version to promote. Example: 2.1.1'
+      old-channel:
+        type: string
+        description: 'Existing channel to promote. Example: Promote **latest-rc** to latest'
+      new-channel:
+        type: string
+        description: 'The channel to promote to. Example: Promote latest-rc to **latest**'
+        required: true
+      use-ctc:
+        type: boolean
+        required: false
+        description: Open a change case for this promotion. Only needed for promotions to latest.
+      ignore-missing:
+        type: boolean
+        required: false
+        description: Ignore 'oclif promote' errors when a specific target is missing.
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure either 'version' or 'old-channel' is passed"
+        if: ${{ !inputs.version && !inputs.old-channel }}
+        run: |
+          echo "ERROR: You must pass either 'version' or 'old-channel' to promote from."
+          echo "-> Use 'version' if you are promoting a new semver version to a channel. Example: I want to promote version '2.1.1' to channel 'dev'.
+          echo "-> Use 'old-channel' if you are promoting an existing channel to another channel. Example: I want to promote channel 'latest-rc' to channel 'latest'.
+          exit 1
+      - name: Ensure only one "starting point"
+        if: ${{ inputs.version && inputs.old-channel }}
+        run: |
+          echo "ERROR: Inputs 'version' and 'old-channel' cannot both be passed (exactlyOne)."
+          echo "-> Use 'version' if you are promoting a new semver version to a channel. Example: I want to promote version '2.1.1' to channel 'dev'.
+          echo "-> Use 'old-channel' if you are promoting an existing channel to another channel. Example: I want to promote channel 'latest-rc' to channel 'latest'.
+          exit 1
+      - name: Ensure channels do not include "stable"
+        if: ${{ contains(inputs.old-channel, 'stable') || contains(inputs.new-channel, 'stable') }}
+        run: |
+          echo "ERROR: Do not use 'stable' in channel names. Use 'latest' instead.
+          echo "-> S3 resources (stable, stable-rc) will be translated for you and will eventually be deprecated in favor of 'latest' and 'latest-rc'
+          exit 1
+
+  # Even if inputs.version is passed, we still need the SHA for a later step
+  get-package-info:
+    needs: [validate-inputs]
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version-info.outputs.version }}
+      sha: ${{ steps.version-info.outputs.sha }}
+    steps:
+      - uses: salesforcecli/github-workflows/.github/actions/versionInfo@main
+        id: version-info
+        with:
+          npmPackage: '@salesforce/cli'
+          version: ${{ inputs.version || inputs.old-channel }}
+
+  # Replace 'latest' with 'stable' for S3 resources
+  build-s3-channel:
+    runs-on: ubuntu-latest
+    needs: [get-package-info]
+    outputs:
+      s3-new-channel: ${{ steps.replace-channel.outputs.s3-new-channel }}
+    steps:
+      - id: replace-channel
+        run: |
+          NEW_CHANNEL="$INPUTS_NEW_CHANNEL"
+          S3_NEW_CHANNEL=${NEW_CHANNEL/latest/stable}
+          echo "s3-new-channel=$S3_NEW_CHANNEL" >> "$GITHUB_OUTPUT"
+        env:
+          INPUTS_NEW_CHANNEL: ${{ inputs.new-channel }}
+
+  # CTC is only needed for promotions to 'latest'
+  # Note: "Optional" GHA jobs are tricky to get right. Edit with caution.
+  # Working example: https://github.com/iowillhoit/gha-sandbox/blob/main/.github/workflows/needing-an-optional-job-alternate.yml
+  open-ctc-or-skip:
+    needs: [build-s3-channel]
+    runs-on: static-ip-ubuntu-24-runners
+    outputs:
+      changeCaseId: ${{ steps.open-ctc.outputs.changeCaseId }}
+    steps:
+      - name: Open CTC
+        id: open-ctc
+        if: inputs.use-ctc
+        uses: salesforcecli/github-workflows/.github/actions/ctcOpen@main
+        with:
+          SF_CHANGE_CASE_SFDX_AUTH_URL: ${{ secrets.SF_CHANGE_CASE_SFDX_AUTH_URL }}
+          SF_CHANGE_CASE_TEMPLATE_ID: ${{ secrets.SF_CHANGE_CASE_TEMPLATE_ID }}
+          SF_CHANGE_CASE_CONFIGURATION_ITEM: ${{ secrets.SF_CHANGE_CASE_CONFIGURATION_ITEM }}
+          SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+          githubTag: ${{ inputs.version }}
+          nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          package-manager: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Check open-ctc status
+        if: always()
+        run: |
+          RESULT=${{ steps.open-ctc.outcome }}
+          if [[ "$RESULT" != 'success' && "$RESULT" != 'skipped' ]]; then
+            echo "Step 'open-ctc' failed! Exiting."
+            exit 1
+          else
+            echo "Step 'open-ctc' was successful or was skipped, proceeding."
+          fi
+
+  docker-promote:
+    needs: [open-ctc-or-skip, get-package-info]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      # TODO: Do we need to checkout here?
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Promote Docker images
+        run: |
+          docker pull "salesforce/cli:$NEEDS_GET_PACKAGE_INFO_VERSION-slim"
+          docker tag "salesforce/cli:$NEEDS_GET_PACKAGE_INFO_VERSION-slim" "salesforce/cli:$INPUTS_NEW_CHANNEL-slim"
+          docker push "salesforce/cli:$INPUTS_NEW_CHANNEL-slim"
+
+          docker pull "salesforce/cli:$NEEDS_GET_PACKAGE_INFO_VERSION-full"
+          docker tag "salesforce/cli:$NEEDS_GET_PACKAGE_INFO_VERSION-full" "salesforce/cli:$INPUTS_NEW_CHANNEL-full"
+          docker push "salesforce/cli:$INPUTS_NEW_CHANNEL-full"
+        env:
+          NEEDS_GET_PACKAGE_INFO_VERSION: ${{ needs.get-package-info.outputs.version }}
+          INPUTS_NEW_CHANNEL: ${{ inputs.new-channel }}
+
+  npm-promote:
+    needs: [open-ctc-or-skip, get-package-info]
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+      - name: Upgrade npm for trusted publishing
+        # dist-tag with Trusted publishing (OIDC) requires npm >= 11.21.0, newer than the npm bundled with Node LTS.
+        run: npm install -g npm@latest
+      # NOTE: If you try to use yarn here, it will use the wrong registry and throw 401s
+      - run: npm dist-tag add "@salesforce/cli@$NEEDS_GET_PACKAGE_INFO_VERSION" "$INPUTS_NEW_CHANNEL"
+        env:
+          NEEDS_GET_PACKAGE_INFO_VERSION: ${{ needs.get-package-info.outputs.version }}
+          INPUTS_NEW_CHANNEL: ${{ inputs.new-channel }}
+
+  oclif-promote:
+    needs: [open-ctc-or-skip, get-package-info, build-s3-channel]
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+          cache: yarn
+
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+
+      - name: Promote with oclif
+        run: yarn promote --version "$NEEDS_GET_PACKAGE_INFO_VERSION" --sha "$NEEDS_GET_PACKAGE_INFO_SHA" --channel "$NEEDS_BUILD_S3_CHANNEL_S3_NEW_CHANNEL" --max-age 300 --macos --win --indexes --xz ${{ inputs.ignore-missing && '--ignore-missing' || '' }}
+        env:
+          NEEDS_GET_PACKAGE_INFO_VERSION: ${{ needs.get-package-info.outputs.version }}
+          NEEDS_GET_PACKAGE_INFO_SHA: ${{ needs.get-package-info.outputs.sha }}
+          NEEDS_BUILD_S3_CHANNEL_S3_NEW_CHANNEL: ${{ needs.build-s3-channel.outputs.s3-new-channel }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DEBUG: ${{ vars.DEBUG }}
+
+  ctcCloseSuccess:
+    needs: [open-ctc-or-skip, npm-promote, docker-promote, oclif-promote]
+    if: needs.open-ctc-or-skip.result == 'success' && needs.open-ctc-or-skip.outputs.changeCaseId && needs.npm-promote.result == 'success' && needs.docker-promote.result == 'success' && needs.oclif-promote.result == 'success'
+    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
+    secrets: inherit
+    with:
+      changeCaseId: ${{ needs.open-ctc-or-skip.outputs.changeCaseId }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+      package-manager: yarn
+      cache-dependency-path: yarn.lock
+
+  ctcCloseFail:
+    needs: [open-ctc-or-skip, npm-promote, docker-promote, oclif-promote]
+    if: always() && needs.open-ctc-or-skip.outputs.changeCaseId && (needs.open-ctc-or-skip.result != 'success' || needs.npm-promote.result != 'success' || needs.docker-promote.result != 'success' || needs.oclif-promote.result != 'success')
+    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
+    secrets: inherit
+    with:
+      changeCaseId: ${{ needs.open-ctc-or-skip.outputs.changeCaseId }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+      package-manager: yarn
+      cache-dependency-path: yarn.lock
+      status: Not Implemented

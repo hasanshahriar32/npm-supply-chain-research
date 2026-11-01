@@ -1,0 +1,90 @@
+# Note: The cache steps on this workflow has been removed Supply Chain attack through GitHub Action Pwn Request.
+# Here's more info on how that works: https://adnanthekhan.com/2024/05/06/the-monsters-in-your-build-cache-github-actions-cache-poisoning/
+name: v4.x releases
+
+on:
+  push:
+    branches:
+    # Pushes to the branch below will test the release workflow without
+    # publishing version on npm or generating new git tags
+    - v4.x-test
+    tags:
+    - 'v4.[0-9]+.[0-9]+'
+    - 'v4.[0-9]+.[0-9]+-alpha.[0-9]+'
+    - 'v4.[0-9]+.[0-9]+-beta.[0-9]+'
+
+jobs:
+  debug:
+    name: Debug
+    runs-on: ubuntu-latest
+    steps:
+    - uses: hmarr/debug-action@v3
+
+  test-node:
+    name: Node Test Specs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [14.x, 16.x, 18.x, 20.x, 22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm install --prefer-offline
+    - run: make test-node
+
+  test-browser:
+    name: Browser Test Specs
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install --prefer-offline
+    - run: make test-browser
+
+  lint:
+    name: Code Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install --prefer-offline
+    - run: make lint
+
+  typecheck:
+    name: Types
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install --prefer-offline
+    - run: make typecheck
+
+  # The security job can't run on pull requests opened from forks because
+  # Github doesn't pass down the SNYK_TOKEN environment variable.
+  security:
+    name: Check Security
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install --prefer-offline
+    - run: make secure
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  publish:
+    name: Publish to NPM registry
+    runs-on: ubuntu-latest
+    needs: [test-node, test-browser, lint, typecheck, security]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: '.nvmrc'
+        # Setup .npmrc file to publish to npm
+        registry-url: 'https://registry.npmjs.org'
+    - run: npm install --prefer-offline
+    - run: make publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

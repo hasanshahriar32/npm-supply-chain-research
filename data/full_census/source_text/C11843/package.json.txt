@@ -1,0 +1,107 @@
+{
+  "name": "graphql-scalars",
+  "version": "2.0.1",
+  "type": "module",
+  "description": "A collection of scalar types not included in base GraphQL.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Urigo/graphql-scalars.git"
+  },
+  "license": "MIT",
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "engines": {
+    "node": ">=10"
+  },
+  "main": "dist/cjs/index.js",
+  "typings": "dist/typings/index.d.ts",
+  "module": "dist/esm/index.js",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/typings/index.d.cts",
+        "default": "./dist/cjs/index.js"
+      },
+      "import": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "default": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/esm/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "bob build --single",
+    "bundlesize": "yarn build && cd bundle-test/ && yarn && yarn test",
+    "ci:lint": "cross-env \"ESLINT_USE_FLAT_CONFIG=false\" eslint --ext .ts \"./src/**/*.ts\" --output-file eslint_report.json --format json",
+    "clean": "rm -rf dist",
+    "lint": "cross-env \"ESLINT_USE_FLAT_CONFIG=false\" eslint --ext .ts \"./src/**/*.ts\"",
+    "lint:prettier": "prettier --ignore-path .gitignore --ignore-path .prettierignore --cache --check .",
+    "prebuild": "yarn clean",
+    "prerelease": "yarn build && bob prepack",
+    "prettier": "yarn lint:prettier --write",
+    "release": "changeset publish",
+    "setup-scalar": "node ./scripts/setup-scalar.js",
+    "test": "vitest run && yarn bundlesize"
+  },
+  "peerDependencies": {
+    "graphql": "^16.0.0 || ^17.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.5.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.0",
+    "@babel/preset-env": "7.29.2",
+    "@babel/preset-typescript": "7.28.5",
+    "@changesets/changelog-github": "0.6.0",
+    "@changesets/cli": "2.30.0",
+    "@graphql-tools/merge": "9.1.7",
+    "@graphql-tools/schema": "10.0.31",
+    "@theguild/prettier-config": "3.0.1",
+    "@types/mongodb": "4.0.7",
+    "@types/node": "24.12.0",
+    "@typescript-eslint/eslint-plugin": "8.57.1",
+    "@typescript-eslint/parser": "8.57.1",
+    "@vitest/utils": "3.2.4",
+    "bob-the-bundler": "7.0.1",
+    "cross-env": "10.1.0",
+    "eslint": "9.39.4",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-n": "17.24.0",
+    "eslint-plugin-promise": "7.2.1",
+    "graphql": "17.0.2",
+    "graphql-16": "npm:graphql@16.14.2",
+    "husky": "9.1.7",
+    "json-bigint-patch": "0.0.9",
+    "lint-staged": "16.4.0",
+    "mockdate": "3.0.5",
+    "mongodb": "7.1.0",
+    "prettier": "3.8.1",
+    "semver": "7.7.4",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "access": "public",
+    "provenance": true
+  },
+  "sideEffects": false,
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "cross-env \"ESLINT_USE_FLAT_CONFIG=false\" eslint --fix",
+      "git add"
+    ],
+    "*.{js,json,css,md,ts,tsx}": [
+      "prettier --write",
+      "git add -f"
+    ]
+  },
+  "typescript": {
+    "definition": "dist/typings/index.d.ts"
+  }
+}

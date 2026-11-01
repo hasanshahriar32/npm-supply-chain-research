@@ -1,0 +1,64 @@
+name: Unit Test
+
+on:
+  push:
+    branches:
+      - main
+      - next
+      - vue-ecosystem-ci
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@main
+
+      - name: ESLint
+        run: pnpm run lint
+
+      - name: Format Check
+        run: pnpm run format:check
+
+      - name: Monorepo Check
+        run: pnpm run mono:check
+
+      - name: CSpell Check
+        run: pnpm run cspell:check
+
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [20, 22, 24]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@main
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Type Check
+        run: pnpm run typecheck
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Publint
+        run: pnpm run publint
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Unit Test
+        run: pnpm run test
+
+      - name: Build Playground
+        run: pnpm run --filter "./playground/*" --parallel build
+        if: ${{ matrix.os == 'ubuntu-latest' }}

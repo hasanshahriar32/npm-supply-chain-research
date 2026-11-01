@@ -1,0 +1,238 @@
+name: zombienet-e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: zombienet-e2e-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: read-all
+
+jobs:
+  env:
+    runs-on: ubuntu-latest
+    outputs:
+      ZOMBIE_PROVIDER: ${{ steps.vars.outputs.ZOMBIE_PROVIDER }}
+      RUST_LOG: ${{ steps.vars.outputs.RUST_LOG }}
+      ZOMBIENET_SDK_IMAGE: ${{ steps.vars.outputs.ZOMBIENET_SDK_IMAGE }}
+      ZOMBIENET_SDK_DEFAULT_RUNNER: ${{ steps.vars.outputs.ZOMBIENET_SDK_DEFAULT_RUNNER }}
+      ZOMBIENET_SDK_LARGE_RUNNER: ${{ steps.vars.outputs.ZOMBIENET_SDK_LARGE_RUNNER }}
+      POLKADOT_SDK_MASTER_SHA: ${{ steps.vars.outputs.POLKADOT_SDK_MASTER_SHA }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Source zombienet-env
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          . .github/zombienet-env
+          {
+            echo "ZOMBIE_PROVIDER=${ZOMBIE_PROVIDER}"
+            echo "RUST_LOG=${RUST_LOG}"
+            echo "ZOMBIENET_SDK_IMAGE=${ZOMBIENET_SDK_IMAGE_FOR_NATIVE}"
+            echo "ZOMBIENET_SDK_DEFAULT_RUNNER=${ZOMBIENET_SDK_DEFAULT_RUNNER_FOR_NATIVE}"
+            echo "ZOMBIENET_SDK_LARGE_RUNNER=${ZOMBIENET_SDK_LARGE_RUNNER_FOR_NATIVE}"
+            echo "POLKADOT_SDK_MASTER_SHA=${POLKADOT_SDK_MASTER_SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+  tests:
+    name: ${{ matrix.test.job-name }}
+    needs: env
+    runs-on: ${{ matrix.test.runner-type == 'large' && needs.env.outputs.ZOMBIENET_SDK_LARGE_RUNNER || needs.env.outputs.ZOMBIENET_SDK_DEFAULT_RUNNER }}
+    # Shared tests run two legs (Node over TCP, then headless Chromium over
+    # WebRTC), and the statement-store ones re-seed network state between them.
+    timeout-minutes: 60
+    container:
+      image: ${{ needs.env.outputs.ZOMBIENET_SDK_IMAGE }}
+      options: -v /tmp/zombienet:/tmp/zombienet
+    env:
+      ZOMBIE_PROVIDER: ${{ needs.env.outputs.ZOMBIE_PROVIDER }}
+      RUST_LOG: ${{ needs.env.outputs.RUST_LOG }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - job-name: "zombienet-smoldot-0001-smoke_fresh"
+            test: "smoke_fresh"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0002-smoke_cold"
+            test: "smoke_cold"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0003-smoke_warm"
+            test: "smoke_warm"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0004-statement_store_submission"
+            test: "statement_store_submission"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0005-statement_store_reception"
+            test: "statement_store_reception"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0006-statement_store_peer_connection"
+            test: "statement_store_peer_connection"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0013-statement_store_browser"
+            test: "statement_store_browser"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0007-bulletin_fetch"
+            test: "bulletin_fetch"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0008-chainhead_v1_follow_fresh"
+            test: "chainhead_v1_follow_fresh"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0009-chainhead_v1_follow_cold"
+            test: "chainhead_v1_follow_cold"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0010-chainhead_v1_follow_warm"
+            test: "chainhead_v1_follow_warm"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0011-bulletin_batch"
+            test: "bulletin_batch"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0012-reserved_peer_discovery"
+            test: "reserved_peer_discovery"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0015-statement_store_submit_parity"
+            test: "statement_store_submit_parity"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0017-chainhead_v1_unpin_early"
+            test: "chainhead_v1_unpin_early"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0018-runtime_no_redownload"
+            test: "runtime_no_redownload"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0019-parachain_warm_start"
+            test: "parachain_warm_start"
+            runner-type: "default"
+            # Browser-host only (WebRTC regressions).
+          - job-name: "zombienet-smoldot-0014-webrtc_double_open"
+            test: "webrtc_double_open"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0015-webrtc_send_after_close"
+            test: "webrtc_send_after_close"
+            runner-type: "default"
+          - job-name: "zombienet-smoldot-0016-webrtc_open_after_pc_close"
+            test: "webrtc_open_after_pc_close"
+            runner-type: "default"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6.1.0
+        with:
+          node-version: '22'
+
+      - name: Install wasm target
+        shell: bash
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo registry + e2e-tests target
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            e2e-tests/target
+          key: e2e-cargo-${{ hashFiles('e2e-tests/Cargo.lock', 'lib/Cargo.toml') }}
+
+      - name: Cache smoldot JS node_modules
+        uses: actions/cache@v4
+        with:
+          path: wasm-node/javascript/node_modules
+          key: smoldot-js-nm-${{ hashFiles('wasm-node/javascript/package-lock.json') }}
+
+      - name: Cache e2e-tests JS node_modules
+        uses: actions/cache@v4
+        with:
+          path: e2e-tests/node_modules
+          key: e2e-nm-${{ hashFiles('e2e-tests/package-lock.json') }}
+
+      # Every test runs the shared body on both hosts (Node over TCP, then
+      # headless Chromium over WebRTC), so Playwright + Chromium are needed
+      # unconditionally.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('e2e-tests/package-lock.json') }}
+
+      - name: Install smoldot JS deps
+        shell: bash
+        run: npm ci
+        working-directory: wasm-node/javascript
+
+      - name: Install e2e-tests JS deps and Chromium
+        shell: bash
+        working-directory: e2e-tests
+        run: |
+          set -euo pipefail
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # Pull binaries from polkadot-sdk's per-merge CI images (see
+      # .github/zombienet-env for why a master build is needed instead of a
+      # GitHub release). These are the same images polkadot-sdk's own zombienet
+      # CI runs on. The job executes inside a container without a Docker
+      # daemon, so the images are fetched with crane, which talks to the
+      # registry directly, and only the binaries are extracted.
+      - name: Cache polkadot binaries
+        id: bins-cache
+        uses: actions/cache@v4
+        with:
+          path: bin
+          key: polkadot-bins-master-${{ needs.env.outputs.POLKADOT_SDK_MASTER_SHA }}
+
+      - name: Install crane
+        if: steps.bins-cache.outputs.cache-hit != 'true'
+        uses: imjasonh/setup-crane@v0.7
+
+      - name: Extract polkadot binaries from polkadot-sdk CI images
+        shell: bash
+        env:
+          SDK_SHA: ${{ needs.env.outputs.POLKADOT_SDK_MASTER_SHA }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/bin"
+          if [[ ! -x "$GITHUB_WORKSPACE/bin/polkadot" ]]; then
+            crane export --platform linux/amd64 \
+              "paritypr/polkadot-debug:master-${SDK_SHA}" - \
+              | tar -x -C "$GITHUB_WORKSPACE/bin" --strip-components=3 \
+                  usr/local/bin/polkadot \
+                  usr/local/bin/polkadot-execute-worker \
+                  usr/local/bin/polkadot-prepare-worker
+            crane export --platform linux/amd64 \
+              "paritypr/polkadot-parachain-debug:master-${SDK_SHA}" - \
+              | tar -x -C "$GITHUB_WORKSPACE/bin" --strip-components=3 \
+                  usr/local/bin/polkadot-parachain
+            chmod +x "$GITHUB_WORKSPACE/bin"/*
+          fi
+          "$GITHUB_WORKSPACE/bin/polkadot" --version
+          "$GITHUB_WORKSPACE/bin/polkadot-execute-worker" --version
+          "$GITHUB_WORKSPACE/bin/polkadot-prepare-worker" --version
+          "$GITHUB_WORKSPACE/bin/polkadot-parachain" --version
+
+      - name: Run test
+        shell: bash
+        env:
+          TEST: ${{ matrix.test.test }}
+        run: |
+          set -euo pipefail
+          export PATH="$GITHUB_WORKSPACE/bin:$PATH"
+          cargo test --locked --manifest-path e2e-tests/Cargo.toml \
+            --test "$TEST" -- --nocapture
+
+      - name: Upload zombienet logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: zombienet-logs-${{ matrix.test.job-name }}-${{ github.sha }}
+          path: |
+            /tmp/zombie-*/**
+            /tmp/zombienet-*/**
+          if-no-files-found: ignore
+          retention-days: 7

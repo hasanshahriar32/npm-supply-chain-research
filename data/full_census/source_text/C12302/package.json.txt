@@ -1,0 +1,61 @@
+{
+  "name": "@knip/root",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Find unused dependencies, exports and files in your TypeScript and JavaScript projects",
+  "homepage": "https://knip.dev",
+  "bugs": "https://github.com/webpro-nl/knip/issues",
+  "license": "ISC",
+  "author": {
+    "name": "Lars Kappert",
+    "email": "lars@webpro.nl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webpro-nl/knip"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "docs": "pnpm run --dir packages/docs dev",
+    "test": "pnpm run --dir packages/knip test",
+    "fmt": "oxfmt",
+    "remark": "remark '*.md' '.agents/*.md' '.github/*.md' 'packages/*/README.md' 'packages/docs/src/content/docs/**/*.md' --verbose -o && mdxlint 'packages/docs/src/content/docs/**/*.mdx' --verbose -o",
+    "lint": "oxlint",
+    "ci": "oxlint && oxfmt --check && installed-check --ignore-dev && ./scripts/check-line-endings.sh",
+    "release": "./scripts/release.sh"
+  },
+  "devDependencies": {
+    "@e18e/eslint-plugin": "^0.8.1",
+    "@release-it/bumper": "^8.0.1",
+    "installed-check": "^11.0.0",
+    "mdxlint": "^1.0.0",
+    "mdxlint-preset-webpro": "^1.3.0",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "release-it": "^21.1.1",
+    "remark-cli": "12.0.1",
+    "remark-preset-webpro": "^2.2.0"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "singleQuote": true,
+    "trailingComma": "es5"
+  },
+  "remarkConfig": {
+    "plugins": [
+      "preset-webpro"
+    ]
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@11.28.8+sha512.f6988a32046b9a3f78d7d7ee0747926bbe905ff9dff73bf19abb87bd7d1906a2ac90d93f73be32b5f9e14c2899569bcb0c9c5ec8a19e083f5d71bbab6dd9e0b8",
+  "mdxlint": {
+    "plugins": [
+      "mdxlint-preset-webpro"
+    ]
+  }
+}

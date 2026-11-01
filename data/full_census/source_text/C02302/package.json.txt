@@ -1,0 +1,57 @@
+{
+  "name": "detective-amd",
+  "version": "7.0.0",
+  "description": "Find all dependencies within a JavaScript file using AMD module syntax",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "bin": {
+    "detective-amd": "bin/cli.js"
+  },
+  "files": [
+    "bin/cli.js",
+    "index.js"
+  ],
+  "scripts": {
+    "lint": "xo",
+    "fix": "xo --fix",
+    "uvu": "uvu test -i fixtures",
+    "test": "npm run lint && npm run uvu",
+    "test:ci": "c8 npm run uvu"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dependents/node-detective-amd.git"
+  },
+  "keywords": [
+    "amd",
+    "detective",
+    "dependencies",
+    "ast",
+    "static analysis",
+    "requirejs",
+    "jsx",
+    "module"
+  ],
+  "author": "Joel Kemp <joel@mrjoelkemp.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dependents/node-detective-amd/issues"
+  },
+  "homepage": "https://github.com/dependents/node-detective-amd",
+  "engines": {
+    "node": ">=20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "ast-module-types": "^7.0.0",
+    "escodegen": "^2.1.0",
+    "get-amd-module-type": "^7.0.0",
+    "node-source-walk": "^8.0.0"
+  },
+  "devDependencies": {
+    "c8": "^12.0.0",
+    "uvu": "^0.5.6",
+    "xo": "^2.0.2"
+  }
+}

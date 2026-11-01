@@ -1,0 +1,764 @@
+name: release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Cargo.toml
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for example v0.1.1); if absent, release the selected workflow ref"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  checks: write
+
+env:
+  CARGO_NET_GIT_FETCH_WITH_CLI: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-22.04
+    outputs:
+      val: ${{ steps.plan.outputs.manifest }}
+      tag: ${{ steps.resolve-tag.outputs.tag }}
+      tag-flag: ${{ steps.resolve-tag.outputs.tag_flag }}
+      release-version: ${{ steps.resolve-tag.outputs.release_version }}
+      release-sha: ${{ steps.resolve-tag.outputs.release_sha }}
+      should-release: ${{ steps.resolve-tag.outputs.should_release }}
+      approval-manifest: ${{ steps.approval-manifest.outputs.manifest }}
+      branch: ${{ steps.configure.outputs.branch }}
+      on-release-branch: ${{ steps.configure.outputs.on_release_branch }}
+      commit-message: ${{ steps.configure.outputs.commit_message }}
+      notes: ${{ steps.configure.outputs.notes }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: ./.github/actions/setup-rust-toolchain
+
+      - id: resolve-tag
+        name: Resolve release tag
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          should_release=true
+          release_sha="$(git rev-parse HEAD)"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="$REQUESTED_TAG"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            tag="${{ github.ref_name }}"
+          else
+            version="$(grep -m1 '^version = "' Cargo.toml | cut -d '"' -f2)"
+            if [ -z "$version" ]; then
+              echo "Failed to parse version from Cargo.toml" >&2
+              exit 1
+            fi
+
+            previous_version=""
+            before_sha="${{ github.event.before }}"
+            if [ -n "$before_sha" ] && [ "$before_sha" != "0000000000000000000000000000000000000000" ]; then
+              if git cat-file -e "${before_sha}^{commit}" 2>/dev/null && git show "${before_sha}:Cargo.toml" >/dev/null 2>&1; then
+                previous_version="$(git show "${before_sha}:Cargo.toml" | grep -m1 '^version = "' | cut -d '"' -f2 || true)"
+              fi
+            fi
+
+            tag="v${version}"
+            if [ "$version" = "$previous_version" ]; then
+              echo "Cargo.toml version is unchanged (${version}); no release needed."
+              should_release=false
+            elif git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null 2>&1; then
+              echo "Tag ${tag} already exists; nothing to release."
+              should_release=false
+            fi
+          fi
+
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag must match v<major>.<minor>.<patch>; got: $tag" >&2
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Retry existing tags at their original commit; otherwise use the
+            # selected workflow commit and create the tag after approval.
+            if git show-ref --verify --quiet "refs/tags/$tag"; then
+              release_sha="$(git rev-parse "refs/tags/$tag^{commit}")"
+            fi
+            version="$(git show "${release_sha}:Cargo.toml" | grep -m1 '^version = "' | cut -d '"' -f2)"
+            if [ "$version" != "${tag#v}" ]; then
+              echo "Tag $tag requires Cargo.toml version ${tag#v}, but commit $release_sha has version $version. Select a matching workflow ref or correct the release tag." >&2
+              exit 1
+            fi
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "tag_flag=--tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_version=${tag#v}" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+          echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$tag" > release-tag.txt
+
+      - name: Upload resolved release tag
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-metadata
+          path: release-tag.txt
+
+      - name: Configure release metadata
+        id: configure
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        uses: braintrustdata/sdk-actions/actions/release/lang/js/configure@9d481f601e62e149777259d2a0f8088b1a5f54fb
+        with:
+          sha: ${{ steps.resolve-tag.outputs.release_sha }}
+          version: ${{ steps.resolve-tag.outputs.release_version }}
+          working_directory: npm/bt
+          npm_package_name: "@braintrust/bt"
+          package_label: Braintrust CLI
+
+      - name: Prepare approval manifest
+        id: approval-manifest
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        env:
+          RELEASE_PACKAGE: ${{ steps.configure.outputs.package }}
+          RELEASE_VERSION: ${{ steps.resolve-tag.outputs.release_version }}
+        run: |
+          # One native release plus all npm distributions. Only the wrapper's
+          # registry state is known here; the publisher checks each tarball again.
+          manifest="$(jq -cn --argjson release "$RELEASE_PACKAGE" --arg version "$RELEASE_VERSION" \
+            --slurpfile wrapper npm/bt/package.json '
+            {packages: [
+              ($release | del(.registries)),
+              (($wrapper[0].optionalDependencies | keys[]) as $name | {
+                label: $name, tag: $version, release_body: "Native binary distribution on npm.",
+                registries: {npm: {name: $name, version: $version, channel: "latest"}}
+              }),
+              ($release + {label: $wrapper[0].name, notes: "", release_body: "Standalone CLI on npm."})
+            ]}')"
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
+
+      - name: Configure git auth for private dependencies
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          token="${BT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+          git config --global url."https://x-access-token:${token}@github.com/".insteadOf "https://github.com/"
+        env:
+          BT_GITHUB_TOKEN: ${{ secrets.BT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dist
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf --retry 3 \
+            https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-installer.sh \
+            --output "$RUNNER_TEMP/cargo-dist-installer.sh"
+          sh "$RUNNER_TEMP/cargo-dist-installer.sh"
+
+      - name: Cache dist
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cargo-dist-cache
+          path: ~/.cargo/bin/dist
+
+      - id: plan
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        shell: bash
+        run: |
+          dist host --steps=create --tag="${{ steps.resolve-tag.outputs.tag }}" --output-format=json > plan-dist-manifest.json
+          echo "dist ran successfully"
+          cat plan-dist-manifest.json
+          echo "manifest=$(jq -c "." plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload dist plan manifest
+        if: steps.resolve-tag.outputs.should_release == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-plan-dist-manifest
+          path: plan-dist-manifest.json
+
+  request-approval:
+    needs: plan
+    if: needs.plan.outputs.should-release == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Request stable release approval
+        uses: braintrustdata/sdk-actions/actions/release/request-approval@9d481f601e62e149777259d2a0f8088b1a5f54fb
+        with:
+          packages: ${{ needs.plan.outputs.approval-manifest }}
+          title: Braintrust CLI stable release
+          sha: ${{ needs.plan.outputs.release-sha }}
+          branch: ${{ needs.plan.outputs.branch }}
+          on_release_branch: ${{ needs.plan.outputs.on-release-branch }}
+          commit_message: ${{ needs.plan.outputs.commit-message }}
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_channel: C0ABHT0SWA2
+
+  build-local-artifacts:
+    name: build-local-artifacts (${{ join(matrix.targets, ', ') }})
+    needs:
+      - plan
+      - request-approval
+    if: ${{ needs.plan.outputs.should-release == 'true' && fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix.include != null }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.val).ci.github.artifacts_matrix }}
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container && matrix.container.image || null }}
+    # Required reviewers on `release` gate the entire native + npm release.
+    # Windows signing's AAD federated credential also requires this environment.
+    environment: release
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_MANIFEST_NAME: target/distrib/${{ join(matrix.targets, '-') }}-dist-manifest.json
+      HAS_AZURE_SIGNING: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+    steps:
+      - name: Enable windows longpaths
+        run: git config --global core.longpaths true
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.plan.outputs.release-sha }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure git auth for private dependencies
+        shell: bash
+        run: |
+          token="${BT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+          git config --global url."https://x-access-token:${token}@github.com/".insteadOf "https://github.com/"
+        env:
+          BT_GITHUB_TOKEN: ${{ secrets.BT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./.github/actions/setup-rust-toolchain
+        with:
+          targets: ${{ join(matrix.targets, ',') }}
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.15.0"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+
+      - name: Install JS dependencies
+        run: pnpm install --ignore-scripts
+
+      - name: Install sha256sum (macOS ARM64)
+        if: ${{ runner.os == 'macOS' && runner.arch == 'ARM64' }}
+        shell: bash
+        run: |
+          printf '#!/bin/sh\nexec shasum -a 256 "$@"\n' > /tmp/sha256sum
+          chmod +x /tmp/sha256sum
+          echo /tmp >> "$GITHUB_PATH"
+
+      - name: Install dist (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -LsSf --retry 3 \
+            https://github.com/axodotdev/cargo-dist/releases/download/v0.31.0/cargo-dist-installer.sh \
+            --output "$RUNNER_TEMP/cargo-dist-installer.sh"
+          sh "$RUNNER_TEMP/cargo-dist-installer.sh"
+
+      - name: Install dist (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ${{ matrix.install_dist.run }}
+
+      - name: Fetch local artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: artifacts-*
+          path: target/distrib/
+          merge-multiple: true
+
+      - name: Install dependencies
+        run: ${{ matrix.packages_install }}
+
+        # https://github.com/azure/artifact-signing-action
+        # As of 2026-06-23, windows arm runners are not supported so the compilation and signing of bt.exe for aarch64 windows needs to happend on x64 windows
+      - name: Set up MSVC cross-compilation for Windows ARM64
+        if: ${{ contains(matrix.targets, 'aarch64-pc-windows-msvc') }}
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+        with:
+          arch: amd64_arm64
+
+      - name: Set MSVC ARM64 linker for cargo cross-compilation
+        if: ${{ contains(matrix.targets, 'aarch64-pc-windows-msvc') }}
+        shell: pwsh
+        run: |
+          $link = (Get-Command link.exe -ErrorAction Stop).Source
+          "CARGO_TARGET_AARCH64_PC_WINDOWS_MSVC_LINKER=$link" >> $env:GITHUB_ENV
+
+      - name: Build artifacts
+        shell: bash
+        run: |
+          BT_UPDATE_CHANNEL=stable \
+          BT_VERSION_STRING="${{ needs.plan.outputs.release-version }}" \
+          dist build ${{ needs.plan.outputs.tag-flag }} --print=linkage --output-format=json ${{ matrix.dist_args }} > dist-manifest.json
+          echo "dist ran successfully"
+
+      - name: Sign Windows artifacts
+        id: sign
+        if: ${{ runner.os == 'Windows' && env.HAS_AZURE_SIGNING == 'true' }}
+        continue-on-error: true
+        uses: ./.github/actions/sign-windows-artifacts
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          account-name: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+          cert-profile: ${{ vars.AZURE_SIGNING_CERT_PROFILE }}
+
+      - name: Verify Windows signature and report
+        if: ${{ runner.os == 'Windows' && env.HAS_AZURE_SIGNING == 'true' && always() }}
+        uses: ./.github/actions/verify-windows-signature
+        with:
+          sign-outcome: ${{ steps.sign.outcome }}
+          targets: ${{ join(matrix.targets, ', ') }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: dist-files
+        name: Post-build
+        shell: bash
+        run: |
+          echo "paths<<EOF" >> "$GITHUB_OUTPUT"
+          dist print-upload-files-from-manifest --manifest dist-manifest.json >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          cp dist-manifest.json "$BUILD_MANIFEST_NAME"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-build-local-${{ join(matrix.targets, '_') }}
+          path: |
+            ${{ steps.dist-files.outputs.paths }}
+            ${{ env.BUILD_MANIFEST_NAME }}
+
+  build-global-artifacts:
+    needs:
+      - plan
+      - build-local-artifacts
+    if: ${{ needs.plan.outputs.should-release == 'true' }}
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BUILD_MANIFEST_NAME: target/distrib/global-dist-manifest.json
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.plan.outputs.release-sha }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure git auth for private dependencies
+        shell: bash
+        run: |
+          token="${BT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+          git config --global url."https://x-access-token:${token}@github.com/".insteadOf "https://github.com/"
+        env:
+          BT_GITHUB_TOKEN: ${{ secrets.BT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cached dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cargo-dist-cache
+          path: ~/.cargo/bin/
+
+      - run: chmod +x ~/.cargo/bin/dist
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.15.0"
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.2 --activate
+
+      - name: Install JS dependencies
+        run: pnpm install --ignore-scripts
+
+      - name: Fetch local artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: artifacts-*
+          path: target/distrib/
+          merge-multiple: true
+
+      - id: dist-files
+        shell: bash
+        run: |
+          BT_UPDATE_CHANNEL=stable \
+          BT_VERSION_STRING="${{ needs.plan.outputs.release-version }}" \
+          dist build ${{ needs.plan.outputs.tag-flag }} --output-format=json --artifacts=global > dist-manifest.json
+          echo "dist ran successfully"
+          echo "paths<<EOF" >> "$GITHUB_OUTPUT"
+          dist print-upload-files-from-manifest --manifest dist-manifest.json >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          cp dist-manifest.json "$BUILD_MANIFEST_NAME"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-build-global
+          path: |
+            ${{ steps.dist-files.outputs.paths }}
+            ${{ env.BUILD_MANIFEST_NAME }}
+
+  host:
+    needs:
+      - plan
+      - build-local-artifacts
+      - build-global-artifacts
+    if: needs.plan.outputs.should-release == 'true'
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    outputs:
+      val: ${{ steps.host.outputs.manifest }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.plan.outputs.release-sha }}
+          persist-credentials: false
+          submodules: recursive
+
+      - name: Configure git auth for private dependencies
+        shell: bash
+        run: |
+          token="${BT_GITHUB_TOKEN:-$GITHUB_TOKEN}"
+          git config --global url."https://x-access-token:${token}@github.com/".insteadOf "https://github.com/"
+        env:
+          BT_GITHUB_TOKEN: ${{ secrets.BT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cached dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: cargo-dist-cache
+          path: ~/.cargo/bin/
+
+      - run: chmod +x ~/.cargo/bin/dist
+
+      - name: Fetch artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: artifacts-*
+          path: target/distrib/
+          merge-multiple: true
+
+      - id: host
+        shell: bash
+        run: |
+          dist host ${{ needs.plan.outputs.tag-flag }} --steps=upload --steps=release --output-format=json > dist-manifest.json
+          echo "artifacts uploaded and released successfully"
+          cat dist-manifest.json
+          echo "manifest=$(jq -c "." dist-manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload dist manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifacts-dist-manifest
+          path: dist-manifest.json
+
+  build-npm:
+    needs:
+      - plan
+      - host
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      manifest: ${{ steps.packages.outputs.manifest }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.plan.outputs.release-sha }}
+          persist-credentials: false
+
+      - name: Download native release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: artifacts-build-local-*
+          path: archives
+          merge-multiple: true
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Use npm 11.12.1
+        run: npm install -g npm@11.12.1
+
+      - name: Build npm packages
+        id: packages
+        env:
+          RELEASE_SHA: ${{ needs.plan.outputs.release-sha }}
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+          RELEASE_TITLE: ${{ fromJSON(needs.host.outputs.val).announcement_title }}
+          INSTALL_NOTES: ${{ fromJSON(needs.host.outputs.val).announcement_github_body }}
+          CHANGELOG: ${{ needs.plan.outputs.notes }}
+        run: |
+          node npm/scripts/build-platform-packages.mjs \
+            --version "${{ needs.plan.outputs.release-version }}" \
+            --archives-dir archives \
+            --out-dir npm/dist
+          # All npm distributions belong to the same native CLI release/tag.
+          jq --arg sha "$RELEASE_SHA" --arg tag "$RELEASE_TAG" \
+            --arg title "$RELEASE_TITLE" --arg install "$INSTALL_NOTES" \
+            --arg notes "$(printf '%s' "$CHANGELOG" | base64 --decode)" \
+            '.commit = $sha | .packages |= map(. + {
+              tag: $tag, release_title: $title, release_body: ($install + "\n\n" + $notes)
+            })' npm/dist/artifacts/release-manifest.json > "$RUNNER_TEMP/release-manifest.json"
+          mv "$RUNNER_TEMP/release-manifest.json" npm/dist/artifacts/release-manifest.json
+          echo "manifest=$(jq -c . npm/dist/artifacts/release-manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Attest npm build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: npm/dist/artifacts/*.tgz
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-packages
+          path: npm/dist/artifacts/
+          if-no-files-found: error
+
+  attest-npm-sboms:
+    needs: build-npm
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJSON(needs.build-npm.outputs.manifest).packages }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-packages
+          path: release-artifacts
+
+      - name: Attest npm package SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release-artifacts/${{ matrix.package.tarball_asset }}
+          sbom-path: release-artifacts/${{ matrix.package.sbom_asset }}
+
+  publish-release:
+    needs:
+      - plan
+      - build-npm
+      - attest-npm-sboms
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    # Approval happened on `release` before the builds. Keep the npm OIDC identity.
+    environment: npm-publish
+    permissions:
+      contents: write
+      id-token: write
+      attestations: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ needs.plan.outputs.release-sha }}
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-packages
+          path: release-artifacts
+
+      - name: Download native release artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: artifacts-*
+          path: native-artifacts
+          merge-multiple: true
+
+      - name: Ensure release tag points to the approved commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.plan.outputs.release-sha }}
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git show-ref --verify --quiet "refs/tags/$RELEASE_TAG"; then
+            test "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")" = "$RELEASE_SHA"
+          else
+            gh api "repos/$GITHUB_REPOSITORY/git/refs" --method POST \
+              -f ref="refs/tags/$RELEASE_TAG" -f sha="$RELEASE_SHA"
+          fi
+
+      - name: Publish platform packages and standalone CLI
+        uses: braintrustdata/sdk-actions/actions/release/lang/js/publish-npm-tarballs@9d481f601e62e149777259d2a0f8088b1a5f54fb
+        with:
+          manifest: release-artifacts/release-manifest.json
+          tarballs: release-artifacts/*.tgz
+          npm_version: "11.12.1"
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_channel: C0ABHT0SWA2
+
+      - name: Publish GitHub release with all assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! is_draft="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft')"; then
+            title="$(jq -r '.packages[0].release_title' release-artifacts/release-manifest.json)"
+            jq -r '.packages[0].release_body' release-artifacts/release-manifest.json > "$RUNNER_TEMP/notes.txt"
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+              --verify-tag --draft --title "$title" --notes-file "$RUNNER_TEMP/notes.txt"
+            is_draft=true
+          fi
+
+          # Reuse drafts on retries and repair assets on already-public releases.
+          rm -f native-artifacts/*-dist-manifest.json
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            native-artifacts/* release-artifacts/*.sbom.json
+
+          # Installers and archives must be available before this becomes latest.
+          if [ "$is_draft" = true ]; then
+            gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+          fi
+
+  smoke-install-unix:
+    needs:
+      - plan
+      - publish-release
+    if: ${{ needs.publish-release.result == 'success' }}
+    runs-on: ubuntu-22.04
+    env:
+      RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install from released installer
+        shell: bash
+        run: |
+          curl -fsSL "https://github.com/${REPO}/releases/download/${RELEASE_TAG}/bt-installer.sh" | sh
+
+      - name: Verify installed binary
+        shell: bash
+        run: |
+          export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+          bt --version
+
+      - name: Verify update check
+        shell: bash
+        run: |
+          export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+          bt update --check --channel stable
+
+  smoke-install-macos:
+    needs:
+      - plan
+      - publish-release
+    if: ${{ needs.publish-release.result == 'success' && vars.BT_ENABLE_MACOS_SMOKE == '1' }}
+    runs-on: macos-latest
+    env:
+      RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install from released installer
+        shell: bash
+        run: |
+          curl -fsSL "https://github.com/${REPO}/releases/download/${RELEASE_TAG}/bt-installer.sh" | sh
+
+      - name: Verify installed binary
+        shell: bash
+        run: |
+          export PATH="${XDG_BIN_HOME:-$HOME/.local/bin}:$PATH"
+          bt --version
+          bt update --check --channel stable
+
+  smoke-install-windows:
+    needs:
+      - plan
+      - publish-release
+    if: ${{ needs.publish-release.result == 'success' }}
+    runs-on: windows-2022
+    env:
+      RELEASE_TAG: ${{ needs.plan.outputs.tag }}
+      REPO: ${{ github.repository }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Install from released installer
+        shell: pwsh
+        run: |
+          irm "https://github.com/${env:REPO}/releases/download/${env:RELEASE_TAG}/bt-installer.ps1" | iex
+
+      - name: Verify installed binary
+        shell: pwsh
+        run: |
+          $binDir = if ($env:XDG_BIN_HOME) { $env:XDG_BIN_HOME } else { Join-Path $HOME ".local/bin" }
+          $btExe = Join-Path $binDir "bt.exe"
+          if (!(Test-Path $btExe)) {
+            throw "bt.exe not found at $btExe"
+          }
+          & $btExe --version
+          $env:PATH = "$binDir;$env:PATH"
+          & $btExe update --check --channel stable
+
+  notify-failure:
+    needs:
+      - plan
+      - request-approval
+      - build-local-artifacts
+      - build-global-artifacts
+      - host
+      - build-npm
+      - attest-npm-sboms
+      - publish-release
+      - smoke-install-unix
+      - smoke-install-macos
+      - smoke-install-windows
+    if: ${{ failure() }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Notify release failure
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: C0ABHT0SWA2
+            text: "Braintrust CLI stable release failed. <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"

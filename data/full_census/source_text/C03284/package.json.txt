@@ -1,0 +1,88 @@
+{
+  "name": "@fengmk2/ps-tree",
+  "version": "2.0.2",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Get all children of a pid and support CommonJS and ESM both",
+  "license": "MIT",
+  "homepage": "http://github.com/fengmk2/ps-tree#readme",
+  "repository": "github:fengmk2/ps-tree",
+  "bugs": {
+    "url": "https://github.com/fengmk2/ps-tree/issues"
+  },
+  "author": "Charlie Robbins <charlie.robbins@gmail.com>",
+  "contributors": [
+    "Zhuohuan LI <zixia@zixia.net> (https://github.com/zixia)",
+    "Simone Primarosa <simonepri@outlook.com> (https://github.com/simonepri)"
+  ],
+  "keyboards": [
+    "ps-tree",
+    "ps",
+    "tree",
+    "ppid",
+    "pid"
+  ],
+  "bin": {
+    "ps-tree": "./bin/ps-tree.cjs"
+  },
+  "dependencies": {
+    "event-stream": "^4.0.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.1",
+    "@eggjs/tsconfig": "1",
+    "@types/event-stream": "^4.0.5",
+    "@types/mocha": "10",
+    "@types/node": "22",
+    "c8": "^10.1.3",
+    "egg-bin": "6",
+    "eslint": "8",
+    "eslint-config-egg": "14",
+    "tape": "^4.17.0",
+    "tree-kill": "^1.1.0",
+    "tshy": "3",
+    "tshy-after": "1",
+    "typescript": "5"
+  },
+  "engines": {
+    "node": ">= 18.19.0"
+  },
+  "scripts": {
+    "lint": "eslint --cache src --ext .ts",
+    "pretest": "npm run lint -- --fix && npm run prepublishOnly",
+    "test": "npm run test-local",
+    "test-local": "tape test/test.cjs",
+    "preci": "npm run lint && npm run prepublishOnly",
+    "ci": "c8 tape test/test.cjs && attw --pack",
+    "prepublishOnly": "tshy && tshy-after"
+  },
+  "type": "module",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin"
+  ],
+  "types": "./dist/commonjs/index.d.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js"
+}

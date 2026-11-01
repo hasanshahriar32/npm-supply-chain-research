@@ -1,0 +1,157 @@
+name: "[Ruby] Release"
+
+on:
+  push:
+    tags:
+      - ruby-v*
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and smoke-test the gems without publishing them"
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-gem:
+    name: Compile native gem for ${{ matrix.platform }}
+    runs-on: ubuntu-22.04
+    env:
+      RUBY_VERSIONS: "3.2,3.3,3.4,4.0"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - aarch64-linux
+          - aarch64-linux-musl
+          - arm64-darwin
+          - x64-mingw-ucrt
+          - x86_64-darwin
+          - x86_64-linux
+          - x86_64-linux-musl
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ./crates/css-inline-ruby
+
+      # `cross-gem` picks the toolchain from the first `rb_sys` line of the root
+      # `Gemfile.lock`. Copying the file wholesale hands it the `PATH` section's
+      # `~>` constraint instead of the resolved version, so pass only the latter.
+      - name: Expose rb_sys version for rb-sys-dock
+        run: grep -E '^ +rb_sys \([0-9]' crates/css-inline-ruby/Gemfile.lock > Gemfile.lock
+
+      - name: Compile native gem
+        id: cross-gem
+        uses: oxidize-rb/actions/cross-gem@v1.5.0
+        with:
+          platform: ${{ matrix.platform }}
+          ruby-versions: ${{ env.RUBY_VERSIONS }}
+          working-directory: ./crates/css-inline-ruby
+
+      # rake-compiler only warns when the image lacks a requested Ruby, and still
+      # exits 0 with that ABI silently absent from the gem.
+      - name: Verify every Ruby ABI was built
+        working-directory: ./crates/css-inline-ruby
+        run: |
+          for version in ${RUBY_VERSIONS//,/ }; do
+            tar -xOf pkg/*.gem data.tar.gz | tar -tzf - \
+              | grep -q "lib/css_inline/$version/" \
+              || { echo "::error::Ruby $version missing from $(ls pkg/*.gem)"; exit 1; }
+          done
+
+      # Pushes to RubyGems are irreversible.
+      - name: Smoke test
+        if: matrix.platform == 'x86_64-linux'
+        working-directory: ./crates/css-inline-ruby
+        env:
+          BUNDLE_GEMFILE: ""
+        run: |
+          gem install pkg/*.gem --local --no-document
+          ruby -e "
+            require 'css_inline'
+            html = '<html><head><style>h1 { color: red; }</style></head><body><h1>Test</h1></body></html>'
+            result = CSSInline.inline(html)
+            raise 'inlining failed' unless result.include?('style=\"color: red;\"')
+            puts 'smoke test OK'
+          "
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cross-gem-${{ matrix.platform }}
+          path: ${{ steps.cross-gem.outputs.gem-path }}
+          if-no-files-found: error
+
+  ruby-release:
+    needs: cross-gem
+    runs-on: ubuntu-22.04
+    env:
+      # A manual run from a branch has no version to release.
+      PUBLISH: ${{ !inputs.dry_run && startsWith(github.ref, 'refs/tags/') }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+          working-directory: ./crates/css-inline-ruby
+
+      - name: Extract Version
+        run: echo "version=${GITHUB_REF#refs/tags/ruby-v}" >> $GITHUB_ENV
+
+      - name: Download native gems
+        uses: actions/download-artifact@v8
+        with:
+          pattern: cross-gem-*
+          merge-multiple: true
+          path: ./crates/css-inline-ruby/pkg
+
+      - name: Build source gem
+        working-directory: ./crates/css-inline-ruby
+        run: |
+          gem build *.gemspec
+          mv css_inline-*.gem pkg/
+          ls -l pkg/
+
+      - name: GitHub Release
+        if: env.PUBLISH == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          make_latest: false
+          draft: true
+          name: "[Ruby] Release ${{ env.version }}"
+          files: ./crates/css-inline-ruby/pkg/*.gem
+
+      - name: Publish to RubyGems
+        if: env.PUBLISH == 'true'
+        working-directory: ./crates/css-inline-ruby
+        run: |
+          mkdir -p $HOME/.gem
+          touch $HOME/.gem/credentials
+          chmod 0600 $HOME/.gem/credentials
+          printf -- "---\n:rubygems_api_key: ${GEM_HOST_API_KEY}\n" > $HOME/.gem/credentials
+          for gem in pkg/*.gem; do
+            gem push "$gem"
+          done
+        env:
+          GEM_HOST_API_KEY: "${{ secrets.RUBYGEMS_API_KEY }}"
+
+      - name: Upload gems (no publish)
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: gems
+          path: ./crates/css-inline-ruby/pkg/*.gem
+          if-no-files-found: error

@@ -1,0 +1,30 @@
+{
+	"name": "neotraverse-monorepo",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vp pack",
+		"test": "vp test",
+		"test:cov": "vp test --coverage",
+		"check": "vp check",
+		"fmt": "vp fmt",
+		"lint": "vp lint",
+		"bench": "pnpm --filter neotraverse bench",
+		"bench:safe": "pnpm --filter neotraverse bench:safe",
+		"docs:dev": "pnpm --filter docs dev",
+		"docs:build": "pnpm --filter docs build",
+		"docs:preview": "pnpm --filter docs preview",
+		"changeset": "changeset",
+		"ci:version": "changeset version",
+		"ci:release": "vp pack && changeset publish"
+	},
+	"devDependencies": {
+		"@changesets/cli": "^2.31.0",
+		"@types/node": "^25.9.1",
+		"vite-plus": "^0.1.24"
+	},
+	"engines": {
+		"node": ">= 20"
+	},
+	"packageManager": "pnpm@10.32.0"
+}

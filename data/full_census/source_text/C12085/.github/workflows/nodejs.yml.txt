@@ -1,0 +1,22 @@
+name: Node CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: voxpelli/ghatemplates/.github/workflows/test.yml@main
+    with:
+      node-versions: '0.10.48,10,14,16,18,20,22'
+      npm-install: false
+      os: 'ubuntu-latest,windows-latest'

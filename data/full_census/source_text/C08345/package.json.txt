@@ -1,0 +1,75 @@
+{
+	"name": "pkg-entry-points",
+	"version": "0.0.0-semantic-release",
+	"description": "Get all entry-points for an npm package. Supports the `exports` field in `package.json`.",
+	"keywords": [
+		"node.js",
+		"package.json",
+		"entry",
+		"points",
+		"entry-points",
+		"exports",
+		"conditions",
+		"entries"
+	],
+	"license": "MIT",
+	"repository": "privatenumber/pkg-entry-points",
+	"funding": "https://github.com/privatenumber/pkg-entry-points?sponsor=1",
+	"author": {
+		"name": "Hiroki Osame",
+		"email": "hiroki.osame@gmail.com"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.cts",
+	"exports": {
+		"require": {
+			"types": "./dist/index.d.cts",
+			"default": "./dist/index.cjs"
+		},
+		"import": {
+			"types": "./dist/index.d.mts",
+			"default": "./dist/index.mjs"
+		}
+	},
+	"imports": {
+		"#pkg-entry-points": {
+			"types": "./src/index.ts",
+			"development": "./src/index.ts",
+			"default": "./dist/index.mjs"
+		}
+	},
+	"packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d",
+	"scripts": {
+		"build": "pkgroll --target=node12.19 --minify",
+		"lint": "lintroll --cache .",
+		"type-check": "tsc",
+		"test": "tsx tests",
+		"coverage": "c8 --reporter=text --reporter=html --include='src/**' --exclude='src/types.ts' --all tsx --conditions=development tests",
+		"benchmark": "tsx --conditions=development scripts/benchmark.ts",
+		"dev": "tsx watch --conditions=development tests",
+		"prepack": "pnpm build && clean-pkg-json"
+	},
+	"engines": {
+		"node": ">=20.19.5"
+	},
+	"devDependencies": {
+		"@types/node": "^24.10.1",
+		"c8": "^11.0.0",
+		"clean-pkg-json": "^1.3.0",
+		"execa": "^9.6.1",
+		"expect-type": "^1.3.0",
+		"fs-fixture": "^2.9.0",
+		"lintroll": "^1.23.4",
+		"manten": "^1.5.0",
+		"mitata": "^1.0.34",
+		"pkgroll": "^2.19.0",
+		"tsx": "^4.21.0",
+		"type-fest": "^5.1.0",
+		"typescript": "^5.9.3"
+	}
+}

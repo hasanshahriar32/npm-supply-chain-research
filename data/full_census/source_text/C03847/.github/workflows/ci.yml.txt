@@ -1,0 +1,871 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # master runs write the shared caches: let them finish.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Harden npm installs against transient registry network blips (e.g.
+  # ECONNRESET) seen intermittently on hosted runners.
+  NPM_CONFIG_FETCH_RETRIES: 5
+  NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: 20000
+  NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: 120000
+
+# Caches that grow per branch (Gradle, NuGet, ccache) are written from master
+# only and restored read-only on pull requests: the repo has a 10 GB cache
+# quota, and per-PR copies evicted master's caches.
+
+jobs:
+  # Which platforms a pull request touches. Pushes to master run everything.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      ios: ${{ github.event_name == 'push' || steps.filter.outputs.ios == 'true' }}
+      android: ${{ github.event_name == 'push' || steps.filter.outputs.android == 'true' }}
+      windows: ${{ github.event_name == 'push' || steps.filter.outputs.windows == 'true' }}
+      web: ${{ github.event_name == 'push' || steps.filter.outputs.web == 'true' }}
+    steps:
+      - name: Filter paths
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            shared: &shared
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig*.json'
+              - 'babel.config.*'
+              - 'src/**'
+              - '.npmrc'
+              - 'react-native.config.cjs'
+              - '.github/workflows/ci.yml'
+            example: &example
+              - 'example/package.json'
+              - 'example/package-lock.json'
+              - 'example/*.js'
+              - 'example/*.json'
+              - 'example/App.tsx'
+              - 'example/src/**'
+            ios:
+              - *shared
+              - *example
+              - 'ios/**'
+              - 'react-native-view-shot.podspec'
+              - 'Package.swift'
+              - 'example/Gemfile'
+              - 'example/ios/**'
+              - 'example/e2e/**'
+            android:
+              - *shared
+              - *example
+              - 'android/**'
+              - 'example/android/**'
+            windows:
+              - *shared
+              - 'windows/**'
+              - 'example-windows/**'
+            web:
+              - *shared
+              - 'example-web/**'
+
+  lint-and-type-check:
+    name: Code Quality (Strict)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # --legacy-peer-deps for react-native-windows@0.76.17; `prepare` builds the library
+        run: npm ci --legacy-peer-deps
+
+      - name: Check formatting (no prettier diff allowed)
+        run: npm run format:check
+
+      - name: Run TypeScript type check (strict)
+        run: npm run type-check
+
+      - name: Run linter (strict - no warnings allowed)
+        run: npm run lint:ci
+
+      - name: Run unit tests
+        run: npm test
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.android == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      # The Android assembleDebug build (RN new arch) exhausts the runner's
+      # ~14 GB of free disk. Reclaim space by removing large preinstalled
+      # toolchains we don't use, while keeping the Android SDK/NDK. Runs
+      # before Node/Java setup so their tool caches are untouched.
+      - name: Free up disk space
+        run: |
+          echo "Disk before cleanup:"; df -h /
+          sudo rm -rf /usr/share/dotnet \
+                      /opt/ghc /usr/local/.ghcup \
+                      /opt/hostedtoolcache/CodeQL \
+                      /usr/local/share/boost \
+                      /usr/local/share/powershell \
+                      /usr/local/lib/node_modules || true
+          sudo docker image prune --all --force || true
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile || true
+          sudo apt-get clean || true
+          echo "Disk after cleanup:"; df -h /
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Restore Gradle cache
+        id: gradle-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'example/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Install dependencies
+        # --legacy-peer-deps for react-native-windows@0.76.17; `prepare` builds the library
+        run: npm ci --legacy-peer-deps
+
+      - name: Install example dependencies
+        working-directory: example
+        run: npm ci --legacy-peer-deps
+
+      # Old architecture: compiles the hand-written paper spec
+      # (android/src/paper), still used by react-native 0.80/0.81 apps.
+      - name: Run library Java unit tests
+        working-directory: example/android
+        run: |
+          ./gradlew :react-native-view-shot:testDebugUnitTest \
+            --no-daemon --stacktrace -PnewArchEnabled=false
+
+      # A single ABI: gradle.properties lists four, which compiles every native
+      # dependency (Skia, Reanimated, worklets...) four times. arm64-v8a keeps
+      # the uploaded APK installable on phones and Apple Silicon emulators.
+      - name: Build Android APK
+        working-directory: example/android
+        run: |
+          ./gradlew assembleDebug \
+            --no-daemon --stacktrace \
+            -PnewArchEnabled=true -PreactNativeArchitectures=arm64-v8a
+
+      - name: Save Gradle cache
+        if: github.ref == 'refs/heads/master' && steps.gradle-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ steps.gradle-cache.outputs.cache-primary-key }}
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-apk
+          path: example/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-ios-spm:
+    name: Build iOS App (SwiftPM)
+    runs-on: macos-15
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.ios == 'true'
+    env:
+      RN_VERSION: '0.87.1'  # first RN with SwiftPM autolinking
+      RN_CLI_VERSION: '20.2.0'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'  # RN 0.87 requires Node >= 22.13
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Pack library
+        run: |
+          npm pack --pack-destination "$RUNNER_TEMP"
+          # The published tarball must carry the SwiftPM manifest
+          tar -tzf "$RUNNER_TEMP"/react-native-view-shot-*.tgz | grep -qx 'package/Package.swift'
+
+      - name: Create SwiftPM test app
+        working-directory: ${{ runner.temp }}
+        run: |
+          npx --yes @react-native-community/cli@"$RN_CLI_VERSION" init SpmTest \
+            --version "$RN_VERSION" --skip-git-init --install-pods false
+          cd SpmTest
+          npm install "$RUNNER_TEMP"/react-native-view-shot-*.tgz
+
+      - name: Switch test app to SwiftPM
+        working-directory: ${{ runner.temp }}/SpmTest
+        run: |
+          npx react-native spm add --deintegrate --yes | tee spm.log
+          # Must use the manifest we ship, not a scaffolded one
+          grep -q 'Self-managed: ReactNativeViewShot' spm.log
+
+      - name: Build iOS (SwiftPM)
+        working-directory: ${{ runner.temp }}/SpmTest/ios
+        run: |
+          xcodebuild -project SpmTest.xcodeproj \
+            -scheme SpmTest \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/dd \
+            build CODE_SIGNING_ALLOWED=NO ARCHS=arm64
+
+      - name: Check build output
+        working-directory: ${{ runner.temp }}/SpmTest/ios
+        run: |
+          test -f build/dd/Build/Products/Release-iphonesimulator/SpmTest.app/ReactNativeViewShot_ReactNativeViewShot.bundle/PrivacyInfo.xcprivacy
+          # Compiled as a TurboModule (RCT_NEW_ARCH_ENABLED), not via the legacy interop
+          OBJ=$(find build/dd/Build/Intermediates.noindex -path '*Release-iphonesimulator*' -name RNViewShot.o | head -1)
+          nm "$OBJ" > rnviewshot.syms
+          grep -q 'getTurboModule:' rnviewshot.syms
+
+  # One macOS job builds the example once (arm64, for the Detox simulator) and
+  # runs Detox, the XCTest unit tests and the podspec lint on that build.
+  # React Native >= 0.82 is new-architecture only, so there is no separate
+  # old/new architecture build.
+  ios:
+    name: iOS (build, Detox, XCTest)
+    runs-on: macos-15
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.ios == 'true'
+    env:
+      # Snapshot references in example/e2e/snapshots/reference/ios were
+      # produced with this Xcode + simulator; change both together.
+      IOS_SIMULATOR: iPhone 16 Pro
+      IOS_SIMULATOR_OS: '26.2'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+
+      # .detoxrc.js reads IOS_DERIVED_DATA for the app path. (The runner
+      # context isn't available in job-level env.)
+      - name: Set build paths
+        run: |
+          echo "IOS_DERIVED_DATA=$RUNNER_TEMP/DerivedData" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$RUNNER_TEMP/ccache" >> "$GITHUB_ENV"
+
+      # Booting takes minutes on a fresh runner; start it now so it overlaps
+      # the build. Detox later targets this exact UDID. The references were
+      # produced on this runtime, which is newer than the Xcode 16.4 SDK
+      # (Detox runs apps there; xcodebuild can't target it).
+      - name: Boot simulator
+        run: |
+          RUNTIME="com.apple.CoreSimulator.SimRuntime.iOS-${IOS_SIMULATOR_OS//./-}"
+          UDID=$(xcrun simctl list devices available -j | jq -r --arg rt "$RUNTIME" --arg name "$IOS_SIMULATOR" '
+            .devices[$rt] // [] | map(select(.name == $name)) | first | .udid // empty')
+          if [ -z "$UDID" ]; then
+            # Detox is skipped and "Check Detox ran" fails the job; the build,
+            # XCTest and podspec lint still report.
+            echo "::error::No $IOS_SIMULATOR on iOS $IOS_SIMULATOR_OS: update IOS_SIMULATOR_OS and the iOS references together"
+            xcrun simctl list devices available
+            exit 0
+          fi
+          echo "IOS_SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl list devices available | grep "$UDID"
+          # Non-fatal: "Install app on the simulator" waits with `bootstatus -b`,
+          # which boots it if this didn't.
+          xcrun simctl boot "$UDID" || true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # RN's compiler wrapper (scripts/xcode/ccache-clang.sh) runs
+      # `$CCACHE_BINARY clang`. Pod install also sets CCACHE_BINARY as a build
+      # setting, but Xcode doesn't pass build settings to compilers, so
+      # without the environment variable the wrapper ran plain clang.
+      # COMPILERCHECK=content: the default (the compiler's mtime) differs
+      # between runner image versions for the same Xcode, and a run on a newer
+      # image missed every entry.
+      - name: Install ccache
+        run: |
+          brew install ccache
+          echo "CCACHE_BINARY=$(command -v ccache)" >> "$GITHUB_ENV"
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
+
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/ccache
+          # The bulk of the build is the example's native dependencies: one
+          # entry per lockfile, not per commit (trimmed to 2 GB before saving).
+          # An exact hit is never re-saved: bump the version when a ccache
+          # setting changes what the entries are keyed on.
+          key: ccache-ios-v2-${{ hashFiles('example/package-lock.json', 'example/ios/Podfile') }}
+          restore-keys: ccache-ios-v2-
+
+      - name: Install dependencies
+        # --legacy-peer-deps for react-native-windows@0.76.17; `prepare` builds the library
+        run: npm ci --legacy-peer-deps
+
+      - name: Install example dependencies
+        working-directory: example
+        run: npm ci --legacy-peer-deps
+
+      - name: Setup CocoaPods
+        uses: maxim-lobanov/setup-cocoapods@v1
+        with:
+          version: latest
+
+      - name: Pod install
+        working-directory: example/ios
+        env:
+          USE_CCACHE: '1'  # read by react_native_post_install (Podfile)
+        run: pod install
+
+      # The ViewShotExampleTests scheme builds the app and its unit tests;
+      # Detox runs the same ViewShotExample.app. arm64 only: the runners are
+      # Apple Silicon, and a generic destination builds every architecture.
+      # FORCE_BUNDLING embeds the (dev) JS bundle, so no Metro runs: a Debug
+      # app only uses Metro if its 6 s /status check passes, which failed on
+      # the first launch on a fresh simulator and left the app without a
+      # bundle (the recurring first-launch Detox timeout).
+      - name: Build iOS
+        id: build
+        working-directory: example
+        env:
+          FORCE_BUNDLING: '1'
+          # Line-buffered output, so log timestamps match the build's progress.
+          NSUnbufferedIO: 'YES'
+        run: |
+          ccache --zero-stats
+          xcodebuild build-for-testing \
+            -workspace ios/ViewShotExample.xcworkspace \
+            -scheme ViewShotExampleTests \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$IOS_DERIVED_DATA" \
+            -showBuildTimingSummary \
+            CODE_SIGNING_ALLOWED=NO ARCHS=arm64 COMPILER_INDEX_STORE_ENABLE=NO
+          ccache --show-stats
+
+      - name: Trim ccache
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && (github.ref == 'refs/heads/master' || github.head_ref == 'ci/ccache-compilercheck') && steps.ccache.outputs.cache-hit != 'true' }}
+        run: ccache --max-size 2G && ccache --cleanup
+
+      - name: Save ccache
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && (github.ref == 'refs/heads/master' || github.head_ref == 'ci/ccache-compilercheck') && steps.ccache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/ccache
+          key: ${{ steps.ccache.outputs.cache-primary-key }}
+
+      # Installed once here; `--reuse` keeps Detox from reinstalling it before
+      # every test file. Then launched once: with a cached build, Detox starts
+      # minutes after the simulator booted, and its first launchApp calls hung
+      # past the 300 s hook timeout while later ones took ~1 min.
+      - name: Install app on the simulator
+        id: install
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && env.IOS_SIMULATOR_UDID != '' }}
+        working-directory: example
+        env:
+          APP_ID: org.reactjs.native.example.ViewShotExample
+        run: |
+          xcrun simctl bootstatus "$IOS_SIMULATOR_UDID" -b
+          xcrun simctl install "$IOS_SIMULATOR_UDID" \
+            "$IOS_DERIVED_DATA/Build/Products/Debug-iphonesimulator/ViewShotExample.app"
+          time xcrun simctl launch "$IOS_SIMULATOR_UDID" "$APP_ID"
+          sleep 30
+          xcrun simctl terminate "$IOS_SIMULATOR_UDID" "$APP_ID" || true
+
+      - name: Install applesimutils
+        id: applesimutils
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          # Homebrew's tap-trust gate refuses community taps by default.
+          if brew tap wix/brew && brew trust wix/brew && brew install applesimutils; then
+            exit 0
+          fi
+          echo "brew install failed, building applesimutils from source"
+          curl -L https://github.com/wix/AppleSimulatorUtils/archive/0.9.6.tar.gz | tar -xz -C "$RUNNER_TEMP"
+          cd "$RUNNER_TEMP/AppleSimulatorUtils-0.9.6"
+          xcodebuild -project applesimutils.xcodeproj -scheme applesimutils -configuration Release -derivedDataPath ./build build
+          sudo cp ./build/Build/Products/Release/applesimutils /usr/local/bin/
+
+      - name: Run Detox Tests
+        if: ${{ !cancelled() && steps.applesimutils.outcome == 'success' }}
+        working-directory: example
+        run: npx detox test --configuration ios.sim.debug --reuse
+
+      - name: Check Detox ran
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && env.IOS_SIMULATOR_UDID == '' }}
+        run: |
+          echo "::error::Detox was skipped: no $IOS_SIMULATOR on iOS $IOS_SIMULATOR_OS"
+          exit 1
+
+      # After Detox, on its own: booting a second simulator next to the Detox
+      # one took 29 min on the 3-core runner. On an iPhone of the
+      # runtime matching Xcode's simulator SDK (the Detox simulator's runtime
+      # is newer than Xcode 16.4 supports as a test destination).
+      - name: Free the runner for unit tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        working-directory: example
+        run: xcrun simctl shutdown all
+
+      - name: Run iOS unit tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        working-directory: example
+        run: |
+          SDK=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          # Newest runtime not newer than the SDK; non-numeric parts sort as 0.
+          TEST_UDID=$(xcrun simctl list devices available -j | jq -r --arg sdk "$SDK" '
+            def ver: split("-") | map(tonumber? // 0);
+            .devices | to_entries
+            | map(select(.key | startswith("com.apple.CoreSimulator.SimRuntime.iOS-"))
+                | .v = (.key | ltrimstr("com.apple.CoreSimulator.SimRuntime.iOS-") | ver)
+                | select(.v <= ($sdk | gsub("\\."; "-") | ver)))
+            | sort_by(.v) | map(.value[] | select(.name | startswith("iPhone ")))
+            | last | .udid // empty')
+          if [ -z "$TEST_UDID" ]; then
+            echo "::error::No iPhone simulator for an iOS runtime <= $SDK"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          xcodebuild test-without-building \
+            -workspace ios/ViewShotExample.xcworkspace \
+            -scheme ViewShotExampleTests \
+            -destination "platform=iOS Simulator,id=$TEST_UDID" \
+            -derivedDataPath "$IOS_DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO
+
+      # Last, so a lint error doesn't hide build/test results.
+      - name: Lint podspec
+        if: ${{ !cancelled() }}
+        run: pod lib lint --allow-warnings --quick
+
+      - name: Upload Detox Screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: detox-screenshots-ios
+          # output/ holds <name>.actual.png and <name>.diff.png for snapshot
+          # mismatches and missing references.
+          path: |
+            example/artifacts/**/*.png
+            example/e2e/snapshots/output/**/*.png
+
+      - name: Upload Detox Test Results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: detox-test-results-ios
+          path: |
+            example/e2e/test-results/**/*
+            example/artifacts/**/*.xml
+
+      - name: Upload iOS Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-build-logs
+          path: ~/Library/Logs/DiagnosticReports/
+
+  test-windows-unit:
+    name: Run Windows unit tests
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.windows == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages
+        id: nuget-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('windows/RNViewShot.Tests/RNViewShot.Tests.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Run dotnet tests
+        run: |
+          dotnet test windows/RNViewShot.Tests/RNViewShot.Tests.csproj \
+            --nologo --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --results-directory TestResults
+
+      - name: Save NuGet packages
+        if: github.ref == 'refs/heads/master' && steps.nuget-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-unit-test-results
+          path: TestResults/
+
+  build-windows:
+    name: Build Windows
+    # Pinned to windows-2022 (VS 2022). GitHub migrated windows-latest to
+    # Visual Studio 2026 (18.x) in June 2026, which react-native-windows 0.76
+    # does not support — its CLI only accepts VS in range [17.11.0, 18.0).
+    runs-on: windows-2022
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.windows == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            example-windows/package-lock.json
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Ensure Windows SDK 10.0.22621
+        shell: pwsh
+        run: |
+          $sdkPath = "C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0"
+          if (Test-Path $sdkPath) {
+            Write-Host "Windows SDK 10.0.22621 already installed"
+            exit 0
+          }
+          Write-Host "Installed SDKs:"
+          Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\Include" -ErrorAction SilentlyContinue | Select-Object Name | ForEach-Object { Write-Host "  $($_.Name)" }
+
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $info = & $vswhere -latest -prerelease -products * -format json | ConvertFrom-Json
+          if (-not $info) { throw "vswhere returned no VS install" }
+          Write-Host "VS productId: $($info.productId)"
+
+          $vsInstaller = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $args = @(
+            'modify',
+            '--channelId', $info.channelId,
+            '--productId', $info.productId,
+            '--add', 'Microsoft.VisualStudio.Component.Windows11SDK.22621',
+            '--quiet', '--norestart'
+          )
+          Write-Host "Running: $vsInstaller $($args -join ' ')"
+          $proc = Start-Process -FilePath $vsInstaller -ArgumentList $args -Wait -PassThru
+          Write-Host "vs_installer exit code: $($proc.ExitCode)"
+
+          if (-not (Test-Path $sdkPath)) {
+            throw "Windows SDK 10.0.22621 still missing after install attempt"
+          }
+          Write-Host "Windows SDK 10.0.22621 installed"
+
+      # ~3 GB: saved from master only (see "Save NuGet packages"), so PRs
+      # don't evict each other's caches from the 10 GB repo quota.
+      - name: Restore NuGet packages
+        id: nuget-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-build-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: ${{ runner.os }}-nuget-build-
+
+      # `prepare` builds the library
+      - name: Install root dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install example-windows dependencies
+        working-directory: example-windows
+        run: npm ci --legacy-peer-deps
+
+      - name: Run Windows autolinking
+        working-directory: example-windows
+        run: npx --no-install react-native autolink-windows --no-telemetry
+
+      - name: Build example-windows
+        working-directory: example-windows
+        shell: pwsh
+        run: |
+          npx --no-install react-native run-windows `
+            --arch x64 `
+            --no-launch `
+            --no-deploy `
+            --no-packager `
+            --no-autolink `
+            --logging `
+            --buildLogDirectory buildlogs `
+            --no-telemetry
+
+      - name: Verify build artifacts
+        working-directory: example-windows
+        shell: pwsh
+        run: |
+          $exe = "windows/ViewShotWindowsExample/bin/x64/Debug/ViewShotWindowsExample.exe"
+          $rnviewshot = "windows/ViewShotWindowsExample/bin/x64/Debug/RNViewShot.winmd"
+          if (-not (Test-Path $exe)) {
+            Write-Error "Missing $exe"; exit 1
+          }
+          if (-not (Test-Path $rnviewshot)) {
+            Write-Error "Missing $rnviewshot — RNViewShot module did not link"; exit 1
+          }
+          Write-Host "OK: $exe and RNViewShot.winmd present"
+
+      - name: Save NuGet packages
+        if: github.ref == 'refs/heads/master' && steps.nuget-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.nuget/packages
+          key: ${{ steps.nuget-cache.outputs.cache-primary-key }}
+
+      - name: Upload Windows app package
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-app
+          path: example-windows/windows/ViewShotWindowsExample/AppPackages/**
+          if-no-files-found: error
+
+      - name: Upload Windows build logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-build-logs
+          path: |
+            example-windows/buildlogs/**
+            example-windows/windows/**/*.log
+            example-windows/windows/**/*.err
+
+  # Android Detox is disabled on CI: Detox's test APK hits native library
+  # (libfbjni.so) conflicts not yet reproduced outside the runner.
+
+  build-web-example:
+    name: Build Web Example
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, changes]
+    if: needs.changes.outputs.web == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # `prepare` builds the library
+      - name: Install root dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install web example dependencies
+        working-directory: example-web
+        run: npm ci
+
+      - name: Build web example (production)
+        working-directory: example-web
+        run: npm run build
+
+      - name: Verify build output
+        working-directory: example-web
+        run: |
+          echo "✅ Web build completed successfully"
+          ls -lh dist/
+          du -sh dist/
+          echo ""
+          echo "Build contains:"
+          ls -1 dist/
+
+      - name: Upload web build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-build
+          path: example-web/dist/
+          retention-days: 7
+
+      - name: Build summary
+        working-directory: example-web
+        run: |
+          echo "### Web Build Summary 🌐" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Production build successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Bundle size:** $(du -sh dist/ | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Files:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          ls -lh dist/ >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  test-web-example:
+    name: Test Web Example (Playwright)
+    runs-on: ubuntu-latest
+    needs: build-web-example
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      # `prepare` builds the library
+      - name: Install root dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install web example dependencies
+        working-directory: example-web
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        working-directory: example-web
+        run: npx playwright install chromium --with-deps
+
+      - name: Start web development server
+        working-directory: example-web
+        run: |
+          npx webpack serve --mode development --port 3000 &
+          echo $! > web-server.pid
+          for i in {1..60}; do
+            if curl -sf http://localhost:3000 > /dev/null; then
+              echo "✅ Web server is ready"
+              exit 0
+            fi
+            echo "⏳ Waiting for web server... ($i/60)"
+            sleep 2
+          done
+          echo "::error::Web server did not start"
+          exit 1
+
+      - name: Run Playwright tests
+        working-directory: example-web
+        run: npm run test:e2e
+        id: playwright_tests
+        
+      - name: Stop web development server
+        if: always()
+        working-directory: example-web
+        run: |
+          if [ -f web-server.pid ]; then
+            kill $(cat web-server.pid) || true
+            rm web-server.pid
+          fi
+
+      - name: Check for snapshot differences
+        if: failure() && steps.playwright_tests.outcome == 'failure'
+        working-directory: example-web
+        run: |
+          if [ -d "test-results" ]; then
+            echo "## 📸 Visual Regression Detected" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some visual snapshots have changed. This could be due to:" >> $GITHUB_STEP_SUMMARY
+            echo "- UI changes in the web example" >> $GITHUB_STEP_SUMMARY
+            echo "- Different rendering between platforms (Linux CI vs local macOS)" >> $GITHUB_STEP_SUMMARY
+            echo "- Font or styling differences" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**To update snapshots:**" >> $GITHUB_STEP_SUMMARY
+            echo "1. Download the \`web-snapshots-actual\` artifact (uploaded below)" >> $GITHUB_STEP_SUMMARY
+            echo "2. Take the \`*-actual.png\` files and copy them over the matching baselines in \`example-web/e2e/snapshots/reference/viewshot.spec.ts-snapshots/\` (drop the \`-actual\` suffix)" >> $GITHUB_STEP_SUMMARY
+            echo "3. Commit the updated snapshots" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Diff files available in artifacts:**" >> $GITHUB_STEP_SUMMARY
+            find test-results -name "*-diff.png" | head -5 | while read file; do
+              echo "- \`$(basename "$file")\`" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+
+      - name: Upload generated snapshots (actual from test-results)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: web-snapshots-actual
+          path: |
+            example-web/test-results/**/*-actual.png
+            example-web/test-results/**/*-expected.png
+            example-web/test-results/**/*-diff.png
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: example-web/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: example-web/test-results/
+          retention-days: 7
+
+      - name: Fail if tests failed
+        if: steps.playwright_tests.outcome == 'failure'
+        run: exit 1

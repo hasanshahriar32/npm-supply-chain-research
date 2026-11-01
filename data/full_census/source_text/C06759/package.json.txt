@@ -1,0 +1,70 @@
+{
+  "name": "marked-terminal",
+  "version": "7.3.0",
+  "description": "A custom renderer for marked to output Markdown to the terminal",
+  "keywords": [
+    "marked",
+    "render",
+    "terminal",
+    "markdown",
+    "markdown-to-terminal"
+  ],
+  "homepage": "https://github.com/mikaelbr/marked-terminal",
+  "bugs": {
+    "url": "https://github.com/mikaelbr/marked-terminal/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mikaelbr/marked-terminal.git"
+  },
+  "license": "MIT",
+  "author": "Mikael Brevik",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "marked-terminal": "./dist/cli.js",
+    "mt": "./dist/cli.js"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "packageManager": "pnpm@12.16.1+sha512.091d1dee7927575661b25dab3c2ae31cafc1c54d6b71ed6a6600cf0c1cb10434a447eae14015f1b23e2e6bedeed79df94a932e2164d2832280dce3fb32f656d1",
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "prepack": "pnpm run build"
+  },
+  "peerDependencies": {
+    "marked": ">=13 <19"
+  },
+  "dependencies": {
+    "cli-table3": "^0.6.5",
+    "emphasize": "^7.0.0",
+    "image-dimensions": "^2.6.0",
+    "node-emoji": "^2.2.0",
+    "supports-hyperlinks": "^4.6.0",
+    "supports-terminal-graphics": "^0.1.0",
+    "terminal-image": "^5.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.3",
+    "@types/node": "^26.6.5",
+    "marked": "^18.1.0",
+    "tsdown": "^0.23.2",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

@@ -1,0 +1,31 @@
+{
+    "private": true,
+    "type": "module",
+    "workspaces": [
+        "packages/core",
+        "packages/react",
+        "packages/vue",
+        "packages/alpine"
+    ],
+    "scripts": {
+        "watch": "npx concurrently \"npm run watch --workspace=packages/core\" \"npm run watch --workspace=packages/react\" \"npm run watch \"npm run watch --workspace=packages/vue\" \"npm run watch \"npm run watch --workspace=packages/alpine\" --names=core,react,vue,alpine",
+        "build": "npm run build --workspaces",
+        "link": "npm link --workspaces",
+        "typeCheck": "npm run typeCheck --workspaces",
+        "lint": "eslint",
+        "test": "npm run test --workspaces --if-present"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3.1.0",
+        "@eslint/js": "^9.9.1",
+        "@stylistic/eslint-plugin": "^2.6.4",
+        "@typescript-eslint/eslint-plugin": "^8.3.0",
+        "@typescript-eslint/parser": "^8.3.0",
+        "eslint": "^9.9.1",
+        "eslint-plugin-react": "^7.35.2",
+        "eslint-plugin-vue": "^9.28.0",
+        "globals": "^15.9.0",
+        "typescript-eslint": "^8.4.0"
+    },
+    "version": "2.0.0-beta.4"
+}

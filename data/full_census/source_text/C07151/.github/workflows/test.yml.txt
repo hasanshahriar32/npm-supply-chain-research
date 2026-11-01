@@ -1,0 +1,88 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  VITE_NEON_DB_URL: ${{ secrets.VITE_NEON_DB_URL }}
+  VITE_NEON_DB_POOLER_URL: ${{ secrets.VITE_NEON_DB_POOLER_URL }}
+  VITE_VERCEL_TOKEN: ${{ secrets.VITE_VERCEL_TOKEN }}
+  VITE_CLERK_SECRET_KEY: ${{ secrets.VITE_CLERK_SECRET_KEY }}
+  VITE_WSPROXY: ${{ vars.VITE_WSPROXY }}
+  VITE_CLERK_USER: ${{ vars.VITE_CLERK_USER }}
+
+jobs:
+  test-old:
+    runs-on:
+      group: databricks-ghec-untrusted-runner-group
+      labels: linux-ubuntu-latest-untrusted-2core-8gb
+    steps:
+      # setup
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: 22
+
+      - name: Setup JFrog CLI with OIDC
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 # v4.9.1
+        env:
+          JF_URL: https://databricks.jfrog.io
+        with:
+          oidc-provider-name: github-actions
+
+      - name: Install package dependencies
+        run: |
+          jf npmc --repo-resolve=db-npm
+          jf npm clean-install
+
+      # goal
+      - name: Run CLI-based tests in Node 22
+        run: touch src && npm run test:node
+
+  test-current:
+    runs-on:
+      group: databricks-ghec-untrusted-runner-group
+      labels: linux-ubuntu-latest-untrusted-2core-8gb
+    steps:
+      # setup
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: oven-sh/setup-bun@4bc047ad259df6fc24a6c9b0f9a0cb08cf17fbe5 # v2.0.1
+      - uses: denoland/setup-deno@909cc5acb0fdd60627fb858598759246509fa755 # v2.0.2
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version: lts/*
+
+      - name: Setup JFrog CLI with OIDC
+        uses: jfrog/setup-jfrog-cli@279b1f629f43dd5bc658d8361ac4802a7ef8d2d5 # v4.9.1
+        env:
+          JF_URL: https://databricks.jfrog.io
+        with:
+          oidc-provider-name: github-actions
+
+      - name: Install package dependencies
+        run: |
+          jf npmc --repo-resolve=db-npm
+          jf npm clean-install
+
+      # goal
+      - name: Run all tests
+        run: npm run test

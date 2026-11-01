@@ -1,0 +1,78 @@
+{
+  "name": "ember-try",
+  "version": "4.0.0",
+  "description": "An ember-cli addon to test against multiple dependencies, such as ember and ember-data.",
+  "keywords": [
+    "ember-addon",
+    "testing"
+  ],
+  "homepage": "https://github.com/ember-cli/ember-try#readme",
+  "bugs": {
+    "url": "https://github.com/ember-cli/ember-try/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ember-cli/ember-try.git"
+  },
+  "license": "MIT",
+  "author": "Katie Gengler",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
+  },
+  "scripts": {
+    "format": "prettier . --cache --write",
+    "lint": "concurrently --group --prefix-colors auto --timings \"pnpm:lint:*(!fix)\"",
+    "lint:fix": "concurrently --group --prefix-colors auto --timings \"pnpm:lint:*:fix\" && pnpm format",
+    "lint:format": "prettier . --cache --check",
+    "lint:js": "eslint . --cache",
+    "lint:js:fix": "eslint . --fix",
+    "node-test": "mocha test/**/*.js",
+    "node-test-with-coverage": "nyc --reporter lcov pnpm node-test",
+    "start": "ember serve",
+    "test": "pnpm lint && pnpm node-test"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "debug": "^4.4.0",
+    "ember-try-config": "^4.0.0",
+    "es-toolkit": "^1.29.0",
+    "execa": "^4.1.0",
+    "fs-extra": "^6.0.1",
+    "resolve": "^1.22.8",
+    "rimraf": "^3.0.2",
+    "semver": "^7.6.3",
+    "temp-dir": "^2.0.0",
+    "walk-sync": "^2.2.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/eslint-parser": "^7.25.9",
+    "chai": "^5.1.2",
+    "chai-as-promised": "^8.0.1",
+    "codecov": "^3.8.3",
+    "concurrently": "^9.1.0",
+    "ember-cli": "~5.12.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-n": "^17.15.0",
+    "mocha": "^11.0.1",
+    "nyc": "^17.1.0",
+    "prettier": "^3.4.2",
+    "release-plan": "^0.13.1",
+    "sinon": "^19.0.2",
+    "tmp-sync": "^1.1.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "ember-addon": {
+    "configPath": "tests/dummy/config"
+  }
+}

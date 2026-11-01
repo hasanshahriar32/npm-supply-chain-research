@@ -1,0 +1,32 @@
+name: Build with node-gyp
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+    - name: Install msvc-dev-cmd
+      uses: ilammy/msvc-dev-cmd@v1
+        
+    - name: Install node-gpy
+      run: npm -g install node-gyp
+      shell: cmd
+        
+    - name: Build
+      run: node-gyp rebuild
+      shell: cmd
+
+    - name: Test
+      run: node test.js
+      shell: cmd

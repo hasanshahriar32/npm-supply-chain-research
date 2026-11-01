@@ -1,0 +1,28 @@
+name: Node CI
+
+on: [push]
+
+jobs:
+  test-e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cypress-version: ['10.11.0', '15.1.0']
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+
+      - name: install
+        run: yarn install --frozen-lockfile
+
+      - name: install Cypress ${{ matrix.cypress-version }}
+        run: yarn add -D cypress@${{ matrix.cypress-version }}
+
+      - name: test against Cypress ${{ matrix.cypress-version }}
+        run: yarn test-e2e
+        env:
+          CI: true

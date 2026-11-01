@@ -1,0 +1,38 @@
+{
+  "name": "react-arborist-monorepo",
+  "private": true,
+  "workspaces": [
+    "./modules/*",
+    "!./modules/docs"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach --all run build",
+    "build-lib": "yarn workspace react-arborist build",
+    "test": "yarn workspaces foreach --all run test",
+    "watch": "yarn workspace react-arborist watch",
+    "bump": "yarn workspace react-arborist version",
+    "clean": "yarn workspace react-arborist clean",
+    "showcase": "yarn workspace showcase start",
+    "start": "run-s clean build-lib && run-p watch showcase",
+    "publish": "sh bin/publish",
+    "release": "node bin/release.mjs",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "typescript": "^5.3.3"
+  },
+  "resolutions": {
+    "@tootallnate/once": "^2.0.1",
+    "axios": "^1.16.0",
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1",
+    "ws": "^8.20.1"
+  },
+  "packageManager": "yarn@4.0.2"
+}

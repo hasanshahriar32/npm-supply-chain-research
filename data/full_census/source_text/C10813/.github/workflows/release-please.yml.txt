@@ -1,0 +1,27 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.STRYKER_MUTATOR_CLIENT_ID }}
+          private-key: ${{ secrets.STRYKER_MUTATOR_NPA_KEY }}
+      - uses: googleapis/release-please-action@v5
+        with:
+          # Version is determined by sbt-ci-release (which uses sbt-dynver)
+          # Actual release code is in `./scala.yml`
+          release-type: simple
+          token: ${{ steps.generate-token.outputs.token }}

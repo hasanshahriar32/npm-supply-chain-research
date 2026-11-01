@@ -1,0 +1,73 @@
+name: Test Workflow
+
+on:
+  # Triggers the workflow on push events
+  push:
+  # Triggers the workflow on pull request events
+  pull_request:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 'Format check'
+            cmd: 'npm run format:check'
+          - name: 'Unit tests'
+            cmd: 'npm run test'
+          - name: 'Build'
+            cmd: 'npm run build'
+    name: '${{ matrix.name }}'
+    steps:
+      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            npm-node-
+      - name: Install Deps
+        run: npm ci --ignore-scripts
+      - name: ${{ matrix.name }}
+        run: ${{ matrix.cmd }}
+  test-bc:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: 'Test with Typescript v4'
+            cmd: |
+              npm i typescript@^4.2
+              cat package-lock.json | grep -A 1 \
+                -e "\"node_modules/typescript\": {"
+            test: npm run test
+            build: npm run build
+    name: '[BC] ${{ matrix.name }}'
+    steps:
+      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            npm-node-
+      - name: Install Deps
+        run: npm ci --ignore-scripts
+      - name: Install BC deps
+        run: ${{ matrix.cmd }}
+      - name: Unit tests
+        if: matrix.test
+        run: ${{ matrix.test }}
+      - name: Build
+        if: matrix.build
+        run: ${{ matrix.build }}

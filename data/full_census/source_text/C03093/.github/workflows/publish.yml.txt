@@ -1,0 +1,115 @@
+name: Publish font packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      publishAll:
+        description: 'Publish all packages'
+        type: boolean
+      packageNames:
+        description: 'OR enter a comma-separated list of package names to publish'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout all package directories
+        if: ${{ github.event.inputs.publishAll == 'true' }}
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            font-packages
+
+      - name: Clone specific package directories
+        if: ${{ github.event.inputs.publishAll != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PACKAGE_NAMES: ${{ github.event.inputs.packageNames }}
+        run: |
+          set -euo pipefail
+
+          sparse_paths=()
+
+          IFS=',' read -ra packages <<< "$PACKAGE_NAMES"
+          for package in "${packages[@]}"; do
+            # Remove any whitespace
+            package=$(echo "$package" | tr -d '[:space:]')
+            sparse_paths+=("font-packages/$package")
+          done
+
+          auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w 0)"
+
+          git -c http.https://github.com/.extraheader="$auth_header" clone \
+            --depth=1 \
+            --filter=blob:none \
+            --sparse \
+            --no-checkout \
+            --branch "$GITHUB_REF_NAME" \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
+            .
+
+          git sparse-checkout set -- "${sparse_paths[@]}"
+          git -c http.https://github.com/.extraheader="$auth_header" checkout --detach "$GITHUB_SHA"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish all packages
+        if: ${{ github.event.inputs.publishAll == 'true' }}
+        run: |
+          count=0
+          for package in font-packages/*; do
+            if [ -d "$package" ]; then
+              echo "Publishing package: $(basename $package)"
+              if [ $((count % 2)) -eq 0 ]; then
+                export NODE_AUTH_TOKEN=${{ secrets.NPM_TOKEN }}
+              else
+                export NODE_AUTH_TOKEN=${{ secrets.NPM_TOKEN_2 }}
+              fi
+              (cd "$package" && npm publish --access public)
+              count=$((count + 1))
+            fi
+          done
+
+      - name: Publish specific packages
+        if: ${{ github.event.inputs.publishAll != 'true' }}
+        run: |
+          IFS=',' read -ra PACKAGES <<< "${{ github.event.inputs.packageNames }}"
+          for package in "${PACKAGES[@]}"; do
+            # Remove any whitespace
+            package=$(echo "$package" | tr -d '[:space:]')
+
+            if [ ! -d "font-packages/$package" ]; then
+              echo "Error: Package directory 'font-packages/$package' does not exist"
+              exit 1
+            fi
+
+            echo "Publishing package: $package"
+            (cd "font-packages/$package" && npm publish --access public)
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: publish
+    if: failure()
+    steps:
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v3.0.5
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "🚨 Workflow 'Publish font packages' failed"
+            blocks:
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "*🚨 Failed to Publish font packages*"
+              - type: "section"
+                text:
+                  type: "mrkdwn"
+                  text: "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow run>"

@@ -1,0 +1,40 @@
+name: Deploy to npm
+
+# MANUAL execution only
+#
+# Also runs the full set of tests, with the deploying Node + TypeScript version.
+
+on: workflow_dispatch
+
+jobs:
+  build_and_test_many_versions:
+    uses: ./.github/workflows/node.js.yml # use the callable tests job to run tests
+  build_test_and_deploy:
+    name: Build, Test and Deploy to npm
+    needs: [build_and_test_many_versions] # require tests to pass before deploy runs
+    environment: prod
+    runs-on: ubuntu-latest
+    strategy:
+      # using matrix here as env variables did not work
+      matrix:
+        # use node 20 as is longer term (note: 16+ uses package-lock.json version 2)
+        node-version: [20.x]
+        # use the usual TypeScript version, slightly older for more compatibility
+        typescript-version: [4.0.5]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node-version }} and TypeScript ${{ matrix.typescript-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+      # npm ci - for a clean install, fails safe
+      - run: npm ci
+      - run: npm install --development typescript@${{ matrix.typescript-version }}
+      - run: npm test
+      # only deploy to npmjs, if this is master
+      - name: Deploy
+        if: github.ref == 'refs/heads/master'
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,35 @@
+{
+  "name": "engines-wrapper",
+  "version": "1.0.0",
+  "description": "It is used to get the hash of the [Prisma Rust Engines](https://github.com/prisma/prisma-engines) for downloading via the [Prisma CLI, the Client](https://github.com/prisma/prisma), and other tooling.",
+  "private": true,
+  "devDependencies": {
+    "@actions/core": "1.11.1",
+    "@sindresorhus/slugify": "1.1.2",
+    "@types/node": "18.19.76",
+    "@types/node-fetch": "2.6.12",
+    "arg": "5.0.2",
+    "chalk": "4.1.2",
+    "execa": "5.1.1",
+    "husky": "7.0.4",
+    "is-ci": "3.0.1",
+    "node-fetch": "2.7.0",
+    "prettier": "2.8.8",
+    "ts-node": "10.9.2",
+    "typescript": "4.9.5"
+  },
+  "scripts": {
+    "format": "prettier --write .",
+    "publish-all": "ts-node scripts/publish.ts",
+    "dry": "ts-node scripts/publish.ts --dry",
+    "prepare": "is-ci || husky install"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prisma/engines-wrapper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/prisma/engines-wrapper/issues"
+  },
+  "homepage": "https://github.com/prisma/engines-wrapper#readme"
+}

@@ -1,0 +1,35 @@
+name: CSEC Node Agent CI
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  should_skip_job:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.should_skip_check.outputs.should_skip }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check for should_skip Label
+        id: should_skip_check
+        run: echo "::set-output name=should_skip::${{ contains(github.event.pull_request.labels.*.name, 'should_skip') }}"
+
+  test:
+    needs: should_skip_job
+    if: needs.should_skip_job.outputs.should_skip != 'true'
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Install Dependencies
+      run: npm ci
+    - name: Run Unit Tests
+      run: npm run test

@@ -1,0 +1,39 @@
+name: Code Formatting
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --network-concurrency 1
+
+      - name: Run Linter Checks
+        run: |
+          pnpm run fmt
+          if ! git diff-index --quiet HEAD; then
+            echo "::error::Formatting issues detected. Please run 'pnpm run fmt' locally and commit the changes."
+            git diff --stat
+            git diff
+            exit 1
+          fi

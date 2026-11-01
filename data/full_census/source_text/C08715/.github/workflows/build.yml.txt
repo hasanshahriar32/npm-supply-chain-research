@@ -1,0 +1,28 @@
+name: build & test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        # 16.x is no longer used in Redocly CLI v2
+        # Removed because of an error with re2 v1.23
+        node-version: [18.x, 20.x, 21.x]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: git submodule update --init
+      - run: npm run build
+      - run: npm run test-ci

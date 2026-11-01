@@ -1,0 +1,51 @@
+name: Test-Release Build
+
+on:
+  - workflow_dispatch
+
+jobs:
+  test-deploy:
+    # Setup OS and Node Version
+    runs-on: ubuntu-latest
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.DEPLOY_FLOW_TOKEN }}
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+    steps:
+      # Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.DEPLOY_FLOW_TOKEN }}
+      # Install deps
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Setup Git
+        run: |
+          git config user.name "GitHub Bot"
+          git config user.email "Brian-McBride@users.noreply.github.com"
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOY_FLOW_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Configure npm
+        run: |
+          echo '//registry.npmjs.org/:_authToken=${NPM_TOKEN}' > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Install environment
+        run: npm install --legacy-peer-deps
+
+      - name: Test
+        run: npm run affected:test
+
+      - name: Build
+        run: npm run affected:build

@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  # This job runs when a new release is published
+  release:
+    types: [published]
+  # Manual trigger with version input
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 2.12.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      # tsdown requires Node ^22.18.0 || >=24.11.0. This only affects how the
+      # package is built; the artifacts it emits are still ES5.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      # Store the release version (from release tag or manual input)
+      - name: Set release version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "Manual release triggered for version: ${{ github.event.inputs.version }}"
+          else
+            echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+            echo "Release triggered from tag: ${GITHUB_REF#refs/*/}"
+          fi
+
+      - run: pnpm install --frozen-lockfile
+      - run: npm version $RELEASE_VERSION --no-git-tag-version --allow-same-version
+      - run: pnpm build
+
+      # Guard the release: the same checks the PR workflow runs, against the
+      # artifacts actually about to be published.
+      - run: pnpm test
+      - run: pnpm exec publint
+      - run: pnpm exec attw --pack . --profile node16 --entrypoints .
+
+      # Upload only what `files` publishes, plus the manifest. The previous
+      # `path: .` also shipped node_modules through the artifact store.
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: |
+            package.json
+            README.md
+            LICENSE
+            es5.js
+            bundled.js
+            bowser.mjs
+            index.d.ts
+            index.d.mts
+            src
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+      # Same Node as the build job. Pin npm's major instead of `@latest`:
+      # trusted publishing needs npm >= 11.5.1, and npm 12 dropped Node 20,
+      # which is what broke the v2.15.0 publish.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+      - name: Update npm to 11.x (trusted publishing requires npm >= 11.5.1)
+        run: npm install -g npm@11
+      - name: Publish to npm
+        run: npm publish --provenance --access public

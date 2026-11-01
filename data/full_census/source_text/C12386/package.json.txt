@@ -1,0 +1,64 @@
+{
+  "name": "root",
+  "private": true,
+  "packageManager": "yarn@4.12.0",
+  "workspaces": [
+    "detox",
+    "detox-cli",
+    "detox/test",
+    "examples/*",
+    "generation",
+    "website"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "docs:markdownlint": "markdownlint -p .remarkignore '**/*.md'",
+    "docs:remark": "remark .",
+    "docs:lint": "yarn docs:markdownlint && yarn docs:remark",
+    "docs:fix": "yarn docs:remark -o && yarn docs:markdownlint --fix",
+    "test:e2e:ios": "cd detox/test && yarn e2e:ios",
+    "test:e2e:android": "cd detox/test && yarn e2e:android",
+    "ci:ios": "sh ./scripts/ci.ios.sh",
+    "ci:android": "sh ./scripts/ci.android.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wix/Detox.git"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "dictionary-en": "^3.1.0",
+    "husky": "^9.0.0",
+    "markdownlint-cli": "^0.29.0",
+    "remark": "^14.0.1",
+    "remark-cli": "^10.0.0",
+    "remark-frontmatter": "^4.0.1",
+    "remark-gfm": "^3.0.1",
+    "remark-github": "^11.2.2",
+    "remark-lint-no-dead-urls": "^1.1.0",
+    "remark-retext": "^5.0.1",
+    "remark-validate-links": "^11.0.2",
+    "retext-contractions": "^5.1.0",
+    "retext-diacritics": "^4.1.0",
+    "retext-english": "^4.1.0",
+    "retext-equality": "^6.5.0",
+    "retext-indefinite-article": "^3.1.0",
+    "retext-intensify": "^6.1.0",
+    "retext-passive": "^4.1.0",
+    "retext-profanities": "^7.1.0",
+    "retext-readability": "^7.1.0",
+    "retext-redundant-acronyms": "^4.2.0",
+    "retext-repeated-words": "^4.1.0",
+    "retext-sentence-spacing": "^5.1.0",
+    "retext-simplify": "^7.1.0",
+    "retext-spell": "^5.1.0",
+    "retext-syntax-mentions": "^3.1.0",
+    "retext-syntax-urls": "^3.1.1",
+    "surge": "^0.24.0",
+    "unified": "^10.1.0",
+    "zx": "^8.0.0"
+  },
+  "version": "20.51.4"
+}

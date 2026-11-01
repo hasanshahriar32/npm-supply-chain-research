@@ -1,0 +1,104 @@
+name: Node.js Conformance CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+        with:
+          disable-sudo: true
+          egress-policy: block
+          allowed-endpoints: >
+            api.github.com:443
+            github.com:443
+            objects.githubusercontent.com:443
+            proxy.golang.org:443
+            registry.npmjs.org:443
+            release-assets.githubusercontent.com:443
+            storage.googleapis.com:443
+            sum.golang.org:443
+
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build Functions Framework
+        run: npm ci
+
+      - name: Build test project
+        working-directory: ./test/conformance
+        run: npm install
+
+      - name: Install conformance client
+        uses: GoogleCloudPlatform/functions-framework-conformance/.github/actions/client/install@403fda9e6e176aae87646aace9bed075cee8e7fd # v1.8.8
+        with:
+          client-version: v1.8.3
+          cache-path: ~/client
+          cache-key: conformance-client-v1.8.3
+
+      - name: Run HTTP conformance tests using legacy API
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=http \
+              -buildpacks=false \
+              -cmd="npm start -- --target=writeHttp --signature-type=http"
+
+      - name: Run event conformance tests using legacy API
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=legacyevent \
+              -buildpacks=false \
+              -cmd="npm start -- --target=writeLegacyEvent --signature-type=event"
+
+      - name: Run cloudevent conformance tests using legacy API
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=cloudevent \
+              -buildpacks=false \
+              -cmd="npm start -- --target=writeCloudEvent --signature-type=cloudevent"
+
+      - name: Run HTTP conformance tests using declarative API
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=http \
+              -buildpacks=false \
+              -validate-mapping=false \
+              -cmd="npm start -- --target=writeHttpDeclarative"
+
+      - name: Run cloudevent conformance tests using declarative API
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=cloudevent \
+              -buildpacks=false \
+              -validate-mapping=true \
+              -cmd="npm start -- --target=writeCloudEventDeclarative"
+
+      - name: Run HTTP concurrency test
+        working-directory: 'test/conformance'
+        run: |
+          ~/client \
+              -type=http \
+              -buildpacks=false \
+              -validate-concurrency=true \
+              -cmd="npm start -- --target=concurrentHttp"

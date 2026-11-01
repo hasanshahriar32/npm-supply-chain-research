@@ -1,0 +1,46 @@
+{
+  "name": "cheap-ruler",
+  "version": "4.1.1",
+  "description": "A collection of fast approximations to common geographic measurements.",
+  "author": "Vladimir Agafonkin",
+  "license": "ISC",
+  "type": "module",
+  "main": "cheap-ruler.js",
+  "exports": "./index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "devDependencies": {
+    "@turf/turf": "^7.4.0",
+    "benchmark": "^2.1.4",
+    "eslint": "^10.12.0",
+    "eslint-config-mourner": "^5.0.1",
+    "node-vincenty": "0.0.6",
+    "rollup": "^4.64.1",
+    "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "pretest": "eslint index.js bench test/*.js",
+    "test": "tsc && node --test test/test.js",
+    "build": "rollup index.js -o cheap-ruler.js -n CheapRuler -f umd",
+    "prepublishOnly": "npm test && npm run build",
+    "cov": "node --test --experimental-test-coverage test/test.js"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "cheap-ruler.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mapbox/cheap-ruler.git"
+  },
+  "keywords": [
+    "geospatial",
+    "measurement",
+    "approximation",
+    "distance"
+  ],
+  "allowScripts": {
+    "fsevents@2.3.3": true
+  }
+}

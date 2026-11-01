@@ -1,0 +1,97 @@
+{
+    "name": "use-local-storage-state",
+    "version": "20.0.0",
+    "description": "React hook that persist data in localStorage",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/astoilkov/use-local-storage-state.git"
+    },
+    "funding": "https://github.com/sponsors/astoilkov",
+    "homepage": "https://github.com/astoilkov/use-local-storage-state",
+    "author": {
+        "name": "Antonio Stoilkov",
+        "email": "hello@astoilkov.com",
+        "url": "https://astoilkov.com"
+    },
+    "keywords": [
+        "react",
+        "hook",
+        "localStorage",
+        "persistent",
+        "state",
+        "useState",
+        "hooks",
+        "local storage",
+        "store"
+    ],
+    "type": "module",
+    "exports": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+    },
+    "sideEffects": false,
+    "scripts": {
+        "build": "tsc",
+        "size": "bun run build && size-limit",
+        "lint": "eslint --cache --format=pretty --ext=.ts ./",
+        "test": "bun run build && bun run lint && vitest --run",
+        "release": "bun run build && np",
+        "prettier": "prettier --write --config .prettierrc.yaml {*.ts,*.json}"
+    },
+    "engines": {
+        "node": ">=14"
+    },
+    "packageManager": "bun",
+    "files": [
+        "index.js",
+        "index.d.ts",
+        "src/**/*.js",
+        "src/**/*.d.ts"
+    ],
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "devDependencies": {
+        "@size-limit/preset-small-lib": "^12.1.0",
+        "@testing-library/react": "^14.0.0",
+        "@types/node": "^24",
+        "@types/react": "^18.2.67",
+        "@types/react-dom": "^18.2.22",
+        "@typescript-eslint/eslint-plugin": "^7.2.0",
+        "@typescript-eslint/parser": "^7.2.0",
+        "@vitest/coverage-v8": "^4.1.10",
+        "confusing-browser-globals": "^1.0.11",
+        "eslint": "^8.21.0",
+        "eslint-config-strictest": "^0.8.1",
+        "eslint-formatter-pretty": "^5.0.0",
+        "eslint-plugin-promise": "^6.0.0",
+        "eslint-plugin-react": "^7.29.4",
+        "eslint-plugin-react-hooks": "^4.5.0",
+        "eslint-plugin-unicorn": "^43.0.2",
+        "jsdom": "^22.1.0",
+        "np": "^11.2.1",
+        "prettier": "^3.2.5",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "react-test-renderer": "^18.1.0",
+        "size-limit": "^12.1.0",
+        "superjson": "^2.2.1",
+        "typescript": "^5.4.2",
+        "vitest": "^4.1.10"
+    },
+    "size-limit": [
+        {
+            "name": "import *",
+            "path": "index.js",
+            "limit": "1.6 kB",
+            "brotli": false
+        },
+        {
+            "name": "import *",
+            "path": "index.js",
+            "limit": "700 B"
+        }
+    ]
+}

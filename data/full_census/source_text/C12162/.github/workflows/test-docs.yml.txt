@@ -1,0 +1,40 @@
+name: Test multiple-cucumber-html-reporter Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - docs/**
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - docs/**
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js v22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install Root Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Docs
+        run: pnpm build
+        working-directory: docs

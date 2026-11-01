@@ -1,0 +1,71 @@
+name: Test iOS build on Fabric
+on:
+  pull_request:
+    branches:
+      - main
+    # Only what the iOS build of FabricExample compiles or installs.
+    paths: &paths
+      - '.github/workflows/ios-build-test-fabric.yml'
+      - 'RNScreens.podspec'
+      - 'package.json'
+      - 'react-native.config.js'
+      - 'ios/**'
+      - 'common/**'
+      - 'cpp/**'
+      - 'src/fabric/**'
+      - 'FabricExample/ios/**'
+      - 'FabricExample/package.json'
+      - 'FabricExample/yarn.lock'
+      - 'FabricExample/Gemfile*'
+  push:
+    branches:
+      - main
+    paths: *paths
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 60
+    env:
+      WORKING_DIRECTORY: FabricExample
+      DEVELOPER_DIR: /Applications/Xcode_27.0.app/Contents/Developer
+    concurrency:
+      group: ios-fabric-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (version from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'yarn'
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/yarn.lock
+      - name: Get Xcode version
+        run: xcodebuild -version
+      - name: Install node dependencies
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: yarn
+
+      - name: Install pods
+        id: install_pods
+        continue-on-error: true
+        working-directory: ${{ env.WORKING_DIRECTORY }}/ios
+        run: pod install
+
+      - if: steps.install_pods.outcome == 'failure'
+        id: remove_pods
+        name: Remove pods
+        working-directory: ${{ env.WORKING_DIRECTORY }}/ios
+        run: rm -fr build Pods Podfile.lock
+
+      - if: steps.remove_pods.outcome == 'success'
+        id: reinstall_pods
+        name: Reinstall pods
+        working-directory: ${{ env.WORKING_DIRECTORY }}/ios
+        run: pod install
+
+      - name: Build app
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npx react-native run-ios --no-packager --simulator="iPhone 17"

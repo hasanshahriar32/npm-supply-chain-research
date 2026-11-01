@@ -1,0 +1,35 @@
+{
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.20.0",
+  "version": "1.17.0",
+  "scripts": {
+    "build": "pnpm run -r build",
+    "stub": "pnpm run -r stub",
+    "release": "bumpp \"package.json\" \"packages/**/package.json\"",
+    "test": "vitest run",
+    "play": "pnpm -C playground run play:dev",
+    "lint": "eslint . -c eslint.config.js",
+    "lint:fix": "eslint . -c eslint.config.js --fix",
+    "lint:play": "pnpm -C playground run lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@nuxt/eslint-config": "workspace:*",
+    "@nuxt/eslint-plugin": "workspace:*",
+    "@nuxt/test-utils": "catalog:dev",
+    "@types/node": "catalog:types",
+    "bumpp": "catalog:dev",
+    "eslint": "catalog:dev",
+    "eslint-plugin-format": "catalog:prod",
+    "eslint-plugin-pnpm": "catalog:dev",
+    "eslint-vitest-rule-tester": "catalog:dev",
+    "jsonc-eslint-parser": "catalog:dev",
+    "nuxt": "catalog:dev",
+    "taze": "catalog:dev",
+    "typescript": "catalog:dev",
+    "unbuild": "catalog:dev",
+    "vitest": "catalog:dev",
+    "vue": "catalog:prod"
+  }
+}

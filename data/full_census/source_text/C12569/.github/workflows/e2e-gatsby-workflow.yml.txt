@@ -1,0 +1,42 @@
+on:
+  schedule:
+  - cron: '0 */4 * * *'
+  push:
+    branches:
+    - master
+  pull_request:
+    paths:
+    - .github/actions/prepare/action.yml
+    - .github/workflows/e2e-gatsby-workflow.yml
+    - scripts/e2e-setup-ci.sh
+
+name: 'E2E Gatsby'
+jobs:
+  chore:
+    name: 'Validating Gatsby'
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: ./.github/actions/prepare
+
+    - name: 'Running the integration test'
+      run: |
+        source scripts/e2e-setup-ci.sh
+
+        yarn dlx gatsby new my-gatsby
+        cd my-gatsby
+
+        # Gatsby writes to its own directory, so we need to unplug it
+        # https://github.com/gatsbyjs/gatsby/pull/39616
+        yarn unplug gatsby
+
+        # Sharp requires build scripts
+        TEMPFILE=$(mktemp)
+        jq '.dependenciesMeta.sharp.built = true' package.json > "$TEMPFILE" && mv "$TEMPFILE" package.json
+
+        yarn
+
+        # Test production build
+        yarn build

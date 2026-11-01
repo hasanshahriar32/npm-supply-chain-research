@@ -1,0 +1,117 @@
+{
+  "name": "redux-saga-repo",
+  "private": true,
+  "workspaces": [
+    "examples/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "format": "prettier --write \"{packages,website,examples}/**/*.{js,jsx}\"",
+    "lint": "eslint packages/*/src packages/*/test",
+    "test": "vitest run",
+    "test:types": "pnpm --filter @redux-saga/core run test:types && pnpm --filter @redux-saga/testing-utils run test:types",
+    "build": "preconstruct build && node ./scripts/combine-umd-builds.js",
+    "clean:size": "rimraf node_modules",
+    "counter": "pnpm --dir examples/counter run start",
+    "error-demo": "pnpm --dir examples/error-demo run start",
+    "cancellable-counter": "pnpm --dir examples/cancellable-counter run start",
+    "shop": "pnpm --dir examples/shopping-cart run start",
+    "async": "pnpm --dir examples/async run start",
+    "real-world": "pnpm --dir examples/real-world run start",
+    "changeset": "changeset",
+    "version-packages": "changeset version && pnpm install --lockfile-only",
+    "prerelease": "pnpm run build",
+    "release": "changeset publish",
+    "postinstall": "preconstruct dev",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/redux-saga/redux-saga.git"
+  },
+  "author": "Yassine ELOUAFI <yelouafi@gmail.com>",
+  "contributors": [
+    "Mateusz Burzyński <mateuszburzynski@gmail.com> (https://github.com/Andarist)",
+    "Mikhail Shustov <restrry@gmail.com> (https://github.com/restrry)",
+    "Shi Feichao <842351815@qq.com> (https://github.com/shinima)"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/redux-saga/redux-saga/issues"
+  },
+  "homepage": "https://redux-saga.js.org/",
+  "dependencies": {
+    "redux": "^4.0.4"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.6.4",
+    "@babel/core": "^7.6.4",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/preset-env": "^7.6.3",
+    "@babel/preset-react": "^7.6.3",
+    "@babel/register": "^7.6.2",
+    "@babel/runtime": "^7.6.3",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.0",
+    "@eslint/js": "^10.0.1",
+    "@preconstruct/cli": "^2.8.13",
+    "@types/react": "^16.14.70",
+    "babel-loader": "^8.0.6",
+    "babel-plugin-annotate-pure-calls": "^0.4.0",
+    "cross-env": "^6.0.3",
+    "eslint": "^10.3.0",
+    "express": "^4.17.1",
+    "gh-pages": "^1.1.0",
+    "globals": "^16.0.3",
+    "html-webpack-plugin": "^3.2.0",
+    "humps": "^0.6.0",
+    "husky": "^9.1.7",
+    "isomorphic-fetch": "^2.2.0",
+    "lint-staged": "^9.4.2",
+    "lodash": "^4.17.10",
+    "mitt": "^1.1.2",
+    "normalizr": "^3.4.1",
+    "npm-run-all": "^4.0.2",
+    "prettier": "^2.8.0",
+    "prop-types": "^15.6.2",
+    "react": "^16.10.2",
+    "react-dom": "^16.10.2",
+    "react-redux": "^5.0.7",
+    "react-router": "^3.2.1",
+    "redux-devtools": "^3.0.0-beta-3",
+    "redux-devtools-dock-monitor": "^1.0.0-beta-3",
+    "redux-devtools-log-monitor": "^1.0.0-beta-3",
+    "redux-logger": "^2.0.2",
+    "redux-saga": "workspace:*",
+    "rimraf": "^3.0.0",
+    "rollup": "^1.23.1",
+    "rollup-plugin-alias": "^1.4.0",
+    "rollup-plugin-babel": "5.0.0-alpha.0",
+    "rollup-plugin-node-resolve": "^4.0.0",
+    "rollup-plugin-replace": "^1.1.1",
+    "serve-favicon": "^2.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3",
+    "webpack": "^4.41.1",
+    "webpack-cli": "^3.3.9",
+    "webpack-dev-middleware": "^3.7.2",
+    "webpack-dev-server": "^3.8.2",
+    "webpack-hot-middleware": "^2.25.0"
+  },
+  "preconstruct": {
+    "packages": [
+      "packages/*"
+    ],
+    "exports": {
+      "importConditionDefaultExport": "default"
+    },
+    "___experimentalFlags_WILL_CHANGE_IN_PATCH": {
+      "importsConditions": true
+    }
+  },
+  "engines": {
+    "node": ">=22.0"
+  },
+  "packageManager": "pnpm@11.16.0+sha512.b767e9a98fc87aec0f42daefcd0e84941c2cdb45d73c4e1e68860fb2bdfdbe032ab592105479e5e05c237f740c8a5ffdbbb52385797ddc2296745a1bbb883e8d"
+}

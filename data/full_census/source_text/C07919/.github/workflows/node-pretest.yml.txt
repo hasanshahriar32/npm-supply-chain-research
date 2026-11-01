@@ -1,0 +1,12 @@
+name: 'Tests: pretest/posttest'
+
+on: [pull_request, push]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    uses: ljharb/actions/.github/workflows/pretest.yml@main
+    with:
+      skip-pack: true # `npm run tests-only` fails in node 15+ without NODE_OPTIONS=--unhandled-rejections=none, but older nodes throw for unrecognized NODE_OPTIONS

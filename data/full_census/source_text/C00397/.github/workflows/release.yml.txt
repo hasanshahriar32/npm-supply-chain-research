@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - beta
+      - main
+      - alpha
+      - 2.x
+
+permissions:
+  contents: read # for checkout
+
+jobs:
+  version:
+    name: Version and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # for provenance
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Install Corepack
+        run: npm install --global --force corepack@latest
+      - name: Enable Corepack
+        run: corepack enable
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+      - run: pnpm --version
+      - run: npm --version
+      - name: Install
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Verify release artifacts
+        run: pnpm run release:verify
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="$(${{ github.ref_name == 'main' || github.ref_name == '2.x' }} && echo 'latest' || echo '${{ github.ref_name }}')"
+          RELEASE_TAG=$TAG npx semantic-release

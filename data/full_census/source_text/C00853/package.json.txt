@@ -1,0 +1,111 @@
+{
+  "name": "babel-loader",
+  "version": "10.1.1",
+  "description": "babel module loader for webpack",
+  "files": [
+    "lib"
+  ],
+  "main": "lib/index.js",
+  "engines": {
+    "node": "^18.20.0 || ^20.10.0 || >=22.0.0"
+  },
+  "dependencies": {
+    "empathic": "^2.0.1"
+  },
+  "peerDependencies": {
+    "@babel/core": "^7.12.0 || ^8.0.0-beta.1",
+    "@rspack/core": "^1.0.0 || ^2.0.0-0",
+    "webpack": ">=5.61.0"
+  },
+  "peerDependenciesMeta": {
+    "@rspack/core": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@babel/cli": "^8.0.0",
+    "@babel/core": "^8.0.0",
+    "@babel/eslint-parser": "^8.0.0",
+    "@babel/preset-env": "^8.0.0",
+    "@eslint/js": "^10.0.1",
+    "@rspack/core": "^1.7.5",
+    "@types/node": "^18.19.130",
+    "c8": "^11.0.0",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.7.0",
+    "husky": "^9.1.5",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.3",
+    "semver": "^7.5.4",
+    "typescript": "5.8.3",
+    "webpack": "^5.108.2"
+  },
+  "scripts": {
+    "clean": "node ./scripts/rimraf.mjs lib",
+    "build": "babel src/ --out-dir lib/ --copy-files",
+    "format": "prettier --write --trailing-comma all 'src/**/*.js' 'test/**/*.test.js' 'test/helpers/*.js' && prettier --write --trailing-comma es5 'scripts/*.js'",
+    "lint": "eslint src test",
+    "precommit": "lint-staged",
+    "prepublish": "yarn run clean && yarn run build",
+    "preversion": "yarn tsc && yarn run test",
+    "test": "yarn run lint && yarn run build --source-maps && c8 yarn run test-only",
+    "test-only": "node --test test/**/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/babel/babel-loader.git"
+  },
+  "keywords": [
+    "webpack",
+    "loader",
+    "babel",
+    "es6",
+    "transpiler",
+    "module"
+  ],
+  "author": "Luis Couto <hello@luiscouto.pt>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/babel/babel-loader/issues"
+  },
+  "homepage": "https://github.com/babel/babel-loader",
+  "nyc": {
+    "all": true,
+    "include": [
+      "src/**/*.js"
+    ],
+    "reporter": [
+      "text",
+      "json"
+    ],
+    "sourceMap": false,
+    "instrument": false
+  },
+  "lint-staged": {
+    "scripts/*.js": [
+      "prettier --trailing-comma es5 --write",
+      "git add"
+    ],
+    "src/**/*.js": [
+      "prettier --trailing-comma all --write",
+      "git add"
+    ],
+    "test/**/*.test.js": [
+      "prettier --trailing-comma all --write",
+      "git add"
+    ],
+    "test/helpers/*.js": [
+      "prettier --trailing-comma all --write",
+      "git add"
+    ],
+    "package.json": [
+      "node ./scripts/yarn-install.js",
+      "git add yarn.lock"
+    ]
+  },
+  "packageManager": "yarn@4.17.0"
+}

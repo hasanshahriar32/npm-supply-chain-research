@@ -1,0 +1,143 @@
+name: Release flows
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    # Run every Monday and Thursday at 12:00
+    - cron: '0 12 * * 1,4'
+
+jobs:
+  publish_next:
+    concurrency:
+      group: publish_next
+      cancel-in-progress: true
+
+    name: Publish @next release to npm
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+
+    if: github.repository_owner == 'discordjs' && github.event_name == 'push' && !startsWith(github.event.head_commit.message, 'chore(release)')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@v2.1.0 # Pinned due to https://github.com/pnpm/setup/issues/47.
+        with:
+          cache: true
+
+      - name: Bump version
+        run: node ./scripts/bump-version.mjs
+
+      # TODO: we need a scoped token for this -.-, can't OIDC tmk
+      # - name: Deprecate old @next versions
+      #   run: pnpm npm-deprecate --name "*next*" --package discord-api-types --message "No longer supported. Install the latest @next release" || true
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
+      - name: Publish new @next version
+        run: |
+          npm version $(jq --raw-output '.version' package.json)-next.$(git rev-parse --short HEAD).$(date +%s) --no-git-tag-version
+          pnpm publish --tag next --no-git-checks
+
+  create_pr:
+    name: Create PR for new version
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'discordjs' && github.event_name != 'push'
+
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.DISCORDJS_APP_ID }}
+          private-key: ${{ secrets.DISCORDJS_APP_KEY_RELEASE }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@v2.1.0 # Pinned due to https://github.com/pnpm/setup/issues/47.
+        with:
+          cache: true
+
+      - name: Install website dependencies
+        run: pushd website && npm ci --ignore-scripts && popd
+
+      - name: Set Git User and Email
+        run: |
+          git config user.name "discord-js[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: node ./scripts/bump-version.mjs
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Create branch for changes, add all changes and push
+        run: |
+          git checkout -b "chore/release/$(jq --raw-output '.version' package.json)"
+
+          # Run changelog generation, deno script, website version bump
+          pnpm ci:pr
+
+          # Add all changes, commit and push
+          git add --all .
+          git commit -m "chore(release): $(jq --raw-output '.version' package.json) 🎉" -m "Build ran for ${GITHUB_SHA}"
+          git push -u origin "chore/release/$(jq --raw-output '.version' package.json)"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Pull Request
+        run: node ./scripts/actions/create-pr.mjs
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+  create_release:
+    name: Create release and publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: write
+
+    if: github.repository_owner == 'discordjs' && github.event_name == 'push' && startsWith(github.event.head_commit.message, 'chore(release)') && !contains(github.event.head_commit.message, '[skip ci]')
+
+    steps:
+      - uses: actions/create-github-app-token@v3
+        id: app-token
+        with:
+          client-id: ${{ vars.DISCORDJS_APP_ID }}
+          private-key: ${{ secrets.DISCORDJS_APP_KEY_RELEASE }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@v2.1.0 # Pinned due to https://github.com/pnpm/setup/issues/47.
+        with:
+          cache: true
+
+      - name: Publish release to npm
+        run: |
+          pnpm publish --no-git-checks
+
+      - name: Create GitHub release
+        run: node ./scripts/actions/create-release.mjs
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

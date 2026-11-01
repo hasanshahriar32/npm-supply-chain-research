@@ -1,0 +1,50 @@
+{
+  "name": "@nuxt/opencollective",
+  "version": "0.4.1",
+  "repository": "nuxt-contrib/opencollective",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "bin": "bin/opencollective.js",
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "bili -t node --format cjs src/index.js",
+    "lint": "eslint src test",
+    "lint:engines": "installed-check -d",
+    "prepublish": "pnpm build",
+    "release": "standard-version && git push --follow-tags && npm publish",
+    "test": "pnpm lint && pnpm test:coverage",
+    "test:ava": "nyc ava --verbose",
+    "test:coverage": "nyc --reporter=lcov --reporter=html ava"
+  },
+  "ava": {
+    "require": [
+      "jiti/register"
+    ]
+  },
+  "dependencies": {
+    "consola": "^3.4.2"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@nuxt/eslint-config": "^1.17.0",
+    "ava": "^5.3.1",
+    "bili": "^5.0.5",
+    "commit-and-tag-version": "^13.3.0",
+    "eslint": "^10.13.0",
+    "fetch-mock": "^9.11.0",
+    "installed-check": "^11.0.0",
+    "jiti": "^1.21.7",
+    "node-fetch": "npm:node-fetch-native@^1.6.7",
+    "nyc": "^18.0.0",
+    "sinon": "^22.1.0"
+  },
+  "engines": {
+    "node": "^14.18.0 || >=16.10.0",
+    "npm": ">=11.21.1"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

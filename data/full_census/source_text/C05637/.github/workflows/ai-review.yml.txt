@@ -1,0 +1,205 @@
+name: 🦊 Code Review
+
+on:
+  pull_request:
+    types: [ready_for_review, synchronize]
+    paths:
+      - ".github/workflows/**"
+      - "package.json"
+      - "react-native-keyboard-controller.podspec"
+      - "react-native.config.js"
+      - "android/**"
+      - "common/**"
+      - "ios/**"
+      - "src/**"
+      - "jest/**"
+      - "docs/docs/**"
+      - "docs/src/**"
+      - "docs/blog/**"
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: 🕵️ Finding bugs
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    env:
+      MODEL: deepseek-r1:14b
+      INCLUDE_REGEX: '^(\.github/workflows/|package\.json|react-native-keyboard-controller\.podspec|react-native\.config\.js|android/|common/|ios/|src/|jest/|docs/docs/|docs/src/|docs/blog/)'
+
+    concurrency:
+      group: ai-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama
+        run: |
+          ollama serve &
+          sleep 5
+
+      - name: Pull model
+        run: |
+          ollama pull $MODEL
+
+      - name: Build LLM context
+        run: |
+          git fetch origin main
+
+          FILES=$(git diff --name-status origin/main...HEAD | awk '{print $1 "|" $2}')
+
+          > prompt.txt
+
+          while IFS="|" read -r status file; do
+            [ -z "$file" ] && continue
+
+            # Ignore example / FabricExample anywhere
+            if [[ "$file" =~ (^|/)(example|FabricExample)(/|$) ]]; then
+              continue
+            fi
+
+            # Respect paths filter
+            if ! [[ "$file" =~ $INCLUDE_REGEX ]]; then
+              continue
+            fi
+
+            # Include base content for MODIFIED files so the diff reads old -> new
+            if [[ "$status" == "M" ]]; then
+              echo "===== BASE FILE: $file =====" >> prompt.txt
+              git show "origin/main:$file" >> prompt.txt 2>/dev/null || true
+              echo "" >> prompt.txt
+            fi
+
+          done <<< "$FILES"
+
+          echo "===== DIFF =====" >> prompt.txt
+          git diff origin/main...HEAD | \
+          awk '
+            /^diff --git/ {
+              skip = ($3 ~ /\/(example|FabricExample)\//)
+            }
+            !skip
+          ' >> prompt.txt
+
+      - name: Run LLM review
+        run: |
+          PROMPT="
+          CHANGES:
+
+          $(cat prompt.txt)
+          ---
+          You are a senior staff engineer performing a STRICT pull request code review.
+
+          You are NOT allowed to summarize or explain the changes.
+
+          If you output anything other than:
+          - a list of issues in the required format
+          - or exactly 'LGTM'
+
+          → your response is INVALID.
+
+          Your ONLY goal is to detect REAL defects that will cause:
+          - runtime errors
+          - CI/CD failure
+          - incorrect program behavior
+          - security vulnerabilities
+
+          ---
+
+          ## HARD CONSTRAINTS (must follow exactly)
+
+          - Output MAXIMUM 2 issues
+          - If there are NO critical issues → output EXACTLY: LGTM
+          - Do NOT guess, speculate, or infer risk
+          - If not 100% sure → output LGTM
+          - Do NOT comment on style, naming, formatting, or architecture
+          - Do NOT suggest refactoring or improvements unless it fixes a real bug
+          - Do NOT provide general engineering advice
+          - Do NOT include reasoning, thinking, or analysis process
+          - Do NOT provide changes overview → only issues spotted during review
+          - Do NOT output anything except final result
+
+          ---
+
+          ## DETECTION PRIORITY (only these matter)
+
+          1. Code that will crash at runtime
+          2. Broken CI / build / scripts
+          3. Incorrect logic that changes behavior
+          4. Security issues that are clearly exploitable
+          5. Invalid assumptions that guarantee failure
+
+          ---
+
+          ## FORBIDDEN CONTENT
+
+          Reject these categories completely:
+          - 'best practices'
+          - 'consider improving'
+          - 'might be better'
+          - performance suggestions without measurable bug
+          - architectural opinions
+          - speculative risks
+          - changes overview
+
+          Examples of INVALID responses (DO NOT DO THIS):
+
+          - 'This PR introduces...'
+          - 'The changes include...'
+          - 'Here is a summary...'
+          - 'This adds a new feature...'
+          - Any explanation of what the code does
+
+          If you do this → you FAILED the task.
+
+          You MUST make a strict decision:
+
+          - If there is at least 1 REAL defect → output issues
+          - If there are 0 CERTAIN defects → output EXACTLY: LGTM
+
+          No other output is allowed.
+
+          Format:
+
+          1. **Title**
+          **Why**: ...
+          **Fix**: ...
+          "
+
+          echo "$PROMPT"
+
+          RESPONSE=$(curl -s http://localhost:11434/api/generate \
+            -d "$(jq -n \
+              --arg model "$MODEL" \
+              --arg prompt "$PROMPT" \
+              '{
+                model: $model,
+                prompt: $prompt,
+                stream: false
+              }')")
+
+          echo "$RESPONSE" | jq -r '.response' > review.txt
+
+      - name: Create review data files
+        run: |
+          echo "${{ github.event.pull_request.number }}" > pr-number.txt
+
+      - name: Upload review data
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-data
+          path: |
+            review.txt
+            pr-number.txt
+          retention-days: 1

@@ -1,0 +1,49 @@
+# Publishes to npm when a version tag (v*) is pushed, using OIDC trusted publishing:
+# https://docs.npmjs.com/trusted-publishers
+# Prerelease tags (e.g. v3.2.0-beta.1) publish to the "next" dist-tag; stable tags to "latest".
+# The npm package's Trusted Publisher must be configured for this repo and workflow file.
+
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          registry-url: 'https://registry.npmjs.org'
+      # trusted publishing needs npm >= 11.5.1; Node 24 bundles a sufficient
+      # npm, and self-upgrading npm in place has corrupted the install before
+      # (missing sigstore module) - so verify, never self-replace
+      - name: Check npm version
+        run: npm --version
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
+        env:
+          CI: true
+      - name: Check tag matches package.json version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)" >&2
+            exit 1
+          fi
+      - name: Publish
+        run: |
+          case "$GITHUB_REF_NAME" in
+            *-*) npm publish --tag next ;;
+            *)   npm publish ;;
+          esac

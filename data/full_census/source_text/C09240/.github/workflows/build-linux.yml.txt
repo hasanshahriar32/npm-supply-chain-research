@@ -1,0 +1,128 @@
+name: Build for linux
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-build-linux-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write # Mints OIDC token to request Sigstore signing certificate
+      attestations: write # Persists attestation
+      artifact-metadata: write # Creates artifact storage record
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: docker.io/library/dart
+            platform: linux/amd64
+            target: linux-x64
+          - image: docker.io/library/dart
+            platform: linux/arm64
+            target: linux-arm64
+          - image: docker.io/library/dart
+            platform: linux/arm/v7
+            target: linux-arm
+          - image: docker.io/library/dart
+            platform: linux/riscv64
+            target: linux-riscv64
+          - image: ghcr.io/dart-musl/dart
+            platform: linux/amd64
+            target: linux-x64-musl
+          - image: ghcr.io/dart-musl/dart
+            platform: linux/arm64
+            target: linux-arm64-musl
+          - image: ghcr.io/dart-musl/dart
+            platform: linux/arm/v7
+            target: linux-arm-musl
+          - image: ghcr.io/dart-musl/dart
+            platform: linux/riscv64
+            target: linux-riscv64-musl
+          - image: ghcr.io/dart-android/dart
+            platform: linux/amd64
+            target: android-x64
+          - image: ghcr.io/dart-android/dart
+            platform: linux/arm64
+            target: android-arm64
+          - image: ghcr.io/dart-android/dart
+            platform: linux/arm64
+            target: android-arm
+          - image: ghcr.io/dart-android/dart
+            platform: linux/riscv64
+            target: android-riscv64
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+
+      - uses: $/.github/util/initialize
+        with: {github-token: "${{ github.token }}"}
+
+      - name: Set up QEMU
+        run: docker run --privileged --rm registry.fedoraproject.org/fedora-minimal /bin/sh -c "microdnf install --assumeyes --nodocs --setopt=install_weak_deps=False qemu-user-static systemd-udev && mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && /usr/lib/systemd/systemd-binfmt --unregister && /usr/lib/systemd/systemd-binfmt"
+
+      - name: Build
+        if: matrix.image != 'ghcr.io/dart-android/dart'
+        run: |
+          docker run --rm -i \
+                     --platform "$PLATFORM" \
+                     --volume "$PWD:$PWD" \
+                     --workdir "$PWD" \
+                     --env "TARGET=$TARGET" \
+                     "$IMAGE" <<'EOF'
+          set -e
+          dart pub get
+          dart run grinder "pkg-standalone-$TARGET"
+          EOF
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          IMAGE: ${{ matrix.image }}
+          TARGET: ${{ matrix.target}}
+
+      - name: Build
+        if: matrix.image == 'ghcr.io/dart-android/dart'
+        run: |
+          docker run --rm -i \
+                     --privileged \
+                     --platform "$PLATFORM" \
+                     --volume "$PWD:$PWD" \
+                     --workdir "$PWD" \
+                     --env "LIB=$LIB" \
+                     --env "TARGET=$TARGET" \
+                     "$IMAGE" <<'EOF'
+          set -e
+          export DART_SDK="/system/$LIB/dart"
+          export PATH="$DART_SDK/bin:$PATH"
+          dart pub get
+          dart run grinder "pkg-standalone-$TARGET"
+          EOF
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          IMAGE: ${{ matrix.image }}
+          LIB: ${{ matrix.target != 'android-arm' && 'lib64' || 'lib' }}
+          TARGET: ${{ matrix.target}}
+
+      - name: Generate artifact attestation
+        if: github.ref_type == 'tag'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: build/*.tar.gz
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-${{ matrix.target }}
+          path: build/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0

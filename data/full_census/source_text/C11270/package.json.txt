@@ -1,0 +1,39 @@
+{
+  "name": "techstack",
+  "description": "A collection of self built packages plus some forks for web development",
+  "version": "1.0.12",
+  "main": "index.js",
+  "author": "The-Code-Monkey",
+  "license": "MIT",
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "clean": "git clean -xdf",
+    "test": "turbo run test",
+    "test:fix": "turbo run test -- -u",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint -- --fix",
+    "lint:cms": "cd platforms/react-cms && npm run lint",
+    "size": "turbo run size",
+    "build:tcm": "turbo run build --filter=@techstack/tcm-cli",
+    "build": "turbo run build",
+    "build-storybook": "turbo run build-storybook -- -- -o build"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "turbo": "2.9.18"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@semantic-release/changelog": "6.0.3",
+    "@semantic-release/git": "10.0.1",
+    "@semantic-release/npm": "13.1.5",
+    "semantic-release": "25.0.5",
+    "semantic-release-monorepo": "8.0.2"
+  }
+}

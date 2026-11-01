@@ -1,0 +1,47 @@
+name: workflow-lint
+
+# 2026-08-25 incident: an unquoted `sse::` scalar made ci.yml invalid
+# and GitHub created ZERO jobs while the local gate reported green.
+# This file is deliberately minimal and independent so it still runs
+# (and reports the error) when ci.yml itself cannot be parsed.
+#
+# Supply-chain posture: no marketplace action for the linter — the
+# previous `rhysd/actionlint@v1` referenced a tag that does not exist,
+# so the job could never resolve. The linter is a release binary
+# pinned by version AND sha256; checkout is pinned to an immutable
+# commit SHA.
+
+on:
+  push:
+    branches: [main, slate]
+  pull_request:
+
+concurrency:
+  # A newer push to the same PR supersedes the run in progress; a push
+  # to a branch or a scheduled run is its own group and runs to
+  # completion (each commit on slate keeps its own verdict).
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+# The token reads the repository and nothing else: no job writes
+# through it (no release, comment, artifact, package or OIDC step).
+# scripts/quality/test_workflow_permissions.py holds every workflow to it.
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Lint every workflow file
+        run: |
+          set -euo pipefail
+          curl -fsSL -o actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz" | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          # Bare invocation: actionlint auto-detects the project and
+          # lints every workflow file (.yml AND .yaml).
+          ./actionlint -color

@@ -1,0 +1,49 @@
+{
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "lerna run build --stream --ignore docs",
+    "build:docs": "yarn workspace docs build",
+    "dev": "yarn workspace docs dev --no-cache",
+    "dev:docs": "yarn workspace docs dev",
+    "postinstall": "yarn build",
+    "lint": "eslint --ext .js,.ts,.vue packages",
+    "release": "yarn lint && yarn build && yarn test && lerna publish",
+    "serve": "yarn workspace docs serve",
+    "test": "jest --runInBand"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "*.{js,ts,vue}": "eslint --fix",
+    "*.{json,md,yml}": "prettier --write",
+    "package.json": "sort-package-json"
+  },
+  "prettier": "prettier-config-vuepress",
+  "devDependencies": {
+    "@commitlint/cli": "^9.1.2",
+    "@commitlint/config-conventional": "^9.1.2",
+    "@types/jest": "^24.0.18",
+    "eslint": "^7.8.0",
+    "eslint-config-vuepress": "^2.2.0",
+    "eslint-config-vuepress-typescript": "^1.3.0",
+    "husky": "^4.2.5",
+    "jest": "^24.9.0",
+    "jest-serializer-vue": "^2.0.2",
+    "lerna": "^3.16.4",
+    "lint-staged": "^10.2.2",
+    "prettier": "^2.0.5",
+    "prettier-config-vuepress": "^1.1.0",
+    "rimraf": "^3.0.2",
+    "sort-package-json": "^1.42.2",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.8.3",
+    "vuepress": "^1.4.1"
+  }
+}

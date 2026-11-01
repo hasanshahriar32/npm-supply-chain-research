@@ -1,0 +1,125 @@
+name: Build
+on:
+  push:
+    branches:
+      - main
+      - beta
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prebuild:
+    strategy:
+      matrix:
+        include:
+          - name: darwin
+            os: macos-latest
+            node: x64
+            command: prebuildify
+            args: --arch x64+arm64
+
+          - name: win32-x86
+            os: windows-latest
+            node: x86
+            command: prebuildify
+
+          - name: win32-x64
+            os: windows-latest
+            node: x64
+            command: prebuildify
+
+          - name: win32-arm64
+            os: windows-latest
+            node: x64
+            command: prebuildify
+            args: --arch arm64 --tag-armv 8
+
+          - name: linux-x64
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i almalinux-devtoolset11 --tag-libc --libc glibc
+
+          - name: linux-x64-musl
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            # already has --tag-libc --libc musl
+            args: -i alpine
+
+          - name: linux-arm64
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i linux-arm64 --tag-libc --libc glibc
+
+          - name: linux-arm64-musl
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i linux-arm64-musl --tag-libc --libc musl
+
+          - name: linux-arm
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i linux-armv7 -i linux-armv6 --tag-libc --libc glibc
+
+          - name: linux-arm-musl
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i linux-armv7l-musl --tag-libc --libc musl
+
+          - name: android-arm
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i android-armv7
+
+          - name: android-arm64
+            os: ubuntu-latest
+            node: x64
+            command: prebuildify-cross
+            args: -i android-arm64
+
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          architecture: ${{ matrix.node }}
+      - uses: actions/checkout@v4
+      - run: npm ci
+      - run: npm run ${{ matrix.command }} -- ${{ matrix.args }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.name }}
+          path: prebuilds/
+          if-no-files-found: error
+      - if: failure()
+        run: npx shx ls -lA
+  release:
+    needs: prebuild
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: build-artifacts-*
+          merge-multiple: true
+          path: prebuilds
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: npm run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,49 @@
+name: prerelease
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Release Type'
+        required: true
+        default: 'prerelease'
+        type: choice
+        options:
+          - premajor
+          - preminor
+          - prepatch
+          - prerelease
+      preid:
+        description: 'Prerelease Identifier'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - alpha
+          - beta
+          - rc
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+      - run: |
+          if [ -z "${{ github.event.inputs.preid }}" ]; then
+            npm version ${{ github.event.inputs.type }}
+          else
+            npm version ${{ github.event.inputs.type }} --preid ${{ github.event.inputs.preid }}
+          fi
+      - run: git push --follow-tags
+      - run: echo "VERSION=$(npm pkg get version --workspaces=false | xargs)" >> $GITHUB_ENV
+      - run: gh release create v${VERSION} -d --generate-notes -p -t ${VERSION}
+        env:
+          GH_TOKEN: ${{ github.token }}

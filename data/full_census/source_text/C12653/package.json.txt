@@ -1,0 +1,77 @@
+{
+  "name": "postcss-sort-media-queries",
+  "description": "PostCSS plugin for sorting and combining CSS media queries with mobile first / **desktop first methodologies",
+  "version": "6.7.1",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "postcss",
+    "postcss-plugin",
+    "css",
+    "css-optimizations",
+    "sort",
+    "mobile-first",
+    "desktop-first",
+    "mediaquery",
+    "media-queries",
+    "mq",
+    "responsive-css",
+    "combine-media-query",
+    "sort-media-query",
+    "css-mqpacker",
+    "node-css-mqpacker"
+  ],
+  "author": "Yunus Gaziyev <yunusga@yandex.ru>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yunusga/postcss-sort-media-queries.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yunusga/postcss-sort-media-queries/issues"
+  },
+  "homepage": "https://yunusga.uz/postcss-sort-media-queries",
+  "type": "module",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/wrapper.cjs",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "npm run build && vitest run",
+    "test:watch": "vitest --watch",
+    "coverage": "vitest --coverage",
+    "lint": "eslint",
+    "format": "prettier --write .",
+    "prepare": "husky",
+    "build": "npm run build:cjs && cpy \"src/**/*\" dist",
+    "build:cjs": "esbuild src/index.js --outfile=dist/index.cjs --format=cjs --bundle --platform=node --external:postcss"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "cpy-cli": "^7.0.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "husky": "^9.1.7",
+    "prettier": "3.9.6",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "postcss": "^8.5.21"
+  },
+  "dependencies": {
+    "sort-css-media-queries": "^3.0.5"
+  }
+}

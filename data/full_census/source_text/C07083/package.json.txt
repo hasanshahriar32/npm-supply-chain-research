@@ -1,0 +1,69 @@
+{
+  "name": "node-rs",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Node & Rust bindings monorepo",
+  "license": "MIT",
+  "author": "LongYinan <lynweklm@gmail.com>",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "artifacts": "yarn workspaces foreach -A --no-private run artifacts",
+    "build": "yarn workspaces foreach -A --no-private -j 1 run build",
+    "build:ts": "tsc -b tsconfig.json -verbose",
+    "lint": "oxlint .",
+    "test": "ava",
+    "format": "run-p format:oxfmt format:rs",
+    "format:oxfmt": "oxfmt --write .",
+    "format:rs": "cargo fmt --all",
+    "postinstall": "husky install"
+  },
+  "devDependencies": {
+    "@emnapi/core": "^2.0.0-alpha.4",
+    "@emnapi/runtime": "^2.0.0-alpha.4",
+    "@napi-rs/cli": "^3.10.8",
+    "@napi-rs/wasm-runtime": "^1.2.3",
+    "@tybys/wasm-util": "^0.10.3",
+    "@types/node": "^26.2.0",
+    "ava": "^8.0.1",
+    "cross-env": "^10.1.0",
+    "emnapi": "^2.0.0-alpha.4",
+    "husky": "^9.1.7",
+    "lerna": "^10.0.0",
+    "lint-staged": "^17.3.0",
+    "npm-run-all2": "^9.0.3",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.78.0",
+    "prettier": "^3.9.6",
+    "tslib": "^2.8.1",
+    "typescript": "^7.0.2"
+  },
+  "lint-staged": {
+    "*.@(js|ts|tsx)": [
+      "oxlint --fix"
+    ],
+    "*.@(js|ts|tsx|yml|yaml|json|md|toml)": [
+      "oxfmt --write"
+    ],
+    "*.rs": [
+      "cargo fmt --"
+    ]
+  },
+  "ava": {
+    "cache": false,
+    "extensions": [
+      "ts"
+    ],
+    "files": [
+      "packages/*/__test__/**/*.spec.ts",
+      "packages/bcrypt/__tests__/**/*.spec.ts"
+    ],
+    "nodeArguments": [
+      "--import",
+      "@oxc-node/core/register"
+    ],
+    "timeout": "1m"
+  },
+  "packageManager": "yarn@4.18.1"
+}

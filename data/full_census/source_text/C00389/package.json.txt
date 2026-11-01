@@ -1,0 +1,76 @@
+{
+  "name": "@rrweb/_monorepo",
+  "description": "record and replay the web",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/amplitude/rrweb.git"
+  },
+  "keywords": [
+    "rrweb"
+  ],
+  "author": "Amplitude Inc",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/amplitude/rrweb/issues"
+  },
+  "private": true,
+  "homepage": "https://github.com/amplitude/rrweb#readme",
+  "devDependencies": {
+    "@monorepo-utils/workspaces-to-typescript-project-references": "^2.8.2",
+    "@types/prettier": "2.7.3",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "browserslist": "^4.22.1",
+    "concurrently": "^7.1.0",
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.25.0",
+    "esbuild-plugin-umd-wrapper": "^2.0.0",
+    "fast-glob": "^3.3.2",
+    "eslint": "^8.53.0",
+    "eslint-plugin-compat": "^5.0.0",
+    "eslint-plugin-jest": "^27.6.0",
+    "eslint-plugin-tsdoc": "^0.2.17",
+    "happy-dom": "^14.12.0",
+    "markdownlint": "^0.25.1",
+    "markdownlint-cli": "^0.31.1",
+    "prettier": "2.8.4",
+    "conventional-changelog-conventionalcommits": "^8.0.0",
+    "lerna": "^8.1.9",
+    "turbo": "^2.0.4",
+    "typescript": "^5.4.5",
+    "vite": "^6",
+    "vite-plugin-dts": "^3.9.1"
+  },
+  "scripts": {
+    "postinstall": "pnpm --recursive rebuild puppeteer",
+    "build:all": "NODE_OPTIONS='--max-old-space-size=4096' turbo run prepublish",
+    "references:update": "workspaces-to-typescript-project-references",
+    "test": "turbo run test --concurrency=1 --continue",
+    "test:no-browser": "turbo run test --concurrency=1 --continue --filter=!@amplitude/rrweb --filter=!@amplitude/rrdom --filter=!@amplitude/rrvideo --filter=!@amplitude/rrweb-snapshot --filter=!@amplitude/rrweb-all --filter=!@amplitude/rrweb-plugin-console-record",
+    "test:watch": "turbo run test:watch",
+    "test:update": "turbo run test:update",
+    "check-types": "turbo run check-types --continue",
+    "format": "prettier --write '**/*.{ts,md}'",
+    "format:head": "git diff --name-only HEAD^ |grep '\\.ts$\\|\\.md$' |xargs prettier --write",
+    "dev": "turbo run dev --concurrency=18",
+    "repl": "pnpm --filter @amplitude/rrweb repl",
+    "live-stream": "pnpm --filter @amplitude/rrweb live-stream",
+    "lint": "concurrently --success=all -r -m=1 'markdownlint docs' 'eslint packages/*/src --ext .ts,.tsx,.js,.jsx,.svelte'",
+    "lint:report": "eslint --output-file eslint_report.json --format json packages/*/src --ext .ts,.tsx,.js,.jsx",
+    "release:version": "lerna version --conventional-commits --yes",
+    "release:version:prerelease": "lerna version --conventional-commits --conventional-prerelease --preid alpha --yes",
+    "release:version:dry-run": "lerna version --conventional-commits --no-git-tag-version --no-push --yes"
+  },
+  "pnpm": {
+    "overrides": {
+      "cssom": "https://registry.npmjs.org/rrweb-cssom/-/rrweb-cssom-0.6.0.tgz",
+      "@types/dom-webcodecs": "0.1.5",
+      "typescript": "5.4.5"
+    }
+  },
+  "browserslist": [
+    "defaults",
+    "not op_mini all"
+  ],
+  "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa"
+}

@@ -1,0 +1,49 @@
+{
+    "name": "tsafe",
+    "version": "1.8.12",
+    "description": "A collection of utilities to step up your TypeScript game",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/garronej/tsafe.git"
+    },
+    "scripts": {
+        "build": "ts-node scripts/build.ts && yarn build:deno",
+        "build:cjs": "tsc --outDir ./dist",
+        "build:esm": "tsc --module es2020 --target es2019 --outDir ./dist/esm && js2mjs dist/esm && ts-add-js-extension --dir=dist/esm",
+        "build:deno": "denoify",
+        "test": "yarn test:node && yarn test:deno",
+        "test:deno": "deno run --reload --unstable --no-check deno_dist/mod.ts",
+        "test:node": "ts-node test/index.ts",
+        "_format": "prettier '**/*.{ts,tsx,json,md,js}'",
+        "format": "npm run _format -- --write",
+        "format:check": "npm run _format -- --list-different"
+    },
+    "lint-staged": {
+        "*.{ts,tsx,json,md}": [
+            "prettier --write"
+        ]
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged -v"
+        }
+    },
+    "author": "u/garronej",
+    "license": "MIT",
+    "sideEffects": false,
+    "keywords": [],
+    "homepage": "https://github.com/garronej/tsafe",
+    "devDependencies": {
+        "@types/node": "^22.9.0",
+        "denoify": "^1.6.16",
+        "evt": "^2.4.18",
+        "glob": "^11.0.0",
+        "husky": "^4.3.0",
+        "lint-staged": "^10.5.4",
+        "prettier": "^3.3.1",
+        "ts-node": "^10.9.1",
+        "typescript": "^5.6.3",
+        "js2mjs": "^1.0.1",
+        "ts-add-js-extension": "^1.6.6"
+    }
+}

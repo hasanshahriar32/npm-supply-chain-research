@@ -1,0 +1,25 @@
+name: Publish Preview
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js & pnpm
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@26
+          cache: true
+
+      - name: Build
+        run: node --run build
+
+      - name: Publish to pkg.pr.new
+        run: pnpm dlx pkg-pr-new@0.0 publish --compact --pnpm .

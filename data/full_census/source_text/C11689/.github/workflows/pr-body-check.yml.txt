@@ -1,0 +1,79 @@
+name: PR Body Check
+
+on:
+  pull_request:
+    branches: [next]
+    types: [opened, edited, synchronize, reopened]
+  pull_request_target:
+    branches: [next]
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: pr-body-check-${{ github.event_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-body:
+    name: PR body
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >-
+      github.repository == 'udecode/plate' && github.event.pull_request.user.login != 'zbeyens' && github.event.pull_request.user.type != 'Bot' && (
+        (github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository) ||
+        (github.event_name == 'pull_request_target' &&
+          github.event.pull_request.head.repo.full_name != github.repository)
+      )
+
+    steps:
+      - name: Check the PR body
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const MARKER = '<!-- pr-body-check -->';
+            const { owner, repo } = context.repo;
+            const number = context.payload.pull_request.number;
+            // A rerun judges the body as it is now, not as the event that started the run saw it.
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            // GitHub's editor saves CRLF, which the section match below would miss.
+            const body = (pr.body ?? '').replace(/\r\n/g, '\n');
+            // The same test land.mjs runs before it opens a PR whose body is the commit body.
+            const filled = (name) => {
+              const section = body.match(new RegExp(`^## ${name}[ \\t]*\\n([\\s\\S]*?)(?=^## |^Beyond the ask:|(?![\\s\\S]))`, 'mu'));
+              return Boolean(section) && section[1].replace(/<!--[\s\S]*?-->/gu, '').trim() !== '';
+            };
+            const missing = [
+              ...['Why', 'Verification'].filter((name) => !filled(name)).map((name) => `a \`## ${name}\` section with text`),
+              ...(/^Beyond the ask: \S/mu.test(body) ? [] : ['a `Beyond the ask:` line']),
+            ];
+            const passed = body.includes('<!-- plan-page:start -->') || missing.length === 0;
+
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: number, per_page: 100 });
+            const mine = comments.find((comment) => comment.user?.login === 'github-actions[bot]' && comment.body?.includes(MARKER));
+            const post = async (text) => {
+              const next = `${MARKER}\n${text}`;
+              try {
+                if (!mine) await github.rest.issues.createComment({ owner, repo, issue_number: number, body: next });
+                else if (mine.body !== next) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body: next });
+              } catch (error) {
+                core.warning(`Could not write the PR comment: ${error.message}`);
+              }
+            };
+
+            if (passed) {
+              core.info('The PR body has its plan page, or its Why and Verification sections and a `Beyond the ask:` line.');
+              if (mine) await post('### PR body check passes\n\nThe body now has its plan page, or its Why and Verification sections and a `Beyond the ask:` line.');
+              return;
+            }
+
+            const skill = `https://github.com/${owner}/${repo}/blob/next/.agents/skills/contributor-setup/SKILL.md`;
+            const text = [
+              '### PR body check fails',
+              '',
+              `This body lacks ${new Intl.ListFormat('en').format(missing)}. The current \`land.mjs\` refuses to open a PR with such a body, so the agent that opened this PR likely runs an old setup. Pull \`next\`, then ask your agent to run the [contributor-setup](${skill}) skill once. It updates the setup and fixes this body, and the check runs again on the edit.`,
+            ].join('\n');
+            await post(text);
+            core.setFailed(text);

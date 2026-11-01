@@ -1,0 +1,139 @@
+{
+  "name": "graphql-config",
+  "version": "6.0.0",
+  "description": "The easiest way to configure your development environment with your GraphQL schema (supported by most tools, editors & IDEs)",
+  "sideEffects": false,
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "packageManager": "pnpm@12.15.0",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/typings/index.d.cts",
+        "default": "./dist/cjs/index.js"
+      },
+      "import": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "default": {
+        "types": "./dist/typings/index.d.ts",
+        "default": "./dist/esm/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "typings": "dist/typings/index.d.ts",
+  "typescript": {
+    "definition": "dist/typings/index.d.ts"
+  },
+  "publishConfig": {
+    "directory": "dist",
+    "access": "public"
+  },
+  "type": "module",
+  "scripts": {
+    "prepublishOnly": "pnpm run build",
+    "clean": "rimraf dist",
+    "prebuild": "pnpm run clean && pnpm run json-schema",
+    "postbuild": "tsx scripts/postbuild.ts",
+    "build": "bob build",
+    "prettier": "prettier --cache --write --list-different .",
+    "prettier:check": "prettier --cache --check .",
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --cache --cache-location node_modules/.cache/.eslintcache --ignore-path .gitignore .",
+    "ci:lint": "ESLINT_USE_FLAT_CONFIG=false eslint --cache --cache-location node_modules/.cache/.eslintcache --ignore-path .gitignore . --output-file eslint_report.json --format json",
+    "test": "vitest .",
+    "test:once": "vitest . --run",
+    "test:graphql-16": "vitest . --run --mode graphql-16",
+    "test:all": "pnpm test:once && pnpm test:graphql-16",
+    "prerelease": "pnpm run build",
+    "release": "changeset publish",
+    "json-schema": "typescript-json-schema src/types.ts IGraphQLConfig --out config-schema.json --ignoreErrors --required --titles && prettier --write config-schema.json"
+  },
+  "peerDependencies": {
+    "cosmiconfig-toml-loader": "^1.0.0",
+    "graphql": "^16.0.0 || ^17.0.0"
+  },
+  "peerDependenciesMeta": {
+    "cosmiconfig-toml-loader": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@graphql-tools/graphql-file-loader": "^9.0.6",
+    "@graphql-tools/json-file-loader": "^9.0.6",
+    "@graphql-tools/load": "^9.0.6",
+    "@graphql-tools/merge": "^10.0.6",
+    "@graphql-tools/url-loader": "^10.0.6",
+    "@graphql-tools/utils": "^13.1.3",
+    "cosmiconfig": "^8.1.0",
+    "jiti": "^2.0.0",
+    "minimatch": "^10.0.0",
+    "string-env-interpolation": "^1.0.1",
+    "tslib": "^2.4.0"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "0.6.0",
+    "@changesets/cli": "2.30.0",
+    "@types/node": "22.19.15",
+    "@typescript-eslint/eslint-plugin": "8.38.0",
+    "@typescript-eslint/parser": "8.38.0",
+    "bob-the-bundler": "7.0.1",
+    "cosmiconfig-toml-loader": "1.0.0",
+    "del": "8.0.1",
+    "eslint": "9.39.4",
+    "eslint-config-prettier": "10.1.8",
+    "graphql": "17.0.2",
+    "graphql-16": "npm:graphql@16.14.2",
+    "husky": "9.1.7",
+    "lint-staged": "15.5.2",
+    "make-dir": "5.1.0",
+    "parent-module": "3.2.0",
+    "prettier": "3.8.1",
+    "rollup": "4.59.0",
+    "rimraf": "6.0.1",
+    "ts-node": "10.9.2",
+    "tsx": "4.19.3",
+    "typescript": "5.8.3",
+    "typescript-json-schema": "0.65.1",
+    "vite-tsconfig-paths": "^5.0.0",
+    "vitest": "3.1.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kamilkisiela/graphql-config.git"
+  },
+  "homepage": "https://graphql-config.com",
+  "keywords": [
+    "graphql",
+    "config",
+    "relay",
+    "apollo"
+  ],
+  "author": {
+    "email": "kamil.kisiela@gmail.com",
+    "name": "Kamil Kisiela",
+    "url": "https://github.com/kamilkisiela"
+  },
+  "license": "MIT",
+  "bob": {
+    "build": {
+      "copy": [
+        "config-schema.json"
+      ]
+    }
+  },
+  "lint-staged": {
+    "{src,test}/**/*": [
+      "prettier --write"
+    ]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

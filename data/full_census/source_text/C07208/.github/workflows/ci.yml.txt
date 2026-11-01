@@ -1,0 +1,71 @@
+name: Continuous Integration
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-lint-test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [20, 24]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+
+      # The node test runner changes behavior between node versions 20 & 24
+      # 24 automatically reads typescript files and therefore test files must be specified
+      #  to properly test the built JS
+      - run: node --enable-source-maps --test 'lib/**/*.test.js'
+        if: matrix.node-version == 24
+
+      # 20 does not automatically read typescript files and does not support glob patterns
+      - run: node --enable-source-maps --test
+        if: matrix.node-version != 24
+
+      - run: pnpm run lint
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
+
+      - run: pnpm run format
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
+
+      - run: pnpm run build:docs
+        # Only generate docs once on ubuntu.
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
+
+      - id: docs-deployment
+        # Only upload docs once on ubuntu.
+        # NOTE that this will not deploy docs, there's a separate job for that, that runs on main only.
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+          retention-days: 7
+
+  deploy-docs:
+    if: github.repository == 'nexus-rpc/sdk-typescript' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.docs-deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-lint-test
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: docs-deployment
+        uses: actions/deploy-pages@v4

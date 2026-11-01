@@ -1,0 +1,194 @@
+name: tests
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  yarn-lockfile-check:
+    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main
+  linux-unit-tests:
+    needs: yarn-lockfile-check
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main
+  windows-unit-tests:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsWindows.yml@main
+
+  publish:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: yarn test:integration:publish
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PRESERVE_ARTIFACTS: ${{ vars.PRESERVE_ARTIFACTS }}
+
+  sf-integration:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: yarn test:integration:sf --retries 3
+
+  cli-integration:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+        package_manager: [yarn, npm, pnpm]
+        module_type: [CommonJS, ESM]
+        os: [ubuntu-latest, windows-latest]
+        exclude:
+          - node_version: lts/*
+            os: windows-latest
+          - package_manager: npm
+            os: windows-latest
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      # oclif pack tarballs needs a git commit to work, so the tests need to be able to run `git commit` with the correct user info
+      - uses: salesforcecli/github-workflows/.github/actions/getGithubUserInfo@main
+        id: github-user-info
+        with:
+          SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+      - uses: salesforcecli/github-workflows/.github/actions/gitConfig@main
+        with:
+          username: ${{ steps.github-user-info.outputs.username }}
+          email: ${{ steps.github-user-info.outputs.email }}
+      - if: matrix.package_manager == 'pnpm'
+        # TODO [JAMIE]: ADD SUPPORT FOR PNPM v11!
+        run: 'npm install -g pnpm@^10.33.4'
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: yarn test:integration:cli
+        env:
+          OCLIF_INTEGRATION_MODULE_TYPE: ${{ matrix.module_type }}
+          OCLIF_INTEGRATION_PACKAGE_MANAGER: ${{ matrix.package_manager }}
+
+  init-integration:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+        package_manager: [yarn, npm, pnpm]
+        module_type: [ESM]
+        os: [ubuntu-latest, windows-latest]
+        exclude:
+          - node_version: lts/*
+            os: windows-latest
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+        # TODO [JAMIE]: ADD SUPPORT FOR PNPM v11!
+      - if: matrix.package_manager == 'pnpm'
+        run: 'npm install -g pnpm@^10.33.4'
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: yarn test:integration:init
+        env:
+          OCLIF_INTEGRATION_MODULE_TYPE: ${{ matrix.module_type }}
+          OCLIF_INTEGRATION_PACKAGE_MANAGER: ${{ matrix.package_manager }}
+
+  win-build:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: |
+          sudo apt-get update
+          sudo apt-get install osslsigncode nsis
+      - run: yarn test:integration:win
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PRESERVE_ARTIFACTS: ${{ vars.PRESERVE_ARTIFACTS }}
+
+  mac-build:
+    needs: [linux-unit-tests]
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+      fail-fast: false
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: yarn test:integration:macos
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PRESERVE_ARTIFACTS: ${{ vars.PRESERVE_ARTIFACTS }}
+
+  deb-build:
+    needs: [linux-unit-tests]
+    env:
+      OCLIF_DEB_PRIVATE_KEY: ${{ secrets.OCLIF_DEB_PRIVATE_KEY }}
+    strategy:
+      matrix:
+        node_version: [lts/*, latest]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: yarn
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - run: echo -n "$OCLIF_DEB_PRIVATE_KEY" | gpg --import
+
+      - run: yarn test:integration:deb
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          OCLIF_DEB_KEY: ${{ secrets.OCLIF_DEB_KEY }}
+          PRESERVE_ARTIFACTS: ${{ vars.PRESERVE_ARTIFACTS }}

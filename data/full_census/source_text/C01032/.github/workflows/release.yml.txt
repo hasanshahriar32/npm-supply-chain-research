@@ -1,0 +1,16 @@
+name: Release
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      id-token: write
+    uses: better-auth/shared-workflows/.github/workflows/release-bumpp-library.yml@b574d729adc6831942ea65d4bcf991f0af4f2705
+    with:
+      version-file: packages/better-fetch/package.json

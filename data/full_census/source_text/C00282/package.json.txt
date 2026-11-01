@@ -1,0 +1,57 @@
+{
+  "name": "check-disk-space",
+  "version": "4.0.0",
+  "description": "Light multi-platform disk space checker without third party for Node.js",
+  "keywords": [
+    "disk",
+    "free",
+    "hdd",
+    "space"
+  ],
+  "homepage": "https://github.com/Alex-D/check-disk-space#readme",
+  "bugs": {
+    "url": "https://github.com/Alex-D/check-disk-space/issues"
+  },
+  "license": "MIT",
+  "author": "Alex-D <contact@alex-d.fr> (https://alex-d.fr)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alex-D/check-disk-space.git"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/check-disk-space.mjs",
+      "types": "./dist/check-disk-space.d.mts"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "dev:all": "pnpm -r --include-workspace-root --parallel dev",
+    "test": "vp tests",
+    "check": "vp check",
+    "prepublishOnly": "vp run build",
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
+    "bumpp": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.3.4",
+      "onFail": "download"
+    }
+  }
+}

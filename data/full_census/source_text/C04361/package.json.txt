@@ -1,0 +1,34 @@
+{
+  "name": "iceworks-spec",
+  "private": true,
+  "devEngines": {
+    "node": "8.x || 9.x || 10.x || 11.x",
+    "npm": "6.x"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^11.0.0",
+    "codecov": "^3.6.1",
+    "commitlint-config-ali": "^0.1.0",
+    "eslint": "^7.22.0",
+    "husky": "^7.0.1",
+    "ice-npm-utils": "^2.0.1",
+    "jest": "^24.9.0",
+    "lerna": "^3.18.2",
+    "prettier": "^2.1.0",
+    "stylelint": "^13.2.0",
+    "typescript": "^3.5.3"
+  },
+  "scripts": {
+    "prepare": "husky install",
+    "setup": "rm -rf ./packages/*/node_modules && lerna bootstrap --no-ci && lerna link",
+    "lint": "eslint --ext .js,.jsx,.tsx,.ts ./ --resolve-plugins-relative-to ./packages/spec",
+    "prettier": "prettier **/* --write",
+    "test": "jest && cd packages/spec && npm run test",
+    "publish": "node ./scripts/publish",
+    "ci": "npm run setup && npm run lint && npm run test"
+  },
+  "jest": {
+    "coverageDirectory": "./coverage/",
+    "collectCoverage": true
+  }
+}

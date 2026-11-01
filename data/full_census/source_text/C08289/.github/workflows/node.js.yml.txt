@@ -1,0 +1,47 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22, 24, 26]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: vite-plus setup
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: true
+
+      - name: Build
+        run: vp run -r build
+
+      - name: Check formatting, linting and type checks.
+        run: vp check
+
+      - name: Test unit
+        run: vp run -r test
+
+      - name: Test integration all esbuild versions
+        run: |
+          for version in '0.12' '0.13' '0.14' '0.15' '0.16' '0.17' '0.18' '0.19' '0.20' '0.21' '0.22' '0.23' '0.24' '0.25' '0.26' '0.27' '0.28'; do
+            echo "Testing esbuild@$version..."
+            vp install --filter example-basic esbuild@$version
+            vp run -F example-basic build
+          done

@@ -1,0 +1,769 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build and notarize Darwin addons; test unsigned Windows binaries without publishing
+        required: true
+        type: boolean
+        default: true
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 24
+  NPM_VERSION: 12.0.2
+  PNPM_VERSION: 12.15.0
+
+jobs:
+  validate:
+    name: Validate release source
+    if: (github.event_name == 'push' && github.ref_protected) || (github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Set up portable archive LLVM
+        uses: ./.github/actions/setup-archive-llvm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate tag, changelog, and versions
+        if: github.event_name == 'push'
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! printf '%s\n' "${RELEASE_TAG}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "release tag must match vX.Y.Z; received ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+          if [ "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" != "tag" ]; then
+            echo "release tag ${RELEASE_TAG} must be annotated" >&2
+            exit 1
+          fi
+          release_commit="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+          git merge-base --is-ancestor "${release_commit}" origin/main
+          node <<'NODE'
+          const { readFileSync } = require("node:fs");
+          const version = process.env.RELEASE_TAG.slice(1);
+          const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+          if (pkg.name !== "@openclaw/fs-safe" || pkg.version !== version) {
+            throw new Error(`root package is ${pkg.name}@${pkg.version}, expected @openclaw/fs-safe@${version}`);
+          }
+          const nativePkg = JSON.parse(readFileSync("native/package.json", "utf8"));
+          if (!nativePkg.private || nativePkg.version !== version) {
+            throw new Error(`private native build workspace must declare ${version}`);
+          }
+          const cargo = readFileSync("native/Cargo.toml", "utf8");
+          if (!cargo.match(new RegExp(`^version = "${version.replaceAll(".", "\\.")}"$`, "m"))) {
+            throw new Error(`native/Cargo.toml does not declare ${version}`);
+          }
+          const nativePackages = require("node:fs").readdirSync("packages");
+          if (nativePackages.length !== nativePkg.napi.targets.length) {
+            throw new Error(`native package count does not match the target manifest: ${nativePackages.length}`);
+          }
+          for (const directory of nativePackages) {
+            const platformPkg = JSON.parse(readFileSync(`packages/${directory}/package.json`, "utf8"));
+            if (platformPkg.version !== version || pkg.optionalDependencies?.[platformPkg.name] !== version) {
+              throw new Error(`${platformPkg.name} and its root optional dependency must declare ${version}`);
+            }
+          }
+          NODE
+          package_version="$(node -p "require('./package.json').version")"
+          [ "${RELEASE_TAG}" = "v${package_version}" ]
+          node scripts/release-notes.mjs "${package_version}" >/dev/null
+
+      - name: Check TypeScript package
+        run: pnpm check
+
+      - name: Test native crate
+        run: cargo test --workspace --locked
+
+  prebuild:
+    name: Build ${{ matrix.label }}
+    if: (github.event_name == 'push' && github.ref_protected) || (github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x64-gnu
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            cross: zig-gnu
+          - label: linux-x64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            cross: zig
+          - label: linux-arm64-gnu
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            cross: zig-gnu
+          - label: linux-arm64-musl
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            cross: zig
+          - label: darwin-x64
+            os: xcode-27
+            architecture: x64
+            target: x86_64-apple-darwin
+            cross: none
+          - label: darwin-arm64
+            os: xcode-27
+            architecture: arm64
+            target: aarch64-apple-darwin
+            cross: none
+          - label: win32-arm64-msvc
+            os: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            cross: none
+          - label: win32-x64-msvc
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            cross: none
+    defaults:
+      run:
+        shell: ${{ matrix.architecture == 'x64' && 'arch -x86_64 /bin/bash --noprofile --norc -e -o pipefail {0}' || (startsWith(matrix.os, 'windows-') && 'pwsh' || 'bash') }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          architecture: ${{ matrix.architecture }}
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Select ARM64 Node
+        if: matrix.label == 'win32-arm64-msvc'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          architecture: arm64
+
+      - name: Set up Zig
+        if: startsWith(matrix.cross, 'zig')
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Set up portable archive LLVM
+        if: matrix.label == 'win32-arm64-msvc'
+        uses: ./.github/actions/setup-archive-llvm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install cargo-zigbuild
+        if: startsWith(matrix.cross, 'zig')
+        run: cargo install cargo-zigbuild --version 0.23.4 --locked
+
+      - name: Build native binding
+        if: matrix.cross == 'none'
+        run: pnpm --filter @openclaw/fs-safe-native-build exec napi build --release --platform --target ${{ matrix.target }} --output-dir ../artifacts
+
+      - name: Build GNU binding and verify glibc floor
+        if: matrix.cross == 'zig-gnu'
+        run: node scripts/build-linux-gnu.mjs ${{ matrix.target }}
+
+      - name: Build native binding with Zig
+        if: matrix.cross == 'zig'
+        run: pnpm --filter @openclaw/fs-safe-native-build exec napi build --release --platform --target ${{ matrix.target }} --cross-compile --output-dir ../artifacts
+
+      - name: Test ARM64 native crate
+        if: matrix.label == 'win32-arm64-msvc'
+        run: cargo test --workspace --locked --target aarch64-pc-windows-msvc
+
+      - name: Sign and notarize Darwin binding
+        if: runner.os == 'macOS'
+        env:
+          MACOS_SIGNING_P12: ${{ secrets.MACOS_SIGNING_P12 }}
+          MACOS_SIGNING_P12_PASSWORD: ${{ secrets.MACOS_SIGNING_P12_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_P8: ${{ secrets.ASC_PRIVATE_KEY_P8 }}
+        run: bash scripts/sign-darwin-addon.sh artifacts/fs-safe-native.${{ matrix.label }}.node
+
+      - name: Verify Darwin deployment floor and load binding
+        if: runner.os == 'macOS'
+        run: arch -${{ matrix.architecture == 'x64' && 'x86_64' || 'arm64' }} node scripts/check-darwin-minos.mjs artifacts/fs-safe-native.${{ matrix.label }}.node ${{ matrix.architecture }}
+
+      - name: Record unsigned Windows binding SHA-256
+        if: startsWith(matrix.label, 'win32-')
+        run: node scripts/windows-signing.mjs record artifacts/fs-safe-native.${{ matrix.label }}.node
+
+      - name: Upload binding
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ startsWith(matrix.label, 'win32-') && 'unsigned-binding' || 'binding' }}-${{ matrix.label }}
+          path: |
+            artifacts/*.node
+            artifacts/*.sha256
+            artifacts/*.notarization*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  prebuild-freebsd:
+    name: Build and prove FreeBSD packages
+    if: (github.event_name == 'push' && github.ref_protected) || (github.event_name == 'workflow_dispatch' && inputs.dry_run)
+    needs: validate
+    uses: ./.github/workflows/freebsd.yml
+
+  prebuild-helper:
+    name: Build unsigned helper (${{ matrix.os }})
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - uses: ./.github/actions/setup-windows-helper
+      - run: pnpm build:windows-helper
+      - name: Record unsigned helper SHA-256
+        run: node scripts/windows-signing.mjs record dist/windows-security-helper.exe
+      - name: Upload unsigned helper
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unsigned-helper-${{ matrix.os }}
+          path: |
+            dist/windows-security-helper.exe
+            dist/windows-security-helper.exe.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+  sign-windows:
+    name: Sign Windows release binaries
+    if: github.event_name == 'push' && github.ref_protected
+    needs: [prebuild, prebuild-helper]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    environment: release-signing
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+      - name: Set up pinned .NET SDK
+        uses: ./.github/actions/setup-windows-helper
+      - name: Download unsigned x64 binding
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-binding-win32-x64-msvc
+          path: signed-windows
+      - name: Download unsigned ARM64 binding
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-binding-win32-arm64-msvc
+          path: signed-windows
+      - name: Download unsigned Windows-built helper
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-helper-windows-latest
+          path: signed-windows
+      - name: Download unsigned Ubuntu-built helper
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-helper-ubuntu-latest
+          path: reference-helper
+      - name: Verify build hashes and unsigned helper reproducibility
+        run: node scripts/windows-signing.mjs prepare signed-windows reference-helper/windows-security-helper.exe
+      - name: Check signing configuration
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          foreach ($name in @('AZURE_CLIENT_ID', 'AZURE_TENANT_ID', 'AZURE_SUBSCRIPTION_ID')) {
+            if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name))) {
+              throw "Missing $name. Complete RELEASE-PREREQS.md Windows signing setup, then rerun. Unsigned publication is disabled."
+            }
+          }
+      # The signing dlib runs only on x64; it signs ARM64 PE bytes without executing them.
+      - name: Azure login for release signing
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Sign both Windows addons and the security helper
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: openclaw
+          certificate-profile-name: openclaw
+          files-folder: signed-windows
+          files-folder-filter: node,exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+      - name: Verify Authenticode and record signed hashes
+        shell: pwsh
+        run: ./scripts/verify-windows-signatures.ps1 -Directory signed-windows -Record
+      - name: Upload verified signed Windows binaries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-windows
+          path: |
+            signed-windows/*.node
+            signed-windows/*.exe
+            signed-windows/windows-signing.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Explain signing failure
+        if: failure()
+        shell: pwsh
+        run: Write-Error 'Windows signing failed; no unsigned release will be published. Check the failed step and complete RELEASE-PREREQS.md Windows signing setup before rerunning.'
+
+  test-signed-windows:
+    name: Load signed Windows binaries (${{ matrix.arch }})
+    needs: sign-windows
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up native Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          architecture: ${{ matrix.arch }}
+      - name: Set up pinned .NET SDK
+        uses: ./.github/actions/setup-windows-helper
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: ./.github/actions/setup-archive-llvm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Download signed binaries
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-windows
+          path: signed-windows
+      - name: Reverify signatures and stage signed binaries
+        shell: pwsh
+        run: |
+          ./scripts/verify-windows-signatures.ps1 -Directory signed-windows
+          Copy-Item signed-windows/fs-safe-native.win32-${{ matrix.arch }}-msvc.node native/
+          Copy-Item signed-windows/windows-security-helper.exe src/
+          Copy-Item signed-windows/windows-security-helper.exe dist/
+          node scripts/stage-host-native.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Load signed addon on its native runtime
+        shell: pwsh
+        env:
+          FS_SAFE_NATIVE_MODE: require
+        run: |
+          node -e "if (process.platform !== 'win32' || process.arch !== '${{ matrix.arch }}') throw Error('native Node architecture required'); require('./signed-windows/fs-safe-native.win32-${{ matrix.arch }}-msvc.node')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm test test/native-loader.test.ts test/windows-native-fd-bridge.test.ts test/native-worker-fd-ownership.test.ts test/windows-native-private.test.ts test/secure-file-windows-native.test.ts
+      - name: Run signed security helper
+        shell: pwsh
+        run: |
+          node -e "const r = require('node:child_process').spawnSync('./dist/windows-security-helper.exe', ['paths'], { input: JSON.stringify([process.cwd()]), encoding: 'utf8', timeout: 30000 }); if (r.error || r.status !== 0 || JSON.parse(r.stdout).ok !== true) throw Error('signed helper failed', { cause: r.error });"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm test test/windows-security-portable.test.ts test/windows-owner-helper.windows.test.ts
+
+  test-unsigned-windows:
+    name: Load unsigned Windows binaries (${{ matrix.arch }})
+    if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+    needs: [prebuild, prebuild-helper]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+          - os: windows-11-arm
+            arch: arm64
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up native Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+          architecture: ${{ matrix.arch }}
+      - name: Set up pinned .NET SDK
+        uses: ./.github/actions/setup-windows-helper
+      - run: rustup target add wasm32-unknown-unknown
+      - uses: ./.github/actions/setup-archive-llvm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Download unsigned x64 binding
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-binding-win32-x64-msvc
+          path: unsigned-windows
+      - name: Download unsigned ARM64 binding
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-binding-win32-arm64-msvc
+          path: unsigned-windows
+      - name: Download unsigned Windows-built helper
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-helper-windows-latest
+          path: unsigned-windows
+      - name: Download unsigned Ubuntu-built helper
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: unsigned-helper-ubuntu-latest
+          path: reference-helper
+      - name: Verify build hashes and unsigned helper reproducibility
+        run: node scripts/windows-signing.mjs prepare unsigned-windows reference-helper/windows-security-helper.exe
+      - name: Stage unsigned binaries
+        shell: pwsh
+        run: |
+          Copy-Item unsigned-windows/fs-safe-native.win32-${{ matrix.arch }}-msvc.node native/
+          Copy-Item unsigned-windows/windows-security-helper.exe src/
+          Copy-Item unsigned-windows/windows-security-helper.exe dist/
+          node scripts/stage-host-native.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Load unsigned addon on its native runtime
+        shell: pwsh
+        env:
+          FS_SAFE_NATIVE_MODE: require
+        run: |
+          node -e "if (process.platform !== 'win32' || process.arch !== '${{ matrix.arch }}') throw Error('native Node architecture required'); require('./unsigned-windows/fs-safe-native.win32-${{ matrix.arch }}-msvc.node')"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm test test/native-loader.test.ts test/windows-native-fd-bridge.test.ts test/native-worker-fd-ownership.test.ts test/windows-native-private.test.ts test/secure-file-windows-native.test.ts
+      - name: Run unsigned security helper
+        shell: pwsh
+        run: |
+          node -e "const r = require('node:child_process').spawnSync('./dist/windows-security-helper.exe', ['paths'], { input: JSON.stringify([process.cwd()]), encoding: 'utf8', timeout: 30000 }); if (r.error || r.status !== 0 || JSON.parse(r.stdout).ok !== true) throw Error('unsigned helper failed', { cause: r.error });"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pnpm test test/windows-security-portable.test.ts test/windows-owner-helper.windows.test.ts
+
+  collect:
+    name: Assemble and validate release packages
+    if: github.event_name == 'push' && github.ref_protected
+    needs: [prebuild, prebuild-freebsd, test-signed-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Set up portable archive LLVM
+        uses: ./.github/actions/setup-archive-llvm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Download all bindings
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: binding-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Download verified signed Windows binaries
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: signed-windows
+          path: artifacts/signed-windows
+
+      - name: Stage signed helper after building JavaScript
+        run: cp artifacts/signed-windows/windows-security-helper.exe dist/windows-security-helper.exe
+
+      - name: Assemble platform packages
+        run: node scripts/assemble-native-binaries.mjs --source artifacts
+
+      - name: Pack and smoke test all packages
+        run: pnpm package:collect --windows-signing-manifest artifacts/signed-windows/windows-signing.json
+
+      - name: Retain Windows signing proof beside release packages
+        run: cp artifacts/signed-windows/windows-signing.json release-artifacts/
+
+      - name: Upload release package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-package
+          path: release-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  collect-dry-run:
+    name: Assemble unsigned binaries and smoke test host packages
+    if: github.event_name == 'workflow_dispatch' && inputs.dry_run
+    needs: [prebuild, prebuild-freebsd, test-unsigned-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Set up portable archive LLVM
+        uses: ./.github/actions/setup-archive-llvm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm build
+
+      - name: Download all bindings
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: binding-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Download unsigned Windows bindings
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: unsigned-binding-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Assemble platform packages
+        run: node scripts/assemble-native-binaries.mjs --source artifacts
+
+      - name: Pack and smoke test unsigned host packages
+        run: pnpm package:smoke --output dry-run-artifacts
+
+      - name: Upload unsigned development packages
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dry-run-package
+          path: dry-run-artifacts/*
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    name: Create draft GitHub Release
+    if: github.event_name == 'push' && github.ref_protected
+    needs: collect
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          package_version="${RELEASE_TAG#v}"
+          node scripts/release-notes.mjs "${package_version}" > release-notes.md
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "${RELEASE_TAG}" --json isDraft >/dev/null 2>&1; then
+            echo "${RELEASE_TAG} already has a GitHub release."
+            exit 0
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --verify-tag \
+            --draft \
+            --title "fs-safe ${RELEASE_TAG#v}" \
+            --notes-file release-notes.md
+
+  publish:
+    name: Publish npm packages
+    if: github.event_name == 'push' && github.ref_protected
+    needs: draft-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Update npm
+        run: npm install --global npm@${{ env.NPM_VERSION }}
+
+      - name: Download release package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-package
+          path: release-artifacts
+
+      - name: Publish platform packages, then root package
+        run: node scripts/publish-release-packages.mjs release-artifacts
+
+  release:
+    name: Verify and promote GitHub Release
+    if: github.event_name == 'push' && github.ref_protected
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node and pnpm
+        uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          pnpm-version: ${{ env.PNPM_VERSION }}
+
+      - name: Add portable TAR parser target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download release package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-package
+          path: release-artifacts
+
+      - name: Generate release notes and proof
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          package_version="${RELEASE_TAG#v}"
+          node scripts/release-notes.mjs "${package_version}" > release-notes.md
+          node scripts/append-release-proof.mjs release-notes.md release-artifacts/manifest.json "${GITHUB_REPOSITORY}" "${GITHUB_RUN_ID}"
+
+      - name: Upload release proof
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Promote draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          release_state="$(gh release view "${RELEASE_TAG}" --json isDraft)"
+          if [ "$(printf '%s' "${release_state}" | jq -r '.isDraft')" != "true" ]; then
+            echo "${RELEASE_TAG} is already public."
+            exit 0
+          fi
+          gh release edit "${RELEASE_TAG}" \
+            --notes-file release-notes.md \
+            --draft=false
+          published_state="$(gh release view "${RELEASE_TAG}" --json isDraft)"
+          if [ "$(printf '%s' "${published_state}" | jq -r '.isDraft')" != "false" ]; then
+            echo "${RELEASE_TAG} did not become public." >&2
+            exit 1
+          fi

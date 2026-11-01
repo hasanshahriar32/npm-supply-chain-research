@@ -1,0 +1,41 @@
+## If the latest commit message contains '[ci] release <branch>' (e.g. '[ci] release main' or '[ci] release next-v7'), trigger gh-release.yml
+name: Check Commit Message
+
+on:
+  push:
+    branches:
+      - main
+      - next-v*
+
+jobs:
+  check-commit-message:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      trigger_release: ${{ steps.check_commit_message.outputs.trigger_release }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Get commit message
+        id: get_commit_message
+        run: echo "message=$(git log -1 --format=%s)" >> $GITHUB_OUTPUT
+
+      - name: Check commit message
+        id: check_commit_message
+        run: |
+          if [[ "${{ steps.get_commit_message.outputs.message }}" == *"[ci] release ${{ github.ref_name }}"* ]]; then
+            echo "Commit message contains '[ci] release ${{ github.ref_name }}', triggering release build..."
+            echo "trigger_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "Commit message does not contain '[ci] release ${{ github.ref_name }}', skipping release build..."
+            exit 0
+          fi
+
+  trigger-gh-release:
+    needs: check-commit-message
+    if: needs.check-commit-message.outputs.trigger_release == 'true'
+    uses: ./.github/workflows/gh-release.yml
+    permissions:
+      contents: write

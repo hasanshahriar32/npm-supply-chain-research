@@ -1,0 +1,44 @@
+name: Release Please
+
+# Maintains a "release PR" that bumps the version and updates CHANGELOG.md from
+# Conventional Commits as they land on main. Merging that PR creates the git tag
+# (vX.Y.Z) and the GitHub Release, then triggers the publish workflow.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Reads release-please-config.json and .release-please-manifest.json
+          # from the repo root.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Runs only when the previous job just cut a release. It dispatches publish.yml
+  # rather than calling it as a reusable workflow, so the publish run's *entry*
+  # workflow is publish.yml itself: npm trusted publishing matches the top-level
+  # workflow, so it must be the entry, not a called sub-workflow. A GITHUB_TOKEN
+  # cannot trigger release/push events, but workflow_dispatch is the documented
+  # exception, so no PAT is needed.
+  trigger-publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch the publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run publish.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}" -f dist_tag=latest

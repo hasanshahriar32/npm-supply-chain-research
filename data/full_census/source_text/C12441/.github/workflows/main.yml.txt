@@ -1,0 +1,53 @@
+jobs:
+  full:
+    name: main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: node
+      - run: npm install
+      - run: npm install --global f-ck@2
+      - run: npm test
+      - uses: codecov/codecov-action@v3
+  no-nvm:
+    name: '${{matrix.node}} on ${{matrix.os}} w/o nvm'
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{matrix.node}}
+      - run: npm install
+      - run: npm install --global f-ck@2
+      - run: npm run test-coverage
+    strategy:
+      matrix:
+        node:
+          - lts/gallium
+          - node
+        os:
+          - ubuntu-latest
+          - windows-latest
+  nvm:
+    name: '${{matrix.node}} on ${{matrix.os}} w/ nvm'
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dcodeIO/setup-node-nvm@v5
+        with:
+          node-version: ${{matrix.node}}
+      - run: npm install
+      - run: npm install --global f-ck@2
+      - run: npm run test-coverage
+    strategy:
+      matrix:
+        node:
+          - node
+        os:
+          - ubuntu-latest
+          - windows-latest
+on:
+  - pull_request
+  - push

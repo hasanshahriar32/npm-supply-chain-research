@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [synchronize, opened, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x, 26.x]
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/setup
+        with:
+          node-version: ${{ matrix.node-version }}
+          setup-java: true
+      # Only install playwright if elements project is affected
+      - name: affected
+        id: affected
+        shell: bash
+        run: echo "affected=$(pnpm nx show projects --affected --json)" >> "$GITHUB_OUTPUT"
+      - name: Install Playwright Browsers
+        if: ${{ contains(fromJson(steps.affected.outputs.affected), 'elements') }}
+        run: pnpm install-browsers
+      - name: Lint & Build & Test
+        run: pnpm run all
+      - name: Bundlemon
+        if: ${{ contains(fromJson(steps.affected.outputs.affected), 'elements') && matrix.os == 'ubuntu-latest' && matrix.node-version == '26.x' }}
+        uses: lironer/bundlemon-action@v1
+        with:
+          working-directory: packages/elements
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: image-diffs
+          path: packages/elements/playwright-report/
+  incremental_mutation_testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/setup
+        with:
+          setup-playwright: true
+      - run: pnpm run download-incremental-reports
+      - name: Run Stryker incrementally
+        run: |
+          pnpm nx run-many --target=stryker --projects=metrics,elements,real-time -- --incremental
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}

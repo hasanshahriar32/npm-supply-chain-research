@@ -1,0 +1,19 @@
+name: Test Swift
+
+on:
+  workflow_call:
+    outputs:
+      matrix-result:
+        description: 'Job result'
+        value: ${{ jobs.run-tests.result }}
+
+jobs:
+  run-tests:
+    name: Run tests
+    runs-on: macos-26
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - name: Run tests
+        working-directory: apple-catalog-parsing/native/swift/AssetCatalogParser
+        run: swift test

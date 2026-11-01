@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      npm_tag:
+        type: choice
+        description: 'Specify npm tag'
+        required: true
+        default: 'alpha'
+        options:
+          - alpha
+          - beta
+          - rc
+          - canary
+          - latest
+      branch:
+        description: 'Release Branch (confirm release branch)'
+        required: true
+        default: 'main'
+
+permissions:
+  # Provenance generation in GitHub Actions requires "write" access to the "id-token"
+  id-token: write
+
+jobs:
+  release:
+    name: Release
+    if: github.repository == 'web-infra-dev/rsdoctor' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Setup Pnpm
+        run: |
+          npm install -g corepack@latest --force
+          corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.15.0
+          cache: 'pnpm'
+
+      - name: Install Pnpm
+        run: |
+          npm install -g corepack@latest --force
+          corepack enable
+
+      # Update npm to the latest version to enable OIDC
+      - name: Info npm version
+        run: |
+          npm --version
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Publish to npm
+        run: |
+          pnpm -r publish --tag ${{ github.event.inputs.npm_tag }} --publish-branch ${{ github.event.inputs.branch }}

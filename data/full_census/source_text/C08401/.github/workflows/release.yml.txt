@@ -1,0 +1,93 @@
+name: Automated product release
+
+on:
+  pull_request:
+    branches: [master]
+    types: [closed]
+
+permissions:
+  actions: write
+  attestations: write
+  checks: write
+  contents: write
+  deployments: write
+  discussions: write
+  issues: write
+  id-token: write
+  packages: write
+  pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+
+jobs:
+  check-release:
+    name: Check release required
+    if: github.event.pull_request.merged && endsWith(github.repository, '-private') != true
+    runs-on:
+      group: organization/Default
+    outputs:
+      release: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          repository: pubnub/client-engineering-deployment-tools
+          ref: v1
+          token: ${{ secrets.GH_TOKEN }}
+          path: .github/.release/actions
+      - id: check
+        name: Check pre-release completed
+        uses: ./.github/.release/actions/actions/checks/release
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+  publish:
+    name: Publish package
+    needs: check-release
+    if: needs.check-release.outputs.release == 'true'
+    runs-on:
+      group: organization/Default
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # This should be the same as the one specified for on.pull_request.branches
+          ref: master
+      - name: Setup AWS CLI credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: GitHubActionsSession
+          aws-region: us-east-1
+      - name: Checkout actions
+        uses: actions/checkout@v4
+        with:
+          repository: pubnub/client-engineering-deployment-tools
+          ref: v1
+          token: ${{ secrets.GH_TOKEN }}
+          path: .github/.release/actions
+      - name: Publish to S3
+        uses: ./.github/.release/actions/actions/services/aws
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          auth-method: role
+          content-type: application/javascript
+          content-encoding: gzip
+          acl: public-read
+          local-path: upload/gzip/*.js
+          remote-path: pubnub/sdk/javascript
+      - name: Publish to NPM
+        uses: ./.github/.release/actions/actions/services/npm
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          npm-auth-type: oidc
+          npm-token: ${{ secrets.NPM_TOKEN }}
+          check-ownership: false
+          build-command: npm run build
+      - name: Create Release
+        uses: ./.github/.release/actions/actions/services/github-release
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          artifacts-folder: upload/normal/
+          jira-api-key: ${{ secrets.JIRA_API_KEY }}
+          last-service: true

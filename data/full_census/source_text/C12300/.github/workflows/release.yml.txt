@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.repository == 'webpack/webpack-dev-server'
+    name: Release
+    runs-on: ubuntu-latest
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check client build exists
+        run: if [ ! -f client/index.js ]; then echo "Missing client build. 'npm run build' did not generate client/index.js"; exit 1; fi
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          publish-script: node ./node_modules/.bin/changeset publish
+          commit-message: "chore(release): new release"
+          pr-title: "chore(release): new release"
+        env:
+          # Not read by the action itself, which takes `github-token` and
+          # defaults it to `github.token`. It is read by `changeset version`,
+          # whose changelog generator queries the GitHub API.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

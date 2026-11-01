@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Allow one concurrent deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+  test-for-win-integrations:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Test
+        run: npm run test:integrations
+  test-for-mac-integrations:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Test
+        run: npm run test:integrations
+  test-for-ubuntu-integrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js
+        uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Test
+        run: npm run test:integrations
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        eslint-version: [9, 10]
+        node-version: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install Target ESLint Version
+        run: npm install -D "eslint@${{ matrix.eslint-version }}"
+      - name: Install Packages
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm test
+  test-and-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm run test:c8
+      - name: Coveralls GitHub Action
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

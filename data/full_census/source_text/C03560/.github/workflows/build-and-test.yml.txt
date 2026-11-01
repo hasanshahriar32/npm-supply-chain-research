@@ -1,0 +1,36 @@
+name: Build / Test
+permissions:
+  contents: read
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x, 26.x]
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: pnpm/action-setup@v6
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: pnpm
+    - name: install, run build, lint and test
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm run build
+        pnpm run lint
+        pnpm run test --coverage
+    - name: Coveralls GitHub Action
+      if: matrix.node-version == '24.x'
+      uses: coverallsapp/github-action@v2.3.8
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        base-path: ./packages/purgecss
+      env:
+        CI: true

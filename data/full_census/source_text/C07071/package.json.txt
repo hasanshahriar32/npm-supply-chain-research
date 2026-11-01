@@ -1,0 +1,57 @@
+{
+  "name": "ts-prune",
+  "version": "0.11.0",
+  "description": "Find potentially unused exports in your Typescript project with zero configuration.",
+  "keywords": [
+    "find",
+    "unused",
+    "exports",
+    "deadcode"
+  ],
+  "main": "lib/index.js",
+  "author": "Nadeesha Cabral <n@nadeesha.me>",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "prepack": "npm run build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "node scripts/test.cjs",
+    "test:unit": "node scripts/test.cjs --unit",
+    "test:integration": "node scripts/test.cjs --integration",
+    "test:coverage": "node scripts/test.cjs --coverage",
+    "test:package": "node scripts/package-smoke.cjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "semantic-release": "semantic-release"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.2",
+    "@typescript-eslint/parser": "^8.70.0",
+    "eslint": "^10.10.0",
+    "semantic-release": "^25.0.9",
+    "typescript": "~6.0.3"
+  },
+  "dependencies": {
+    "cosmiconfig": "^10.0.1",
+    "ts-morph": "^28.0.0"
+  },
+  "files": [
+    "/lib",
+    "/RELEASE_NOTES.md",
+    "/PUBLISHING.md",
+    "/MODERNIZATION.md"
+  ],
+  "bin": "./lib/index.js",
+  "repository": "git@github.com:nadeesha/ts-prune.git",
+  "release": {
+    "branches": [
+      "master"
+    ]
+  },
+  "types": "lib/index.d.ts",
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

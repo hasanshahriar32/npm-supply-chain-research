@@ -1,0 +1,94 @@
+{
+  "name": "babel-polyfills",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "yarn build-es-shims-data && yarn build-corejs3-shipped-proposals && gulp build",
+    "build-corejs3-shipped-proposals": "node ./scripts/build-corejs3-shipped-proposals.mjs",
+    "build-es-shims-data": "node ./scripts/download-compat-table.js && node ./scripts/build-es-shims-data",
+    "clean": "rimraf packages/*/lib",
+    "clean-all": "yarn clean && rimraf packages/*/node_modules node_modules",
+    "lint": "eslint packages '*.{js,ts}' --ext .js,.ts --format=codeframe",
+    "publish": "yarn clean && NODE_ENV=production yarn build && yarn validate && lerna publish from-git",
+    "test": "jest && yarn test:esm",
+    "test:esm": "node test/esm/index.mjs",
+    "tscheck": "yarn tsc",
+    "validate": "yarn lint && yarn tscheck && yarn test",
+    "version": "yarn lerna version",
+    "watch": "gulp watch"
+  },
+  "devDependencies": {
+    "@babel/cli": "^8.0.0",
+    "@babel/core": "^8.0.0",
+    "@babel/eslint-parser": "^8.0.0",
+    "@babel/eslint-plugin-development": "^8.0.0",
+    "@babel/plugin-transform-runtime": "^8.0.0",
+    "@babel/preset-env": "^8.0.0",
+    "@babel/preset-typescript": "^8.0.0",
+    "@babel/runtime": "^8.0.0",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "@rollup/plugin-babel": "^7.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "babel-jest": "^29.7.0",
+    "electron-to-chromium": "^1.5.278",
+    "eslint": "^10.5.0",
+    "eslint-formatter-codeframe": "^7.32.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.6.0",
+    "gulp": "^4.0.2",
+    "gulp-rename": "^1.4.0",
+    "gulp-uglify": "^3.0.2",
+    "gulp-watch": "^5.0.1",
+    "jest": "^30.2.0",
+    "jest-light-runner": "^0.7.11",
+    "lerna": "^3.22.1",
+    "lodash": "^4.17.23",
+    "prettier": "^3.8.1",
+    "rimraf": "^2.7.1",
+    "rollup": "^4.59.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.1"
+  },
+  "resolutions": {
+    "@lerna/npm-publish": "patch:@lerna/npm-publish@npm:3.18.5#.yarn-patches/@lerna/npm-publish.patch",
+    "@lerna/package": "patch:@lerna/package@npm:3.16.0#.yarn-patches/@lerna/package.patch",
+    "@lerna/package-graph": "patch:@lerna/package-graph@npm:3.18.5#.yarn-patches/@lerna/package-graph.patch",
+    "@lerna/pack-directory": "patch:@lerna/pack-directory@npm:3.16.4#.yarn-patches/@lerna/pack-directory.patch",
+    "@babel/preset-env/core-js-compat": "^3.48.0"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0",
+    "yarn": ">=1.0.0"
+  },
+  "workspaces": [
+    "packages/*",
+    "test/esm"
+  ],
+  "jest": {
+    "runner": "jest-light-runner",
+    "testRegex": "./packages/[^/]+/test/.+\\.m?js$",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/test/fixtures/",
+      "/test/spawn-fixtures/",
+      "/test/helpers/"
+    ],
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "/node_modules/",
+      "/test/fixtures/",
+      "<rootDir>/packages/[^/]+/lib/"
+    ],
+    "modulePathIgnorePatterns": [
+      "/test/fixtures/"
+    ],
+    "moduleNameMapper": {
+      "^@babel/helper-define-polyfill-provider$": "<rootDir>/packages/babel-helper-define-polyfill-provider/"
+    }
+  },
+  "version": "0.0.0",
+  "packageManager": "yarn@4.12.0"
+}

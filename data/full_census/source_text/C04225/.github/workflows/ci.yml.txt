@@ -1,0 +1,147 @@
+name: CI
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 2' # Weekly build
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - node-version: 20.x
+          - node-version: 22.x
+          - node-version: 24.x
+          - node-version: 'v24.22.1'
+            deploys-docs: true
+          - node-version: latest
+
+    services:
+      # Self-hosted certificate linter, to run lintcert tests reliably against a local instance
+      certlinter:
+        image: ghcr.io/pkimetal/pkimetal:latest
+        ports:
+          - 8080:8080
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          check-latest: true
+          cache: ${{ github.event_name != 'schedule' && 'npm' || '' }}
+          cache-dependency-path: 'package.json'
+
+      - run: npm install
+
+      - name: Wait for cert linter
+        run: timeout 60 bash -c 'until curl -sf http://localhost:8080/ >/dev/null; do sleep 1; done'
+
+      - run: npm run ci-tests
+        env:
+          # Node v22+ needs no strip-types (because we use ts-node for full TS instead)
+          NODE_OPTIONS: >-
+            ${{ (!startsWith(matrix.node-version, '20') && '--no-experimental-strip-types') || '' }}
+          # We log performance test results to Posthog to track trends:
+          POSTHOG_PERF_API_KEY: ${{ secrets.POSTHOG_PERF_API_KEY }}
+          # Point lintcert tests at the self-hosted linter service above:
+          PKIMETAL_BASE_URL: http://localhost:8080
+
+      - name: Upload docs artifact
+        uses: actions/upload-artifact@v6
+        if: matrix.deploys-docs == true
+        with:
+          name: typedoc
+          path: typedoc
+          retention-days: 1
+
+  deploy-docs:
+    name: Deploy docs
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: typedoc
+          path: typedoc
+      - name: Check for generated docs
+        run: |
+          # Fails if directory doesn't exist or is empty
+          if [ ! -d "typedoc" ] || [ -z "$(ls -A typedoc)" ]; then
+            echo "Error: 'typedoc' directory is missing or empty."
+            exit 1
+          fi
+      - uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          single-commit: true
+          branch: gh-pages
+          folder: typedoc
+
+  publish:
+    name: Publish to npm
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/mockttp
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'v24.22.1'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+          cache-dependency-path: 'package.json'
+
+      - run: npm install
+      - run: npm run build
+
+      - name: Verify tag matches package.json version
+        id: version-check
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Error: Tag version (v$TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            exit 1
+          fi
+          echo "✓ Tag version matches package.json version: $PACKAGE_VERSION"
+
+          # Check if version matches strict X.Y.Z format (stable release)
+          if echo "$PACKAGE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Stable release version detected: $PACKAGE_VERSION"
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          else
+            echo "Prerelease version detected: $PACKAGE_VERSION"
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          fi
+
+      # Make sure we have the latest npm for publishing:
+      - run: npm install -g npm@^11
+
+      - name: Publish to npm
+        run: |
+          if [ "${{ steps.version-check.outputs.is_prerelease }}" == "true" ]; then
+            echo "Publishing untagged prerelease"
+            npm stage publish --provenance --tag test
+            # We have to publish with a tag (so we use 'test') but we can clean it up:
+            npm dist-tag rm mockttp test --silent
+          else
+            echo "Publishing stable release with 'latest' tag"
+            npm stage publish --provenance
+          fi
+

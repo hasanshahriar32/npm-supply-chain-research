@@ -1,0 +1,66 @@
+name: JavaScript Obfuscator CI
+
+on:
+  push:
+    branches: [master, release-**]
+  pull_request:
+    branches: [master, release-**]
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest,
+            node-version: 20.x
+          - os: ubuntu-latest,
+            node-version: 22.x
+          - os: ubuntu-latest,
+            node-version: 24.x
+          - os: windows-latest,
+            node-version: 20.x
+          - os: windows-latest,
+            node-version: 22.x
+          - os: windows-latest,
+            node-version: 24.x
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: styfle/cancel-workflow-action@0.12.1
+        with:
+          access_token: ${{ github.token }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - uses: actions/cache@v4
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+      - run: yarn install
+      - run: yarn run build
+      - run: yarn run test:mocha-coverage
+      - run: yarn run test:mocha-coverage:report
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: './coverage/lcov.info'
+          parallel: true
+          flag-name: node-${{ matrix.node-version }}-${{ matrix.os }}
+
+  coveralls-finish:
+    needs: build
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true

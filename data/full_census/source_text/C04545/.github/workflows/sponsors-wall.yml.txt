@@ -1,0 +1,76 @@
+name: Update sponsors wall
+
+on:
+  schedule:
+    # Every Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-sponsors-wall:
+    name: Update sponsors wall
+    environment: CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: create_token
+        with:
+          client-id: ${{ vars.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+      - name: Generate sponsors wall
+        run: pnpm sponsorkit
+        env:
+          # GitHub Sponsors – must be a PAT (read:user + read:org scopes)
+          SPONSORKIT_GITHUB_TOKEN: ${{ secrets.SPONSORKIT_GITHUB_TOKEN }}
+          SPONSORKIT_GITHUB_LOGIN: inversify
+          # OpenCollective – API key from https://opencollective.com/applications
+          SPONSORKIT_OPENCOLLECTIVE_KEY: ${{ secrets.SPONSORKIT_OPENCOLLECTIVE_KEY }}
+          SPONSORKIT_OPENCOLLECTIVE_SLUG: inversifyjs
+
+      - name: Commit changes
+        id: commit
+        run: |
+          if [ -z "$(git status --porcelain --untracked-files=all)" ]; then
+            echo "No changes to sponsors wall"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B sponsors-wall/main
+          git add assets/sponsors.svg
+          git commit -m "chore: update sponsors wall"
+
+      - name: Push branch
+        if: steps.commit.outputs.has_changes == 'true'
+        run: git push origin sponsors-wall/main --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Open or update PR
+        if: steps.commit.outputs.has_changes == 'true'
+        run: |
+          if [ "$(gh pr list --head sponsors-wall/main --state open --json number --jq 'length')" -eq 0 ]; then
+            gh pr create \
+              --base main \
+              --head sponsors-wall/main \
+              --title "chore: update sponsors wall" \
+              --body "Automated weekly sponsors wall update via [sponsorkit](https://github.com/antfu-collective/sponsorkit)."
+          fi
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}

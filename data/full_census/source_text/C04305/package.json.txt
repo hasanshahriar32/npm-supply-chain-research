@@ -1,0 +1,97 @@
+{
+  "name": "i18next-cli",
+  "version": "1.80.7",
+  "description": "A unified, high-performance i18next CLI.",
+  "type": "module",
+  "bin": {
+    "i18next-cli": "./dist/esm/cli.js"
+  },
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./types/index.d.ts",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./types/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./cjs": {
+      "types": "./types/index.d.ts",
+      "default": "./dist/cjs/index.js"
+    },
+    "./esm": {
+      "types": "./types/index.d.ts",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && rollup -c && rm -rf types && tsc -d --declarationDir types --declarationMap --emitDeclarationOnly",
+    "lint": "eslint .",
+    "test": "npm run lint && vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "preversion": "npm run test && npm run build",
+    "postversion": "npm run build && git push && git push --tags"
+  },
+  "keywords": [
+    "i18next",
+    "swc",
+    "cli"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/i18next/i18next-cli.git"
+  },
+  "homepage": "https://github.com/i18next/i18next-cli",
+  "bugs": {
+    "url": "https://github.com/i18next/i18next-cli/issues"
+  },
+  "devDependencies": {
+    "@rollup/plugin-replace": "^6.0.3",
+    "@rollup/plugin-terser": "^1.0.2",
+    "@rollup/plugin-typescript": "^12.3.1",
+    "@types/inquirer": "^9.0.10",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@typescript-eslint/parser": "^8.72.0",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^9.39.5",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import": "^2.32.0",
+    "memfs": "^4.80.0",
+    "neostandard": "^0.14.1",
+    "react": "^19.3.1",
+    "rollup": "^4.65.0",
+    "typescript": "^6.0.3",
+    "unplugin-swc": "^2.0.0",
+    "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "@croct/json5-parser": "^0.2.2",
+    "@formatjs/icu-messageformat-parser": "^3.5.22",
+    "@inquirer/confirm": "^6.3.5",
+    "@inquirer/input": "^5.1.9",
+    "@inquirer/password": "^5.2.5",
+    "@inquirer/select": "^5.2.8",
+    "@swc/core": "^1.16.20",
+    "chokidar": "^5.0.0",
+    "commander": "^15.0.0",
+    "glob": "^13.0.6",
+    "i18next": "^26.5.10",
+    "i18next-resources-for-ts": "^2.1.2",
+    "jiti": "^2.7.0",
+    "jsonc-parser": "^3.3.1",
+    "magic-string": "^1.4.3",
+    "messageformat": "^4.1.0",
+    "minimatch": "^10.2.6",
+    "nano-spawn": "^2.1.0",
+    "react-i18next": "^17.1.8",
+    "yaml": "^2.9.1",
+    "yocto-spinner": "^1.2.2"
+  }
+}

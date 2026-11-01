@@ -1,0 +1,87 @@
+name: Main
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_COLOR: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  lint:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - uses: ./.github/actions/setup-action
+      - run: pnpm lint
+
+  build:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    env:
+      CI_JOB_NUMBER: 1
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - uses: ./.github/actions/setup-action
+      - run: pnpm run build
+
+      - uses: amplitude/size-limit-action@710d41ebc34634c011e8a91fe165d6ff49536a74 # v1
+        if: github.event_name == 'pull_request'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          script: pnpm run size --json
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: './dist/samples/web-minified'
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: 'js-client-monorepo-packages-dist'
+          if-no-files-found: error
+          path: ./dist/packages
+
+  test:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - uses: ./.github/actions/setup-action
+      - run: |
+          pnpm run test --testPathIgnorePatterns=MemoryLeak.test.ts
+          pnpm exec nx run statsig-combo:test --testPathPattern=MemoryLeak.test.ts
+  e2e:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
+      - uses: ./.github/actions/setup-action
+      - run: pnpm exec nx run next-js-sample-e2e:e2e
+
+  deploy:
+    if: github.event_name == 'push' && github.event.repository.private
+    needs: [lint, test, build]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: 'pages'
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

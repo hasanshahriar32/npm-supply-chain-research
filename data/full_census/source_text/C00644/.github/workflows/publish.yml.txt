@@ -1,0 +1,106 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate release tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "::error::Release tag '$TAG' does not match pattern vMAJOR.MINOR.PATCH[-prerelease]"
+            exit 1
+          fi
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - name: Verify package.json version matches tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Read package.json via ESM so the file works under strict workflow
+          # validators that disallow CJS imports inside inline `node -e` scripts.
+          PKG_VERSION="v$(node --input-type=module -e "import { readFile } from 'node:fs/promises'; const p = JSON.parse(await readFile('./package.json', 'utf8')); process.stdout.write(p.version)")"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match release tag ($TAG)"
+            exit 1
+          fi
+
+      # No registry-url here: passing it makes actions/setup-node write a
+      # project .npmrc with `_authToken=${NODE_AUTH_TOKEN}` and `always-auth=true`,
+      # which npm then prefers over OIDC trusted publishing — even when the
+      # token expands to empty. Skipping it lets `npm publish` use its default
+      # registry config and authenticate via the OIDC token from `id-token: write`.
+      # Node 24 ships with npm 11.x, which is required for OIDC *publish* auth
+      # (npm 10 can sign provenance but cannot authenticate publishes via OIDC).
+      - uses: ./.github/actions/setup-node-pnpm
+        with:
+          node-version: "24"
+
+      - run: pnpm check
+
+      - run: pnpm typecheck
+
+      - run: pnpm build
+
+      - name: Verify declaration files exist
+        run: |
+          test -f dist/index.fetch.d.ts   || { echo "Missing dist/index.fetch.d.ts"; exit 1; }
+          test -f dist/index.node.d.ts   || { echo "Missing dist/index.node.d.ts"; exit 1; }
+          test -f dist/index.browser.d.ts || { echo "Missing dist/index.browser.d.ts"; exit 1; }
+
+      - run: pnpm test
+
+      # Derive the npm dist-tag from the release tag.
+      #
+      #   v4.1.0        → "latest"   (stable release, becomes the default install target)
+      #   v4.2.0-beta.1 → "beta"     (prerelease, only installed via @beta or explicit version)
+      #   v5.0.0-rc.2   → "rc"
+      #   v4.1.0-next.3 → "next"
+      #
+      # Publishing prereleases under a non-`latest` dist-tag is what most callers
+      # mean by "staged publish" — the tarball is on the registry and pinnable,
+      # but `npm install <pkg>` (no version) still resolves to the stable release.
+      - name: Determine npm dist-tag
+        id: dist-tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if echo "$TAG" | grep -qE '-'; then
+            DIST_TAG=$(echo "$TAG" | sed -E 's/^v[0-9]+\.[0-9]+\.[0-9]+-([a-zA-Z]+).*/\1/')
+          else
+            DIST_TAG=latest
+          fi
+          echo "Publishing $TAG under npm dist-tag '$DIST_TAG'"
+          echo "tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+
+      # Diagnostic: capture the npm CLI's effective config + version so future
+      # OIDC publishing failures are debuggable without a workflow re-edit.
+      # `npm config list` redacts secrets, so this is safe to print.
+      - name: Diagnostic — npm version and effective config
+        run: |
+          echo "node: $(node --version)"
+          echo "npm:  $(npm --version)"
+          echo "--- npm config list ---"
+          npm config list || true
+          echo "--- userconfig file (if any) ---"
+          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            cat "$NPM_CONFIG_USERCONFIG"
+          else
+            echo "(no userconfig file in use)"
+          fi
+
+      - run: npm publish --provenance --access public --tag '${{ steps.dist-tag.outputs.tag }}'

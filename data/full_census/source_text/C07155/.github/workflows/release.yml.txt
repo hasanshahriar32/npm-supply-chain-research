@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+# Jobs get only what they declare; nothing is granted by default.
+permissions: {}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build --filter=@nestjs-modules/mailer
+
+      - name: Unit tests (100% coverage required)
+        run: pnpm --filter @nestjs-modules/mailer run test:cov
+
+  # Only this job holds write and publish credentials, and it runs only after
+  # the unprivileged test job has passed.
+  release:
+    name: Release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Full history and tags, needed to find the last release below.
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Auto-create changeset if source code changed
+        run: |
+          # Skip if this push is a changesets version commit (prevents infinite loop)
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if echo "$COMMIT_MSG" | grep -q "^chore(release)"; then
+            echo "Skipping: this is a changesets version commit"
+            exit 0
+          fi
+
+          # Skip if changesets already exist
+          CHANGESETS=$(ls .changeset/*.md 2>/dev/null | grep -v README.md || true)
+          if [ -n "$CHANGESETS" ]; then
+            echo "Skipping: changesets already exist"
+            exit 0
+          fi
+
+          # Check if the published package changed since the last release tag.
+          # Without a tag there is nothing to compare against, so do not guess:
+          # releasing anyway published empty versions (e.g. 3.0.1).
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "::warning::No release tag found, skipping changeset creation"
+            exit 0
+          fi
+          echo "Last release tag: $LAST_TAG"
+          CHANGES=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/mailer/ | head -1)
+
+          if [ -n "$CHANGES" ]; then
+            echo "Source changes detected, determining version bump..."
+
+            # Analyze commits since last tag to determine bump type
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=%s -- packages/mailer/)
+
+            BUMP="patch"
+
+            # Check for minor: feat(...) or feat:
+            if echo "$COMMITS" | grep -qiE "^feat(\(.*\))?:"; then
+              BUMP="minor"
+            fi
+
+            # Check for major: feat!(...), fix!(...), BREAKING CHANGE in body, or !: convention
+            if echo "$COMMITS" | grep -qiE "^[a-z]+(\(.*\))?!:"; then
+              BUMP="major"
+            fi
+            BODIES=$(git log "$LAST_TAG"..HEAD --pretty=%b -- packages/mailer/)
+            if echo "$BODIES" | grep -q "BREAKING CHANGE"; then
+              BUMP="major"
+            fi
+
+            echo "Detected bump type: $BUMP"
+
+            cat > .changeset/auto-release.md << CHANGESET
+          ---
+          '@nestjs-modules/mailer': ${BUMP}
+          ---
+
+          Auto-release ${BUMP} version with latest changes.
+          CHANGESET
+          else
+            echo "No source changes detected, skipping changeset creation"
+          fi
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          publish-script: pnpm run release
+          version-script: pnpm run version-packages
+          pr-title: 'chore(release): version packages'
+          commit-message: 'chore(release): version packages'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          # npm auth comes from setup-node's `registry-url` and this token
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          echo "$PACKAGES" | jq -c '.[]' | while read -r pkg; do
+            NAME=$(echo "$pkg" | jq -r '.name')
+            VERSION=$(echo "$pkg" | jq -r '.version')
+            TAG="v${VERSION}"
+
+            git tag "$TAG" || true
+            git push origin "$TAG" || true
+
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --generate-notes \
+              --latest || echo "Release $TAG already exists"
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGES: ${{ steps.changesets.outputs.published-packages }}

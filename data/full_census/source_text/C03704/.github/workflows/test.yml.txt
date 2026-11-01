@@ -1,0 +1,33 @@
+name: Node CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [20.x, 22.x, 24.x]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: corepack enable
+
+      - name: Install and test
+        run: |
+          yarn
+          yarn test
+
+      - name: type check
+        run: |
+          yarn build-types
+          [ $(git diff types.d.ts | wc -l) -gt 0 ] && echo 'Diff exists in types.d.ts. Please change jsdoc.' && exit 1
+          tsc --noEmit types.d.ts --skipLibCheck

@@ -1,0 +1,37 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+permissions:
+  id-token: write
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # using `v1` because of: https://github.com/actions/checkout/issues/246
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          registry-url: "https://registry.npmjs.org"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run ci
+
+      - name: Publish to NPM
+        run: pnpm run release:publish
+        env:
+          NPM_CONFIG_PROVENANCE: "true"
+
+      - name: Create Github Release
+        uses: softprops/action-gh-release@v1
+

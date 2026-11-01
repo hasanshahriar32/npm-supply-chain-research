@@ -1,0 +1,142 @@
+{
+    "name": "inferred-types",
+    "version": "1.5.11",
+    "description": "Functions which provide useful type inference on Typescript projects",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/inocan-group/inferred-types.git"
+    },
+    "license": "MIT",
+    "author": "Ken Snyder<ken@ken.net>",
+    "sideEffects": false,
+    "type": "module",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./modules/inferred-types/dist/index.d.mts",
+                "default": "./modules/inferred-types/dist/index.mjs"
+            },
+            "require": {
+                "types": "./modules/inferred-types/dist/index.d.cts",
+                "default": "./modules/inferred-types/dist/index.cjs"
+            }
+        },
+        "./types": {
+            "import": {
+                "types": "./modules/types/dist/index.d.mts",
+                "default": "./modules/types/dist/index.mjs"
+            },
+            "require": {
+                "types": "./modules/types/dist/index.d.cts",
+                "default": "./modules/types/dist/index.cjs"
+            }
+        },
+        "./constants": {
+            "import": {
+                "types": "./modules/constants/dist/index.d.mts",
+                "default": "./modules/constants/dist/index.mjs"
+            },
+            "require": {
+                "types": "./modules/constants/dist/index.d.cts",
+                "default": "./modules/constants/dist/index.cjs"
+            }
+        },
+        "./runtime": {
+            "import": {
+                "types": "./modules/runtime/dist/index.d.mts",
+                "default": "./modules/runtime/dist/index.mjs"
+            },
+            "require": {
+                "types": "./modules/runtime/dist/index.d.cts",
+                "default": "./modules/runtime/dist/index.cjs"
+            }
+        }
+    },
+    "main": "modules/inferred-types/dist/index.cjs",
+    "module": "modules/inferred-types/dist/index.mjs",
+    "files": [
+        "modules/constants/dist",
+        "modules/inferred-types/dist",
+        "modules/runtime/dist",
+        "modules/types/dist"
+    ],
+    "scripts": {
+        "nuke": "pnpm -r nuke",
+        "circular": "pnpm -r --stream --color=always --workspace-concurrency=1 circular || true",
+        "circular:summary": "pnpm -r --stream --color=always --workspace-concurrency=1 circular:summary || true",
+        "test": "node scripts/test-with-args.mjs",
+        "test:runtime": "vitest run",
+        "test:types": "typed test",
+        "test:imports": "bun run scripts/invalid-imports.ts",
+        "test:package": "bun run scripts/validate-package-json.ts",
+        "test:bundle": "node scripts/test-bundle.mjs",
+        "test:circular-deps": "node scripts/test-circular-deps.mjs",
+        "test:ci": "vitest run",
+        "test:watch": "vitest",
+        "test:ui": "vitest --ui",
+        "test:globals": "run-s test:globals:runtime test:globals:types",
+        "test:globals:runtime": "vitest run globals-and-transpiled",
+        "test:globals:types": "npx typed test globals-and-transpiled",
+        "typed": "node_modules/.bin/typed test",
+        "typed:input-tokens": "npx typed test IT_Take GetInputToken FromInputToken",
+        "typed:datetime": "npx typed test datetime",
+        "typed:boolean-logic": "npx typed test boolean-logic",
+        "deps": "pnpm -r deps",
+        "source": "pnpm -r source",
+        "source:types": "pnpm --filter types source",
+        "audit:types": "just check-types",
+        "audit:runtime": "just check-runtime",
+        "audit:constants": "just check-constants",
+        "release": "run-s test:package release:push",
+        "release:push": "bumpp",
+        "prepublishOnly": "npm run build",
+        "jsr:dry-run": "npx jsr --dry-run --allow-slow-types",
+        "prepare": "husky",
+        "build": "pnpm -r build",
+        "build:constants": "pnpm --filter constants build",
+        "build:types": "pnpm --filter types build",
+        "build:runtime": "pnpm --filter runtime build",
+        "watch": "pnpm -r watch",
+        "lint": "pnpm -r lint",
+        "lint:fix": "pnpm -r lint:fix",
+        "lint:ox": "pnpm -r lint:ox"
+    },
+    "devDependencies": {
+        "@date-fns/tz": "catalog:",
+        "@js-temporal/polyfill": "catalog:",
+        "@type-challenges/utils": "catalog:",
+        "@types/luxon": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/analyze-trace": "catalog:",
+        "@vitest/ui": "catalog:",
+        "@yankeeinlondon/ask": "catalog:",
+        "@yankeeinlondon/claudine": "catalog:",
+        "bumpp": "catalog:",
+        "chalk": "catalog:",
+        "cross-env": "catalog:",
+        "date-fns": "catalog:",
+        "dayjs": "catalog:",
+        "fast-glob": "catalog:",
+        "husky": "catalog:",
+        "jiti": "catalog:",
+        "luxon": "catalog:",
+        "madge": "catalog:",
+        "moment": "catalog:",
+        "moment-timezone": "catalog:",
+        "npm-run-all": "catalog:",
+        "oxlint": "catalog:",
+        "package-json-validator": "catalog:",
+        "pathe": "catalog:",
+        "taze": "catalog:",
+        "tsdown": "catalog:",
+        "tsx": "catalog:",
+        "typecheck": "catalog:",
+        "typed-tester": "catalog:",
+        "typescript": "catalog:",
+        "vite": "catalog:",
+        "vite-node": "catalog:",
+        "vitest": "catalog:",
+        "vue": "catalog:"
+    },
+    "packageManager": "pnpm@10.34.4+sha512.8768be55200ae3f2226b6527fcca2687e14bc4e5f12d7721a0f25da3df47915177058648db4177baf348120fa0ba2752d8d8d93f6beaf1fe64ae18da8de961af"
+}

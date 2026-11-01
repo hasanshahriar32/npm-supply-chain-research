@@ -1,0 +1,54 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # Publish core first so the wrappers' "intl-tel-input" dependency is
+      # already on the registry by the time consumers install a wrapper.
+      - name: Publish core
+        run: npm publish --workspace=intl-tel-input --provenance
+
+      - name: Publish wrappers
+        run: |
+          npm publish --workspace=@intl-tel-input/react --provenance
+          npm publish --workspace=@intl-tel-input/vue --provenance
+          npm publish --workspace=@intl-tel-input/angular --provenance
+          npm publish --workspace=@intl-tel-input/svelte --provenance
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^")
+          NOTES=$(git log --pretty=format:"- %s ([%h](https://github.com/jackocnr/intl-tel-input/commit/%H))" "$PREV_TAG..${GITHUB_REF_NAME}^" -- packages/ scripts/ third_party/libphonenumber/ package.json tsconfig.json tsconfig.base.json)
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "$NOTES"

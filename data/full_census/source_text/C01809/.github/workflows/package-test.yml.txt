@@ -1,0 +1,60 @@
+# Package Test Workflow
+#
+# This workflow tests that the published package works correctly when installed by users.
+# It runs on every push/PR to master branch.
+#
+# What it does:
+# 1. Builds the package using the current code
+# 2. Creates a test project in a separate directory
+# 3. Installs the built package as if it were published to npm
+# 4. Runs tests to ensure the package works correctly when imported
+# 5. Verifies that all exports are working as expected
+#
+# This ensures that users can actually use the package after installation.
+
+name: Package Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Test Package Installation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build package
+        run: yarn build
+
+      - name: Create test package
+        run: |
+          mkdir test-pkg
+          cd test-pkg
+          yarn init -y
+          yarn add ../
+
+      - name: Copy test file
+        run: cp test/githubActionsTest/package-test.js test-pkg/
+
+      - name: Run package test
+        run: |
+          cd test-pkg
+          node package-test.js

@@ -1,0 +1,62 @@
+name: Lint And Test
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  verify_lint:
+    name: Verify lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # Use node 18
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install dependencies
+        # Install deps from lockfile
+        run: npm ci
+      # Run lint
+      - name: Lint
+        run: npm run lint
+  run_tests_and_push_to_codecov:
+    # Name with matrix eval
+    runs-on: ubuntu-latest
+    needs: verify_lint
+    strategy:
+      matrix:
+        # We verify compatibility for current and previous LTS
+        # Jun 2025 -> Still supporting node 16 tho it was EOL on September 11, 2023
+        node_version: [16, 18, 20, 22, 23, 24]
+    name: "[ Node ${{ matrix.node_version }} ] Run tests and push to codecov"
+    env:
+      NODE_VERSION: ${{ matrix.node_version }}
+    steps:
+      - name: Install docker-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+      - uses: actions/checkout@v3
+        with:
+          # Fetch all history for all tags and branches
+          fetch-depth: 0
+      - name: Build the stack
+        run: docker-compose -f docker-compose.yml up -d
+      - name: Build testing container
+        run: docker build -t tests:${{ github.sha }} --build-arg SET_NODE_VERSION=$NODE_VERSION .
+      - name: Invoke testing container
+        run: docker run --network vault-network
+          -e VAULT_ADDR=$VAULT_ADDR
+          -v $PWD/coverage:/app/coverage tests:${{ github.sha }} "cd /app && npm run coverage"
+        env:
+          VAULT_ADDR: http://vault:8200
+      # - uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # tag: 3.1.4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     env_vars: NODE_VERSION # optional
+      #     name: codecov-umbrella # optional
+      #     fail_ci_if_error: ${{ github.ref == 'refs/heads/master' }} # fail on master, don't fail on other branches
+      #     verbose: true # optional (default = false)

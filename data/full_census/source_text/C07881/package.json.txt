@@ -1,0 +1,78 @@
+{
+  "name": "substrate-connect",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "A collection of libraries and tools needed to run Substrate Wasm light clients directly in the browser",
+  "repository": "https://github.com/paritytech/substrate-connect.git",
+  "author": "Parity Team <admin@parity.io>",
+  "maintainers": [
+    "Stefanie Doll <stefie@parity.io>",
+    "Sveta Goldstein <sveta@parity.io>",
+    "Raoul Millais <raoul@parity.io>",
+    "Nikolaos Kontakis <nikolaos@parity.io>",
+    "Pierre Krieger <pierre@parity.io>",
+    "Josep Sobrepere <josep@parity.io>"
+  ],
+  "license": "GPL-3.0-only",
+  "private": true,
+  "scripts": {
+    "downloadSpecs": "node bin/downloadSpecs.js",
+    "api-docs": "typedoc",
+    "deep-clean": "pnpm -r deep-clean && rm -rf node_modules",
+    "clean": "turbo run clean",
+    "build": "turbo run build",
+    "lint": "prettier --check .",
+    "test": "pnpm -r test",
+    "dev:api-docs": "concurrently -n typedoc,http-server 'nodemon -e ts --watch ./packages/connect --watch ./packages/connect-extension-protocol --exec typedoc' 'http-server _site/api'",
+    "dev:burnr": "pnpm --filter @substrate/burnr dev",
+    "dev:demo": "pnpm --filter @substrate/demo dev",
+    "dev:extension": "pnpm --filter @substrate/extension dev",
+    "format": "prettier --write .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md}": "prettier --write"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.9",
+    "@total-typescript/tsconfig": "^1.0.4",
+    "@types/chrome": "^0.0.270",
+    "@types/node": "^20.14.10",
+    "@types/qrcode.react": "^1.0.5",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/react-router-dom": "^5.3.3",
+    "@typescript-eslint/parser": "^7.11.0",
+    "concurrently": "^9.1.2",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-plugin-import": "^2.29.0",
+    "globals": "^16.0.0",
+    "http-server": "^14.1.1",
+    "husky": "^9.1.6",
+    "jsdom": "^26.0.0",
+    "lint-staged": "^15.4.3",
+    "nodemon": "^3.1.4",
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1",
+    "tshy": "^3.0.2",
+    "tslib": "^2.6.2",
+    "turbo": "^2.2.3",
+    "typedoc": "^0.26.11",
+    "typescript": "^5.6.2",
+    "vite-tsconfig-paths": "^5.0.1",
+    "vitest": "^2.1.9",
+    "tsup": "^8.3.0"
+  },
+  "packageManager": "pnpm@9.9.0+sha512.60c18acd138bff695d339be6ad13f7e936eea6745660d4cc4a776d5247c540d0edee1a563695c183a66eb917ef88f2b4feb1fc25f32a7adcadc7aaf3438e99c1",
+  "pnpm": {
+    "overrides": {
+      "@substrate/connect": "workspace:^",
+      "smoldot": "^2.0.34"
+    },
+    "patchedDependencies": {
+      "@polkadot-api/ws-provider": "patches/@polkadot-api__ws-provider.patch"
+    }
+  }
+}

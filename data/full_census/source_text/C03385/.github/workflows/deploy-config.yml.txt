@@ -1,0 +1,57 @@
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Deploy Project Config
+
+on: pull_request
+
+permissions:
+  contents: read
+
+# Detects if any project config files (rules or functions) have changed,
+# and deploys them to the test project used for CI if so.
+# Run this in its own workflow instead of as a step before each test
+# workflow to avoid too many deploys, possibly causing race conditions.
+# Since the build step of each test workflow takes a long time, this
+# this should finish before the tests begin running.
+
+jobs:
+  test:
+    name: Deploy Firebase Project Rules and Functions
+    runs-on: ubuntu-latest
+    if: (github.actor != 'dependabot[bot]')
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7
+      with:
+        # This makes Actions fetch all Git history so run-changed script can diff properly.
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Set up Node (24)
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # ratchet:actions/setup-node@v7
+      with:
+        node-version: 24.22.1
+    # firebase-tools has a minimum java version requirement
+    - name: Set up Java (22)
+      uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+      with:
+        distribution: 'temurin'
+        java-version: '22'
+    - name: Yarn install
+      run: yarn
+    - name: Deploy project config if needed
+      run: yarn ts-node scripts/ci-test/deploy-if-needed.ts
+      env:
+        FIREBASE_CLI_TOKEN: ${{secrets.FIREBASE_CLI_TOKEN}}

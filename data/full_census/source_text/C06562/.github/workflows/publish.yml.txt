@@ -1,0 +1,59 @@
+name: Publish to npm
+
+on:
+  # The only trigger. Used both for a manual publish (with a dist-tag choice) and
+  # for the automatic publish, which release-please.yml fires via
+  # `gh workflow run` after it cuts a release. Either way this workflow is the
+  # run's entry point, which is what npm trusted publishing matches against.
+  workflow_dispatch:
+    inputs:
+      dist_tag:
+        description: 'npm dist-tag to publish under'
+        type: choice
+        default: latest
+        required: true
+        options:
+          - latest
+          - beta
+          - next
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # OIDC trusted publishing: the id-token is exchanged with npm at publish
+    # time, so no NPM_TOKEN secret is needed. It also enables provenance.
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+
+      # Trusted publishing requires npm >= 11.5.1; node 20 ships an older npm.
+      - name: Upgrade npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        # `inputs.dist_tag` comes from workflow_dispatch (chosen) or workflow_call
+        # (defaults to latest).
+        run: npm publish --provenance --tag "${{ inputs.dist_tag }}"

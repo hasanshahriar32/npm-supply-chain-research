@@ -1,0 +1,30 @@
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: publish
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - run: npm ci
+      - name: npm publish
+        run: npm publish --workspaces --provenance --access public
+      - name: postpublish
+        run: npm run dist:postpublish
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linkifyjs
+          path: dist/

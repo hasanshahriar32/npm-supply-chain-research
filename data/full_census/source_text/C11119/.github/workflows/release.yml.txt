@@ -1,0 +1,49 @@
+name: ⚠️ Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        description: Bump version as requested
+        required: true
+        options:
+          - patch
+          - minor
+          - alpha
+          - major
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: taiga-family/actions/setup-variables@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/setup-node@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+      - uses: taiga-family/actions/release-it@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        id: release-it
+        with:
+          ref: ${{ github.ref }}
+          mode: ${{ github.event.inputs.mode }}
+          npmTrustedPublishing: true
+          githubToken: ${{ secrets.TAIGA_FAMILY_BOT_PAT }}
+
+      - uses: taiga-family/actions/read-package-json@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        id: info
+
+      - name: Announce to Telegram
+        if: steps.release-it.outputs.released == 'true'
+        uses: taiga-family/actions/messenger-telegram-announce@81cb55a2c1685e45ea591772e6bc9fd1d6b83765 # v2.24.0
+        with:
+          chatId: ${{ secrets.TAIGA_TELEGRAM_CHAT_ID }}
+          topicId: ${{ secrets.TAIGA_TELEGRAM_CHAT_THREAD_ID }}
+          token: ${{ secrets.TAIGA_TELEGRAM_BOT_TOKEN }}
+          version: v${{ steps.info.outputs.version }}
+          textLink: '@maskito/core'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true

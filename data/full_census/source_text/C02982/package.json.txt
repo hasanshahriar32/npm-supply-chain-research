@@ -1,0 +1,118 @@
+{
+  "name": "@eslint/config-inspector",
+  "type": "module",
+  "version": "3.5.0",
+  "packageManager": "pnpm@12.4.2",
+  "description": "A visual tool for inspecting and understanding your ESLint flat configs",
+  "license": "Apache-2.0",
+  "funding": "https://opencollective.com/eslint",
+  "homepage": "https://github.com/eslint/config-inspector#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eslint/config-inspector.git"
+  },
+  "bugs": "https://github.com/eslint/config-inspector/issues",
+  "bin": {
+    "@eslint/config-inspector": "./bin.mjs",
+    "eslint-config-inspector": "./bin.mjs"
+  },
+  "files": [
+    "*.mjs",
+    "dist"
+  ],
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "scripts": {
+    "build": "nuxt build && tsdown",
+    "dev": "nuxt dev",
+    "cli:build": "node bin.mjs build",
+    "cli:dev": "pnpm build && node bin.mjs",
+    "prepare": "nuxt prepare && pnpm simple-git-hooks && skills-npm",
+    "start": "node bin.mjs",
+    "prepack": "pnpm build",
+    "lint": "nuxt prepare && eslint .",
+    "storybook": "storybook dev -p 6006 -h 0.0.0.0",
+    "build-storybook": "storybook build",
+    "test": "vitest --project unit",
+    "test:storybook": "vitest run --project storybook",
+    "pretest:e2e": "node -e \"process.exit(require('node:fs').existsSync('dist/cli.mjs')?0:1)\" || pnpm build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "typecheck": "nuxt typecheck"
+  },
+  "peerDependencies": {
+    "eslint": "^8.50.0 || ^9.0.0 || ^10.0.0"
+  },
+  "dependencies": {
+    "@devframes/agentic": "catalog:",
+    "ansis": "catalog:",
+    "cac": "catalog:",
+    "chokidar": "catalog:",
+    "devframe": "catalog:",
+    "jiti": "catalog:",
+    "tinyglobby": "catalog:"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:",
+    "@axe-core/playwright": "catalog:",
+    "@devframes/vite": "catalog:",
+    "@eslint/config-array": "catalog:",
+    "@iconify-json/carbon": "catalog:",
+    "@iconify-json/catppuccin": "catalog:",
+    "@iconify-json/ph": "catalog:",
+    "@iconify-json/svg-spinners": "catalog:",
+    "@iconify-json/twemoji": "catalog:",
+    "@nodelib/fs.walk": "catalog:",
+    "@nuxt/eslint": "catalog:",
+    "@playwright/test": "catalog:",
+    "@shikijs/langs-precompiled": "catalog:",
+    "@shikijs/transformers": "catalog:",
+    "@storybook/addon-docs": "catalog:",
+    "@storybook/addon-vitest": "catalog:",
+    "@storybook/vue3-vite": "catalog:",
+    "@typescript-eslint/utils": "catalog:",
+    "@unocss/eslint-config": "catalog:",
+    "@unocss/nuxt": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vueuse/nuxt": "catalog:",
+    "eslint": "catalog:",
+    "find-up": "catalog:",
+    "floating-vue": "catalog:",
+    "fuse.js": "catalog:",
+    "lint-staged": "catalog:",
+    "minimatch": "catalog:",
+    "mlly": "catalog:",
+    "nuxt": "catalog:",
+    "pathe": "catalog:",
+    "rolldown": "catalog:",
+    "rollup": "catalog:",
+    "semver": "catalog:",
+    "shiki": "catalog:",
+    "simple-git-hooks": "catalog:",
+    "skills-npm": "catalog:",
+    "storybook": "catalog:",
+    "textmate-grammar-glob": "catalog:",
+    "tsdown": "catalog:",
+    "typescript": "catalog:",
+    "unocss": "catalog:",
+    "vitest": "catalog:",
+    "vue-tsc": "catalog:"
+  },
+  "resolutions": {
+    "chokidar": "catalog:",
+    "esbuild": "catalog:",
+    "nitropack": "catalog:",
+    "rolldown": "catalog:",
+    "rollup": "catalog:",
+    "semver": "catalog:",
+    "vite": "catalog:"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
+  }
+}

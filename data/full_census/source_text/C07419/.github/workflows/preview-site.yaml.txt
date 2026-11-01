@@ -1,0 +1,36 @@
+name: Deploy Site
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Setup Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Build zig library
+        run: zig build wasm_bindings
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 24.2
+      - name: Build site
+        run: |
+          zig build install_npm_deps
+          zig build build_all
+          export SITE=true && pnpm exec vite build src/client
+
+      - name: Deploy site
+        uses: JamesIves/github-pages-deploy-action@v4.4.3
+        with:
+          branch: gh-page
+          folder: dist/client
+          single-commit: true
+          clean: true

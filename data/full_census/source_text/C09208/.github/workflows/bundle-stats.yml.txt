@@ -1,0 +1,31 @@
+name: Bundle Stats
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-stats:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 24
+
+      - name: Bundle Stats
+        uses: rexxars/bundle-stats@c8bb783559da734cbb251f66731ee5227ba41059 # v2.0.1
+        with:
+          build-command: 'pnpm turbo run build --filter=@sanity/sdk... --filter=@sanity/sdk-react...'

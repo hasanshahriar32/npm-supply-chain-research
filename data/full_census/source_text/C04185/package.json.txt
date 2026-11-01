@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json.schemastore.org/package",
+  "name": "root",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "dbml-playground"
+  ],
+  "scripts": {
+    "test": "npx lerna run test",
+    "build": "yarn clean-build && npx lerna run build",
+    "clean-build": "rimraf ./packages/dbml-cli/lib ./packages/dbml-core/lib ./packages/dbml-parse/dist ./packages/dbml-connector/dist",
+    "lint": "npx lerna run lint",
+    "lint:all": "npx lerna run lint:all",
+    "lint:fix": "npx lerna run lint:fix",
+    "coverage": "npx lerna run coverage"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "^5.5.0",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^20.8.8",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
+    "@vitest/coverage-v8": "4.0.18",
+    "eslint": "^9.39.1",
+    "fast-check": "^4.3.0",
+    "globals": "^16.5.0",
+    "jiti": "^2.7.0",
+    "lerna": "^7.1.4",
+    "lerna-changelog": "^2.2.0",
+    "nodemark": "^0.3.0",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.3",
+    "vite": "^8.3.4",
+    "vite-plugin-dts": "^4.5.4",
+    "vite-plugin-no-bundle": "^4.0.0",
+    "vitest": "^4.1.8"
+  },
+  "resolutions": {
+    "**/tmp": "0.2.5",
+    "**/uuid": "11.1.1"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/holistics/dbml"
+  },
+  "changelog": {
+    "labels": {
+      "PR: Performance :running_woman:": ":running_woman: Performance",
+      "PR: Docs :memo:": ":memo: Documentation",
+      "PR: Bug Fix :bug:": ":bug: Bug Fix",
+      "PR: New Feature :rocket:": ":rocket: New Feature",
+      "PR: Breaking Change :boom:": ":boom: Breaking Change",
+      "PR: Internal :house_with_garden:": ":house_with_garden: Internal",
+      "PR: Dependencies Update :robot:": ":robot: Dependencies Update"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,128 @@
+name: NodeJS
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+permissions:
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x, 16.x, 18.x, 20.x]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Build
+      run: |
+        npm config set fetch-retries 5
+        npm config set fetch-retry-mintimeout 20000
+        npm config set fetch-retry-maxtimeout 120000
+        # Mitigate intermittent registry socket timeouts (ERR_SOCKET_TIMEOUT).
+        # On failure, wipe node_modules so retry is a clean install — partial
+        # trees leave packages like diff missing files (MODULE_NOT_FOUND).
+        ok=0
+        for i in 1 2 3; do
+          if npm install; then
+            ok=1
+            break
+          fi
+          echo "npm install failed (attempt $i), cleaning and retrying..."
+          rm -rf node_modules
+          sleep 15
+        done
+        test "$ok" -eq 1
+
+    - name: Unit Test
+      run: npm run ci
+
+    - name: Upload Coverage Report
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }} # required
+
+    - name: Setup OIDC
+      run: npm install @actions/core@1.6.0 @actions/http-client
+
+    - name: Get Id Token
+      uses: actions/github-script@v7
+      id: idtoken
+      with:
+        script: |
+          const coreDemo = require('@actions/core');
+          const idToken = await coreDemo.getIDToken('sts.aliyuncs.com');
+          const fsx = require('fs/promises');
+          await fsx.writeFile('/tmp/oidc_token', idToken);
+
+    - name: Integration Test
+      run: npm run integration
+      if: env.SUB_ACCESS_KEY_ID != ''
+      env:
+        # for RAM role ARN
+        ROLE_ARN: ${{ secrets.ROLE_ARN }}
+        SUB_ACCESS_KEY_ID: ${{ secrets.SUB_ACCESS_KEY_ID }}
+        SUB_ACCESS_KEY_SECRET: ${{ secrets.SUB_ACCESS_KEY_SECRET }}
+        ROLE_ARN_TO_ASSUME: ${{ secrets.ROLE_ARN_TO_ASSUME }}
+        # for OIDC
+        ALIBABA_CLOUD_OIDC_PROVIDER_ARN: ${{ secrets.ALIBABA_CLOUD_OIDC_PROVIDER_ARN }}
+        ALIBABA_CLOUD_OIDC_TOKEN_FILE: "/tmp/oidc_token"
+        ALIBABA_CLOUD_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+
+  build-win:
+    runs-on: windows-2025
+
+    strategy:
+      matrix:
+        # keep in sync with Linux build matrix
+        node-version: [12.x, 14.x, 16.x, 18.x, 20.x]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Build
+      shell: bash
+      run: |
+        npm config set fetch-retries 5
+        npm config set fetch-retry-mintimeout 20000
+        npm config set fetch-retry-maxtimeout 120000
+        # Mitigate intermittent registry socket timeouts (ERR_SOCKET_TIMEOUT).
+        # On failure, wipe node_modules so retry is a clean install — partial
+        # trees leave packages like diff missing files (MODULE_NOT_FOUND).
+        ok=0
+        for i in 1 2 3; do
+          if npm install; then
+            ok=1
+            break
+          fi
+          echo "npm install failed (attempt $i), cleaning and retrying..."
+          rm -rf node_modules
+          sleep 15
+        done
+        test "$ok" -eq 1
+
+    - name: Unit Test
+      run: npm run ci
+
+    - name: Upload Coverage Report
+      uses: codecov/codecov-action@v4
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}

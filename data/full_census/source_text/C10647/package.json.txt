@@ -1,0 +1,70 @@
+{
+  "name": "osc-progress",
+  "version": "0.3.4",
+  "description": "Tiny TypeScript helper for OSC 9;4 terminal progress sequences.",
+  "keywords": [
+    "cli",
+    "ghostty",
+    "osc",
+    "progress",
+    "terminal",
+    "wezterm",
+    "windows-terminal"
+  ],
+  "homepage": "https://github.com/steipete/osc-progress#readme",
+  "bugs": {
+    "url": "https://github.com/steipete/osc-progress/issues"
+  },
+  "license": "MIT",
+  "author": "Peter Steinberger",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/steipete/osc-progress.git"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "pnpm build",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm check",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
+    "lint": "pnpm format:check && oxlint --deny-warnings src tests scripts",
+    "lint:fix": "pnpm format && oxlint --fix src tests scripts",
+    "test": "pnpm build && vitest run",
+    "test:coverage": "pnpm build && vitest run --coverage",
+    "check": "pnpm lint && pnpm typecheck && pnpm test:coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.5",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "postcss": "^8.5.31",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@11.28.4"
+}

@@ -1,0 +1,135 @@
+on:
+    push:
+        branches:
+            - main
+
+name: release-please
+
+permissions:
+    contents: write
+    pull-requests: write
+    id-token: write
+
+jobs:
+    release-please:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: GoogleCloudPlatform/release-please-action@v5
+              id: release
+              with:
+                  token: ${{secrets.GITHUB_TOKEN}}
+
+            # Output which releases were created
+            - run: echo "A release was created."
+              if: ${{ steps.release.outputs.releases_created }}
+
+            # Check to see if we need to do any releases and if so check out the repo
+            - uses: actions/checkout@v7
+              if: ${{ steps.release.outputs.releases_created }}
+
+            # Node.js release
+            - uses: actions/setup-node@v7
+              if: ${{ steps.release.outputs.releases_created }}
+              with:
+                  node-version: lts/*
+                  registry-url: "https://registry.npmjs.org"
+
+            - uses: denoland/setup-deno@v2.0.5
+              with:
+                  deno-version: 2.x
+
+            - run: npm ci
+              if: ${{ steps.release.outputs.releases_created }}
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/core
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/core package to npm
+              run: npm publish -w packages/core
+              if: ${{ steps.release.outputs['packages/core--release_created'] }}
+
+            - name: Publish @humanfs/core package to JSR
+              run: |
+                npm run build
+                npx jsr publish
+              working-directory: packages/core
+              if: ${{ steps.release.outputs['packages/core--release_created'] }}
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/test
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/test package to npm
+              run: npm publish -w packages/test
+              if: ${{ steps.release.outputs['packages/test--release_created'] }}
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/types
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/types package to npm
+              run: npm publish -w packages/types
+              if: ${{ steps.release.outputs['packages/types--release_created'] }}
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/node
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/node package to npm
+              run: npm publish -w packages/node
+              if: ${{ steps.release.outputs['packages/node--release_created'] }}                                  
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/memory
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/memory package to npm
+              run: npm publish -w packages/memory
+              if: ${{ steps.release.outputs['packages/memory--release_created'] }}
+             
+            - name: Publish @humanfs/memory package to JSR
+              run: |
+                npm run build
+                npx jsr publish
+              working-directory: packages/memory
+              if: ${{ steps.release.outputs['packages/memory--release_created'] }}
+              
+            #-----------------------------------------------------------------------------
+            # @humanfs/web
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/web package to npm
+              run: npm publish -w packages/web
+              if: ${{ steps.release.outputs['packages/web--release_created'] }}          
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/box
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/box package to npm
+              run: npm publish -w packages/box
+              if: ${{ steps.release.outputs['packages/box--release_created'] }}
+             
+            - name: Publish @humanfs/box package to JSR
+              run: |
+                npm run build
+                npx jsr publish
+              working-directory: packages/box
+              if: ${{ steps.release.outputs['packages/box--release_created'] }}
+
+            #-----------------------------------------------------------------------------
+            # @humanfs/deno
+            #-----------------------------------------------------------------------------
+
+            - name: Publish @humanfs/deno package to npm
+              run: npm publish -w packages/deno
+              if: ${{ steps.release.outputs['packages/deno--release_created'] }}
+             
+            - name: Publish @humanfs/deno package to JSR
+              run: |
+                npm run build
+                deno task install-deps
+                npx jsr publish --allow-dirty
+              working-directory: packages/deno
+              if: ${{ steps.release.outputs['packages/deno--release_created'] }}

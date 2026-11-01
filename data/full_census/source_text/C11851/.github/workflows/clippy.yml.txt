@@ -1,0 +1,33 @@
+name: clippy
+
+on:
+  push:
+    branches: ["next"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Init git submodules
+        run: git submodule update --init --recursive --depth 1
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly-2026-08-20
+          components: clippy
+      # - name: Cache cargo
+      #   uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: clippy
+      - name: Cargo clippy
+        run: cargo clippy --all-targets -- -D warnings --no-deps

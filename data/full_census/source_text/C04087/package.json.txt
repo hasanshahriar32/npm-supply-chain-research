@@ -1,0 +1,41 @@
+{
+  "version": "0.11.0",
+  "name": "catharsis",
+  "description": "A JavaScript parser for Google Closure Compiler and JSDoc type expressions.",
+  "author": "Jeff Williams <jeffrey.l.williams@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hegemonic/catharsis.git"
+  },
+  "bugs": "https://github.com/hegemonic/catharsis/issues",
+  "main": "catharsis.js",
+  "dependencies": {
+    "lodash": "^4.18.1"
+  },
+  "devDependencies": {
+    "@jsdoc/eslint-config": "^4.0.0",
+    "@jsdoc/prettier-config": "^0.2.13",
+    "@jsdoc/test-matchers": "^0.2.9",
+    "ajv": "^8.20.0",
+    "eslint": "^10.14.0",
+    "execa": "^10.2.1",
+    "hereby": "^1.15.2",
+    "jasmine": "^7.0.0",
+    "jasmine-console-reporter": "^3.1.0",
+    "license-check-and-add": "^4.0.5",
+    "peggy": "^5.1.1",
+    "prettier": "^3.9.10"
+  },
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "npx peggy ./lib/parser.pegjs",
+    "default": "npx hereby lint-and-test",
+    "format": "npx hereby format",
+    "license-headers": "npx hereby license-headers",
+    "lint": "npx hereby lint",
+    "test": "npx hereby test"
+  },
+  "license": "MIT"
+}

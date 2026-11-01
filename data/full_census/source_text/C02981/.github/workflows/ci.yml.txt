@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    name: 'Test: node-20, ubuntu-latest'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to 20
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Versions
+        run: |
+          echo "pnpm: $(pnpm --version)"
+          echo "npm : $(npm --version)"
+          echo "node: $(node --version)"
+          echo "process.versions:"
+          node -p process.versions
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check
+        run: pnpm run build
+
+      - name: Check scripts
+        run: pnpm run ts-check
+
+      - name: Test types
+        run: pnpm run typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    name: 'Lint: node-20, ubuntu-latest'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to 20
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Prepare
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Check formatting
+        run: pnpm prettier --check .
+
+  audit:
+    runs-on: ubuntu-latest
+    name: 'Audit: node-20, ubuntu-latest'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to 20
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Prepare
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit production
+        run: pnpm audit --prod
+
+      - name: Audit all
+        continue-on-error: true
+        run: pnpm audit
+
+      - name: Check outdated dependencies
+        continue-on-error: true
+        if: github.ref == 'refs/heads/main'
+        run: pnpm outdated --long

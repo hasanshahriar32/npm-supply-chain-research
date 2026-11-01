@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v**"
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Verify release tag
+        run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Publint
+        run: pnpm run publint
+
+      - name: Install Playwright
+        run: pnpm run test:setup
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Extract release notes
+        run: pnpm releaselog --format=notes ${{ github.ref_name }} > RELEASE_NOTES.md
+
+      - name: Get dist tag
+        id: tag
+        run: echo "tag=$(pnpm exec jiti scripts/dist-tag.ts)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ contains(github.ref_name, '-') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: npm i -g npm && pnpm publish --access public --tag ${{ steps.tag.outputs.tag }} --no-git-checks

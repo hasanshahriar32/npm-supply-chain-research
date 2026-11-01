@@ -1,0 +1,101 @@
+name: Build
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+    
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+
+      - name: Setup pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-3.10-${{ hashFiles('package.json') }}
+          restore-keys: |
+            pip-3.10-
+            pip-
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Setup yarn cache
+        uses: actions/cache@v4
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            yarn-
+
+      - name: Install dependencies
+        # Use JLab 4.0.x branch because otherwise this will not bring
+        # the current toolkit version but the core version one.
+        run: python -m pip install -U jupyterlab~=4.0.0
+      - name: Build the extension
+        run: |
+          set -eux
+          jlpm
+          jlpm run lint:check
+          python -m pip install .
+
+          jupyter labextension list 2>&1 | grep -ie "jupyter-ui-demo.*enabled"
+
+          npx playwright install-deps
+          python -m jupyterlab.browser_check
+
+          pip install build
+          python -m build --sdist
+          cp dist/*.tar.gz myextension.tar.gz
+          pip uninstall -y jupyter_ui_demo jupyterlab
+          rm -rf myextension
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: myextension-sdist
+          path: myextension.tar.gz
+
+  test_isolated:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+      - uses: actions/download-artifact@v4
+        with:
+          name: myextension-sdist
+      - name: Install and Test
+        run: |
+          set -eux
+          # Remove NodeJS, twice to take care of system and locally installed node versions.
+          sudo rm -rf $(which node)
+          sudo rm -rf $(which node)
+          pip install myextension.tar.gz
+          pip install "jupyterlab~=4.0.0"
+          jupyter labextension list 2>&1 | grep -ie "jupyter-ui-demo.*enabled"
+          python -m jupyterlab.browser_check --no-browser-test

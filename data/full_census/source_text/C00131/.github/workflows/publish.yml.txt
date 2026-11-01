@@ -1,0 +1,88 @@
+name: Test
+on:
+  push:
+  pull_request:
+# See https://docs.npmjs.com/trusted-publishers
+permissions:
+  id-token: write # Required for NPM integration with OIDC
+  contents: read
+jobs:
+  is_release:
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.get_type.outputs.type }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - id: get_type
+        run: echo $( git tag --points-at HEAD | grep -q -e '^.*@.*$' && echo 'type=::release::' || echo "type=::norelease::" ) >> "$GITHUB_OUTPUT"
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm run test
+  # test_16:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       node-version: [16.x]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Use Node.js ${{ matrix.node-version }}
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ matrix.node-version }}
+  #     - run: npm install
+  #     - run: npm run test:16
+  # test_legacy:
+  #   needs: [is_release]
+  #   if: ${{ needs.is_release.outputs.type == '::norelease::' }}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       node-version: [14.x]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Use Node.js ${{ matrix.node-version }}
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ matrix.node-version }}
+  #     - run: |
+  #         cwd=`pwd`
+  #         for pkg in packages/*/package.json; do
+  #           cd $cwd/`dirname $pkg`
+  #           npm install
+  #           npm run test:legacy;
+  #         done
+  publish:
+    needs: [is_release, test]
+    if: ${{ needs.is_release.outputs.type == '::release::' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci --ignore-scripts
+      - run: npm run publish
+        # env:
+        #   NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

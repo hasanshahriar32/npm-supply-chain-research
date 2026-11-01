@@ -1,0 +1,46 @@
+name: Test project mutual dependency versions
+
+# run CI on pushes to master, and on all PRs (even the ones that target other
+# branches)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Cancel in-progress runs for the same branch when a new run is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: 'true'
+          persist-credentials: false
+
+      # without this, setup-node errors on mismatched yarn versions
+      - run: corepack enable
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Install graphviz
+        run: |
+          sudo apt update
+          sudo apt install -y graphviz
+
+      - name: Check for cycles
+        run: scripts/check-dependency-cycles.sh 0
+
+        # Under Yarn "classic" this job also checked for mismatchedWorkspaceDependencies
+        # (https://github.com/yarnpkg/yarn/blob/158d96dce95313d9a00218302631cd263877d164/src/cli/commands/workspaces.js#L49)
+        # but it's not supported in Berry and it's better solved by the "workspace:*" protocol.
+        # If we do want more workspace constraint enforcement, we can define arbitrarily with:
+        #    https://yarnpkg.com/features/constraints

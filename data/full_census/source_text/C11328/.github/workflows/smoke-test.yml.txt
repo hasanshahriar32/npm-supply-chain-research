@@ -1,0 +1,49 @@
+name: Smoke test
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-target:
+    name: Fetch Target From TUF Repo
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: ubuntu-latest
+            shell: bash
+          - os: windows-latest
+            shell: cmd
+    runs-on: ${{ matrix.platform.os }}
+    defaults:
+      run:
+        shell: ${{ matrix.platform.shell }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v3
+      - name: Setup node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v3
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Download target from Sigstore TUF repo
+        run: |
+          npx tuf download-target --metadata-base-url https://sigstore-tuf-root.storage.googleapis.com --unsafe-root-download --target-name trusted_root.json
+          npx tuf download-target --metadata-base-url https://sigstore-tuf-root.storage.googleapis.com --unsafe-root-download --target-name registry.npmjs.org/keys.json
+      - name: Download target from TUF Demo repo
+        run: |
+          npx tuf download-target --metadata-base-url https://jku.github.io/tuf-demo/metadata --target-base-url https://jku.github.io/tuf-demo/targets --unsafe-root-download --target-name rdimitrov/artifact-example.md
+      - name: Download target from GitHub TUF repo
+        run: |
+          npx tuf download-target --metadata-base-url https://tuf-repo.github.com --unsafe-root-download --target-name trusted_root.json

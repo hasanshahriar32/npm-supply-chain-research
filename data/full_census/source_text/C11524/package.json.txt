@@ -1,0 +1,38 @@
+{
+  "name": "monolib",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "yarn lint:ts && yarn fix:js && yarn test",
+    "fix": "yarn fix:js",
+    "build": "tsc --build",
+    "fix:js": "biome check --write .",
+    "fix:js:unsafe": "biome check --write --unsafe .",
+    "lint": "biome check . && tsc --build",
+    "changeset:version:install": "yarn changeset version && corepack yarn install --mode=update-lockfile",
+    "lint:js": "biome check .",
+    "lint:ts": "tsc --build",
+    "pretest": "tsc --build",
+    "publish": "changeset publish",
+    "test": "tsc --build && node --test --enable-source-maps 'packages/*/dist/**/*.test.js' 'template-package/dist/**/*.test.js'",
+    "build:watch": "tsc --build --watch",
+    "test:watch": "node --test --enable-source-maps --watch",
+    "test:build:watch": "npm-run-all build --parallel build:watch test:watch",
+    "version": "changeset version",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@changesets/cli": "^2.31.0",
+    "@types/node": "^25.9.2",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^6.0.3"
+  },
+  "packageManager": "yarn@4.12.0",
+  "engines": {
+    "node": ">= 22",
+    "yarn": "4.2.1"
+  }
+}

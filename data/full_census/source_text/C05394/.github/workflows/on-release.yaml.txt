@@ -1,0 +1,33 @@
+name: Publish
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: Ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
+        registry-url: 'https://registry.npmjs.org'
+    - run: npm ci
+
+    # Publish to npm. Each `npm publish` runs the package's prepack build, which
+    # also produces the dist/jsr published below (rebuild if JSR moves to its own job).
+    - run: npm publish --access public -w @streamparser/json
+    - run: npm publish --access public -w @streamparser/json-node
+    - run: npm publish --access public -w @streamparser/json-whatwg
+
+    # Publish to JSR. The base package must go first so the others resolve it via jsr:.
+    - run: npx --yes jsr publish --allow-dirty
+      working-directory: packages/plainjs/dist/jsr
+    - run: npx --yes jsr publish --allow-dirty
+      working-directory: packages/node/dist/jsr
+    - run: npx --yes jsr publish --allow-dirty
+      working-directory: packages/whatwg/dist/jsr

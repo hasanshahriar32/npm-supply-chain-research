@@ -1,0 +1,55 @@
+name: Continuous Integration
+
+on: pull_request
+
+concurrency:
+  group: ${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      rabbitmq:
+        image: rabbitmq:management
+        env:
+          RABBITMQ_ERLANG_COOKIE: 'SWQOKODSQALRPCLNMEQG'
+          RABBITMQ_DEFAULT_USER: 'rabbitmq'
+          RABBITMQ_DEFAULT_PASS: 'rabbitmq'
+          RABBITMQ_DEFAULT_VHOST: '/'
+        ports:
+          - 5672/tcp
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install mise tools (Node.js, pnpm)
+        uses: jdx/mise-action@v4
+
+      - name: Install dependencies
+        run: pnpm i --prefer-offline
+
+      - name: Build
+        run: pnpm build --concurrency=12
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm lerna:typecheck
+
+      - name: Run unit tests
+        run: pnpm test:ci
+
+      - name: Run Vitest unit tests
+        run: pnpm test:vitest:ci
+
+      - name: Run integration tests
+        run: |
+          pnpm test:ci:integration
+        env:
+          NODE_ENV: ci
+          RABBITMQ_HOST: localhost
+          RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}

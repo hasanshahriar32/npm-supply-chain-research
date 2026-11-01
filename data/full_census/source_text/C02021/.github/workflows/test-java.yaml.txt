@@ -1,0 +1,50 @@
+name: test-java
+
+permissions: {}
+
+on:
+  push:
+    branches:
+      - main
+      - renovate/**
+    paths:
+      - java/**
+      - .github/**
+      - Makefile
+  pull_request:
+    branches:
+      - main
+    paths:
+      - java/**
+      - .github/**
+      - Makefile
+
+jobs:
+  test-java:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+        java: ['21']
+        include:
+          - os: windows-latest
+            java: '21'
+          - os: macos-latest
+            java: '21'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/prepare
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+          cache: 'maven'
+      - run: mvn install
+        working-directory: java
+      - run: mvn test
+        working-directory: java

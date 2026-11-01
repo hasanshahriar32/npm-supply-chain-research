@@ -1,0 +1,133 @@
+{
+  "name": "eslint-plugin-qunit",
+  "version": "8.2.6",
+  "description": "ESLint plugin containing rules useful for QUnit tests.",
+  "exports": {
+    ".": "./dist/index.js",
+    "./configs/*": "./dist/lib/configs/*.js",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "npm-run-all --continue-on-error --aggregate-output --parallel lint:*",
+    "lint:docs": "markdownlint \"**/*.md\"",
+    "lint:eslint-docs": "npm-run-all \"update:eslint-docs -- --check\"",
+    "lint:js": "eslint --cache --report-unused-disable-directives .",
+    "lint:remote": "eslint-remote-tester --config eslint-remote-tester.config.mjs",
+    "lint:types": "tsc --noEmit",
+    "preversion": "npm test",
+    "report-coverage-html": "c8 report --reporter=html --report-dir build/coverage",
+    "release": "release-it",
+    "test": "npm-run-all lint test:unit",
+    "test:unit": "c8 mocha tests/**/*.js",
+    "update:eslint-docs": "eslint-doc-generator"
+  },
+  "files": [
+    "dist/"
+  ],
+  "dependencies": {
+    "@eslint-community/eslint-utils": "^4.4.0"
+  },
+  "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.5.0",
+    "@eslint/js": "^9.29.0",
+    "@release-it/conventional-changelog": "^10.0.5",
+    "@types/eslint": "^9.6.1",
+    "@types/eslint-plugin-markdown": "^2.0.2",
+    "@types/eslint-plugin-mocha": "^10.4.0",
+    "@types/estree": "^1.0.8",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.0.3",
+    "@typescript-eslint/parser": "^8.54.0",
+    "all-contributors-cli": "^6.26.1",
+    "c8": "^10.1.3",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-doc-generator": "^3.0.2",
+    "eslint-plugin-eslint-plugin": "^7.0.0",
+    "eslint-plugin-markdown": "^5.1.0",
+    "eslint-plugin-mocha": "^10.5.0",
+    "eslint-plugin-n": "^17.20.0",
+    "eslint-plugin-prettier": "^5.5.1",
+    "eslint-plugin-qunit": "file:./",
+    "eslint-plugin-unicorn": "^59.0.1",
+    "eslint-remote-tester": "^4.0.1",
+    "globals": "^16.2.0",
+    "markdownlint-cli": "^0.45.0",
+    "mocha": "^11.7.1",
+    "npm-run-all2": "^8.0.4",
+    "outdent": "^0.8.0",
+    "prettier": "^3.1.0",
+    "release-it": "^19.2.4",
+    "typescript": "^5.8.3"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.38.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/platinumazure/eslint-plugin-qunit.git"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin"
+  ],
+  "author": "Kevin Partington <kevin@kernelpanicstudios.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/platinumazure/eslint-plugin-qunit/issues"
+  },
+  "homepage": "https://github.com/platinumazure/eslint-plugin-qunit",
+  "engines": {
+    "node": "^16.0.0 || ^18.0.0 || >=20.0.0"
+  },
+  "release-it": {
+    "github": {
+      "release": true
+    },
+    "hooks": {
+      "after:bump": "npm run build"
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": {
+          "name": "conventionalcommits",
+          "types": [
+            {
+              "type": "feat",
+              "section": "Features"
+            },
+            {
+              "type": "fix",
+              "section": "Bug Fixes"
+            },
+            {
+              "type": "perf",
+              "section": "Performance"
+            },
+            {
+              "type": "docs",
+              "section": "Documentation"
+            },
+            {
+              "type": "chore",
+              "section": "Chores"
+            },
+            {
+              "type": "refactor",
+              "section": "Chores"
+            },
+            {
+              "type": "test",
+              "section": "Chores"
+            }
+          ]
+        },
+        "infile": "CHANGELOG.md"
+      }
+    }
+  }
+}

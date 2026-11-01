@@ -1,0 +1,28 @@
+name: Benchmark
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  benchmarks:
+    name: Benchmarks
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js & pnpm
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@26
+          cache: true
+
+      - name: Setup benchmarks
+        run: node --run bench:setup
+
+      - name: Run benchmarks
+        run: node --run bench

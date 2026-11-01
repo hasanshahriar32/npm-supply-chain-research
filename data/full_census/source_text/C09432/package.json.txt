@@ -1,0 +1,63 @@
+{
+  "name": "sass-resources-loader",
+  "version": "2.2.5",
+  "description": "SASS resources loader for Webpack",
+  "main": "lib/loader.js",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "start": "yarn run lint && yarn run clean && yarn run dev",
+    "dev": "scripts/dev",
+    "build": "scripts/build",
+    "lint": "scripts/lint",
+    "test": "jest",
+    "clean": "scripts/clean",
+    "prerelease": "yarn run clean && yarn run build && yarn run test && yarn run lint",
+    "preversion": "yarn run prerelease",
+    "prepublish": "yarn run prerelease",
+    "release:patch": "scripts/release patch",
+    "release:minor": "scripts/release minor",
+    "release:major": "scripts/release major"
+  },
+  "authors": [
+    "Justin Gordon <justin.gordon@gmail.com> (https://github.com/justin808)",
+    "Alex Fedoseev <alex.fedoseev@gmail.com> (https://github.com/alexfedoseev)"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shakacode/sass-resources-loader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shakacode/sass-resources-loader/issues"
+  },
+  "keywords": [
+    "css",
+    "sass",
+    "webpack"
+  ],
+  "dependencies": {
+    "async": "^3.2.5",
+    "chalk": "^4.1.2",
+    "glob": "^8.1.0",
+    "loader-utils": "^2.0.4"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.19.3",
+    "@babel/core": "^7.19.3",
+    "@babel/preset-env": "^7.19.3",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.6.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-shakacode": "^17.0.0",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-jsx-a11y": "^6.6.1",
+    "eslint-plugin-react": "^7.31.8",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "jest": "^26.2.2",
+    "raw-loader": "^4.0.2",
+    "webpack": "^5.61.0",
+    "webpack-merge": "^5.8.0"
+  }
+}

@@ -1,0 +1,135 @@
+name: Node CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '!*'
+  pull_request:
+
+jobs:
+  build:
+    name: Test Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [20.x, 22.x, 24.x]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: package.json
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Tests
+        run: pnpm test
+
+  lint:
+    name: Lint
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: package.json
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lint
+        run: pnpm lint
+        id: lint
+        continue-on-error: true
+
+      - name: Run Format
+        run: pnpm format:check
+        id: format
+        continue-on-error: true
+
+      - name: Run Engines Check
+        run: node scripts/check-deps.mjs engines
+        id: engines
+        continue-on-error: true
+
+      - name: Run Licenses Check
+        run: node scripts/check-deps.mjs licenses
+        id: licenses
+        continue-on-error: true
+
+      - name: Check Results
+        run: |
+          declare -A OUTCOMES=(
+            [lint]="${{ steps.lint.outcome }}"
+            [format]="${{ steps.format.outcome }}"
+            [engines]="${{ steps.engines.outcome }}"
+            [licenses]="${{ steps.licenses.outcome }}"
+          )
+          STATUS=0
+          for STEP in "${!OUTCOMES[@]}"; do
+            OUTCOME="${OUTCOMES[$STEP]}"
+            echo "$STEP: $OUTCOME"
+            if [ "$OUTCOME" != "success" ]; then
+              STATUS=1
+            fi
+          done
+          exit $STATUS
+
+  e2e:
+    name: E2E
+
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'push' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]')
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: package.json
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run E2E Tests
+        run: pnpm test-e2e
+        env:
+          NORDVPN_USERNAME: ${{ secrets.NORDVPN_USERNAME }}
+          NORDVPN_PASSWORD: ${{ secrets.NORDVPN_PASSWORD }}

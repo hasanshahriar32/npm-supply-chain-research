@@ -1,0 +1,41 @@
+{
+  "name": "stablelib",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Code library for TypeScript/JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "build": "lerna bootstrap --no-ci && lerna run build",
+    "test": "lerna run test",
+    "bench": "lerna run bench",
+    "lint": "eslint packages/**/*.ts",
+    "lintfix": "eslint packages/**/*.ts --fix",
+    "publish-all": "lerna publish",
+    "docs": "typedoc"
+  },
+  "author": "Dmitry Chestnykh",
+  "license": "MIT",
+  "browser": {
+    "crypto": false,
+    "buffer": false
+  },
+  "devDependencies": {
+    "@eslint/js": "^8.56.0",
+    "@lerna/legacy-package-management": "^8.1.5",
+    "@types/eslint__js": "^8.42.3",
+    "@types/node": "^20.14.9",
+    "eslint": "^8.56.0",
+    "globals": "^15.6.0",
+    "lerna": "^8.1.5",
+    "string-width": "4.2.3",
+    "strip-ansi": "6.0.0",
+    "typedoc": "^0.26.3",
+    "typescript": "^5.5.2",
+    "typescript-eslint": "^7.14.1",
+    "vitest": "^1.6.0"
+  },
+  "overrides": {
+    "string-width": "4.2.3",
+    "strip-ansi": "6.0.0"
+  }
+}

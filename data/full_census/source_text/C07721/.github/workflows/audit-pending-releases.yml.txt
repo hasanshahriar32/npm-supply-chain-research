@@ -1,0 +1,34 @@
+on:
+  push:
+    branches:
+      - 'release-please**'
+
+env:
+  CORE_PACKAGE: core
+
+name: Audit Pending Releases
+jobs:
+  npm-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.ref }}
+
+      # if this is an SDK release, make sure there are no pending releases for @openfeature/core
+      - name: Check for Pending Dependency PRs
+        if: ${{ !endsWith(github.ref_name, env.CORE_PACKAGE) }}
+        run: |
+          if [ $(gh pr list --search '"release ${{ env.CORE_PACKAGE }}" in:title' | wc -l) -gt 0 ]; \
+            then echo "Pending @openfeaure/${{ env.CORE_PACKAGE }} release. Please release @openfeaure/${{ env.CORE_PACKAGE }} first!" && exit 1; \
+            else echo "No pending @openfeaure/${{ env.CORE_PACKAGE }} releases"; \
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'

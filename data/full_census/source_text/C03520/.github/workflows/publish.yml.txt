@@ -1,0 +1,27 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          registry-url: https://registry.npmjs.org
+      # The bundled npm on current LTS already supports OIDC trusted publishing
+      # (>= 11.5.1). Upgrading npm in place ("npm install -g npm@latest") prunes
+      # sigstore from its own tree and breaks provenance generation, so don't.
+      - run: pnpm install
+      - run: pnpm build
+      - run: npm publish --access public
+        working-directory: dist

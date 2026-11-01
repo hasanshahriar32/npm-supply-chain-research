@@ -1,0 +1,56 @@
+name: React Doctor
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  statuses: write
+
+concurrency:
+  group: react-doctor-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# First-party PRs can read the Turbo cache, but only trusted push runs can write it.
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  TURBO_CACHE: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && 'local:rw,remote:r' || github.event_name == 'pull_request' && 'local:rw' || 'local:rw,remote:rw' }}
+
+jobs:
+  react-doctor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22.18.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --prefer-offline
+
+      # Build the workspace CLI and point the local action at it (version:
+      # ./packages/react-doctor) so this job dogfoods the PR's own action AND
+      # CLI, not the published npm release.
+      - run: pnpm --filter react-doctor... build
+
+      - uses: ./
+        with:
+          blocking: none
+          node-version: 22.18.0
+          version: ./packages/react-doctor
+          # This repo dogfoods its own action; opt out of the missing-baseline
+          # warning so self-scans don't nag about their own CI setup.
+          silence-missing-baseline-warning: true

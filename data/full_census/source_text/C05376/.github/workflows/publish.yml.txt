@@ -1,0 +1,51 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - '[0-9]*.*.*'
+      - '@jspm/*@*'
+
+jobs:
+  publish:
+    name: Publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Setup Chomp
+        uses: guybedford/chomp-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: release
+        run: node .github/release.mjs info "$GITHUB_REF_NAME" | tee -a "$GITHUB_OUTPUT"
+      - run: npm install
+      - run: npm run -ws build
+      - run: npm publish --access public
+        if: steps.release.outputs.published == ''
+        working-directory: ${{ steps.release.outputs.dir }}
+      # The merged release PR body is the curated changelog; manual bump commits fall back to the package history
+      - name: Release notes
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" \
+            --jq "[.[] | select(.title == \"$GITHUB_REF_NAME\")][0].body // empty" | sed -e '1{/^Merging tags/d}' -e '/./,$!d' > notes.md
+          [ -s notes.md ] || node .github/release.mjs notes "$NAME" > notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md \
+            --latest=${{ steps.release.outputs.name == 'jspm' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ steps.release.outputs.name }}
+      - name: Redeploy sites
+        if: steps.release.outputs.published == ''
+        run: gh workflow run deploy.yml -R jspm/jspm-sites -f package="$NAME" -f version="$VERSION"
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NAME: ${{ steps.release.outputs.name }}
+          VERSION: ${{ steps.release.outputs.version }}

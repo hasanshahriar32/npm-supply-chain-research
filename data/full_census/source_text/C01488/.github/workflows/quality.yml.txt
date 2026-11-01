@@ -1,0 +1,79 @@
+name: Quality
+"on":
+  # No `pull_request:` — pr.yml is the entry point there and calls this workflow, so
+  # triggering on the event too would run every check twice. (RSRMID-3047)
+  workflow_call:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Language-agnostic on purpose — it checks the things every repository has regardless of
+# what it is written in: Markdown/JSON/YAML formatting, workflow syntax, and shell
+# scripts. The language-specific analysers live in the shared workflow that pr.yml calls
+# alongside this one. A repository wants both.
+jobs:
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version:` input, deliberately — the action then resolves the version from
+      # `devEngines.packageManager` in package.json, so CI runs a pnpm inside the range
+      # this repository declares rather than whatever pnpm released most recently.
+      # Passing a version here as well is a hard error: the action refuses two
+      # disagreeing declarations. (RSRMID-3008)
+      #
+      # It must come before setup-node, which needs pnpm on PATH to resolve `cache: pnpm`.
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      # Installing rather than `npx --yes prettier@3` — that fetched whatever prettier 3
+      # happened to be newest, so CI could disagree with every developer's checkout over
+      # formatting nobody had changed. The lockfile pins one version for both. It also
+      # takes npm off the CI path entirely, which is the point: we install with pnpm.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      # Gated, not advisory: unformatted Markdown should be a red build rather than a
+      # local nag that everyone learns to ignore.
+      - name: Check formatting
+        run: pnpm prettier
+
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Actionlint
+        uses: reviewdog/action-actionlint@v1
+        with:
+          reporter: github-pr-check
+          fail_level: error
+
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # `git ls-files` rather than `find`, so this lints only *tracked* files and needs
+      # no prune list. The generated scripts that are not ours to lint live in .husky/_/
+      # (written by husky on install; its husky.sh has no shebang, so it fails SC2148)
+      # and node_modules/ — both untracked, so there is nothing to forget to exclude when
+      # a third one appears.
+      #
+      # .husky/pre-commit is named explicitly because it has no `.sh` extension.
+      # -z | xargs -0 survives paths with spaces, and `--no-run-if-empty` makes
+      # "this repository has no other shell scripts" a pass instead of a shellcheck
+      # invoked with no arguments (which exits 3 with a usage dump).
+      - name: ShellCheck
+        run: |
+          git ls-files -z '*.sh' .husky/pre-commit \
+            | xargs -0 --no-run-if-empty shellcheck --severity=warning
+          echo "ShellCheck completed."

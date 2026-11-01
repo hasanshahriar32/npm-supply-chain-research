@@ -1,0 +1,94 @@
+name: Cockroach Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  merge_group:
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version: [24]
+        cockroach_version: [23.2.28, 24.3.23, 25.3.5]
+      fail-fast: false
+    timeout-minutes: 10
+
+    name: 'Cockroach Test: cockroach-${{ matrix.cockroach_version }}, node-${{ matrix.node_version }}, ubuntu-latest'
+    steps:
+      - name: Init Cockroach
+        env:
+          COCKROACHDB_DOCKER_TAG: cockroachdb/cockroach:v${{ matrix.cockroach_version }}
+          DATABASE_URL: postgresql://root@localhost:26257/integration_test
+        run: |
+          docker pull $COCKROACHDB_DOCKER_TAG
+          docker run -d --name roach --hostname roach -p 26257:26257 -p 8080:8080 $COCKROACHDB_DOCKER_TAG start-single-node --insecure
+          sudo apt update && sudo apt install wait-for-it -y
+          wait-for-it -h localhost -p 26257
+          docker exec roach bash -c "./cockroach sql --execute=\"CREATE DATABASE integration_test;\" --insecure"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set node version to ${{ matrix.node_version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node_version }}
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      # CockroachDB v25 defaults `autocommit_before_ddl` to `on`, which commits DDL out of
+      # the surrounding transaction - including the read-only one a dry run relies on. This
+      # default already flipped between minor versions once, so it is guarded per version.
+      - name: Dry Run Test
+        run: |
+          pnpm run migrate up -m test/dry-run-migrations --dry-run
+          tables=$(docker exec roach ./cockroach sql --insecure --database=integration_test --format=csv --execute="SHOW TABLES")
+          echo "$tables"
+          if echo "$tables" | grep -qE 'dry_run_table|pgmigrations'; then
+            echo "::error::--dry-run created objects in the database"
+            exit 1
+          fi
+        env:
+          DATABASE_URL: postgresql://root@localhost:26257/integration_test
+
+      - name: Integration Test
+        run: pnpm run migrate up -m test/cockroach --no-lock && pnpm run migrate down 0 -m test/cockroach --no-lock
+        env:
+          DATABASE_URL: postgresql://root@localhost:26257/integration_test
+
+      - name: Shared Transaction Test
+        run: pnpm run test:integration --run test/integration/shared-transactions-it.spec.ts
+        env:
+          COCKROACH_URL: postgresql://root@localhost:26257/integration_test
+
+      # `down 0` above left the migrations table empty. With another schema holding a history,
+      # the next run has to find that table - and read it - then refuse, until it is pointed
+      # at a schema on purpose.
+      - name: Migration History Test
+        run: |
+          docker exec roach ./cockroach sql --insecure --database=integration_test --execute="CREATE SCHEMA other; CREATE TABLE other.pgmigrations (id SERIAL PRIMARY KEY, name varchar(255) NOT NULL, run_on timestamp NOT NULL); INSERT INTO other.pgmigrations (name, run_on) VALUES ('001_other_app', now());"
+          if pnpm run migrate up -m test/cockroach --no-lock > refused.log 2>&1; then
+            cat refused.log
+            echo "::error::a run with an empty migrations table ignored the history in another schema"
+            exit 1
+          fi
+          cat refused.log
+          grep -q '"other"."pgmigrations" already records migrations' refused.log
+          pnpm run migrate up -m test/cockroach --no-lock --migrations-schema public
+        env:
+          DATABASE_URL: postgresql://root@localhost:26257/integration_test

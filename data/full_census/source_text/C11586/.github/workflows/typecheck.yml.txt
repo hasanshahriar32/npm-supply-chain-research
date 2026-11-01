@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  type-check:
+    name: TypeScript ${{ matrix.typescript }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        typescript:
+          [
+            "4.5.5",
+            "4.6.4",
+            "4.7.4",
+            "4.8.4",
+            "4.9.5",
+            "5.0.4",
+            "5.1.6",
+            "5.2.2",
+            "5.3.3",
+            "5.4.5",
+            "5.5.4",
+            "5.6.3",
+            "5.7.3",
+            "5.8.3",
+            "5.9.2",
+            "6.0.3"
+          ]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: npm --version
+      - run: node --version
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+          key: ${{ runner.OS }}-${{ hashFiles('.nvmrc') }}-npm-cache-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.OS }}-${{ hashFiles('.nvmrc') }}-npm-cache-
+
+      - run: npm ci
+      - run: npm install typescript@${{ matrix.typescript }}
+      - run: npm run setTsVersion
+      - run: npm run test

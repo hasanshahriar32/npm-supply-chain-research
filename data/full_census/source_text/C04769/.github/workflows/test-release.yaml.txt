@@ -1,0 +1,62 @@
+name: Test Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-matrix:
+    uses: ./.github/workflows/_build-matrix.yaml
+
+  publish-npm-binaries:
+    name: (Test) Publish npm binaries
+    needs: build-matrix
+    runs-on: ${{ matrix.build.OS }}
+    strategy:
+      fail-fast: false
+      matrix:
+        build: ${{ fromJson(needs.build-matrix.outputs.build_matrix) }}
+    steps:
+      - name: Debug workflow values
+        shell: bash
+        run: |
+          echo "matrix.build.NAME   : ${{ matrix.build.NAME }}"
+          echo "matrix.build.OS     : ${{ matrix.build.OS }}"
+          echo "matrix.build.TARGET : ${{ matrix.build.TARGET }}"
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Node
+        uses: ./.github/actions/setup-node
+      - name: Set up Rust build
+        uses: ./.github/actions/setup-rust-build
+        with:
+          target: ${{ matrix.build.TARGET }}
+          cache: "false"
+      - name: Build Rust binary
+        uses: ./.github/actions/build-rust-binary
+        with:
+          target: ${{ matrix.build.TARGET }}
+      - name: (Test) Publish rust binary package to npm
+        shell: bash
+        run: |
+          just --dotenv-filename .env.${{ matrix.build.NAME }} create-npm-binary-package
+
+  publish-npm-base:
+    name: (Test) Publish npm package
+    needs: publish-npm-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Set up Node
+        uses: ./.github/actions/setup-node
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: 1.35.0
+      - name: (Test) Publish the package
+        shell: bash
+        run: |
+          npm install
+          just --dotenv-filename .env.linux-x64-glibc create-npm-root-package

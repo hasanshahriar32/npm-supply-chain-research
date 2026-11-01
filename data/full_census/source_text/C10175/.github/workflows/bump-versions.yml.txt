@@ -1,0 +1,46 @@
+name: Bump versions
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: The new version
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The new version
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  bump-version:
+    runs-on: sonar-xs
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Update version in pom.xml
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          version="${VERSION}"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            version="${version}.0"
+          fi
+          snapshot_version="${version}-SNAPSHOT"
+          # Update the revision property in root pom.xml to the new snapshot version
+          sed -i "s/<revision>.*-SNAPSHOT<\/revision>/<revision>${snapshot_version}<\/revision>/" pom.xml
+      - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          author: ${{ github.actor }} <${{ github.actor }}>
+          commit-message: Prepare next development iteration
+          title: Prepare next development iteration
+          branch: bot/bump-project-version
+          branch-suffix: timestamp
+          base: master
+          reviewers: ${{ github.actor }}

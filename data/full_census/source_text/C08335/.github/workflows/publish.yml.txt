@@ -1,0 +1,37 @@
+name: Publish (latest)
+run-name: Publish ${{ github.event.release.tag_name }} to latest
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    permissions:
+      # required for publishing to npm with --provenance
+      # see https://docs.npmjs.com/generating-provenance-statements
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          registry-url: 'https://registry.npmjs.org'
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Update npm to support Trusted Publishers
+        run: npm install -g npm@^11.5
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Version
+        run: pnpm version --allow-same-version --no-git-tag-version ${{ github.event.release.tag_name }}
+
+      - name: Publish
+        run: pnpm publish --access public --provenance --tag latest --no-git-checks

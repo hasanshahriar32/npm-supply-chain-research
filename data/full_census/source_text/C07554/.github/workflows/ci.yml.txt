@@ -1,0 +1,64 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          cache: true
+
+      - run: pnpm dev:prepare
+
+      - name: 🔠 Lint project
+        run: pnpm lint
+
+      - name: ✂️ Knip project
+        run: pnpm test:knip
+
+      - name: ⚙️ Check package engines
+        run: pnpm test:engines
+
+      - name: 💪 Check published types (example)
+        run: pnpm test:attw
+
+      - name: 📦 Check `package.json` (example)
+        run: pnpm test:publint
+
+  ci:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@fbda4c85fc2e1e08721cd8763afea8f48d60f024 # v3.0.0
+        with:
+          runtime: node@24.21.0
+          cache: true
+
+      - run: pnpm dev:prepare
+
+      - name: 🧪 Test project
+        run: pnpm test
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 🛠 Build project (example)
+        run: pnpm example:build
+
+      - name: 💪 Type check
+        run: pnpm test:types

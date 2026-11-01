@@ -1,0 +1,32 @@
+{
+  "name": "rsbuild-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm --workspace-concurrency=10 --filter \"./packages/*\" --filter \"./scripts/*\" run build",
+    "check": "rs check --type-check",
+    "check-spell": "pnpx cspell",
+    "doc": "cd website && node --run dev",
+    "e2e": "cd ./e2e && pnpm e2e",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "prebundle": "pnpm --parallel --filter \"./packages/*\" run prebundle",
+    "prepare": "rs hooks && node --run prebundle",
+    "test": "pnpm --parallel --filter \"./packages/*\" test"
+  },
+  "devDependencies": {
+    "@scripts/config": "workspace:*",
+    "@scripts/test-helper": "workspace:*",
+    "@types/node": "catalog:",
+    "cross-env": "catalog:",
+    "cspell-ban-words": "catalog:",
+    "heading-case": "catalog:",
+    "rstack": "catalog:",
+    "typescript": "catalog:"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.18.0",
+    "pnpm": ">=12.6.0"
+  }
+}

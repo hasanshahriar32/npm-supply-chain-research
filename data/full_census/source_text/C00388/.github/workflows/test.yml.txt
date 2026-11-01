@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['20', '22']
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+    - name: Cache Node Modules
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      with:
+        path: '**/node_modules'
+        key: ${{ runner.os }}-node-${{ matrix.node-version }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+    - name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Set up SSH for deploy key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DOM_MUTATOR_ACCESS_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+      continue-on-error: true # forked repos don't have access, and this is only for experiment-tag
+      shell: bash
+
+    - name: Clear yarn cache
+      run: yarn cache clean
+
+    - name: Install
+      run: yarn install --frozen-lockfile --force
+
+    - name: Build
+      run: yarn build
+
+    - name: Test
+      run: yarn test

@@ -1,0 +1,86 @@
+{
+  "name": "ember-template-recast",
+  "version": "6.1.5",
+  "description": "Non-destructive template transformer.",
+  "keywords": [
+    "codemod",
+    "ember",
+    "glimmer",
+    "handlebars",
+    "recast",
+    "templates"
+  ],
+  "homepage": "https://github.com/ember-template-lint/ember-template-recast",
+  "bugs": "https://github.com/ember-template-lint/ember-template-recast/issues",
+  "repository": "github:ember-template-lint/ember-template-recast",
+  "license": "MIT",
+  "author": "Robert Jackson <me@rwjblue.com>",
+  "main": "lib/index.js",
+  "bin": "lib/bin.js",
+  "files": [
+    "lib/",
+    "!lib/**/*.test.*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "npm-run-all lint:*",
+    "lint:files": "eslint .",
+    "lint:tsc": "tsc --noEmit",
+    "perf:benchmark": "node scripts/benchmark.mjs",
+    "prepare": "tsc",
+    "test": "npm-run-all lint test:*",
+    "test:jest": "jest"
+  },
+  "dependencies": {
+    "@glimmer/syntax": ">= 0.84.3",
+    "@types/tmp": "^0.2.6",
+    "async-promise-queue": "^1.0.5",
+    "colors": "^1.4.0",
+    "commander": "^8.3.0",
+    "globby": "^11.0.3",
+    "ora": "^5.4.0",
+    "slash": "^3.0.0",
+    "tmp": "^0.2.1",
+    "workerpool": "^6.4.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^27.4.0",
+    "@types/workerpool": "^6.1.1",
+    "@glimmer/reference": "^0.84.3",
+    "@glimmer/validator": "^0.84.3",
+    "@typescript-eslint/eslint-plugin": "^5.9.1",
+    "@typescript-eslint/parser": "^5.9.1",
+    "benchmark": "^2.1.4",
+    "broccoli-test-helper": "^2.0.0",
+    "eslint": "^8.36.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "execa": "^5.1.1",
+    "jest": "^26.6.3",
+    "npm-run-all": "^4.1.5",
+    "outdent": "^0.8.0",
+    "prettier": "^2.5.1",
+    "release-plan": "^0.16.0",
+    "ts-jest": "^26.5.6",
+    "typescript": "~4.9.5"
+  },
+  "packageManager": "pnpm@10.9.0",
+  "engines": {
+    "node": ">= 18.12"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "pnpm": {
+    "overrides": {
+      "@glimmer/reference": "0.84.3",
+      "@glimmer/syntax": "0.84.3",
+      "@glimmer/validator": "0.84.3"
+    },
+    "override-nodes": [
+      "@glimmer/* pinned for typescript reasons",
+      "TODO: We should test against a range of @glimmer/syntaxes -- or bump to 1.0"
+    ]
+  }
+}

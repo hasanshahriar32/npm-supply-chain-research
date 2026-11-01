@@ -1,0 +1,52 @@
+name: Update documentation after merge
+
+on:
+  push:
+    branches:
+      - 4.x
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update-documentation:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: npm i --force
+
+      - name: Configure git user
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Update contributor faces
+        run: |
+          npm run update-contributor-faces
+          git add README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "DOC: Update contributor faces" --no-verify
+          fi
+
+      - name: Generate and update documentation
+        run: |
+          npm run def && npm run docs
+          git add docs/**/*.md
+          if ! git diff --cached --quiet; then
+            git commit -m "DOC: Autogenerate and update documentation" --no-verify
+          fi
+
+      - name: Push to the repo
+        run: git push --no-verify

@@ -1,0 +1,38 @@
+name: Build
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22, 24]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Reads the pnpm version from `packageManager` in package.json.
+      - name: Install pnpm and Node.js ${{ matrix.node-version }}
+        uses: pnpm/setup@703c52620218391530e48b9e8870d5c0082e1b9b # v2.1.0
+        with:
+          runtime: node@${{ matrix.node-version }}
+          cache: true
+          install: false
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm fmt:check
+      - run: pnpm build
+      - run: pnpm check:package
+      - run: pnpm test
+      - run: pnpm test:smoke
+
+      # The demo consumes lib/ through the workspace link, so its build is a consumer check.
+      - run: pnpm --filter rd3t-demo typecheck
+      - run: pnpm --filter rd3t-demo test
+      - run: pnpm --filter rd3t-demo build

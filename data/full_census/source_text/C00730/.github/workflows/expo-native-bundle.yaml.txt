@@ -1,0 +1,95 @@
+name: Expo Native Bundle
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/expo-native-bundle.yaml
+      - examples/with-expo/**
+      - package.json
+      - packages/ai-sdk/**
+      - packages/assistant-stream/**
+      - packages/cloud/**
+      - packages/core/**
+      - packages/react-native/**
+      - packages/store/**
+      - packages/tap/**
+      - packages/ui/**
+      - "!packages/ui/src/components/react/**"
+      - "!packages/ui/src/components/vue/**"
+      - packages/x-buildutils/**
+      - packages/x-generative-compiler/**
+      - "!packages/**/*.test.ts"
+      - "!packages/**/*.test.tsx"
+      - packages/metro/**
+      - packages/ui/src/components/react-native/**
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/expo-native-bundle.yaml
+      - examples/with-expo/**
+      - package.json
+      - packages/ai-sdk/**
+      - packages/assistant-stream/**
+      - packages/cloud/**
+      - packages/core/**
+      - packages/react-native/**
+      - packages/store/**
+      - packages/tap/**
+      - packages/ui/**
+      - "!packages/ui/src/components/react/**"
+      - "!packages/ui/src/components/vue/**"
+      - packages/x-buildutils/**
+      - packages/x-generative-compiler/**
+      - "!packages/**/*.test.ts"
+      - "!packages/**/*.test.tsx"
+      - packages/metro/**
+      - packages/ui/src/components/react-native/**
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - turbo.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    name: Bundle (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - android
+          - ios
+    steps:
+      - name: Checkout code repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm and node.js
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # ratchet:pnpm/setup@v3.1.2
+        with:
+          cache: false
+          install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter . --filter="@assistant-ui/react-devtools..." --filter="with-expo..."
+
+      - name: Build workspace packages
+        env:
+          TURBO_TOKEN: ${{ github.event_name != 'pull_request' && secrets.TURBO_TOKEN || '' }}
+          TURBO_TEAM: ${{ github.event_name != 'pull_request' && secrets.TURBO_TEAM || '' }}
+        run: pnpm turbo build --filter=@assistant-ui/react-native --filter=@assistant-ui/ai-sdk --filter=@assistant-ui/metro
+
+      - name: Bundle Expo for ${{ matrix.platform }}
+        working-directory: examples/with-expo
+        run: pnpm exec expo export --platform ${{ matrix.platform }} --output-dir dist-${{ matrix.platform }}

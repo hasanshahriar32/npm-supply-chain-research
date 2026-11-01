@@ -1,0 +1,104 @@
+name: 🧪 Test and 🚀 Release
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+  pull_request: {}
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  test-and-release:
+    name: 🧪 Test and 🚀 Release
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/beta' }}
+
+    permissions:
+      # Required for concurrency cancel-in-progress on PR branches
+      actions: write
+      # semantic-release: push version commits/tags and create GitHub releases
+      contents: write
+      issues: write
+      pull-requests: write
+      # Necessary for npm publish --provenance
+      # See https://docs.npmjs.com/generating-provenance-statements#example-github-actions-workflow
+      id-token: write
+      packages: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: "package.json"
+
+      - name: 🗄 Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: "**/node_modules"
+          key: node_modules-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+
+      - name: 🗄 Cache .eslintcache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: "**/.eslintcache"
+          # Unique key per commit so the cache is refreshed when code changes,
+          # while restore-keys reuses the most recent previous cache as a base.
+          key: eslintcache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ github.sha }}
+          restore-keys: |
+            eslintcache-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
+            eslintcache-${{ runner.os }}-
+
+      - name: 🔍 Install dependencies
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        run: |
+          npm ci --ignore-scripts --prefer-offline --no-audit --strict-peer-deps
+
+      # `.npmrc` sets `ignore-scripts=true`. In case there is
+      # a build script, it must now get executed explicitly.
+      - name: 📦 Build
+        run: npm run build --if-present
+
+      - name: 🏗 Build
+        run: |
+          npm run prepare:build
+
+      - name: 🧪 Run tests
+        env:
+          CI: true
+        run: |
+          npm test
+
+      - name: ⬆️ Upload coverage report
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🚀 Release preview
+        if: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/beta' }}
+        # Call to npm publish --dry-run is currently necessary, see https://github.com/stackblitz-labs/pkg.pr.new/issues/320
+        run: |
+          npm publish --dry-run --tag test-release
+          npx pkg-pr-new publish
+
+      - name: 🚀 Release on npm and jsr
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Fetch the last 30 commits to ensure we have a complete CHANGELOG.md
+        # See https://github.com/peerigon/template-public-package/issues/2
+        run: |
+          git fetch --depth=30
+          npm run release

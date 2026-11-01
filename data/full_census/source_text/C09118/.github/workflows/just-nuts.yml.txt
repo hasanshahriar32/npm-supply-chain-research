@@ -1,0 +1,152 @@
+name: just-nuts
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel-or-version:
+        required: true
+        description: Version or channel of the CLI to test against (nightly, latest-rc, 2.1.1)
+        type: string
+      devhub-environment:
+        required: false
+        description: 'GitHub Environment whose secrets override the default TESTKIT_* credentials. Leave empty to use org-level secrets.'
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      channel-or-version:
+        required: true
+        description: Version or channel of the CLI to test against (nightly, latest-rc, 2.1.1)
+        type: string
+      devhub-environment:
+        required: false
+        description: 'GitHub Environment whose secrets override the default TESTKIT_* credentials. Leave empty to use org-level secrets.'
+        type: string
+        default: ''
+
+jobs:
+  # plugins that use yarn:test:nuts
+  basic:
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        repository:
+          - salesforcecli/plugin-agent
+          - salesforcecli/plugin-auth
+          - salesforcecli/plugin-apex
+          - salesforcecli/plugin-api
+          - salesforcecli/plugin-limits
+          - salesforcecli/plugin-org
+          - salesforcecli/plugin-schema
+          - salesforcecli/plugin-settings
+          - salesforcecli/plugin-sobject
+          - salesforcecli/plugin-templates
+          - salesforcecli/plugin-user
+          - salesforcecli/plugin-trust
+    uses: ./.github/workflows/just-nut.yml
+    with:
+      repository: ${{ matrix.repository }}
+      channel-or-version: ${{ inputs.channel-or-version }}
+      os: ${{ matrix.os }}
+      devhub-environment: ${{ inputs.devhub-environment }}
+    secrets: inherit
+
+  jit:
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        repository:
+          - salesforcecli/plugin-custom-metadata
+          - salesforcecli/plugin-community
+          - salesforcecli/plugin-dev
+          - salesforcecli/plugin-lightning-dev
+          - salesforcecli/plugin-signups
+          - salesforcecli/plugin-ui-bundle-dev
+          # - salesforce/plugin-devops-center
+          # - salesforce/sfdx-plugin-lwc-test
+        exclude:
+          - os: windows-latest
+            repository: salesforcecli/plugin-dev # These are flakey on Windows
+    uses: ./.github/workflows/just-nut.yml
+    with:
+      repository: ${{ matrix.repository }}
+      channel-or-version: ${{ inputs.channel-or-version }}
+      os: ${{ matrix.os }}
+      jit: true
+      devhub-environment: ${{ inputs.devhub-environment }}
+    secrets: inherit
+
+  packaging:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        command:
+          - yarn test:nuts:package
+          # disabled until W-15837641 is fixed
+          # - yarn test:nuts:package1
+    uses: ./.github/workflows/just-nut.yml
+    with:
+      repository: salesforcecli/plugin-packaging
+      channel-or-version: ${{ inputs.channel-or-version }}
+      os: ${{ matrix.os }}
+      command: ${{ matrix.command }}
+      devhub-environment: ${{ inputs.devhub-environment }}
+    secrets: inherit
+
+  deploy-retrieve:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        command:
+          - yarn test:nuts:convert
+          - yarn test:nuts:deb
+          - yarn test:nuts:delete
+          - yarn test:nuts:deploy:metadata:manifest
+          - yarn test:nuts:deploy:metadata:metadata
+          - yarn test:nuts:deploy:metadata:metadata-dir
+          - yarn test:nuts:deploy:metadata:source-dir
+          - yarn test:nuts:deploy:metadata:test-level
+          - yarn test:nuts:destructive
+          - yarn test:nuts:manifest
+          - yarn test:nuts:retrieve
+          - yarn test:nuts:specialTypes
+          - yarn test:nuts:static
+          - yarn test:nuts:tracking
+    uses: ./.github/workflows/just-nut.yml
+    with:
+      repository: salesforcecli/plugin-deploy-retrieve
+      channel-or-version: ${{ inputs.channel-or-version }}
+      os: ${{ matrix.os }}
+      command: ${{ matrix.command }}
+      devhub-environment: ${{ inputs.devhub-environment }}
+    secrets: inherit
+
+  data:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        command:
+          - yarn test:nuts:bulk:import
+          - yarn test:nuts:bulk:export
+          - yarn test:nuts:bulk:update
+          - yarn test:nuts:data:tree
+          - yarn test:nuts:data:query
+          - yarn test:nuts:data:record
+          - yarn test:nuts:data:search
+          - yarn test:nuts:data:create
+          - yarn test:nuts:data:bulk-upsert-delete
+    uses: ./.github/workflows/just-nut.yml
+    with:
+      repository: salesforcecli/plugin-data
+      channel-or-version: ${{ inputs.channel-or-version }}
+      os: ${{ matrix.os }}
+      command: ${{ matrix.command }}
+      devhub-environment: ${{ inputs.devhub-environment }}
+    secrets: inherit

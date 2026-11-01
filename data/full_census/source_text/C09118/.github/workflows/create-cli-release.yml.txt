@@ -1,0 +1,186 @@
+name: create-cli-release
+on:
+  release:
+    # This works for both releases and prereleases https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#release
+    types: [published]
+
+jobs:
+  get-channel:
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.release-channel.outputs.group1 }}
+      s3-channel: ${{ steps.s3-release-channel.outputs.s3-channel }}
+    steps:
+      - name: Get release channel Github release
+        id: release-channel
+        uses: kaisugi/action-regex-match@45cc5bacf016a4c0d2c3c9d0f8b7c2f1b79687b8
+        with:
+          text: ${{ github.event.release.body }}
+          # https://regex101.com/r/tYAJ8L/1
+          regex: '!! Release as ([a-z-]+) !!'
+
+      - name: Confirm regex channel match
+        if: ${{ !steps.release-channel.outputs.group1 }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Release channel was not found in release body. Exiting')
+
+      - name: Prevent legacy channel
+        if: ${{ steps.release-channel.outputs.group1 == 'legacy' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Do not publish to the "legacy" channel! It is still bundled with "sfdx@v7", which is permanetly archived.')
+
+      - name: Get release channel for s3
+        id: s3-release-channel
+        run: |
+          CHANNEL="$STEPS_RELEASE_CHANNEL_GROUP1"
+          S3_CHANNEL=${CHANNEL/latest/stable}
+          echo "s3-channel=$S3_CHANNEL" >> "$GITHUB_OUTPUT"
+        env:
+          STEPS_RELEASE_CHANNEL_GROUP1: ${{ steps.release-channel.outputs.group1 }}
+
+      - name: Channel Notice
+        run: |
+          echo "::notice title=Channel::Channel found in Github Release: $STEPS_RELEASE_CHANNEL_GROUP1"
+          echo "::notice title=S3 Channel::Channel that will be used in S3: $STEPS_S3_RELEASE_CHANNEL_S3_CHANNEL"
+        env:
+          STEPS_RELEASE_CHANNEL_GROUP1: ${{ steps.release-channel.outputs.group1 }}
+          STEPS_S3_RELEASE_CHANNEL_S3_CHANNEL: ${{ steps.s3-release-channel.outputs.s3-channel }}
+
+  npm-release:
+    permissions:
+      id-token: write
+      contents: read
+    uses: salesforcecli/github-workflows/.github/workflows/npmPublish.yml@main
+    needs: [get-channel]
+    secrets: inherit
+    with:
+      trustedPublishing: true
+      tag: ${{ needs.get-channel.outputs.channel }}
+      githubTag: ${{ github.event.release.tag_name }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+
+  pack-verify-upload-tarballs:
+    needs: [get-channel, npm-release]
+    uses: salesforcecli/github-workflows/.github/workflows/tarballs.yml@main
+    with:
+      upload: true
+      version: ${{ github.event.release.tag_name }}
+      channel: ${{ needs.get-channel.outputs.s3-channel }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+    secrets: inherit
+
+  archives-verify:
+    # Skip archive-verify on prereleases
+    if: ${{ contains(fromJSON('["latest", "latest-rc", "nightly"]'), needs.get-channel.outputs.channel) }}
+    runs-on: ubuntu-latest
+    needs: [get-channel, pack-verify-upload-tarballs]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+          cache: npm
+
+      - name: Install plugin-release-management
+        run: npm install -g @salesforce/plugin-release-management --omit=dev
+
+      # Retry several times because the S3 cache can cause failures
+      - name: Version inspect (with retries)
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: 5
+          retry_wait_seconds: 120
+          command: sf-release cli:versions:inspect -c ${{ needs.get-channel.outputs.s3-channel }} -l archive
+          retry_on: error
+
+  pack-upload-mac:
+    needs: [get-channel, pack-verify-upload-tarballs]
+    uses: salesforcecli/github-workflows/.github/workflows/packUploadMac.yml@main
+    with:
+      version: ${{ github.event.release.tag_name }}
+      channel: ${{ needs.get-channel.outputs.s3-channel }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+    secrets: inherit
+
+  pack-upload-win:
+    needs: [get-channel, pack-verify-upload-tarballs]
+    uses: salesforcecli/github-workflows/.github/workflows/packUploadWindows.yml@main
+    with:
+      version: ${{ github.event.release.tag_name }}
+      channel: ${{ needs.get-channel.outputs.s3-channel }}
+      nodeVersion: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+    secrets: inherit
+
+  stampy-upload-win:
+    needs: [pack-upload-win]
+    uses: salesforcecli/github-workflows/.github/workflows/stampyUpload.yml@main
+    secrets: inherit
+    with:
+      version: ${{ github.event.release.tag_name }}
+
+  build-docker-slim:
+    needs: [get-channel, pack-verify-upload-tarballs]
+    uses: ./.github/workflows/build-docker-slim.yml
+    with:
+      version: ${{ github.event.release.tag_name }}
+      channel: ${{ needs.get-channel.outputs.channel }}
+    secrets: inherit
+
+  build-docker-full:
+    needs: [get-channel, npm-release]
+    uses: ./.github/workflows/build-docker-full.yml
+    with:
+      version: ${{ github.event.release.tag_name }}
+      channel: ${{ needs.get-channel.outputs.channel }}
+    secrets: inherit
+
+  announce-cli-patch-in-slack:
+    # Do not announce prereleases or nightlies
+    # https://docs.github.com/en/actions/learn-github-actions/expressions#contains
+    if: ${{ contains(fromJSON('["latest", "latest-rc"]'), needs.get-channel.outputs.channel ) }}
+    runs-on: ubuntu-latest
+    needs:
+      - get-channel
+      - pack-verify-upload-tarballs
+      - npm-release
+      - pack-upload-win
+      - pack-upload-mac
+      - build-docker-slim
+      - build-docker-full
+    steps:
+      - name: Announce patch in Slack
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "blocks": [{
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":bandaid-4506: `sf@${{ needs.get-channel.outputs.channel }}` has been patched in version `${{ github.event.release.tag_name }}` :bandaid-4506:\nPlease ensure you are running the newest version of `sf`"
+                }
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.PLATFORM_CLI_CHANNEL_SLACK_INCOMING_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  run-just-nuts:
+    needs:
+      - get-channel
+      - pack-verify-upload-tarballs
+      - npm-release
+      - pack-upload-win
+      - pack-upload-mac
+      - build-docker-slim
+      - build-docker-full
+    uses: ./.github/workflows/just-nuts.yml
+    with:
+      channel-or-version: ${{ needs.get-channel.outputs.channel }}
+    secrets: inherit

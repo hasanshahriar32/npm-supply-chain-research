@@ -1,0 +1,241 @@
+{
+  "name": "@antfu/eslint-config",
+  "type": "module",
+  "version": "10.0.0",
+  "packageManager": "pnpm@12.15.0",
+  "description": "Anthony's ESLint config",
+  "author": "Anthony Fu <anthonyfu117@hotmail.com> (https://github.com/antfu/)",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/antfu",
+  "homepage": "https://github.com/antfu/eslint-config",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/antfu/eslint-config.git"
+  },
+  "bugs": {
+    "url": "https://github.com/antfu/eslint-config/issues"
+  },
+  "keywords": [
+    "eslint-config"
+  ],
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./cli": "./dist/cli.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "bin": "./bin/index.mjs",
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "scripts": {
+    "build": "nr gen && tsdown --clean --dts",
+    "stub": "tsdown",
+    "dev": "npx @eslint/config-inspector --config eslint.config.ts",
+    "build:inspector": "pnpm build && npx @eslint/config-inspector build --stats --config eslint.config.ts --out-dir ./.eslint-config-inspector",
+    "watch": "tsdown --watch",
+    "lint": "eslint",
+    "gen": "tsx scripts/typegen.ts && tsx scripts/versiongen.ts",
+    "prepack": "nr build",
+    "release": "bumpp",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepare": "simple-git-hooks && skills-npm"
+  },
+  "peerDependencies": {
+    "@angular-eslint/eslint-plugin": "^21.1.0",
+    "@angular-eslint/eslint-plugin-template": "^21.1.0",
+    "@angular-eslint/template-parser": "^21.1.0",
+    "@eslint-react/eslint-plugin": "^5.6.0",
+    "@next/eslint-plugin-next": ">=15.0.0",
+    "@prettier/plugin-xml": "^3.4.1",
+    "@unocss/eslint-plugin": ">=0.50.0",
+    "astro-eslint-parser": ">=1.0.2",
+    "eslint": "^9.10.0 || ^10.0.0",
+    "eslint-plugin-astro": ">=1.2.0",
+    "eslint-plugin-erasable-syntax-only": "^0.7.1",
+    "eslint-plugin-format": ">=0.1.0",
+    "eslint-plugin-jsx-a11y": ">=6.10.2",
+    "eslint-plugin-react-refresh": "^0.5.0",
+    "eslint-plugin-slop": ">=0.1.1",
+    "eslint-plugin-solid": "^0.17.0",
+    "eslint-plugin-sonarjs": ">=4.0.0",
+    "eslint-plugin-svelte": ">=2.35.1",
+    "eslint-plugin-vuejs-accessibility": "^2.4.1",
+    "prettier-plugin-astro": "^0.14.0",
+    "prettier-plugin-slidev": "^1.0.5",
+    "svelte-eslint-parser": ">=0.37.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular-eslint/eslint-plugin": {
+      "optional": true
+    },
+    "@angular-eslint/eslint-plugin-template": {
+      "optional": true
+    },
+    "@angular-eslint/template-parser": {
+      "optional": true
+    },
+    "@eslint-react/eslint-plugin": {
+      "optional": true
+    },
+    "@next/eslint-plugin-next": {
+      "optional": true
+    },
+    "@prettier/plugin-xml": {
+      "optional": true
+    },
+    "@unocss/eslint-plugin": {
+      "optional": true
+    },
+    "astro-eslint-parser": {
+      "optional": true
+    },
+    "eslint-plugin-astro": {
+      "optional": true
+    },
+    "eslint-plugin-erasable-syntax-only": {
+      "optional": true
+    },
+    "eslint-plugin-format": {
+      "optional": true
+    },
+    "eslint-plugin-jsx-a11y": {
+      "optional": true
+    },
+    "eslint-plugin-react-refresh": {
+      "optional": true
+    },
+    "eslint-plugin-slop": {
+      "optional": true
+    },
+    "eslint-plugin-solid": {
+      "optional": true
+    },
+    "eslint-plugin-sonarjs": {
+      "optional": true
+    },
+    "eslint-plugin-svelte": {
+      "optional": true
+    },
+    "eslint-plugin-vuejs-accessibility": {
+      "optional": true
+    },
+    "prettier-plugin-astro": {
+      "optional": true
+    },
+    "prettier-plugin-slidev": {
+      "optional": true
+    },
+    "svelte-eslint-parser": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@antfu/install-pkg": "catalog:prod",
+    "@clack/prompts": "catalog:prod",
+    "@e18e/eslint-plugin": "catalog:prod",
+    "@eslint-community/eslint-plugin-eslint-comments": "catalog:prod",
+    "@eslint/markdown": "catalog:prod",
+    "@stylistic/eslint-plugin": "catalog:prod",
+    "@typescript-eslint/eslint-plugin": "catalog:prod",
+    "@typescript-eslint/parser": "catalog:prod",
+    "@vitest/eslint-plugin": "catalog:prod",
+    "ansis": "catalog:prod",
+    "cac": "catalog:prod",
+    "eslint-config-flat-gitignore": "catalog:prod",
+    "eslint-flat-config-utils": "catalog:prod",
+    "eslint-merge-processors": "catalog:prod",
+    "eslint-plugin-antfu": "catalog:prod",
+    "eslint-plugin-command": "catalog:prod",
+    "eslint-plugin-import-lite": "catalog:prod",
+    "eslint-plugin-jsdoc": "catalog:prod",
+    "eslint-plugin-jsonc": "catalog:prod",
+    "eslint-plugin-n": "catalog:prod",
+    "eslint-plugin-no-only-tests": "catalog:prod",
+    "eslint-plugin-perfectionist": "catalog:prod",
+    "eslint-plugin-pnpm": "catalog:prod",
+    "eslint-plugin-regexp": "catalog:prod",
+    "eslint-plugin-toml": "catalog:prod",
+    "eslint-plugin-unicorn": "catalog:prod",
+    "eslint-plugin-unused-imports": "catalog:prod",
+    "eslint-plugin-vue": "catalog:prod",
+    "eslint-plugin-yml": "catalog:prod",
+    "eslint-processor-vue-blocks": "catalog:prod",
+    "globals": "catalog:prod",
+    "local-pkg": "catalog:prod",
+    "parse-gitignore": "catalog:prod",
+    "toml-eslint-parser": "catalog:prod",
+    "vue-eslint-parser": "catalog:prod",
+    "yaml-eslint-parser": "catalog:prod"
+  },
+  "devDependencies": {
+    "@angular-eslint/eslint-plugin": "catalog:peer",
+    "@angular-eslint/eslint-plugin-template": "catalog:peer",
+    "@angular-eslint/template-parser": "catalog:peer",
+    "@angular/core": "catalog:dev",
+    "@antfu/eslint-config": "workspace:*",
+    "@antfu/ni": "catalog:dev",
+    "@eslint-react/eslint-plugin": "catalog:peer",
+    "@eslint/config-inspector": "catalog:dev",
+    "@next/eslint-plugin-next": "catalog:peer",
+    "@prettier/plugin-xml": "catalog:peer",
+    "@types/eslint-plugin-jsx-a11y": "catalog:dev",
+    "@types/node": "catalog:dev",
+    "@unocss/eslint-plugin": "catalog:peer",
+    "astro-eslint-parser": "catalog:peer",
+    "baseline-browser-mapping": "catalog:dev",
+    "bumpp": "catalog:dev",
+    "eslint": "catalog:peer",
+    "eslint-plugin-astro": "catalog:peer",
+    "eslint-plugin-erasable-syntax-only": "catalog:peer",
+    "eslint-plugin-format": "catalog:peer",
+    "eslint-plugin-jsx-a11y": "catalog:peer",
+    "eslint-plugin-react-refresh": "catalog:peer",
+    "eslint-plugin-slop": "catalog:peer",
+    "eslint-plugin-solid": "catalog:peer",
+    "eslint-plugin-sonarjs": "catalog:peer",
+    "eslint-plugin-svelte": "catalog:peer",
+    "eslint-plugin-vuejs-accessibility": "catalog:peer",
+    "eslint-typegen": "catalog:dev",
+    "find-up-simple": "catalog:inline",
+    "jiti": "catalog:dev",
+    "lint-staged": "catalog:dev",
+    "pnpm-workspace-yaml": "catalog:dev",
+    "prettier-plugin-astro": "catalog:peer",
+    "prettier-plugin-slidev": "catalog:peer",
+    "simple-git-hooks": "catalog:dev",
+    "skills-npm": "catalog:dev",
+    "svelte": "catalog:peer",
+    "svelte-eslint-parser": "catalog:peer",
+    "tinyexec": "catalog:dev",
+    "tinyglobby": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "tsdown-stale-guard": "catalog:dev",
+    "tsnapi": "catalog:dev",
+    "tsx": "catalog:dev",
+    "typescript": "catalog:dev",
+    "vitest": "catalog:dev",
+    "vue": "catalog:peer"
+  },
+  "resolutions": {
+    "@eslint-community/eslint-utils": "catalog:peer",
+    "@typescript-eslint/types": "catalog:peer",
+    "@typescript-eslint/utils": "catalog:peer",
+    "chokidar": "catalog:dev",
+    "eslint": "catalog:peer",
+    "semver": "catalog:dev",
+    "synckit": "catalog:dev",
+    "tsx": "catalog:dev"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
+  },
+  "inlinedDependencies": {
+    "find-up-simple": "1.0.1"
+  }
+}

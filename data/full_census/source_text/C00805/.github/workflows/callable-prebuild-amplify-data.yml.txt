@@ -1,0 +1,25 @@
+name: Prebuild amplify-data
+
+on:
+  workflow_call:
+    inputs:
+      runs_on:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prebuild:
+    name: Prebuild on ${{ inputs.runs_on }}
+    runs-on: ${{ inputs.runs_on }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: amplify-data
+      - name: Setup node and build the repository
+        uses: ./amplify-data/.github/actions/node-and-build
+        with:
+          is-prebuild: true

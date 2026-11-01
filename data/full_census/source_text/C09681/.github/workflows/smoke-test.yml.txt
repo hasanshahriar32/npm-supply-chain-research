@@ -1,0 +1,20 @@
+name: Smoke test
+
+on:
+  # Scheduled smoke tests are disabled.
+  # schedule:
+  #   - cron: "0 0 * * SUN"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - run: npm install --legacy-peer-deps
+      - uses: AriPerkkio/eslint-remote-tester-run-action@v6
+        with:
+          issue-title: "Results of weekly scheduled smoke test"
+          eslint-remote-tester-config: test/smoke/eslint-remote-tester.config.js

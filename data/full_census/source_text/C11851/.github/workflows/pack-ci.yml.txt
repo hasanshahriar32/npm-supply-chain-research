@@ -1,0 +1,191 @@
+name: utoopack-ci
+
+on:
+  push:
+    branches: ["next"]
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    if: (github.event_name == 'push' && contains(github.event.head_commit.message, '(pack)')) || (github.event_name == 'pull_request' && contains(github.event.pull_request.title, '(pack)'))
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            test: |
+              cargo check -p pack-napi --features plugin --target aarch64-apple-darwin &&
+              cargo test -p pack-tests --target aarch64-apple-darwin
+          - host: macos-latest
+            target: x86_64-apple-darwin
+            test: |
+              cargo check -p pack-napi --features plugin --target x86_64-apple-darwin &&
+              cargo test -p pack-tests --target x86_64-apple-darwin
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
+            test: |
+              apt-get update &&
+              rustup install nightly-2026-08-20 &&
+              rustup default nightly-2026-08-20 &&
+              rustup target add x86_64-unknown-linux-gnu &&
+              cargo check -p pack-napi --features plugin --target x86_64-unknown-linux-gnu &&
+              cargo test -p pack-tests --target x86_64-unknown-linux-gnu
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            test: |
+              set -ex &&
+              rm /etc/apk/repositories &&
+              echo "https://dl-cdn.alpinelinux.org/alpine/v3.21/main" >> /etc/apk/repositories &&
+              echo "https://dl-cdn.alpinelinux.org/alpine/v3.21/community" >> /etc/apk/repositories &&
+              apk update &&
+              apk add --no-cache libc6-compat pkgconfig dav1d libdav1d dav1d-dev clang-static llvm-dev &&
+              rustup install nightly-2026-08-20 &&
+              rustup default nightly-2026-08-20 &&
+              rustup target add x86_64-unknown-linux-musl &&
+              export RUSTFLAGS='--cfg tokio_unstable -Zshare-generics=y -Zthreads=8 -Csymbol-mangling-version=v0 -Ctarget-feature=-crt-static' &&
+              cargo check -p pack-napi --features plugin --target x86_64-unknown-linux-musl &&
+              cargo test -p pack-tests --target x86_64-unknown-linux-musl
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            test: |
+              apt-get update && apt-get install -y libc6-dev-arm64-cross libgcc-s1-arm64-cross &&
+              rustup install nightly-2026-08-20 &&
+              rustup default nightly-2026-08-20 &&
+              rustup target add aarch64-unknown-linux-gnu &&
+              export QEMU_LD_PREFIX=/usr/aarch64-linux-gnu &&
+              cargo check -p pack-napi --features plugin --target aarch64-unknown-linux-gnu &&
+              cargo test -p pack-tests --target aarch64-unknown-linux-gnu
+          - host: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            test: |
+              set -ex &&
+              rm /etc/apk/repositories &&
+              echo "https://dl-cdn.alpinelinux.org/alpine/v3.21/main" >> /etc/apk/repositories &&
+              echo "https://dl-cdn.alpinelinux.org/alpine/v3.21/community" >> /etc/apk/repositories &&
+              apk update &&
+              apk add --no-cache libc6-compat pkgconfig dav1d libdav1d dav1d-dev clang-static llvm-dev &&
+              rustup install nightly-2026-08-20 &&
+              rustup default nightly-2026-08-20 &&
+              rustup target add aarch64-unknown-linux-musl &&
+              export RUSTFLAGS='--cfg tokio_unstable -Zshare-generics=y -Zthreads=8 -Csymbol-mangling-version=v0' &&
+              cargo check -p pack-napi --features plugin --target aarch64-unknown-linux-musl &&
+              cargo test -p pack-tests --target aarch64-unknown-linux-musl
+          # swc_plugin_runner not supported on aarch64 windows now
+          # - host: windows-latest
+          #   target: aarch64-pc-windows-msvc
+          #   test: |
+          #     git config --system core.longpaths true &&
+          #     rustup target add aarch64-pc-windows-msvc &&
+          #     cargo test -p pack-tests
+          # - host: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          #   test: |
+          #     git config --system core.longpaths true &&
+          #     cargo test -p pack-tests --target x86_64-pc-windows-msvc
+    name: utoopack-ci-${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Init git submodules
+        run: git submodule update --init --recursive --depth 1
+      - name: Free disk space
+        if: matrix.settings.host == 'ubuntu-latest'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/share/miniconda
+          sudo docker image prune --all --force
+      - name: Set up QEMU
+        if: matrix.settings.docker && contains(matrix.settings.target, 'aarch64')
+        uses: docker/setup-qemu-action@v3
+      - name: Setup node
+        uses: actions/setup-node@v4
+        if: ${{ !matrix.settings.docker }}
+        with:
+          node-version: 22.14.0
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        if: ${{ !matrix.settings.docker }}
+        with:
+          toolchain: nightly-2026-08-20
+          targets: ${{ matrix.settings.target }}
+      # - name: Cache cargo
+      #   uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: pack-ci-${{ matrix.settings.target }}
+      - name: Setup toolchain
+        run: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.setup }}
+        shell: bash
+      - name: Setup Utoo
+        uses: utooland/setup-utoo@v1
+
+      - name: Clear install-node for musl builds
+        if: ${{ contains(matrix.settings.target, 'musl') }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json'));
+            delete pkg.engines['install-node'];
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Install dependencies
+        run: utoo install
+      - name: Setup node x86
+        uses: actions/setup-node@v4
+      - name: Verify NAPI release command
+        if: ${{ matrix.settings.target == 'x86_64-unknown-linux-gnu' }}
+        run: npm run artifacts --workspace=@utoo/pack -- --help
+      - name: Test in docker
+        if: ${{ matrix.settings.docker }}
+        run: |
+          cat <<'EOF' > test_script.sh
+          ${{ matrix.settings.test }}
+          EOF
+          chmod +x test_script.sh
+          docker run --rm \
+            -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db \
+            -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache \
+            -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index \
+            -v ${{ github.workspace }}:/build \
+            -w /build \
+            ${{ matrix.settings.docker }} \
+            /bin/sh /build/test_script.sh
+      - name: Test
+        run: ${{ matrix.settings.test }}
+        if: ${{ !matrix.settings.docker }}
+        shell: bash
+
+  success:
+    name: utoopack-ci-success
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test
+    steps:
+      - name: Check success
+        run: |
+          if [ "${{ needs.test.result }}" == "failure" ] || [ "${{ needs.test.result }}" == "cancelled" ]; then
+            echo "Tests failed or were cancelled"
+            exit 1
+          else
+            echo "Tests passed or were skipped"
+          fi

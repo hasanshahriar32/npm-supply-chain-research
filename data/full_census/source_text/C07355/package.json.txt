@@ -1,0 +1,100 @@
+{
+  "name": "@node-saml/passport-saml",
+  "version": "5.1.1",
+  "description": "SAML 2.0 authentication strategy for Passport",
+  "keywords": [
+    "saml",
+    "adfs",
+    "sso",
+    "shibboleth"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/node-saml/passport-saml.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Henri Bergius",
+    "email": "henri.bergius@iki.fi",
+    "url": "http://bergie.iki.fi"
+  },
+  "contributors": [
+    "Michael Bosworth",
+    "Herbert Vojčík",
+    "Peter Loer",
+    "Mark Stosberg",
+    "Chris Barth",
+    "Andrii Kostenko"
+  ],
+  "main": "./lib",
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "changelog": "gren changelog --override --generate --head master",
+    "lint": "eslint --ext .ts \"**/*.ts\" --cache && npm run prettier-check",
+    "lint-watch": "onchange -k -p 100 \"**/*.ts\" -- eslint {{file}}",
+    "lint:fix": "eslint --ext .ts --fix src && npm run prettier-format",
+    "prepare": "tsc",
+    "prettier-check": "prettier --config .prettierrc.json --check .",
+    "prettier-format": "prettier --config .prettierrc.json --write .",
+    "prettier-watch": "npm run prettier-format && onchange -k -p 100 \".\" -- prettier --config .prettierrc.json --write {{file}}",
+    "prerelease": "git clean -xfd && npm ci && npm run lint && npm test && npm run build",
+    "release": "release-it",
+    "test": "npm run tsc && nyc mocha",
+    "test-watch": "mocha --watch",
+    "tsc": "tsc",
+    "tsc-watch": "tsc --watch",
+    "update": "npx npm-check-updates -du",
+    "update:major": "npx npm-check-updates -i",
+    "update:minor": "npx npm-check-updates -i -t minor",
+    "watch": "concurrently --kill-others \"npm:*-watch\""
+  },
+  "dependencies": {
+    "@node-saml/node-saml": "^5.2.0",
+    "@types/express": "^4.17.25",
+    "@types/passport": "^1.0.17",
+    "@types/passport-strategy": "^0.2.38",
+    "passport": "^0.7.0",
+    "passport-strategy": "^1.0.0"
+  },
+  "devDependencies": {
+    "@cjbarth/github-release-notes": "^5.2.0",
+    "@eslint/js": "^9.39.5",
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.19.130",
+    "@types/sinon": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.70.1",
+    "@typescript-eslint/parser": "^8.70.1",
+    "chai": "^4.5.0",
+    "choma": "^1.2.1",
+    "concurrently": "^10.0.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-chai-friendly": "^1.2.1",
+    "eslint-plugin-mocha": "^10.5.0",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.13.0",
+    "mocha": "^11.8.0",
+    "nyc": "^18.0.0",
+    "onchange": "^7.1.0",
+    "prettier": "^3.9.9",
+    "prettier-plugin-packagejson": "^3.0.2",
+    "release-it": "^21.1.0",
+    "sinon": "^22.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

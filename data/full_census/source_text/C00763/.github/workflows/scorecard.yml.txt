@@ -1,0 +1,66 @@
+name: Scorecard analysis
+
+# Runs OpenSSF Scorecard supply-chain analysis directly via ossf/scorecard-action
+# (no composite wrapper, no cross-org dependency). All action refs are SHA-pinned.
+#
+# Scorecard requirements
+# ──────────────────────
+# • Must run on push to the default branch or a schedule event — NOT pull_request.
+#   The if: condition below enforces this.
+# • The checkout step MUST set persist-credentials: false (required by Scorecard's
+#   security model to avoid leaking the GITHUB_TOKEN into the analysis environment).
+# • publish_results: true publishes to the public Scorecard API and enables the
+#   Scorecard badge. It requires id-token: write on the job AND a push/schedule
+#   event (not a PR). Set to 'false' to keep results private (id-token can then
+#   be omitted from the job permissions).
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 1 * * 6'   # weekly, Saturday 01:30 UTC
+
+permissions: read-all   # default: restrict everything; the job overrides what it needs
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'   # Scorecard must run on push/schedule only
+    permissions:
+      security-events: write   # upload SARIF to the Security tab / Code Scanning dashboard
+      # id-token: write           # OIDC token for Scorecard's public API publishing (publish_results: true)
+                                # Uncomment this line only when you set publish_results: true
+      contents: read            # checkout the repository
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # required by Scorecard — do not remove
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # publish_results: true publishes to the Scorecard public dataset and enables the badge.
+          # Requires id-token: write above and a push/schedule event.
+          # Set to 'true' (and enable id-token: write) to publish results to the Scorecard public dataset.
+          publish_results: false
+
+      # Upload SARIF as a workflow artifact (optional — comment out to disable).
+      # https://docs.github.com/en/actions/advanced-guides/storing-workflow-data-as-artifacts
+      - name: Upload artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5 # adjust as needed
+
+      # Upload SARIF to GitHub Code Scanning dashboard (optional — comment out to disable).
+      - name: Upload to code-scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: results.sarif
+          category: scorecard

@@ -1,0 +1,57 @@
+name: CI
+on: [push, pull_request]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node: ["18", "20", "22.4.1", "24"]
+        name: Node ${{ matrix.node }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+            - name: Set up Node
+              uses: actions/setup-node@v6.3.0
+              with:
+                  node-version: ${{ matrix.node }}
+            - name: Set up pnpm
+              run: npm i -g pnpm@10
+            - name: Install
+              run: pnpm install
+            - name: Build
+              run: pnpm run build
+            - name: Test
+              run: |
+                  if node -e "process.exit(Number(+process.versions.node.slice(0, 2) < 23))"; then
+                    export NODE_OPTIONS="--no-experimental-strip-types"
+                  fi
+                  pnpm run test:full
+            - name: Lint
+              run: pnpm run lint
+            - name: Circular dependency check
+              uses: gerrit0/circular-dependency-check@v2.0.2
+              with:
+                  entry: |
+                    dist/index.js
+                    dist/models.js
+                    dist/browser-utils.js
+    build-windows:
+        runs-on: windows-latest
+        name: Node 18 Windows
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+            - name: Set up Node
+              uses: actions/setup-node@v6.3.0
+              with:
+                  node-version: 18
+            - name: Set up pnpm
+              run: npm i -g pnpm@10
+            - name: Install
+              run: pnpm install
+            - name: Build
+              run: pnpm run build
+            - name: Test
+              run: pnpm run test:full
+            - name: Lint
+              run: pnpm run lint

@@ -1,0 +1,34 @@
+name: Verify Go client
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify-go:
+    name: Verify go client source code is up to date
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        go_version: [1.27.x]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Go ${{ matrix.go_version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go_version }}
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: make all
+      - name: Check for changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to the go client source files detected"
+          else
+            echo "Changes to the go client source files detected, please run 'make all' and push your changes"
+            exit 1
+          fi

@@ -1,0 +1,37 @@
+name: OSSAR
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: ["main"]
+  schedule:
+    - cron: "42 15 * * 2"
+
+permissions:
+  contents: read
+
+jobs:
+  OSSAR-Scan:
+    # OSSAR runs on windows-latest.
+    # ubuntu-latest and macos-latest support coming soon
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+        # Run open source static analysis tools
+      - name: Run OSSAR
+        uses: github/ossar-action@4e96c4f6e591eb4b991abfd459e40b136a317aea # v2.0.0
+        id: ossar
+
+        # Upload results to the Security tab
+      - name: Upload OSSAR results
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        with:
+          sarif_file: ${{ steps.ossar.outputs.sarifFile }}

@@ -1,0 +1,173 @@
+---
+name: Node CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x, 25.x]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install
+        run: |
+          npm install
+
+      - name: Lint
+        run: |
+          npm run generate-version
+          npm run lint
+
+      - name: Unit test
+        run: |
+          npm run test:unit
+
+      - name: Acceptance test
+        run: |
+          npm run test:acceptance
+
+  test-client:
+    name: Test against client
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x, 25.x]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          repository: elastic/elasticsearch-js
+          ref: main
+          path: client
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          path: transport
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install transport
+        run: |
+          cd "$GITHUB_WORKSPACE/transport"
+          npm install
+
+      - name: Build transport
+        run: |
+          cd "$GITHUB_WORKSPACE/transport"
+          npm run build
+
+      - name: Install client with local transport
+        run: |
+          cd "$GITHUB_WORKSPACE/client"
+          npm install
+          npm install ../transport --install-links
+
+      - name: Unit test
+        env:
+          _TAPJS_PROCESSINFO_EXCLUDE_: ".*"
+        run: |
+          cd "$GITHUB_WORKSPACE/client"
+          npm test
+
+  license:
+    name: License check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.x
+
+      - name: Install
+        run: |
+          npm install
+
+      - name: License checker
+        run: |
+          npm run license-checker
+
+      - name: License header check
+        run: |
+          npm run license-header
+
+  test-bun:
+    name: Test Bun
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Use Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+
+      - name: Install
+        run: |
+          bun install
+
+      - name: Lint
+        run: |
+          bun run generate-version
+          bun run lint
+
+      - name: Unit test
+        run: |
+          bun run test:unit-bun
+
+  test-fuzz:
+    name: Fuzz tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.x
+
+      - name: Install
+        run: npm install
+
+      - name: Fuzz test
+        shell: bash
+        run: npm run test:fuzz

@@ -1,0 +1,101 @@
+name: Build & Test
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: 🟢 Use Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+
+      - name: 🔧 Install Dependencies
+        run: pnpm install
+
+      - name: 🏗️ Build
+        run: pnpm run build
+
+      - name: 🔍 Check Git Context
+        uses: ./.github/workflows/actions/check-git-context
+
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: build-artifacts
+          path: |
+            packages/*/dist
+            packages/*/loader
+            example-project/component-library/dist
+            example-project/component-library/loader
+            example-project/component-library-angular
+            example-project/component-library-react/dist
+            example-project/component-library-vue/dist
+          retention-days: 1
+
+  test:
+    name: Test ${{ matrix.ecosystem }} (${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['macos-latest', 'windows-latest']
+        ecosystem: ['angular', 'react', 'vue', 'ssr', 'types']
+        include:
+          - ecosystem: angular
+            filter: --filter "@stencil/angular-output-target" --filter "*angular*" --filter "ng-app"
+          - ecosystem: react
+            filter: --filter "@stencil/react-output-target" --filter "*react*" --filter "remix-app" --filter "next-15-runtime-based"
+          - ecosystem: vue
+            filter: --filter "@stencil/vue-output-target" --filter "*vue*" --filter "*nuxt*"
+          - ecosystem: ssr
+            filter: --filter "@stencil/ssr" --filter "next-app"
+          - ecosystem: types
+            filter: --filter "@stencil/types-output-target"
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: 🟢 Use Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+
+      - name: 🔧 Install Dependencies
+        run: pnpm install
+
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: 🧪 Test
+        run: pnpm ${{ matrix.filter }} test
+
+  format:
+    name: Format
+    uses: ./.github/workflows/format.yml
+

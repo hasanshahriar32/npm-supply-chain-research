@@ -1,0 +1,33 @@
+name: Lint Check
+
+on:
+  # Build on pushes to branches that have a PR (including drafts)
+  pull_request:
+  # Build on pushes to the main branch
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: Lint
+        run: pnpm lint

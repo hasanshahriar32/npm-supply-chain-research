@@ -1,0 +1,51 @@
+{
+  "name": "rendu",
+  "version": "0.1.1",
+  "description": "",
+  "license": "MIT",
+  "repository": "h3js/rendu",
+  "bin": "./dist/cli.mjs",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": "./dist/index.mjs"
+  },
+  "scripts": {
+    "build": "obuild",
+    "build:runtime": "node ./scripts/build-runtime.ts",
+    "dev": "vitest dev",
+    "lint": "oxlint . && oxfmt --check .",
+    "fmt": "automd && oxlint . --fix && oxfmt .",
+    "prepack": "pnpm build",
+    "play": "pnpm rendu playground",
+    "release": "pnpm test && pnpm build && changelogen --release && pnpm publish && git push --follow-tags",
+    "rendu": "node ./src/cli.ts",
+    "test": "pnpm lint && pnpm test:types && vitest run --coverage",
+    "test:types": "tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "srvx": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "@vitest/coverage-v8": "^4.1.11",
+    "automd": "^0.4.3",
+    "changelogen": "^0.6.2",
+    "cookie-es": "^3.1.1",
+    "eslint-config-unjs": "^0.6.2",
+    "happy-dom": "^20.12.2",
+    "obuild": "^0.4.39",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "parse5": "^8.0.1",
+    "rendu": "link:*",
+    "rolldown": "^1.2.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.11"
+  },
+  "packageManager": "pnpm@11.22.0"
+}

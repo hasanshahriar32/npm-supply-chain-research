@@ -1,0 +1,61 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run lint
+
+  test:
+    name: test (${{ matrix.os }}, node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [22.13.0, 22, 24, 26]
+    steps:
+      - name: Normalise line-ending handling in Git
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+        if: runner.os == 'Windows'
+
+      - name: Disable AppArmor User Namespace Restrictions, required to open
+          Chrome on Ubuntu 23.10+ without --no-sandbox). See
+          https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md.
+        run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+        if: runner.os == 'Linux'
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - run: npm ci
+
+      - name: Run Unit Tests & Coverage
+        run: |
+          npm run test-coverage
+          npm run verify-coverage
+
+      - name: Run Pa11y Integration Tests
+        env:
+          CI: true
+          PUPPETEER_LAUNCH_ARGS: '--no-sandbox --disable-setuid-sandbox --disable-gpu --disable-dev-shm-usage'
+        shell: bash
+        run: npm run test-integration

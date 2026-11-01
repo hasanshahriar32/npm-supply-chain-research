@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint and formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci --engine-strict
+      - name: Lint and formatting
+        run: npm run check
+
+  test-with-canvas:
+    name: Tests with node-canvas
+    env:
+      TEST_SUITE: node-canvas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install canvas system dependencies
+        run: sudo apt-get update && sudo apt-get install build-essential libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+      - name: Configure hosts for web platform tests
+        run: ./test/web-platform-tests/tests/wpt make-hosts-file | sudo tee -a /etc/hosts
+      - name: Install dependencies
+        run: npm ci --engine-strict
+      - name: Install canvas
+        run: npm install --engine-strict canvas@3
+      - name: Run tests
+        run: npm test
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          # Explicitly test minimum Node.js versions. Keep in sync with package.json.
+          - 22.22.2
+          - 22
+          - 24.15.0
+          - lts/* # currently 24
+          - 26.0.0
+          - latest # currently 26
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Configure hosts for web platform tests
+        run: ./test/web-platform-tests/tests/wpt make-hosts-file | sudo tee -a /etc/hosts
+      - name: Install dependencies
+        run: npm ci --engine-strict
+      - name: Run tests
+        run: npm test

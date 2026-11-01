@@ -1,0 +1,420 @@
+name: Test
+
+defaults:
+  run: {shell: bash}
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Code formatting
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with: {persist-credentials: false}
+    - uses: $/.github/util/initialize
+      with: {github-token: "${{ github.token }}"}
+    - run: dart format .
+    - run: dart fix --apply
+    - run: git diff --exit-code
+
+  static_analysis_code:
+    name: Static analysis (Code)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with: {github-token: "${{ github.token }}"}
+
+      - name: Analyze Dart
+        run: dart analyze --fatal-warnings ./
+
+  static_analysis_ci:
+    name: Static analysis (GitHub Actions)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          persona: pedantic
+          advanced-security: false # Fail the GitHub action if Zizmor has findings
+
+  dartdoc:
+    name: Dartdoc
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with: {github-token: "${{ github.token }}"}
+
+      - name: dartdoc sass
+        run: dart run dartdoc --quiet --no-generate-docs
+          --errors ambiguous-doc-reference,broken-link,deprecated
+          --errors unknown-directive,unknown-macro,unresolved-doc-reference
+      - name: dartdoc sass_api
+        run: cd pkg/sass_api && dart run dartdoc --quiet --no-generate-docs
+          --errors ambiguous-doc-reference,broken-link,deprecated
+          --errors unknown-directive,unknown-macro,unresolved-doc-reference
+
+  sass_spec_language:
+    name: "Language Tests | Dart ${{ matrix.dart_channel }} | ${{ matrix.async_label }} | ${{ matrix.os }}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # We expect language test results not to vary from OS to OS. In most
+        # cases, this is trivial, but for operations on very high-precision
+        # floating-point numbers there are cases where float rounding can differ
+        # (see sass/sass-spec#2156). To ensure we don't include these in our
+        # test cases, we test against Windows and MacOS as well.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dart_channel: [stable]
+        async_label: [synchronous]
+        async_args: ['']
+        include:
+          - os: ubuntu-latest
+            dart_channel: stable
+            async_label: asynchronous
+            async_args: '--cmd-args --async'
+          - os: ubuntu-latest
+            dart_channel: dev
+            async_label: synchronous
+            async_args: ''
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+      - uses: $/.github/util/sass-spec
+
+      - name: Run specs
+        run: npm run sass-spec -- --dart .. $extra_args
+        working-directory: sass-spec
+        env: {extra_args: "${{ matrix.async_args }}"}
+
+  sass_spec_js:
+    name: "JS API Tests | Pure JS | Dart ${{ matrix.dart_channel }} | Node ${{ matrix.node-version }} | ${{ matrix.os }}"
+    runs-on: "${{ matrix.os }}"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dart_channel: [stable]
+        node-version: ['lts/*']
+        include:
+          # Test older LTS versions
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-1
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-2
+          # Test LTS version with dart dev channel
+          - os: ubuntu-latest
+            dart_channel: dev
+            node-version: 'lts/*'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+          node-version: ${{ matrix.node-version }}
+      - uses: $/.github/util/sass-spec
+
+      - name: Build JS
+        run: dart run grinder pkg-npm-dev
+        env: {UPDATE_SASS_SASS_REPO: false}
+
+      - name: Check out Sass specification
+        uses: sass/clone-linked-repo@ec2dcd11c5eaec56b64855712372056a14e9614d # v1.1.0
+        with:
+          repo: sass/sass
+          path: language
+
+      - name: Run tests
+        run: npm run js-api-spec -- --sassSassRepo ../language --sassPackage ../build/npm
+        working-directory: sass-spec
+
+  sass_spec_js_embedded:
+    name: 'JS API Tests | Embedded | Node ${{ matrix.node-version }} | ${{ matrix.os }}'
+    runs-on: ${{ matrix.os }}
+    if: "github.event_name != 'pull_request' || !contains(github.event.pull_request.body, 'skip sass-embedded')"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ['lts/*']
+        include:
+          # Test older LTS versions
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-1
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-2
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          github-token: ${{ github.token }}
+          node-version: ${{ matrix.node-version }}
+      - uses: $/.github/util/sass-spec
+
+      - name: Check out the embedded host
+        uses: sass/clone-linked-repo@ec2dcd11c5eaec56b64855712372056a14e9614d # v1.1.0
+        with: {repo: sass/embedded-host-node}
+
+      - name: Check out the language repo
+        uses: sass/clone-linked-repo@ec2dcd11c5eaec56b64855712372056a14e9614d # v1.1.0
+        with: {repo: sass/sass, path: build/language}
+
+      - name: Initialize embedded host
+        run: |
+          npm install
+          npm run init -- --compiler-path=.. --language-path=../build/language
+          npm run compile
+        working-directory: embedded-host-node
+
+      - name: Version info
+        run: node dist/bin/sass.js --version
+        working-directory: embedded-host-node
+
+      - name: Run tests
+        run: npm run js-api-spec -- --sassPackage ../embedded-host-node --sassSassRepo ../build/language
+        working-directory: sass-spec
+
+  sass_spec_js_browser:
+    name: "JS API Tests | Browser | Dart ${{ matrix.dart_channel }}"
+
+    strategy:
+      matrix:
+        dart_channel: [stable]
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+      - uses: $/.github/util/sass-spec
+
+      - name: Build JS
+        run: dart run grinder pkg-npm-dev
+        env: {UPDATE_SASS_SASS_REPO: false}
+
+      - name: Install built dependencies
+        run: npm install
+        working-directory: build/npm
+
+      - name: Check out Sass specification
+        uses: sass/clone-linked-repo@ec2dcd11c5eaec56b64855712372056a14e9614d # v1.1.0
+        with:
+          repo: sass/sass
+          path: language
+
+      - name: Run tests
+        run: npm run js-api-spec -- --sassSassRepo ../language --sassPackage ../build/npm --browser
+        working-directory: sass-spec
+        env:
+          CHROME_EXECUTABLE: chrome
+
+  dart_tests:
+    name: "Dart tests | Dart ${{ matrix.dart_channel }} | ${{ matrix.os }}"
+    runs-on: "${{ matrix.os }}"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dart_channel: [stable]
+        # TODO(nweiz): Re-enable this when
+        # https://github.com/dart-lang/sdk/issues/52121#issuecomment-1728534228
+        # is addressed.
+        # include: [{os: ubuntu-latest, dart_channel: dev}]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+
+      - run: dart run grinder pkg-standalone-dev
+      - name: Run tests
+        run: dart run test -x node
+
+  # Unit tests that use Node.js, defined in test/.
+  node_tests:
+    name: "Node tests | Dart ${{ matrix.dart_channel }} | Node ${{ matrix.node-version }} | ${{ matrix.os }}"
+    runs-on: "${{ matrix.os }}"
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dart_channel: [stable]
+        node-version: ['lts/*']
+        include:
+          # Test older LTS versions
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-1
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-2
+          # Test LTS version with dart dev channel
+          - os: ubuntu-latest
+            dart_channel: dev
+            node-version: 'lts/*'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+          node-version: ${{ matrix.node-version }}
+
+      - run: dart run grinder pkg-npm-dev
+        env: {UPDATE_SASS_SASS_REPO: false}
+      - name: Run tests
+        run: dart run test -t node -j 2
+
+  browser_tests:
+    name: "Browser Tests | Dart ${{ matrix.dart_channel }}"
+
+    strategy:
+      matrix:
+        dart_channel: [stable]
+      fail-fast: false
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with: {persist-credentials: false}
+    - uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
+    - uses: $/.github/util/initialize
+      with:
+        dart-sdk: ${{ matrix.dart_channel }}
+        github-token: ${{ github.token }}
+
+    - run: dart run grinder pkg-npm-dev
+      env: {UPDATE_SASS_SASS_REPO: false}
+    # See https://github.com/puppeteer/puppeteer/issues/12818
+    # Ubuntu 23+ doesn't like running puppeteer without disabling AppArmor.
+    - name: Disable AppArmor
+      run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+    - name: Run tests
+      run: dart run test -p chrome -j 2
+      env:
+        CHROME_EXECUTABLE: chrome
+
+  sass_parser_tests:
+    name: "sass-parser Tests | Dart ${{ matrix.dart_channel }} | Node ${{ matrix.node-version }}"
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dart_channel: [stable]
+        node-version: ['lts/*']
+        include:
+          # Test older LTS versions
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-1
+          - os: ubuntu-latest
+            dart_channel: stable
+            node-version: lts/-2
+          # Test LTS version with dart dev channel
+          - os: ubuntu-latest
+            dart_channel: dev
+            node-version: 'lts/*'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: $/.github/util/initialize
+        with:
+          dart-sdk: ${{ matrix.dart_channel }}
+          github-token: ${{ github.token }}
+          node-version: ${{ matrix.node-version }}
+
+      - run: dart run grinder pkg-npm-dev
+        env: {UPDATE_SASS_SASS_REPO: false}
+      - run: npm install
+        working-directory: pkg/sass-parser/
+      - name: Run tests
+        run: npm test
+        working-directory: pkg/sass-parser/
+
+  sass_parser_static_analysis:
+    name: "sass-parser Static Analysis"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: 'lts/*'}
+      - uses: $/.github/util/initialize
+        with: {github-token: "${{ github.token }}"}
+
+      - run: dart run grinder pkg-npm-dev
+        env: {UPDATE_SASS_SASS_REPO: false}
+      - run: npm install
+        working-directory: build/npm/
+      - run: npm install
+        working-directory: pkg/sass-parser/
+      - name: Run static analysis
+        run: npm run check
+        working-directory: pkg/sass-parser/
+
+  # TODO - postcss/postcss#1958: Enable this once PostCSS doesn't have TypeDoc
+  # warnings.
+
+  # sass_parser_typedoc:
+  #   name: "sass-parser Typedoc"
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #        with: {persist-credentials: false}
+  #      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+  #       with: {node-version: 'lts/*'}
+  #     - run: npm install
+  #       working-directory: pkg/sass-parser/
+  #     - run: npm run typedoc
+  #       working-directory: pkg/sass-parser/

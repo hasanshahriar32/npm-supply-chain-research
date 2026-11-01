@@ -1,0 +1,73 @@
+{
+  "name": "capsize",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "%metrics": "pnpm --filter=@capsizecss/metrics",
+    "%packages": "pnpm --filter='@capsizecss/*' --aggregate-output",
+    "%site": "pnpm --filter=./site",
+    "start": "pnpm site:start",
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "lint": "manypkg check && prettier --check . && tsc",
+    "dev": "pnpm unpack:generate && pnpm metrics:generate",
+    "build": "pnpm %packages build && pnpm generate",
+    "generate": "pnpm unpack:generate && pnpm metrics:generate",
+    "copy-readme": "node scripts/copy-readme",
+    "version": "changeset version && pnpm install --lockfile-only",
+    "prepare-release": "pnpm copy-readme && pnpm build",
+    "release": "pnpm prepare-release && pnpm site:build && pnpm site:deploy && changeset publish",
+    "chromatic": "chromatic",
+    "storybook": "storybook dev --quiet --port 6006",
+    "storybook:build": "pnpm build && storybook build",
+    "site:start": "pnpm %site start",
+    "site:build": "pnpm %site build",
+    "site:serve": "pnpm %site serve",
+    "site:deploy": "pnpm %site run deploy",
+    "site:deploy-preview": "pnpm generate && pnpm %site deploy-preview",
+    "metrics:changeset": "pnpm %metrics changeset",
+    "metrics:extract": "pnpm %metrics extract",
+    "metrics:generate": "pnpm %metrics generate",
+    "metrics:download": "pnpm %metrics download",
+    "unpack:generate": "pnpm --filter=@capsizecss/unpack generate",
+    "prepare": "pnpm dev && (is-ci || husky install)"
+  },
+  "author": {
+    "name": "Michael Taranto",
+    "homepage": "https://github.com/michaeltaranto"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seek-oss/capsize.git"
+  },
+  "homepage": "https://github.com/seek-oss/capsize#readme",
+  "license": "MIT",
+  "dependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.31.1",
+    "@manypkg/cli": "^0.21.4",
+    "@storybook/builder-vite": "^10.0.7",
+    "@storybook/html-vite": "^10.0.7",
+    "@types/node": "^22.18.8",
+    "@vanilla-extract/vite-plugin": "^5.1.1",
+    "chromatic": "^11.3.0",
+    "husky": "^8.0.3",
+    "is-ci": "^3.0.1",
+    "prettier": "^3.6.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "storybook": "^10.0.7",
+    "tsdown": "^0.16.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2",
+    "vitest": "^4.0.9"
+  },
+  "packageManager": "pnpm@11.15.1",
+  "volta": {
+    "node": "22.23.1",
+    "pnpm": "11.15.1"
+  },
+  "manypkg": {
+    "workspaceProtocol": "require"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "name": "espurify",
+  "version": "3.2.0",
+  "description": "Clone AST without extra properties",
+  "keywords": [
+    "ast",
+    "estree",
+    "ecmascript",
+    "es6"
+  ],
+  "homepage": "https://github.com/estools/espurify",
+  "bugs": "https://github.com/estools/espurify/issues",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/estools/espurify.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Takuto Wada",
+    "email": "takuto.wada@gmail.com",
+    "url": "https://github.com/twada"
+  },
+  "contributors": [
+    {
+      "name": "Renée Kooi",
+      "url": "https://github.com/goto-bus-stop"
+    },
+    {
+      "name": "Andreas Lind",
+      "url": "https://github.com/papandreou"
+    }
+  ],
+  "type": "commonjs",
+  "main": "index.js",
+  "files": [
+    "CHANGELOG.md",
+    "MIT-LICENSE.txt",
+    "README.md",
+    "index.js",
+    "lib",
+    "package.json"
+  ],
+  "scripts": {
+    "preversion": "npm test",
+    "lint": "semistandard --verbose index.js lib test | snazzy",
+    "fmt": "semistandard --fix index.js lib test",
+    "test": "npm run lint && node --test"
+  },
+  "devDependencies": {
+    "acorn": "^8.0.0",
+    "babel-types": "^6.3.20",
+    "babylon": "^6.3.20",
+    "esprima": "^4.0.0",
+    "estraverse": "^5.0.0",
+    "semistandard": "^17.0.0",
+    "snazzy": "^9.0.0"
+  },
+  "semistandard": {
+    "ignore": [
+      "/build/",
+      "/bench/",
+      "**/*.jsx"
+    ]
+  }
+}

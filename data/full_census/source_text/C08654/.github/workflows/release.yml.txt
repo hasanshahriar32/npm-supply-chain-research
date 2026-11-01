@@ -1,0 +1,81 @@
+name: Release
+permissions:
+  id-token: write
+  contents: read
+on:
+  push:
+    branches: [main]
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      will-publish: ${{ steps.check.outputs.will-publish }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check for pending changesets
+        id: check
+        run: |
+          CHANGESETS=$(find .changeset -name "*.md" -not -name "README.md" | wc -l | tr -d ' ')
+          if [ "$CHANGESETS" -eq 0 ]; then
+            echo "will-publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "will-publish=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-apple:
+    needs: check-release
+    if: needs.check-release.outputs.will-publish == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: "false"
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+        with:
+          node-cache: ""
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+      - name: Build Apple native library
+        run: bash ./scripts/build-native-lib.sh apple
+      - name: Upload Apple artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-artifacts
+          path: packages/async-storage/apple-frameworks
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [check-release, build-apple]
+    if: "!failure() && !cancelled()"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: "false"
+      - name: Setup project
+        uses: ./.github/actions/setup-project
+      - name: Install dependencies
+        run: yarn
+      - name: Download Apple artifacts
+        if: needs.check-release.outputs.will-publish == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-artifacts
+          path: packages/async-storage/apple-frameworks
+      - name: Version or release packages
+        uses: changesets/action@v1
+        with:
+          title: "release: version packages"
+          commit: "release: version packages"
+          setupGitUser: "false"
+          publish: "yarn release:publish"
+          version: "yarn release:version"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          GITHUB_NAME: ${{ vars.GH_BOT_NAME }}
+          GITHUB_EMAIL: ${{ vars.GH_BOT_EMAIL }}
+          NPM_TOKEN: "" # https://github.com/changesets/changesets/issues/1152#issuecomment-3765490009
+          NPM_CONFIG_PROVENANCE: true

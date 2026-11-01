@@ -1,0 +1,38 @@
+name: CI
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI - Node ${{ matrix.node-version }}, ${{ matrix.os }}
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x] # LTS Node: https://nodejs.org/en/about/releases/
+        os: [ubuntu-latest]
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - name: Install
+      run: npm ci
+
+    - name: Typecheck
+      run: npm run tsc
+    - name: Lint
+      run: npm run lint
+    - name: Build
+      run: npm run build
+
+    - name: Test w/ coverage report
+      run: npm run test:coverage
+    - name: Upload coverage report to Codecov
+      uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0

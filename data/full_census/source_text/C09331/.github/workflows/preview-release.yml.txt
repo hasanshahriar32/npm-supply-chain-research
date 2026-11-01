@@ -1,0 +1,35 @@
+name: Preview Release
+
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Bump Version
+        run: |
+          changeset=$(find .changeset -maxdepth 1 -type f -name '*.md' ! -name 'README.md' -print -quit)
+          if [[ -n "$changeset" ]]; then
+            pnpm changeset version
+          else
+            echo "No unreleased changesets found; keeping the current package version."
+          fi
+
+      - name: Build
+        run: pnpm prepublishOnly
+
+      - name: Publish Preview Release
+        run: pnpx pkg-pr-new publish --compact

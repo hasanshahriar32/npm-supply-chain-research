@@ -1,0 +1,107 @@
+name: Scala CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    types: [synchronize, opened, reopened]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Fetch all commits, used by sbt-dynver plugin to determine version
+          fetch-depth: 0
+        # Fetch all tags
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - run: git fetch --tags
+      - uses: ./.github/setup
+      - name: Compile code
+        run: sbt "compile; docs/mdoc --check; mimaReportBinaryIssues"
+
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/setup
+      - name: Check formatting
+        run: sbt scalafmtCheckAll
+
+  test:
+    name: Test (${{matrix.os}})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest']
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/setup
+      - name: Test
+        run: sbt test
+
+  test-js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/setup
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: node/package-lock.json
+      - name: Generate JS
+        run: sbt fastLinkJS
+      - name: Npm setup
+        run: npm ci
+        working-directory: node
+      - name: Test
+        run: npm test
+        working-directory: node
+
+  mutation-testing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Fetch all commits, used by sbt-dynver plugin to determine version
+          fetch-depth: 0
+      - uses: ./.github/setup
+      - name: Run stryker
+        run: sbt 'WeaponRegeX/stryker --reporters console --reporters dashboard'
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}
+
+  release:
+    needs: [build, formatting, test, test-js]
+    if: github.ref == 'refs/heads/main' || startsWith(github.event.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Fetch all commits, used by sbt-dynver plugin to determine version
+          fetch-depth: 0
+        # Fetch all tags
+      - run: git fetch --depth=1 origin +refs/tags/*:refs/tags/*
+      - run: git fetch --tags
+      - uses: ./.github/setup
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+      - name: Publish code
+        run: sbt ci-release
+        env:
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          CI_RELEASE: WeaponRegeXPublishSigned

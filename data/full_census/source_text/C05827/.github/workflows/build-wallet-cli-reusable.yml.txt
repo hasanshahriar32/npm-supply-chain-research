@@ -1,0 +1,122 @@
+name: "[Wallet CLI] - Build - Called"
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: false
+    outputs:
+      coverage_generated:
+        value: ${{ jobs.build-wallet-cli.outputs.coverage_generated }}
+    secrets:
+      AWS_ACCOUNT_ID_PROD:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_BRANCH:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_DEVELOP:
+        required: true
+      AWS_CACHE_REGION:
+        required: true
+      AWS_CACHE_ROLE_NAME:
+        required: true
+      NX_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: |
+          If you run this manually, and want to run on a PR, the correct ref should be refs/pull/{PR_NUMBER}/merge to
+          have the "normal" scenario involving checking out a merge commit between your branch and the base branch.
+          If you want to run only on a branch or specific commit, you can use either the sha or the branch name instead (prefer the first verion for PRs).
+        type: string
+        required: false
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-wallet-cli:
+    name: "Build (all platforms)"
+    runs-on: ledger-wallet-4cpu-aws-public-cached
+    timeout-minutes: 30
+    continue-on-error: true
+    outputs:
+      coverage_generated: ${{ contains(steps.generate_coverage.outcome, 'success') }}
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup the caches
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-caches@develop
+        id: setup-caches
+        with:
+          use-mise: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-develop-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_DEVELOP }}
+          cache-branch-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_BRANCH }}
+          nx-key: ${{ secrets.NX_KEY }}
+          accountId: ${{ secrets.AWS_ACCOUNT_ID_PROD }}
+          roleName: ${{ secrets.AWS_CACHE_ROLE_NAME }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
+      - name: JFrog npm auth
+        uses: LedgerHQ/ledger-live/tools/actions/composites/jfrog-npm-auth@develop
+        with:
+          registry: ${{ vars.ARTIFACTORY_URL }}
+
+      - name: Install other platforms' optional deps (wallet-cli cross-compilation)
+        uses: LedgerHQ/ledger-live/tools/actions/composites/pnpm-cross-platform-optional-deps@develop
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile --filter "@ledgerhq/wallet-cli..." --filter "ledger-live"
+
+      - name: format check wallet-cli
+        if: github.base_ref == 'develop' || github.ref == 'refs/heads/develop' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        run: pnpm exec nx run @ledgerhq/wallet-cli:format:check
+
+      - name: Build, lint, typecheck and test wallet-cli
+        run: |
+          mkdir -p apps/wallet-cli/coverage
+          pnpm exec nx run-many --projects=@ledgerhq/wallet-cli --targets=lint:ci,typecheck,build,coverage
+
+      - name: Prepare and validate wallet-cli npm packages
+        run: |
+          pnpm --filter "@ledgerhq/wallet-cli" prepare:npm
+          pnpm --filter "@ledgerhq/wallet-cli" pack:check
+          pnpm --filter "@ledgerhq/wallet-cli" smoke:npm
+
+      - name: Upload wallet-cli unit test coverage
+        id: generate_coverage
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-wallet-cli
+          path: ${{ github.workspace }}/apps/wallet-cli/coverage
+
+      - name: Upload darwin-arm64 binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wallet-cli-darwin-arm64
+          path: ${{ github.workspace }}/apps/wallet-cli/npm/darwin-arm64/bin/wallet-cli
+
+      - name: Upload linux-x64 binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wallet-cli-linux-x64
+          path: ${{ github.workspace }}/apps/wallet-cli/npm/linux-x64/bin/wallet-cli
+
+      - name: Upload linux-arm64 binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wallet-cli-linux-arm64
+          path: ${{ github.workspace }}/apps/wallet-cli/npm/linux-arm64/bin/wallet-cli
+
+      - name: Upload windows-x64 binary
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: wallet-cli-windows-x64
+          path: ${{ github.workspace }}/apps/wallet-cli/npm/windows-x64/bin/wallet-cli.exe

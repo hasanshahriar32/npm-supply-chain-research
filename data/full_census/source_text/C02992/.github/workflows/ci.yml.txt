@@ -1,0 +1,156 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - main
+            - "release/*/v**"
+
+    pull_request:
+        branches:
+            - main
+            - "release/*/v**"
+
+permissions:
+    contents: read
+
+jobs:
+    verify_files:
+        name: Verify Files
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: "lts/*"
+
+            - name: Install Packages
+              run: npm install
+
+            - name: Lint Files
+              run: npm run lint
+
+            - name: Lint Files, Dependencies, & Exports
+              run: npm run lint:unused
+
+            - name: Check Formatting
+              run: npm run fmt:check
+
+    build:
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [windows-latest, macOS-latest, ubuntu-latest]
+                node-version: [26.x, 25.x, 24.x, 22.x, 20.x, "20.19.0"]
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Set up Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: npm install and test
+              run: |
+                  npm install
+                  npm run test:unit
+              env:
+                  CI: true
+
+    test_types:
+        name: Test Types
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: "lts/*"
+
+            - name: Install Packages
+              run: npm install
+
+            - name: Run TypeScript Compiler
+              run: npx tsc
+
+            - name: Test types (config-array)
+              run: npm run test:types -w packages/config-array
+
+            - name: Test types (config-helpers)
+              run: npm run test:types -w packages/config-helpers
+
+            - name: Test types (core)
+              run: npm run test:types -w packages/core
+
+            - name: Test types (object-schema)
+              run: npm run test:types -w packages/object-schema
+
+            - name: Test types (plugin-kit)
+              run: npm run test:types -w packages/plugin-kit
+
+            - name: Check dist types compile (TypeScript 5.3)
+              run: npm run test:types:5.3
+
+            - name: Check dist types compile (TypeScript 5.x)
+              run: npm run test:types:5.x
+
+            - name: Check dist types compile (TypeScript 7 preview)
+              run: npm run test:types:7.x
+
+    are-the-types-wrong:
+        name: Are the types wrong?
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: "lts/*"
+
+            - name: Install Packages
+              run: npm install
+
+            - name: Check validity of type definitions
+              run: npm run lint:types
+
+    jsr_test:
+        name: Verify JSR Publish
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: "lts/*"
+
+            - name: Install Packages
+              run: npm install
+
+            - name: Run --dry-run
+              run: npm run test:jsr
+
+    pnpm_test:
+        name: Test pnpm Type Support
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+              with:
+                  version: latest
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: "lts/*"
+
+            - name: Install Packages
+              run: npm install
+
+            - name: Run pnpm test
+              run: npm run test:pnpm --ws --if-present

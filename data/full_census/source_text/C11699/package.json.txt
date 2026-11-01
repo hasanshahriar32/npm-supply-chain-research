@@ -1,0 +1,45 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "lerna exec --scope @uiw/* --scope react-codemirror-merge --ignore www -- npm run build",
+    "⬇️⬇️⬇️⬇️⬇️ package ⬇️⬇️⬇️⬇️⬇️": "▼▼▼▼▼ package ▼▼▼▼▼",
+    "watch": "npm run-script watch --workspace @uiw/react-codemirror",
+    "bundle": "npm run-script bundle --workspace @uiw/react-codemirror",
+    "doc": "npm run-script build --workspace www",
+    "start": "npm run-script start --workspace www",
+    "⬆️⬆️⬆️⬆️⬆️ package ⬆️⬆️⬆️⬆️⬆️": "▲▲▲▲▲ package ▲▲▲▲▲",
+    "test": "lerna exec \"tsbb test --no-watchman\" --scope @uiw/react-codemirror",
+    "coverage": "lerna exec \"tsbb test --coverage --bail --no-watchman\" --scope @uiw/react-codemirror --scope @uiw/codemirror-extensions-langs",
+    "check:theme-dependencies": "node themes/_scripts/check-runtime-dependencies.cjs",
+    "prepare": "husky",
+    "version": "lerna version --exact --force-publish --no-push --no-git-tag-version",
+    "prettier": "prettier --write '**/*.{js,jsx,tsx,ts,less,json}'",
+    "remove": "npm run clean && lerna exec \"rm -rf package-lock.json cjs esm lib\" --scope @uiw/* --scope website --scope react-codemirror-merge",
+    "clean": "lerna clean --yes"
+  },
+  "workspaces": [
+    "themes/*",
+    "extensions/*",
+    "core",
+    "merge",
+    "www"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@kkt/less-modules": "^7.5.4",
+    "@kkt/ncc": "^1.0.13",
+    "@types/react-test-renderer": "~18.0.0",
+    "husky": "^9.0.11",
+    "jest": "^29.7.0",
+    "kkt": "^7.5.4",
+    "lerna": "8.0.0",
+    "lint-staged": "^15.1.0",
+    "prettier": "^3.0.2",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "react-test-renderer": "~18.2.0",
+    "tsbb": "^4.5.1"
+  }
+}

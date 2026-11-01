@@ -1,0 +1,118 @@
+name: unit
+
+on:
+  push:
+    branches: [main]
+  pull_request: # run on all PRs, not just PRs to a particular branch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 1
+
+jobs:
+  # `unit` includes just unit and proto tests.
+  unit:
+    strategy:
+      matrix:
+        node: ['22.19', '24', '26']
+      fail-fast: false
+    runs-on: ubuntu-latest
+    name: node ${{ matrix.node }}
+    env:
+      CHROME_PATH: ${{ github.workspace }}/.tmp/chrome-tot/chrome
+      FORCE_COLOR: true
+
+    steps:
+    - name: git clone
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        # Depth of at least 2 for codecov coverage diffs. See https://github.com/GoogleChrome/lighthouse/pull/12079
+        fetch-depth: 2
+        persist-credentials: false
+
+    - name: Use Node.js ${{ matrix.node }}
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: ${{ matrix.node }}
+        cache: 'yarn'
+      env:
+        FORCE_COLOR: 0
+
+    - name: Set up protoc
+      uses: arduino/setup-protoc@64c0c85d18e984422218383b81c52f8b077404d3 # v1.1.2
+      with:
+        version: '3.20'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set up Python
+      uses: actions/setup-python@0f07f7f756721ebd886c2462646a35f78a8bc4de # v1
+      with:
+        python-version: 3
+    - name: Install Python dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install protobuf==3.20
+
+    - run: yarn install --frozen-lockfile --network-timeout 1000000
+    - run: yarn build-report
+    - run: yarn i18n:collect-strings
+    - run: yarn reset-link
+
+    # Since Ubuntu 23, dev builds of Chromium need this.
+    # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+    - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+    # Run pptr tests using ToT Chrome instead of stable default.
+    - name: Install Chrome ToT
+      run: bash $GITHUB_WORKSPACE/core/scripts/download-chrome.sh
+
+    - run: yarn test-proto # Run before unit-core because the roundtrip json is needed for proto tests.
+
+    - name: yarn unit
+      run: yarn unit:ci
+
+    # Runs here because it needs the roundtrip proto.
+    - name: yarn test-viewer
+      if: matrix.node == '24'
+      run: yarn build-viewer && yarn test-viewer
+
+    - run: git add -A && git diff --cached --exit-code
+
+    - name: Upload failures
+      if: failure()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: Unit (ubuntu; node ${{ matrix.node }})
+        path: .tmp/unit-failures/
+
+  # For windows, just test the potentially platform-specific code.
+  unit-windows:
+    runs-on: windows-latest
+    name: Windows unit
+
+    steps:
+    - name: git clone
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        persist-credentials: false
+
+    - name: Use Node.js 22.19
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version: '22.19'
+        cache: 'yarn'
+
+    - run: yarn install --frozen-lockfile --network-timeout 1000000
+    - run: yarn build-report
+
+    - run: yarn unit-cli
+    - run: yarn diff:sample-json
+
+    # Fail if any changes were written to any source files or generated untracked files (ex, from -GA).
+    - run: git add -A && git diff --cached --exit-code

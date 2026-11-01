@@ -1,0 +1,157 @@
+# This is a composition of lint and test scripts
+
+name: Test and Release
+
+# Run this job on all pushes to master and pull requests
+# as well as tags with a semantic version
+on:
+  push:
+    branches:
+      - master
+    tags:
+      # normal versions
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      # pre-releases
+      - "v[0-9]+.[0-9]+.[0-9]+-**"
+  pull_request: {}
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Runs unit tests on all supported node versions and OSes
+  lint:
+    if: contains(github.event.head_commit.message, '[skip ci]') == false
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [24.x]
+        os: [ubuntu-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint code
+        run: npm run lint
+
+  # Runs unit tests on all supported node versions and OSes
+  unit-tests:
+    if: contains(github.event.head_commit.message, '[skip ci]') == false
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 24.x]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript code
+        run: npm run build
+
+      # TODO: No actual tests aside from declaration checks
+      - name: Run component tests
+        run: npm test
+
+  auto-merge:
+    if: |
+      always() &&
+      github.event_name == 'pull_request'
+    needs: [ lint, unit-tests ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - id: automerge
+        name: automerge
+        uses: "pascalgn/automerge-action@v0.16.4"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          MERGE_LABELS: "automated pr 🔧"
+          MERGE_FILTER_AUTHOR: "foxriver76"
+          MERGE_FORKS: "false"
+          MERGE_DELETE_BRANCH: "false"
+          UPDATE_LABELS: "automated pr 🔧"
+          MERGE_METHOD: "squash"
+          MERGE_COMMIT_MESSAGE: "pull-request-title-and-description"
+
+      - name: Checkout repository
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # Fetch the history, or this action won't work
+          ref: 'master'
+
+      - name: Use Node.js 24
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Determine version
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        id: version
+        uses: actions/github-script@v9
+        with:
+          result-encoding: string
+          script: |
+            return require('./package.json').version;
+
+      - name: Install dependencies
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        run: npm ci
+
+      - name: Build
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        run: npm run build
+
+      - name: Extract the commit body
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        id: extract_release
+        # The body may be multiline, therefore we need to escape some characters
+        run: |
+          BODY=$(git show -s --format=%b)
+          BODY="${BODY//'%'/'%25'}"
+          BODY="${BODY//$'\n'/'%0A'}"
+          BODY="${BODY//$'\r'/'%0D'}"
+          echo "::set-output name=BODY::$BODY"
+
+      - name: Publish npm
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        run: npm publish
+
+      - name: Create Github Release
+        if: steps.automerge.outputs.mergeResult == 'merged'
+        uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: v${{ steps.version.outputs.result }}
+          name: Release v${{ steps.version.outputs.result }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.result, '-') }}
+          body: ${{ steps.extract_release.outputs.BODY }}

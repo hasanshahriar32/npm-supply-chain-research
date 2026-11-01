@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node:
+          - 22.x # Maintenance LTS — EOL 2025-10-21 / 2027-04-30
+          - 24.x # Active LTS      — EOL 2026-10-20 / 2028-04-30
+          - 26.x # Current         — EOL 2027-10-27 / 2029-04-30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Test source (lint + jest)
+        run: npm test
+      - name: Helper script unit tests
+        run: npm run test:scripts
+
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - run: npm run compile
+      - run: npm pack
+      - name: Upload packed tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: '*.tgz'
+          if-no-files-found: error
+
+  verify-package:
+    needs: pack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node:
+          - 22.x # Maintenance LTS — EOL 2025-10-21 / 2027-04-30
+          - 24.x # Active LTS      — EOL 2026-10-20 / 2028-04-30
+          - 26.x # Current         — EOL 2027-10-27 / 2029-04-30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: Download packed tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+      - name: Verify packaged artifact (CJS + ESM + types)
+        shell: bash
+        run: node .github/scripts/verify-packaged.mjs "$(ls ts-dedent-*.tgz | head -1)"
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+      - run: npm ci
+      - name: Run coverage
+        run: npm run ci
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

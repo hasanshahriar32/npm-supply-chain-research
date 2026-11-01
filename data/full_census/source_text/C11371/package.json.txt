@@ -1,0 +1,62 @@
+{
+  "name": "gulp-prettier",
+  "version": "7.0.0",
+  "description": "Format files with Prettier",
+  "license": "MIT",
+  "repository": "thomasvantuycom/gulp-prettier",
+  "author": {
+    "name": "Thomas Vantuycom",
+    "email": "thomasvantuycom@proton.me",
+    "url": "https://www.thomasvantuycom.com"
+  },
+  "type": "module",
+  "exports": "./index.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "xo && ava"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "gulp",
+    "prettier",
+    "gulp-prettier",
+    "gulpplugin"
+  ],
+  "dependencies": {
+    "plugin-error": "^2.0.1",
+    "prettier": "^3.9.5"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^7.0.0",
+    "@semantic-release/git": "^11.0.0",
+    "ava": "^8.0.1",
+    "p-event": "^7.1.0",
+    "semantic-release": "^25.0.7",
+    "vinyl": "^3.0.1",
+    "xo": "^4.0.0"
+  },
+  "release": {
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/npm",
+      [
+        "@semantic-release/git",
+        {
+          "message": "release: ${nextRelease.version}"
+        }
+      ],
+      "@semantic-release/github"
+    ]
+  },
+  "xo": {
+    "rules": {
+      "markdown/no-multiple-h1": "off"
+    }
+  }
+}

@@ -1,0 +1,161 @@
+name: Continuous Integration and Deployment
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  run-ci:
+    uses: ./.github/workflows/reusable-ci.yml
+    with:
+      upload-artifacts: true
+
+  changesets:
+    needs: [run-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate a token
+        id: gen_token
+        uses: actions/create-github-app-token@v2
+        with:
+            app-id: ${{ secrets.SUBSTRATE_CONNECT_PR_APP_ID }}
+            private-key: ${{ secrets.SUBSTRATE_CONNECT_PR_APP_KEY }}
+            owner: ${{ github.repository_owner }}
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.gen_token.outputs.token }}
+      - uses: ./.github/actions/turbo-build
+      - name: Create Release Pull Request
+        uses: changesets/action@v1
+        with:
+          commit: "chore: version packages"
+          title: "chore: version packages"
+          publish: npx @changesets/cli tag 
+        env:
+          GITHUB_TOKEN: ${{ steps.gen_token.outputs.token }}
+
+  npm-publish:
+    needs: [run-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: ./.github/actions/turbo-build
+      - name: "@substrate/connect Publish"
+        id: publish_connect
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-connect"
+          package-directory: ./packages/connect
+      - name: "@substrate/connect-extension-protocol Publish"
+        id: publish_connect_extension_protocol
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-connect-extension-protocol"
+          package-directory: ./packages/connect-extension-protocol
+      - name: "@substrate/connect-known-chains Publish"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-connect-known-chains"
+          package-directory: ./packages/connect-known-chains
+      - name: "@substrate/light-client-extension-helpers Publish"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-light-client-extension-helpers"
+          package-directory: ./packages/light-client-extension-helpers
+      - name: "@substrate/connect-discovery"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-connect-discovery"
+          package-directory: ./packages/connect-discovery
+      - name: "@substrate/discovery"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-discovery"
+          package-directory: ./packages/discovery
+      - name: "@substrate/smoldot-discovery"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-smoldot-discovery"
+          package-directory: ./packages/smoldot-discovery
+      - name: "@substrate/smoldot-discovery-connector"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-smoldot-discovery-connector"
+          package-directory: ./packages/smoldot-discovery-connector
+      - name: "@substrate/ws-provider"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-ws-provider"
+          package-directory: ./packages/ws-provider
+      - name: "@substrate/logs-provider"
+        uses: ./.github/actions/publish-package 
+        with:
+          token: ${{ secrets.NPM_PUBLISH_AUTOMATION_TOKEN }}
+          tarball-name: "substrate-logs-provider"
+          package-directory: ./packages/logs-provider
+
+  upload-extension-artifacts:
+    needs: [run-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: substrate-connect-extension-source-code
+          path: ./projects/extension
+      - uses: ./.github/actions/turbo-build
+      - run: pnpm --filter @substrate/extension build:firefox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: substrate-connect-extension-mv3-firefox
+          path: ./projects/extension/dist
+      - run: pnpm --filter @substrate/extension build:chrome
+      - uses: actions/upload-artifact@v4
+        with:
+          name: substrate-connect-extension-mv3-chrome
+          path: ./projects/extension/dist
+
+  docs:
+    needs: [run-ci]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.1.7
+      - uses: ./.github/actions/turbo-build
+      - name: Generate API Docs
+        run: pnpm api-docs
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: './docs'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  all:
+    needs: [run-ci, changesets, npm-publish, upload-extension-artifacts, docs]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check job status
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
+      - name: All jobs completed successfully
+        if: success()
+        run: echo "All jobs completed successfully!"

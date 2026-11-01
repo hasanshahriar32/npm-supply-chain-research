@@ -1,0 +1,31 @@
+{
+  "name": "temporal-workspace",
+  "private": true,
+  "author": {
+    "name": "Adam Shaw",
+    "email": "arshaw@users.noreply.github.com",
+    "url": "http://arshaw.com/"
+  },
+  "license": "MIT",
+  "copyright": "2026 Adam Shaw",
+  "type": "module",
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "postinstall": "lefthook install",
+    "ci": "pnpm run clean && pnpm run lint && pnpm run build && pnpm run test",
+    "lint": "pnpm -r run lint",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r --filter '!terser' --stream run test",
+    "vitest": "pnpm -r --stream run vitest",
+    "test262": "pnpm -r --stream run test262",
+    "clean": "pnpm -r run clean"
+  },
+  "devDependencies": {
+    "lefthook": "^1.6.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "terser": "workspace:*"
+    }
+  }
+}

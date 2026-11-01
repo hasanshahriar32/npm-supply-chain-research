@@ -1,0 +1,33 @@
+name: 'pr-check'
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions: {}
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Collect changed files
+        id: changed-files
+        uses: step-security/changed-files@2e07db73e5ccdb319b9a6c7766bd46d39d304bad # v47.0.5
+        with:
+          files: |
+            .changeset/**
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/actions/check-pr
+            .github/PULL_REQUEST_TEMPLATE.md
+            .changeset
+      - uses: $/.github/actions/check-pr
+        with:
+          changed-files: ${{ steps.changed-files.outputs.added_files }} ${{ steps.changed-files.outputs.modified_files }}

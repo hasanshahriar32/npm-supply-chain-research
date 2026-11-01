@@ -1,0 +1,315 @@
+name: React Native Smoke Test
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  push:
+    branches: [main]
+
+jobs:
+  check-affected:
+    name: Check @amplitude/analytics-react-native affected
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request'
+    outputs:
+      unaffected: ${{ steps.package-unaffected.outputs.unaffected }}
+    env:
+      NX_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main~1' }}
+      NX_HEAD: ${{ github.sha }}
+
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ff378ebe6b225b0680b81c1ad4498ae0d1d3a5e3 # v6.0.10
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install project dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check if analytics-react-native is affected
+        id: package-unaffected
+        run: |
+          set +e
+          sh scripts/is-package-unaffected.sh @amplitude/analytics-react-native
+          code=$?
+          set -e
+          if [ "$code" -eq 0 ]; then
+            echo "unaffected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "unaffected=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip smoke test (package not affected)
+        if: steps.package-unaffected.outputs.unaffected == 'true'
+        run: echo "Skipping React Native smoke test — @amplitude/analytics-react-native is not in the affected set."
+
+  ios-smoke:
+    name: iOS Simulator Smoke (Maestro, newArch=${{ matrix.new-arch }})
+    needs: check-affected
+    if: needs.check-affected.outputs.unaffected == 'false' || github.event_name != 'pull_request'
+    runs-on: macos-15
+    # Headroom for a slow Maestro XCTest driver plus one retry (below).
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        new-arch: [false, true]
+
+    env:
+      APP_DIR: examples/react-native/app
+      BUNDLE_ID: org.reactjs.native.example.app
+      SIM_NAME: iPhone 16
+      SIM_OS: '18.5'
+      # Baked into the generated Pods project by `pod install` (codegen + the
+      # RCT_NEW_ARCH_ENABLED compile flag), so it must be set for that step;
+      # xcodebuild only compiles what pod install produced.
+      RCT_NEW_ARCH_ENABLED: ${{ matrix.new-arch && '1' || '0' }}
+      # CocoaPods 1.14.3 hits `ArgumentError - pathname contains null byte` in
+      # Pathname#realdirpath on pnpm monorepos when the locale is not UTF-8
+      # (see https://github.com/CocoaPods/CocoaPods/issues/12866). macOS
+      # runners default to an unset/C locale; pin it here.
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      # Maestro's iOS XCTest driver waits 120s by default. On macos-15 that
+      # xcodebuild is often still running when the wait expires, so the
+      # driver never opens. Milliseconds.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ff378ebe6b225b0680b81c1ad4498ae0d1d3a5e3 # v6.0.10
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      # Session Replay's XCFramework requires Swift 6.1; Xcode 15.4 cannot import it.
+      - name: Select Xcode 16.4
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_16.4.app/Contents/Developer
+          xcodebuild -version
+          xcrun swift --version
+
+      - name: Setup Ruby for CocoaPods
+        uses: ruby/setup-ruby@6aaa311d81eba98ae12eaffbcb63296ace0efcde # v1.307.0
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ env.APP_DIR }}
+
+      - name: Install project dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SDK and its workspace deps
+        run: pnpm --filter @amplitude/analytics-react-native... build
+
+      - name: Cache CocoaPods
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ${{ env.APP_DIR }}/ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-newarch-${{ matrix.new-arch }}-${{ hashFiles(format('{0}/ios/Podfile.lock', env.APP_DIR)) }}
+          restore-keys: |
+            pods-${{ runner.os }}-newarch-${{ matrix.new-arch }}-
+
+      - name: Pod install
+        working-directory: ${{ env.APP_DIR }}/ios
+        # Even with LANG/LC_ALL pinned, cocoapods 1.14.3 + pnpm intermittently
+        # raises `ArgumentError - pathname contains null byte` in
+        # Pathname#realdirpath (cocoapods/cocoapods#12866). Retry on failure
+        # before giving up — failures so far have always passed on the next try.
+        run: |
+          for attempt in 1 2 3; do
+            if bundle exec pod install; then
+              exit 0
+            fi
+            echo "::warning::pod install attempt $attempt failed, retrying..."
+            sleep 5
+          done
+          echo "::error::pod install failed 3 times"
+          exit 1
+
+      - name: Build iOS app (Release, simulator)
+        working-directory: ${{ env.APP_DIR }}
+        # Raw xcodebuild output is noisy; xcpretty would be nicer but isn't
+        # installed by default on the runners, and adding it as a Gemfile
+        # dependency for cosmetics isn't worth the install time.
+        #
+        # AMPLITUDE_API_KEY is read by babel-plugin-transform-inline-environment-variables
+        # at bundle time (see examples/react-native/app/babel.config.js) and inlined into
+        # the JS bundle so the example app can send events end-to-end to api2.amplitude.com
+        # under our test project. Mirrors the Playwright VITE_AMPLITUDE_API_KEY pattern in
+        # .github/actions/e2e-test/action.yml. With no secret, the bundle falls back to
+        # the literal 'YOUR_API_KEY' and the Maestro test still passes the crash-guard
+        # assertions (only the api2 round-trip is skipped).
+        env:
+          AMPLITUDE_API_KEY: ${{ secrets.AMPLITUDE_API_KEY }}
+        run: |
+          xcodebuild \
+            -workspace ios/app.xcworkspace \
+            -scheme app \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+          test -d build/Build/Products/Release-iphonesimulator/app.app
+
+      # Compiles packages/analytics-react-native/ios/Tests via the appTests
+      # target (the example app is just the host/runner). Release so the host
+      # app uses the embedded JS bundle instead of Metro; same derivedDataPath
+      # as the build step so pod compilation is reused.
+      - name: Run native unit tests (XCTest)
+        working-directory: ${{ env.APP_DIR }}
+        env:
+          AMPLITUDE_API_KEY: ${{ secrets.AMPLITUDE_API_KEY }}
+        run: |
+          xcodebuild test \
+            -workspace ios/app.xcworkspace \
+            -scheme app \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=$SIM_NAME,OS=$SIM_OS" \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Boot iOS simulator
+        run: |
+          UDID=$(xcrun simctl list devices "$SIM_NAME" available -j | node -e "
+            const data = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+            const runtime = 'com.apple.CoreSimulator.SimRuntime.iOS-' + process.env.SIM_OS.replaceAll('.', '-');
+            const match = (data.devices[runtime] ?? []).find(d => d.name === process.env.SIM_NAME && d.isAvailable);
+            if (!match) { console.error('No available', process.env.SIM_NAME, 'on iOS', process.env.SIM_OS); process.exit(1); }
+            console.log(match.udid);
+          ")
+          echo "SIM_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Install app on simulator
+        working-directory: ${{ env.APP_DIR }}
+        run: xcrun simctl install "$SIM_UDID" build/Build/Products/Release-iphonesimulator/app.app
+
+      - name: Install Maestro
+        env:
+          MAESTRO_VERSION: '2.7.0'
+          MAESTRO_SHA256: 'a4ccab6b604617e7aef6db4f885666056eabe5cfa32befaa3bc994041b8fcbb5'
+        run: |
+          MAESTRO_DIR="$HOME/.maestro"
+          MAESTRO_TMP="$MAESTRO_DIR/tmp"
+          MAESTRO_ZIP="$MAESTRO_TMP/maestro.zip"
+          DOWNLOAD_URL="https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          mkdir -p "$MAESTRO_TMP"
+          curl -fsSL "$DOWNLOAD_URL" -o "$MAESTRO_ZIP"
+          echo "$MAESTRO_SHA256  $MAESTRO_ZIP" | shasum -a 256 -c -
+          unzip -qo "$MAESTRO_ZIP" -d "$MAESTRO_TMP"
+          rm -rf "${MAESTRO_DIR}/lib" "${MAESTRO_DIR}/bin"
+          mkdir -p "$MAESTRO_DIR"
+          cp -rf "$MAESTRO_TMP/maestro/"* "$MAESTRO_DIR"
+          rm -rf "$MAESTRO_TMP/maestro" "$MAESTRO_ZIP"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run Maestro smoke flow
+        working-directory: ${{ env.APP_DIR }}
+        # --device pins the simulator booted above. A timed-out driver leaves
+        # xcodebuild running, so the retry shuts that down and reboots first.
+        run: |
+          run_maestro() {
+            maestro test --device "$SIM_UDID" .maestro/smoke.yaml
+          }
+          if run_maestro; then
+            exit 0
+          fi
+          echo "::warning::Maestro smoke flow failed; rebooting simulator and retrying once"
+          pkill -x xcodebuild || true
+          xcrun simctl shutdown "$SIM_UDID" || true
+          xcrun simctl bootstatus "$SIM_UDID" -b
+          xcrun simctl install "$SIM_UDID" build/Build/Products/Release-iphonesimulator/app.app
+          run_maestro
+
+      - name: Dump simulator logs on failure
+        if: failure()
+        run: |
+          xcrun simctl spawn "$SIM_UDID" log show --last 5m --predicate 'process == "app"' || true
+
+  android-unit:
+    name: Android Robolectric Unit Tests
+    needs: check-affected
+    if: needs.check-affected.outputs.unaffected == 'false' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      # The library has no standalone Gradle project — it builds only as an autolinked
+      # subproject of a host app — so we run its unit tests from the bare example app.
+      APP_ANDROID_DIR: examples/react-native/app/android
+
+    steps:
+      - name: Check out git repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@f2beeb24e141e01a676f977032f5a29d81c9e27e # v5.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ff378ebe6b225b0680b81c1ad4498ae0d1d3a5e3 # v6.0.10
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install project dependencies
+        # Installs the example app's RN autolinking Gradle deps (@react-native-community/cli,
+        # @react-native-community/cli-platform-android, @react-native/gradle-plugin) that
+        # android/settings.gradle resolves via its relative node_modules paths.
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Gradle
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('examples/react-native/app/android/**/*.gradle*', 'examples/react-native/app/android/gradle/wrapper/gradle-wrapper.properties', 'packages/analytics-react-native/android/**/*.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Run Robolectric unit tests
+        working-directory: ${{ env.APP_ANDROID_DIR }}
+        # Relies on the Android SDK preinstalled on ubuntu-latest (ANDROID_HOME set, platform
+        # 34 + build-tools 34.0.0 present, licenses accepted). newArchEnabled=false keeps this
+        # a pure unit-test run (no codegen/NDK), so the :app native build is never required.
+        run: ./gradlew :amplitude_analytics-react-native:testDebugUnitTest -PnewArchEnabled=false --console=plain
+
+      - name: Upload test report on failure
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: android-unit-test-report
+          path: packages/analytics-react-native/android/build/reports/tests/testDebugUnitTest
+          if-no-files-found: ignore

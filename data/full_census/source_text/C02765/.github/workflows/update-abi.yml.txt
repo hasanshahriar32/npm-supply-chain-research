@@ -1,0 +1,76 @@
+name: Auto-update ABI JSON file
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 15-23,0-3 * * 1-5'
+
+permissions: {}
+
+jobs:
+  autoupdate:
+    strategy:
+      fail-fast: false
+      matrix:
+        branch:
+          - main
+          - 3-x-y
+    runs-on: ubuntu-latest
+    environment:
+      name: auto-updater
+      deployment: false
+    permissions:
+      id-token: write  # for secret service access
+    steps:
+    - name: Generate GitHub App token (updater app)
+      uses: electron/github-app-auth-action@5f70a3726af01b612f29aac96d05aa524389c9e9 # v2.1.0
+      id: generate-token
+      with:
+        creds: ${{ secrets.GH_APP_CREDS }}
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+        ref: ${{ matrix.branch }}
+        token: ${{ steps.generate-token.outputs.token }}
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version-file: '.nvmrc'
+    - run: yarn install --immutable
+    - name: Update ABI registry
+      run: |
+        npm run update-abi-registry
+        git add abi_registry.json
+    - name: Commit Changes to ABI registry
+      id: commit-changes
+      uses: dsanders11/github-app-commit-action@2bbcd331016d8c950b05a24b56e7eb9cb50d545e # v2.1.0
+      with:
+        fail-on-no-changes: false
+        message: 'feat: update ABI registry'
+        ref: "feat/update-abi-registry-${{ matrix.branch }}-${{ hashFiles('abi_registry.json') }}"
+        token: ${{ steps.generate-token.outputs.token }}
+    - name: Create pull request
+      if: ${{ steps.commit-changes.outputs.sha }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+      run: |
+        gh pr create \
+          --title "feat: update ABI registry (${{ matrix.branch }})" \
+          --body "Automated PR to update abi_registry.json" \
+          --head "feat/update-abi-registry-${{ matrix.branch }}-${{ hashFiles('abi_registry.json') }}" \
+          --base ${{ matrix.branch }}
+    - name: Get GitHub App token (approver app)
+      if: ${{ steps.commit-changes.outputs.sha }}
+      id: secret-service
+      uses: electron/secret-service-action@23b9042f797e34674f0fe2c91608f57f9661ccf2 # v1.1.0
+    - name: Approve and merge pull request
+      if: ${{ steps.commit-changes.outputs.sha }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ fromJSON(steps.secret-service.outputs.secrets || '{}').PR_APPROVER_GH_TOKEN }}
+      run: |
+        set -eo pipefail
+        gh pr review "feat/update-abi-registry-${{ matrix.branch }}-${{ hashFiles('abi_registry.json') }}" --approve
+        sleep 30  # Checks don't always start immediately
+        gh pr checks "feat/update-abi-registry-${{ matrix.branch }}-${{ hashFiles('abi_registry.json') }}" --watch --fail-fast
+        gh pr merge "feat/update-abi-registry-${{ matrix.branch }}-${{ hashFiles('abi_registry.json') }}" --squash

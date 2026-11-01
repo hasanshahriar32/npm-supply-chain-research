@@ -1,0 +1,64 @@
+name: Sanity check
+
+on:
+  push:
+    branches:
+      - master
+      - 2025-review
+  pull_request:
+    branches:
+      - master
+      - 2025-review
+
+jobs:
+  build:
+    name: Build with Node ${{ matrix.node-version }} | Mongo ${{ matrix.mongo-server }} | Driver ${{ matrix.mongodb-driver }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20.x, 22.x, 24.x]
+        mongodb-driver: ['5.0.0', '5.6.0', '5.9.2', '6', '6.11.0', '6.21.0', '7.0.0']
+        mongo-server: ['4.4', '5.0', '6.0', '7.0', '8.0']
+
+    env:
+      MONGODB_DRIVER_VERSION: ${{ matrix.mongodb-driver }}
+      MONGO_SERVER_TAG: ${{ matrix.mongo-server }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install MongoDB driver ${{ matrix.mongodb-driver }}
+        run: |
+          npm install mongodb@${MONGODB_DRIVER_VERSION} --no-save --no-package-lock --no-audit --legacy-peer-deps
+      - name: Start MongoDB ${{ matrix.mongo-server }}
+        run: docker compose up -d
+      - name: Wait for MongoDB to accept connections
+        run: |
+          for i in {1..30}; do
+            if docker compose exec -T mongo /bin/sh -c 'if command -v mongosh >/dev/null 2>&1; then mongosh --quiet --eval "db.runCommand({ ping: 1 })"; else mongo --quiet --eval "db.runCommand({ ping: 1 })"; fi' >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MongoDB failed to start" >&2
+          exit 1
+      - run: npm run typecheck
+      - run: npm test
+      - name: Upload coverage
+        if: matrix.node-version == '22.x' && matrix.mongodb-driver == '6' && matrix.mongo-server == '6.0'
+        run: npm run cov:send
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Build artifacts
+        run: npm run build
+      - name: Tear down MongoDB
+        if: always()
+        run: docker compose down -v

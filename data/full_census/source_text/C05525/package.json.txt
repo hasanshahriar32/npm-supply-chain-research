@@ -1,0 +1,108 @@
+{
+  "name": "sort-package-json",
+  "version": "0.0.0-development",
+  "description": "Sort an Object or package.json based on the well-known package.json keys",
+  "keywords": [
+    "keys",
+    "object",
+    "sort"
+  ],
+  "homepage": "https://github.com/keithamus/sort-package-json#readme",
+  "bugs": {
+    "url": "https://github.com/keithamus/sort-package-json/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/keithamus/sort-package-json.git"
+  },
+  "license": "MIT",
+  "author": "Keith Cirkel <npm@keithcirkel.co.uk> (http://keithcirkel.co.uk/)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./index.d.ts",
+        "default": "./index.js"
+      },
+      "require": {
+        "types": "./index.d.ts",
+        "default": "./index.cjs"
+      }
+    }
+  },
+  "types": "index.d.ts",
+  "bin": "cli.js",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "cli.js",
+    "reporter.js",
+    "index.cjs"
+  ],
+  "scripts": {
+    "build": "esbuild index.js --bundle --platform=node --outfile=index.cjs --external:semver --external:git-hooks-list",
+    "fix": "eslint . --fix && prettier . --write && node cli.js \"package.json\"",
+    "lint": "eslint . && prettier . \"!**/*.js\" --check && node cli.js \"package.json\" --check",
+    "prepare": "husky",
+    "prepublishOnly": "npm run build",
+    "semantic-release": "semantic-release",
+    "test": "ava && tstyche",
+    "test-coverage": "c8 npm run test",
+    "update-snapshots": "ava --update-snapshots"
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "package.json": [
+      "node cli.js"
+    ],
+    "*.js": [
+      "eslint --fix"
+    ],
+    "**/*": [
+      "prettier --write --ignore-unknown"
+    ]
+  },
+  "prettier": {
+    "semi": false,
+    "singleQuote": true
+  },
+  "ava": {
+    "verbose": true
+  },
+  "dependencies": {
+    "detect-indent": "^7.0.2",
+    "detect-newline": "^4.0.1",
+    "git-hooks-list": "^4.2.1",
+    "is-plain-obj": "^4.1.0",
+    "semver": "^7.8.5",
+    "sort-object-keys": "^2.1.0",
+    "tinyglobby": "^0.2.17"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@eslint/js": "^10.0.1",
+    "ava": "^8.1.0",
+    "c8": "^12.0.0",
+    "dot-prop": "^10.2.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.5.0",
+    "eslint-plugin-promise": "^7.3.0",
+    "globals": "^17.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "semantic-release": "^25.0.9",
+    "tempy": "^3.2.0",
+    "tstyche": "^7.2.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

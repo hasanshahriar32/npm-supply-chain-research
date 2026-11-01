@@ -1,0 +1,139 @@
+name: tag-release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+      - uses: bahmutov/npm-install@v1.1.0
+      - name: Build native packages
+        run: yarn build-release
+      - name: Strip debug symbols # https://github.com/rust-lang/rust/issues/46034
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: strip -x ./*.node # Must use -x on macOS. This produces larger results on linux.
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: bindings-${{ matrix.os }}
+          path: ./*.node
+      - name: Smoke test
+        run: node -e "require('./')"
+
+  build-linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            strip: strip
+            image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
+            setup: npm install --global yarn@1
+          - target: aarch64-unknown-linux-gnu
+            strip: llvm-strip
+            image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+          - target: aarch64-unknown-linux-musl
+            image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            strip: aarch64-linux-musl-strip
+          - target: x86_64-unknown-linux-musl
+            image: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            strip: strip
+    name: build-${{ matrix.target }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.target }}
+      - name: Setup cross compile toolchain
+        if: ${{ matrix.setup }}
+        run: ${{ matrix.setup }}
+      - name: Setup rust target
+        run: rustup target add ${{ matrix.target }}
+      - uses: bahmutov/npm-install@v1.8.32
+      - name: Build native packages
+        run: yarn build-release --target ${{ matrix.target }}
+      - name: Strip debug symbols # https://github.com/rust-lang/rust/issues/46034
+        if: ${{ matrix.strip }}
+        run: ${{ matrix.strip }} *.node
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: bindings-${{ matrix.target }}
+          path: ./*.node
+
+  build-apple-silicon:
+    name: aarch64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: aarch64-apple-darwin
+      - uses: bahmutov/npm-install@v1.1.0
+      - name: Build native packages
+        run: |
+          sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
+          export CC=$(xcrun -f clang);
+          export CXX=$(xcrun -f clang++);
+          SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
+          export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
+          export JEMALLOC_SYS_WITH_LG_PAGE=14;
+          yarn build-release --target aarch64-apple-darwin
+      - name: Strip debug symbols
+        run: strip -x ./*.node
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: bindings-apple-aarch64
+          path: ./*.node
+      - name: debug
+        run: ls -l ./*.node
+
+  build-and-release:
+    runs-on: ubuntu-latest
+    name: Build and release the tagged version
+    needs:
+      - build
+      - build-linux
+      - build-apple-silicon
+    steps:
+      - uses: actions/checkout@v1
+      - uses: bahmutov/npm-install@v1.1.0
+      - name: Build native packages
+        run: yarn build-release
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: Move artifacts
+        run: mv artifacts/*/*.node .
+      - name: Debug
+        run: ls -l ./*.node
+      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm publish

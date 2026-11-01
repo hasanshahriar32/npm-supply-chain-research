@@ -1,0 +1,112 @@
+{
+  "name": "apache-arrow",
+  "description": "Apache Arrow columnar in-memory format",
+  "bin": {
+    "arrow2csv": "bin/arrow2csv.cjs"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "cross-env NODE_NO_WARNINGS=1 gulp test",
+    "build": "cross-env NODE_NO_WARNINGS=1 gulp build",
+    "clean": "cross-env NODE_NO_WARNINGS=1 gulp clean",
+    "debug": "cross-env NODE_NO_WARNINGS=1 gulp debug",
+    "perf": "node --no-warnings --loader ts-node/esm/transpile-only perf/index.ts",
+    "test:integration": "bin/integration.ts --mode validate",
+    "release": "./npm-release.sh",
+    "test:coverage": "gulp test -t src --coverage",
+    "test:bundle": "gulp bundle",
+    "doc": "del-cli ./doc && typedoc",
+    "lint": "eslint src test --fix",
+    "lint:ci": "eslint src test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/apache/arrow-js.git"
+  },
+  "keywords": [
+    "apache",
+    "arrow"
+  ],
+  "author": "Apache Software Foundation",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/apache/arrow-js/issues"
+  },
+  "homepage": "https://arrow.apache.org/js/",
+  "files": [
+    "bin",
+    "src",
+    "gulp",
+    "jestconfigs",
+    "test",
+    "*.json",
+    "tsconfigs",
+    "README.md",
+    "gulpfile.js",
+    "jest.config.js"
+  ],
+  "dependencies": {
+    "@types/node": "^25.2.0",
+    "flatbuffers": "^25.1.24",
+    "json-with-bigint": "^3.5.3",
+    "tslib": "^2.6.2"
+  },
+  "devDependencies": {
+    "@rollup/plugin-alias": "6.0.0",
+    "@rollup/plugin-node-resolve": "16.0.3",
+    "@rollup/stream": "3.0.1",
+    "@swc-node/register": "1.12.1",
+    "@swc/core": "1.16.2",
+    "@swc/helpers": "^0.5.11",
+    "@types/benchmark": "2.1.5",
+    "@types/jest": "30.0.0",
+    "@types/lz4js": "0.2.2",
+    "@types/multistream": "4.1.4",
+    "async-done": "2.0.0",
+    "benny": "3.7.1",
+    "cross-env": "10.0.0",
+    "del": "8.0.1",
+    "del-cli": "7.0.0",
+    "esbuild": "0.28.1",
+    "esbuild-plugin-alias": "0.2.1",
+    "eslint": "9.39.2",
+    "eslint-plugin-jest": "29.17.0",
+    "eslint-plugin-unicorn": "59.0.1",
+    "glob": "13.0.0",
+    "google-closure-compiler": "20261007.0.0",
+    "gulp": "5.0.1",
+    "gulp-esbuild": "0.14.1",
+    "gulp-json-transform": "0.5.0",
+    "gulp-rename": "2.1.0",
+    "gulp-replace": "1.1.4",
+    "gulp-sourcemaps": "3.0.0",
+    "gulp-terser": "2.1.0",
+    "gulp-typescript": "5.0.1",
+    "gulp-vinyl-size": "1.1.4",
+    "ix": "7.0.0",
+    "jest": "30.3.0",
+    "jest-silent-reporter": "0.6.0",
+    "lz4js": "0.2.0",
+    "memfs": "4.80.0",
+    "mkdirp": "3.0.1",
+    "multistream": "4.1.0",
+    "regenerator-runtime": "0.14.1",
+    "rollup": "4.65.0",
+    "rxjs": "7.8.2",
+    "ts-jest": "29.4.15",
+    "typedoc": "0.28.20",
+    "typescript": "5.4.5",
+    "typescript-eslint": "8.71.0",
+    "vinyl-buffer": "1.0.1",
+    "vinyl-source-stream": "2.0.0",
+    "web-streams-polyfill": "3.2.1",
+    "webpack": "5.104.1",
+    "webpack-bundle-analyzer": "5.2.0",
+    "webpack-stream": "7.0.0",
+    "zstd-codec": "0.1.5"
+  },
+  "engines": {
+    "node": ">=20.0"
+  },
+  "version": "21.2.0"
+}

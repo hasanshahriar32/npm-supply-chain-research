@@ -1,0 +1,201 @@
+permissions:
+  contents: read
+
+name: generator-tests
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'core/generator/**'
+      - '.github/workflows/generator-tests.yaml'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      generator: ${{ steps.filter.outputs.generator }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            generator:
+              - 'core/generator/**'
+              - '.github/workflows/generator-tests.yaml'
+
+  generator-tests:
+    needs: changes
+    if: >-
+      (github.event_name == 'pull_request' && needs.changes.outputs.generator == 'true') ||
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container: gcr.io/gapic-images/googleapis:20250404
+    steps:
+    - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      with:
+        fetch-depth: 300
+        persist-credentials: false
+
+    - name: Mark repo as safe for git
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    - name: Setup Node.js
+      uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+      with:
+        node-version: 24.x
+
+    - name: Setup pnpm
+      run: npm install -g pnpm@10.0.0 --silent
+
+    - name: Install protoc
+      run: |
+        curl -sSL https://github.com/protocolbuffers/protobuf/releases/download/v33.2/protoc-33.2-linux-x86_64.zip -o protoc.zip
+        echo "b24b53f87c151bfd48b112fe4c3a6e6574e5198874f38036aff41df3456b8caf  protoc.zip" | sha256sum -c -
+        unzip -q -o protoc.zip -d /usr/local
+        rm protoc.zip
+
+    - name: Install and build generator
+      run: |
+        pnpm install --frozen-lockfile --filter @google-cloud/gapic-generator
+        pnpm --filter @google-cloud/gapic-generator run compile
+
+    - name: Run test
+      working-directory: core/generator/gapic-generator-typescript
+      run: pnpm test
+      env:
+        PROTOC_PATH: /usr/local/bin/protoc
+
+    - name: Verify error conformance
+      working-directory: core/generator/gapic-generator-typescript
+      run: |
+        curl -sSL https://github.com/googleapis/gapic-config-validator/releases/download/v0.6.0/gapic-config-validator-0.6.0-linux-amd64.tar.gz > config-validator.tar.gz
+        tar xzf config-validator.tar.gz --no-same-owner
+        chmod +x gapic-error-conformance
+        chmod +x build/typescript/src/protoc-plugin.js
+        ./gapic-error-conformance -plugin="build/typescript/src/protoc-plugin.js"
+
+    - name: Prepare baseline artifacts
+      working-directory: core/generator/gapic-generator-typescript
+      run: |
+        mkdir -p ~/artifacts
+        zip -qr ~/artifacts/outputs.zip .test-out-*
+        tar cfz ~/artifacts/node_modules.tar.gz node_modules
+
+    - name: Save artifacts
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      with:
+        name: artifacts
+        path: ~/artifacts
+
+    - name: Test generated libraries
+      working-directory: core/generator/gapic-generator-typescript
+      shell: bash
+      run: |
+        set -ex
+        cp ../../../.mocharc.cjs .
+        cp -r ../../../bin .
+        unzip -q ~/artifacts/outputs.zip -d library
+        FAIL=0
+        PIDS=()
+        for lib in showcase kms translate monitoring dlp texttospeech showcase-legacy compute logging bigquery-v2 redis retail; do
+          (
+            set -ex
+            echo "--- Testing library $lib ---"
+            cd "library/.test-out-$lib"
+            pnpm install --ignore-scripts --no-frozen-lockfile --ignore-workspace --reporter=append-only < /dev/null
+            pnpm run compile-protos
+            pnpm run compile
+            pnpm test
+            pnpm run system-test
+          ) &
+          PIDS+=($!)
+          if [ "${#PIDS[@]}" -ge 4 ]; then
+            for pid in "${PIDS[@]}"; do
+              wait "$pid" || FAIL=1
+            done
+            PIDS=()
+          fi
+        done
+        for pid in "${PIDS[@]}"; do
+          wait "$pid" || FAIL=1
+        done
+        if [ "$FAIL" -ne 0 ]; then
+          echo "Some library tests failed!"
+          exit 1
+        fi
+
+    - name: Test generated ESM libraries
+      working-directory: core/generator/gapic-generator-typescript
+      shell: bash
+      run: |
+        set -ex
+        cp ../../../.mocharc.cjs .
+        cp -r ../../../bin .
+        FAIL=0
+        PIDS=()
+        for lib in showcase kms translate monitoring dlp texttospeech showcase-legacy compute logging bigquery-v2 redis retail; do
+          (
+            set -ex
+            echo "--- Testing ESM library $lib ---"
+            cd "library/.test-out-$lib-esm"
+            pnpm install --ignore-scripts --no-frozen-lockfile --ignore-workspace --reporter=append-only < /dev/null
+            pnpm run compile-protos
+            pnpm run compile
+            pnpm test
+            pnpm run system-test
+          ) &
+          PIDS+=($!)
+          if [ "${#PIDS[@]}" -ge 4 ]; then
+            for pid in "${PIDS[@]}"; do
+              wait "$pid" || FAIL=1
+            done
+            PIDS=()
+          fi
+        done
+        for pid in "${PIDS[@]}"; do
+          wait "$pid" || FAIL=1
+        done
+        if [ "$FAIL" -ne 0 ]; then
+          echo "Some ESM library tests failed!"
+          exit 1
+        fi
+
+  # Consolidate generator test status to satisfy branch protection requirements
+  presubmit:
+    needs: [changes, generator-tests]
+    runs-on: ubuntu-latest
+    if: ${{ !cancelled() }}
+    env:
+      CHANGES_RESULT: ${{ needs.changes.result }}
+      GENERATOR_CHANGED: ${{ needs.changes.outputs.generator }}
+      TESTS_RESULT: ${{ needs.generator-tests.result }}
+      EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - name: Check generator test status
+        run: |
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "Path filter job failed (result: $CHANGES_RESULT)."
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "pull_request" ] && [ "$GENERATOR_CHANGED" != "true" ]; then
+            echo "No generator changes detected; skipping generator tests."
+            exit 0
+          fi
+          if [ "$TESTS_RESULT" != "success" ]; then
+            echo "Generator tests did not succeed (result: $TESTS_RESULT)."
+            exit 1
+          fi
+          echo "Generator tests passed!"

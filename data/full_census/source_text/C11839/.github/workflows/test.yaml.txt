@@ -1,0 +1,382 @@
+name: Tests
+
+on:
+  workflow_call:
+
+env:
+  QSTASH_TOKEN: ${{ secrets.QSTASH_TOKEN }}
+  QSTASH_CURRENT_SIGNING_KEY: ${{ secrets.QSTASH_CURRENT_SIGNING_KEY }}
+  QSTASH_NEXT_SIGNING_KEY: ${{ secrets.QSTASH_NEXT_SIGNING_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  OPENAI_ORGANIZATION: ${{ secrets.OPENAI_ORGANIZATION }}
+jobs:
+  local-tests:
+    runs-on: ubuntu-latest
+
+    name: QStash Tests
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      - name: Check edge bundles for Node.js builtins
+        run: node scripts/check-edge-bundle.mjs
+
+  receiver-node-versions:
+    name: Receiver Web Crypto (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 16/18 have no global Web Crypto and exercise uncrypto's `node` export
+        # condition (node:crypto webcrypto); 20/22/24 have the global.
+        node: [16, 18, 20, 22, 24]
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Verify receiver under Node ${{ matrix.node }} (ESM + CJS)
+        run: node scripts/check-receiver-runtime.mjs
+
+  receiver-bun-runtime:
+    name: Receiver Web Crypto (Bun)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Verify receiver under Bun (ESM + CJS)
+        run: bun scripts/check-receiver-runtime.mjs
+
+  cloudflare-workers-local-build:
+    runs-on: ubuntu-latest
+    name: CF Workers Local Build
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Dependencies
+        run: bun install
+        working-directory: examples/cloudflare-workers
+
+      - name: Install local package
+        run: bun install @upstash/qstash@file:../../dist
+        working-directory: examples/cloudflare-workers
+
+      - name: Change main file to ci.ts
+        run: sed -i 's/main = "src\/index.ts"/main = "src\/ci.ts"/' wrangler.toml
+        working-directory: examples/cloudflare-workers
+
+      - name: Add environment
+        run: |
+          echo '[vars]' >> wrangler.toml
+          echo "QSTASH_TOKEN = \"$QSTASH_TOKEN\"" >> ./wrangler.toml
+        working-directory: examples/cloudflare-workers
+
+      - name: Run example
+        run: bun dev &
+        working-directory: examples/cloudflare-workers
+
+      - name: Test
+        run: bun test ci.test.ts
+        working-directory: examples/cloudflare-workers
+        env:
+          DEPLOYMENT_URL: http://127.0.0.1:8787
+
+  cloudflare-workers-deployed:
+    concurrency: cloudflare-workers-deployed
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup nodejs
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install example
+        run: |
+          bun add @upstash/qstash@${{needs.release.outputs.version}}
+          npm i -g wrangler
+        working-directory: examples/cloudflare-workers
+
+      - name: Add account ID
+        run: echo 'account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"' >> wrangler.toml
+        working-directory: examples/cloudflare-workers
+
+      - name: Add environment
+        run: |
+          echo '[vars]' >> wrangler.toml
+          echo "QSTASH_TOKEN = \"$QSTASH_TOKEN\"" >> ./wrangler.toml
+          echo "QSTASH_CURRENT_SIGNING_KEY = \"$QSTASH_CURRENT_SIGNING_KEY\"" >> ./wrangler.toml
+          echo "QSTASH_NEXT_SIGNING_KEY = \"$QSTASH_NEXT_SIGNING_KEY\"" >> ./wrangler.toml
+        working-directory: examples/cloudflare-workers
+
+      - name: Change main file to ci.ts
+        run: sed -i 's/main = "src\/index.ts"/main = "src\/ci.ts"/' wrangler.toml
+        working-directory: examples/cloudflare-workers
+
+      - name: Deploy
+        run: wrangler deploy
+        working-directory: examples/cloudflare-workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{secrets.CLOUDFLARE_API_TOKEN}}
+
+      - name: Test
+        run: bun test ci.test.ts
+        working-directory: examples/cloudflare-workers
+        env:
+          DEPLOYMENT_URL: https://upstash-qstash.upsdev.workers.dev
+
+      - name: Test delivery round-trip (publish → verify endpoint → delivered)
+        run: bun test verify.test.ts
+        working-directory: examples/cloudflare-workers
+        env:
+          DEPLOYMENT_URL: https://upstash-qstash.upsdev.workers.dev
+
+  nextjs-local-build:
+    runs-on: ubuntu-latest
+    name: NextJS Local Build (Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Build + run the example across Node versions so bundler and runtime
+        # regressions in the receiver are caught everywhere, not just on the
+        # latest Node. Next.js 14 needs Node >= 18.17, so 16 is covered by
+        # receiver-node-versions instead.
+        node: [18, 20, 22, 24]
+    # The /serverless and /edge example routes call verifySignatureAppRouter()
+    # at module load (page-data collection at build, route compile at dev).
+    # Without keys in env it throws synchronously, so provide dummies. Real
+    # signature verification isn't exercised on these paths in CI; /dev/receive
+    # uses devMode: true and supplies its own dev keys.
+    env:
+      QSTASH_CURRENT_SIGNING_KEY: sig_dummy_for_local_build
+      QSTASH_NEXT_SIGNING_KEY: sig_dummy_for_local_build
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Install Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: 9
+
+      - name: Install Dependencies
+        run: pnpm install
+        working-directory: examples/nextjs
+
+      - name: Install local package
+        # `file:../../dist` (with the `file:` prefix) tells pnpm to install the
+        # dist folder as if it were a real package, not as a symlink. A plain
+        # `pnpm install ../../dist` symlinks instead, which leaves two copies
+        # of `next` resolvable (one in the qstash-js root, one in the example)
+        # and TS sees them as distinct types, breaking the build.
+        run: pnpm add @upstash/qstash@file:../../dist
+        working-directory: examples/nextjs
+
+      - name: Local build
+        run: pnpm run build
+        working-directory: examples/nextjs
+
+      - name: Run Example
+        run: pnpm dev &
+        working-directory: examples/nextjs
+
+      - name: Wait for next dev to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "next dev never became ready"; exit 1
+
+      - name: Test (production routes)
+        run: bun test ci.test.ts
+        working-directory: examples/nextjs
+        env:
+          DEPLOYMENT_URL: http://localhost:3000
+
+      - name: Test (devMode round-trip)
+        # Exercises the SDK auto-spawning the QStash dev binary inside the
+        # Next.js process, publishing a signed message, and the receiver
+        # verifying it. This is the only CI coverage of devMode end-to-end.
+        run: bun test dev.test.ts
+        working-directory: examples/nextjs
+        env:
+          DEPLOYMENT_URL: http://localhost:3000
+
+  nextjs-deployed:
+    concurrency: nextjs-deployed
+    runs-on: ubuntu-latest
+    needs:
+      - release
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Deploy
+        run: |
+          pnpm add @upstash/qstash@${{needs.release.outputs.version}}
+          DEPLOYMENT_URL=$(npx vercel --token=${{ secrets.VERCEL_TOKEN }} \
+            -e QSTASH_TOKEN="$QSTASH_TOKEN" \
+            -e QSTASH_CURRENT_SIGNING_KEY="$QSTASH_CURRENT_SIGNING_KEY" \
+            -e QSTASH_NEXT_SIGNING_KEY="$QSTASH_NEXT_SIGNING_KEY")
+          echo "DEPLOYMENT_URL=${DEPLOYMENT_URL}" >> $GITHUB_ENV
+        env:
+          VERCEL_ORG_ID: ${{secrets.VERCEL_TEAM_ID}}
+          VERCEL_PROJECT_ID: "prj_dUPhtwNlX6otLH5CSV4N0CsZzoaq"
+        working-directory: examples/nextjs
+
+      - name: Test
+        run: bun test ci.test.ts
+        working-directory: examples/nextjs
+
+      - name: Test delivery round-trip (publish → verify endpoint → delivered)
+        run: bun test verify.test.ts
+        working-directory: examples/nextjs
+
+  release:
+    concurrency: release
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    needs:
+      - cloudflare-workers-local-build
+      - nextjs-local-build
+      - local-tests
+      - receiver-node-versions
+      - receiver-bun-runtime
+
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "::set-output name=version::v0.0.0-ci.${GITHUB_SHA}-$(date +%Y%m%d%H%M%S)"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Set version
+        run: |
+          echo $(jq --arg v "${{ steps.version.outputs.version }}" '(.version) = $v' package.json) > package.json
+          echo "export const VERSION='${{ env.VERSION }}'" > ./version.ts
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish ci version
+        run: npm publish --tag=ci --verbose --provenance
+        working-directory: ./dist
+
+      - name: Sleep for 10s
+        run: sleep 10s
+        shell: bash

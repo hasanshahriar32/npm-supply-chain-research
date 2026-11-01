@@ -1,0 +1,25 @@
+name: Daily Node dependency refresh
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: daily-node-dependency-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-dependencies:
+    uses: centralnicgroup-opensource/rtldev-middleware-shareable-workflows/.github/workflows/daily-node-dependency-refresh.yml@main
+    secrets: inherit
+    with:
+      base-ref: main
+      # Empty, so pnpm/action-setup resolves the version from
+      # `devEngines.packageManager` in package.json rather than installing whatever
+      # pnpm is newest. (RSRMID-3008)
+      pnpm-version: ""

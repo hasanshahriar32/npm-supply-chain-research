@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write # to enable use of OIDC for trusted publishing and npm provenance
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '22'
+        cache: 'gradle'
+    - uses: SocketDev/action@v1
+      with:
+        mode: firewall-free
+    - run: sfw npm install --no-package-lock
+      name: Install dev dependencies
+    - run: npx semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      name: Release

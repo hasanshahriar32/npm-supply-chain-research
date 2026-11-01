@@ -1,0 +1,83 @@
+name: Publish npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Exact main commit to publish
+        required: true
+        type: string
+      version:
+        description: Bare numeric MAJOR.MINOR.PATCH version
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish exact green commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+      - name: Verify immutable main candidate
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ inputs.commit }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          test "$(git rev-parse origin/main)" = "$EXPECTED_COMMIT"
+          [[ "$EXPECTED_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(node -p "require('./package.json').version")" = "$EXPECTED_VERSION"
+          if npm view "strong-type@$EXPECTED_VERSION" version >/dev/null 2>&1; then
+            echo "strong-type@$EXPECTED_VERSION is already published" >&2
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:browser-contract
+      - run: npm run test:conformance
+      - run: npm run coverage
+      - run: npm run test:package
+      - run: npm ls --omit=dev --all
+      - run: npm ls --all
+      - run: npm audit --omit=dev
+      - run: npm audit
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Verify published commit and integrity
+        shell: bash
+        env:
+          EXPECTED_COMMIT: ${{ inputs.commit }}
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            METADATA=$(npm view "strong-type@$EXPECTED_VERSION" gitHead dist.integrity --json 2>/dev/null || true)
+            if [ -n "$METADATA" ] && [ "$METADATA" != "{}" ]; then
+              break
+            fi
+            sleep 5
+          done
+          test "$(node -e "const value=JSON.parse(process.argv[1]); process.stdout.write(value.gitHead || '')" "$METADATA")" = "$EXPECTED_COMMIT"
+          INTEGRITY=$(node -e "const value=JSON.parse(process.argv[1]); process.stdout.write(value['dist.integrity'] || '')" "$METADATA")
+          test -n "$INTEGRITY"
+          {
+            echo "### Published strong-type@$EXPECTED_VERSION"
+            echo "- Commit: \`$EXPECTED_COMMIT\`"
+            echo "- Integrity: \`$INTEGRITY\`"
+          } >> "$GITHUB_STEP_SUMMARY"

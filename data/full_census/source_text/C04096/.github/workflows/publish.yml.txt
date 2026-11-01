@@ -1,0 +1,74 @@
+name: Publish new version
+
+on:
+    push:
+        tags:
+            - 'v*'
+
+permissions:
+    id-token: write
+    contents: write
+
+jobs:
+    test:
+        name: Test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+            - run: npm ci
+            - run: npm test
+
+    release:
+        name: Create Release
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Create Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  name: Release ${{ github.ref_name }}
+                  body: |
+                      Release ${{ github.ref_name }}
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    publish-npm:
+        name: Publish on NPM package registry
+        needs: release
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+            contents: read
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+            - run: npm ci
+            - run: npm run build
+            - run: npm publish --provenance --access public
+
+    # publish-github:
+    #     name: Publish on GitHub package registry
+    #     needs: release
+    #     runs-on: ubuntu-latest
+    #     steps:
+    #         - uses: actions/checkout@v2
+    #         - uses: actions/setup-node@v1
+    #           with:
+    #               node-version: 17
+    #               registry-url: https://npm.pkg.github.com/
+    #           # Note: This is an awful solution to publish this package as "foo" on NPM and "@hejny/foo" on GitHub
+    #         - run: "sed -i -e 's/\\\"name\\\"\\: \\\"/\\\"name\\\": \\\"\\@hejny\\//g' ./package.json"
+    #         - run: npm ci
+    #         - run: npm run build
+    #         - run: npm publish
+    #           env:
+    #               NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

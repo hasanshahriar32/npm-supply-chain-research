@@ -1,0 +1,30 @@
+{
+  "private": true,
+  "repository": "https://github.com/embroider-build/ember-auto-import",
+  "scripts": {
+    "nom": "rm -rf node_modules packages/*/node_modules test-scenarios/node_modules types/*/node_modules",
+    "test": "cd test-scenarios && npm run test",
+    "watch": "cd packages/ember-auto-import && npm run compile -- --watch"
+  },
+  "dependencies": {
+    "resolve-package-path": "^3.1.0",
+    "semver": "^7.3.5"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.10.0",
+    "@typescript-eslint/parser": "^4.10.0",
+    "babel-eslint": "^8.0.0",
+    "eslint": "^7.15.0",
+    "eslint-config-prettier": "^7.0.0",
+    "eslint-plugin-ember": "^5.0.0",
+    "eslint-plugin-node": "^6.0.1",
+    "eslint-plugin-prettier": "^3.3.0",
+    "prettier": "^2.2.1",
+    "release-plan": "^0.17.4"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "fastboot": "patches/fastboot.patch"
+    }
+  }
+}

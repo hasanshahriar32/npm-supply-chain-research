@@ -1,0 +1,62 @@
+{
+  "name": "get-random-values",
+  "version": "4.1.0",
+  "description": "`window.crypto.getRandomValues` with fallback to Node.js crypto",
+  "keywords": [
+    "crypto"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kenany/get-random-values.git"
+  },
+  "license": "MIT",
+  "author": "Kenan Yildirim <kenan@kenany.me> (https://kenany.me/)",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "LICENSE.txt"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "engines": {
+    "node": "22 || >=24"
+  },
+  "scripts": {
+    "clean": "rimraf --glob test/**/*.d.ts *.d.ts || true",
+    "lint": "biome check .",
+    "release": "semantic-release",
+    "type-coverage": "type-coverage --at-least 100 --detail --strict",
+    "prebuild": "pnpm run clean",
+    "build": "tsc",
+    "pretest": "pnpm run build",
+    "test": "tape test/*.js",
+    "posttest": "pnpm run lint && pnpm run type-coverage",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "window-or-global": "^1.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@containerbase/semantic-release-pnpm": "1.4.3",
+    "@kenan/biome-config": "1.2.0",
+    "@tsconfig/node22": "22.0.6",
+    "@types/lodash.isfunction": "3.0.9",
+    "@types/node": "24.19.2",
+    "@types/tape": "5.8.1",
+    "conventional-changelog-conventionalcommits": "9.3.1",
+    "is-browser": "2.1.0",
+    "lodash.isfunction": "3.0.9",
+    "rimraf": "6.1.3",
+    "semantic-release": "25.0.9",
+    "tape": "5.10.3",
+    "type-coverage": "2.30.3",
+    "typescript": "6.0.3"
+  },
+  "browser": {
+    "crypto": false
+  }
+}

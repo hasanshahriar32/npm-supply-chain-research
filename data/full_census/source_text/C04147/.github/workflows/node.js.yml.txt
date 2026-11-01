@@ -1,0 +1,41 @@
+---
+name: Tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_call:
+    secrets:
+      codecov_token:
+        required: true
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        node-version: [20, 22, 24, 25]
+        platform: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: true
+      - uses: pnpm/action-setup@v5
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm i -r --filter '!*-demo' --filter '!cbor-web'
+      - name: Test ${{ matrix.node-version }}
+        run: npm run coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

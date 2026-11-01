@@ -1,0 +1,70 @@
+{
+  "name": "moo-color",
+  "version": "2.0.0",
+  "description": "A modern TypeScript library for color parsing, conversion, and manipulation.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "browser": "./dist/moo-color.global.js",
+  "unpkg": "./dist/moo-color.global.js",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "color",
+    "color-conversion",
+    "color-manipulation",
+    "hex",
+    "rgb",
+    "hsl",
+    "hwb",
+    "hsv",
+    "cmyk",
+    "wcag",
+    "typescript"
+  ],
+  "author": "archcoster@gmail.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/archco/moo-color.git"
+  },
+  "bugs": {
+    "url": "https://github.com/archco/moo-color/issues"
+  },
+  "homepage": "https://github.com/archco/moo-color#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "color-name": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/color-name": "^1.1.3",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
+  }
+}

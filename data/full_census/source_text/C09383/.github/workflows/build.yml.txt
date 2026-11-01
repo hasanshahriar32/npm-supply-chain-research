@@ -1,0 +1,73 @@
+# Continuous integration: clean install, build and test on Node.js 24, the
+# version Seneca 4 targets, across Linux, Windows and macOS.
+# Publishing is handled separately by release.yml (npm trusted publishing).
+#
+# Actions are pinned to commits; Dependabot (.github/dependabot.yml) keeps
+# the pins up to date.
+
+name: build
+
+on:
+  push:
+    branches: [main, 3.x]
+  pull_request:
+    branches: [main, 3.x]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: node ${{ matrix.node-version }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [24.x]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          package-manager-cache: false
+
+      - run: npm install
+      - run: npm run build --if-present
+      - run: npm test
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    # Coverage upload is informational only and must never block a build.
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
+      - run: npm install
+      - run: npm run build --if-present
+      - run: npm run coverage
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./coverage/lcov.info

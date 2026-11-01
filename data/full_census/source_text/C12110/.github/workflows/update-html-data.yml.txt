@@ -1,0 +1,31 @@
+name: Update HTML Data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  update-html-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - run: pnpm install
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Update HTML Data
+        run: cd packages/language-service && npm run update-html-data
+
+      - name: Commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          message: "ci(language-service): update html data"
+          add: "packages/language-service/data"
+          default_author: github_actions

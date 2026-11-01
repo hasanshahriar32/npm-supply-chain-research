@@ -1,0 +1,26 @@
+name: Deploy Sanity Studio
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/studio/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-studio
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      # `run` is required: `pnpm deploy` is a built-in pnpm command
+      - run: pnpm --filter sanity-icons-studio run deploy --schema-required
+        env:
+          SANITY_AUTH_TOKEN: ${{ secrets.SANITY_DEPLOY_TOKEN }}

@@ -1,0 +1,19 @@
+name: Release
+
+permissions: {}
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+jobs:
+  release:
+    permissions:
+      actions: read # Required to download the package artifact.
+      contents: write # Required to integrate release branches.
+      discussions: write # Required by the reusable workflow for release discussions.
+      id-token: write # Required for npm trusted publishing.
+    uses: panva/.github/.github/workflows/npm-release.yml@3faba8af3880247be43547787aedd52780c9f946
+    with:
+      github_release: false
+      maintenance_branch: false

@@ -1,0 +1,72 @@
+name: Typescript Types
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/types.yml'
+      - 'package.json'
+      - 'tstyche*.json'
+      - 'types/**'
+      - 'test/types/**'
+  push:
+    paths:
+      - '.github/workflows/types.yml'
+      - 'package.json'
+      - 'tstyche*.json'
+      - 'types/**'
+      - 'test/types/**'
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint TS-Files
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Lint TS-Files
+        run: npm run lint-ts
+
+  test-ts-types:
+    needs:
+      - lint
+    runs-on: ubuntu-latest
+    name: Test Typescript Types (TypeScript ${{ matrix.typescript }}, skipLibCheck=${{ matrix.skip_lib_check }})
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript: ['5.9.3', '7.0.2']
+        skip_lib_check: [true, false]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Typings
+        # TSTyche 7.2.5 does not support the TypeScript 7 compiler API. The
+        # TypeScript 7 jobs compile the complete suite with tsc below.
+        if: matrix.typescript == '5.9.3'
+        run: >-
+          npm run test:types -- --config tstyche.matrix.json
+          --target ${{ matrix.typescript }} --tsconfig
+          '{"extends":"./test/types/tsconfig.json","compilerOptions":{"strict":true,"skipLibCheck":${{ matrix.skip_lib_check }},"exactOptionalPropertyTypes":true}}'
+
+      - name: Compile Typescript Tests
+        run: >-
+          npx --yes --package typescript@${{ matrix.typescript }} --
+          tsc --project test/types/tsconfig.json --noEmit
+          --strict true
+          --skipLibCheck ${{ matrix.skip_lib_check }}
+          --exactOptionalPropertyTypes true

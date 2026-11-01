@@ -1,0 +1,98 @@
+name: Check supports-hyperlinks Crate Updates
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  check-crate-updates:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check crate version
+        id: crate-check
+        run: |
+          CRATE_NAME="supports-hyperlinks"
+          CURRENT_VERSION=$(cat .github/workflows/supports-hyperlinks-version.txt)
+          
+          # Get latest version from crates.io with error handling
+          # Rate limit: crates.io requires max 1 request per second
+          RESPONSE=$(curl -s -H "User-Agent: termi-link-updater (https://github.com/king8fisher/termi-link; contact: king8fisher@users.noreply.github.com)" "https://crates.io/api/v1/crates/$CRATE_NAME")
+          LATEST_VERSION=$(echo "$RESPONSE" | jq -r '.crate.newest_version // empty')
+          
+          echo "API Response: $RESPONSE"
+          echo "Current version: $CURRENT_VERSION"
+          echo "Latest version: $LATEST_VERSION"
+          
+          # Validate API response
+          if echo "$RESPONSE" | jq -e '.errors' > /dev/null 2>&1; then
+            echo "::error::crates.io API returned errors: $RESPONSE"
+            exit 1
+          fi
+          
+          if [ "$LATEST_VERSION" = "null" ] || [ -z "$LATEST_VERSION" ]; then
+            echo "::error::Failed to fetch latest version from crates.io API"
+            echo "::error::API Response: $RESPONSE"
+            exit 1
+          fi
+          
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "crate_name=$CRATE_NAME" >> $GITHUB_OUTPUT
+          
+          # Check if there's a new version
+          if [ "$LATEST_VERSION" != "$CURRENT_VERSION" ]; then
+            echo "has_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create notification issue
+        if: steps.crate-check.outputs.has_update == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const crateName = '${{ steps.crate-check.outputs.crate_name }}';
+            const currentVersion = '${{ steps.crate-check.outputs.current_version }}';
+            const latestVersion = '${{ steps.crate-check.outputs.latest_version }}';
+            
+            const title = `Update ${crateName} from ${currentVersion} to ${latestVersion}`;
+            const body = `## Crate Update Available
+            
+            **${crateName}** has a new version available:
+            - Current: \`${currentVersion}\`
+            - Latest: \`${latestVersion}\`
+            
+            Check the [changelog](https://crates.io/crates/${crateName}) for breaking changes.
+            
+            ---
+            Generated automatically by GitHub Actions`;
+            
+            // Check if issue already exists for this version
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'crate-update'
+            });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes(`Update ${crateName}`) && 
+              issue.title.includes(latestVersion)
+            );
+            
+            if (!existingIssue) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['crate-update', 'supports-hyperlinks']
+              });
+            }

@@ -1,0 +1,13 @@
+name: Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    uses: cto-af/workflows/.github/workflows/node-ci.yml@main
+    with:
+      script: ci
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

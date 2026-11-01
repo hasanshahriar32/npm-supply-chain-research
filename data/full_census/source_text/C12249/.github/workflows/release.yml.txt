@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    if: github.repository == 'webpack/coffee-loader'
+    name: Release
+    runs-on: ubuntu-latest
+    # Must match the environment set on the npm trusted publisher for this package.
+    environment: npm
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+
+      # OIDC token exchange needs npm >= 11.5.1, which is newer than the npm
+      # bundled with some Node LTS lines.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          version: npm run version-packages
+          publish: npm run release
+          commit: "chore(release): new release"
+          title: "chore(release): new release"
+        # No NPM_TOKEN: authentication goes through the npm trusted publisher
+        # configured for this repository and workflow file.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

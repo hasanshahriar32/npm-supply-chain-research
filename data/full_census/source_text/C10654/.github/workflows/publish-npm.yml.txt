@@ -1,0 +1,133 @@
+name: 'Publish Stencil Sass'
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version or semver bump to publish.'
+        required: true
+        type: string
+      tag:
+        description: 'npm dist-tag to publish under.'
+        required: true
+        type: string
+      node-version:
+        description: 'Node.js version used for publishing.'
+        required: false
+        type: string
+        default: '24'
+      registry-url:
+        description: 'npm registry URL.'
+        required: false
+        type: string
+        default: 'https://registry.npmjs.org'
+      scope:
+        description: 'npm scope that should use trusted publisher auth.'
+        required: false
+        type: string
+        default: '@stencil'
+      package-directory:
+        description: 'Directory that contains the package to publish.'
+        required: false
+        type: string
+        default: '.'
+      install-command:
+        description: 'Command used to install dependencies. Leave blank to skip.'
+        required: false
+        type: string
+        default: 'pnpm install --frozen-lockfile'
+      install-working-directory:
+        description: 'Working directory for the install command.'
+        required: false
+        type: string
+        default: '.'
+      build-command:
+        description: 'Command used to build the package. Leave blank to skip.'
+        required: false
+        type: string
+        default: 'pnpm run build'
+      build-working-directory:
+        description: 'Working directory for the build command.'
+        required: false
+        type: string
+        default: '.'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: 🟢 Configure Node for Publish
+        if: ${{ inputs.scope == '' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+
+      - name: 🟢 Configure Node for Publish (Scoped)
+        if: ${{ inputs.scope != '' }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          registry-url: ${{ inputs.registry-url }}
+          scope: ${{ inputs.scope }}
+
+      - name: 📦 Install Dependencies
+        if: ${{ inputs.install-command != '' }}
+        run: ${{ inputs.install-command }}
+        shell: bash
+        working-directory: ${{ inputs.install-working-directory }}
+
+      - name: 🛠️ Build Package
+        if: ${{ inputs.build-command != '' }}
+        run: ${{ inputs.build-command }}
+        shell: bash
+        working-directory: ${{ inputs.build-working-directory }}
+
+      - name: 🔧 Configure Git
+        if: ${{ inputs.tag == 'latest' }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+        shell: bash
+
+      - name: 🏷️ Bump Version, Commit & Tag
+        if: ${{ inputs.tag == 'latest' }}
+        id: bump-version
+        run: |
+          # npm version's own stdout isn't captured here: our "version" lifecycle
+          # script (pnpm run build) writes rollup's build log to stdout too, and a
+          # multi-line value breaks the single-line GITHUB_OUTPUT format below.
+          npm version ${{ inputs.version }} --tag-version-prefix="v" --message "v%s"
+          echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        shell: bash
+        working-directory: ${{ inputs.package-directory }}
+
+      - name: 🏷️ Set Version (no commit)
+        if: ${{ inputs.tag != 'latest' }}
+        run: npm version --no-git-tag-version --allow-same-version ${{ inputs.version }}
+        shell: bash
+        working-directory: ${{ inputs.package-directory }}
+
+      - name: 🔄 Push Version Commit & Tag
+        if: ${{ inputs.tag == 'latest' }}
+        run: |
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin ${{ steps.bump-version.outputs.tag }}
+        shell: bash
+        working-directory: ${{ inputs.package-directory }}
+
+      - name: 🚀 Publish to npm
+        run: npm publish --tag ${{ inputs.tag }}
+        shell: bash
+        working-directory: ${{ inputs.package-directory }}
+

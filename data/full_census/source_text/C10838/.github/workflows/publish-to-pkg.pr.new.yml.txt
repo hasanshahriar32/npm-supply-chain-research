@@ -1,0 +1,51 @@
+name: Publish to pkg.pr.new
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    tags: ['!**']
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  pkg-pr-new:
+    if: github.repository == 'stylelint/stylelint'
+    name: Publish to pkg.pr.new
+    runs-on: ubuntu-slim
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: latest
+          cache: npm
+      - name: Install Packages
+        run: npm ci
+      - name: Publish
+        run: npx pkg-pr-new publish --compact --json output.json --comment=off
+      - name: Add metadata to output
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const output = JSON.parse(fs.readFileSync('output.json', 'utf8'));
+            output.number = context.issue.number;
+            output.event_name = context.eventName;
+            output.ref = context.ref;
+            output.sha = context.eventName === 'pull_request'
+              ? context.payload.pull_request.head.sha
+              : context.payload.after;
+            fs.writeFileSync('output.json', JSON.stringify(output), 'utf8');
+      - name: Upload output
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: output
+          path: ./output.json
+      - name: Check current directory
+        run: ls -R .

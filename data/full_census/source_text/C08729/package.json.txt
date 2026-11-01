@@ -1,0 +1,90 @@
+{
+  "name": "reselect",
+  "version": "5.3.0",
+  "description": "Selectors for Redux.",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/reselect.legacy-esm.js",
+  "types": "./dist/reselect.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/reselect.d.ts",
+      "import": "./dist/reselect.mjs",
+      "default": "./dist/cjs/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist"
+  ],
+  "sideEffects": false,
+  "bugs": {
+    "url": "https://github.com/reduxjs/reselect/issues"
+  },
+  "scripts": {
+    "build": "pnpm clean && tsdown --config-loader unrun && tsx scripts/stripSourcemapFileField.mts",
+    "clean": "rimraf dist",
+    "format": "oxfmt \"{src,test,type-tests,typescript_test,bench,scripts}/**\" \"*.mts\" \"*.json\"",
+    "format:check": "oxfmt --check \"{src,test,type-tests,typescript_test,bench,scripts}/**\" \"*.mts\" \"*.json\"",
+    "lint": "oxlint src test type-tests typescript_test",
+    "lint:fix": "oxlint --fix src test type-tests typescript_test",
+    "prepack": "pnpm build",
+    "bench": "vitest bench --run --mode production",
+    "bench:hot-path": "node ./bench/build.mjs && node --expose-gc ./bench/run.mjs",
+    "bench:hot-path:dev": "node ./bench/build.mjs --dev && node --expose-gc ./bench/run.mjs",
+    "heap-snapshot": "pnpm build && node --expose-gc ./scripts/weakMapMemoizeHeapSnapshot.mjs",
+    "test": "vitest --run && pnpm type-check",
+    "test:watch": "vitest --watch",
+    "type-check": "vitest --run --typecheck.only && pnpm type-check:loose-null-checks",
+    "type-check:loose-null-checks": "tsc --noEmit -p type-tests/tsconfig.looseNullChecks.json",
+    "type-check:trace": "vitest --run --typecheck.only && tsc --noEmit -p typescript_test/tsconfig.json --generateTrace trace && npx @typescript/analyze-trace trace && rimraf trace",
+    "test:typescript": "tsc --noEmit -p typescript_test/tsconfig.json",
+    "docs:examples": "rimraf docs/examples/dist && tsx scripts/compileExamples.ts && tsx scripts/insertCodeExamples.ts && oxfmt docs"
+  },
+  "keywords": [
+    "react",
+    "redux"
+  ],
+  "authors": [
+    "Lee Bannard",
+    "Robert Binna",
+    "Martijn Faassen",
+    "Philip Spitzlinger"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/reduxjs/reselect.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@reduxjs/toolkit": "^2.0.1",
+    "@testing-library/react": "^14.1.2",
+    "@types/lodash": "^4.14.175",
+    "@types/react": "^18.2.38",
+    "@types/react-dom": "^18.2.17",
+    "@types/shelljs": "^0.8.11",
+    "@typescript/analyze-trace": "^0.10.1",
+    "jsdom": "^23.0.0",
+    "lodash": "^4.17.21",
+    "lodash.memoize": "^4.1.2",
+    "memoize-one": "^6.0.0",
+    "micro-memoize": "^4.0.9",
+    "netlify-plugin-cache": "^1.0.3",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "pkg-pr-new": "^0.0.88",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.0.4",
+    "rimraf": "^3.0.2",
+    "rolldown": "1.2.4",
+    "shelljs": "^0.8.5",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "unrun": "^0.3.1",
+    "vitest": "^4.1.11"
+  },
+  "packageManager": "pnpm@11.23.0"
+}

@@ -1,0 +1,79 @@
+{
+  "name": "event-lite",
+  "description": "Light-weight EventEmitter (less than 1KB when gzipped)",
+  "version": "1.0.1",
+  "author": "@kawanet",
+  "bugs": {
+    "url": "https://github.com/kawanet/event-lite/issues"
+  },
+  "contributors": [
+    "Joshua Wise <josh@joshuawise.ninja>"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-alias": "^6.0.0",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-multi-entry": "^7.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "jsdoc": "^4.0.5",
+    "jshint": "^2.13.6",
+    "playwright-js-cli": "^0.1.0",
+    "rollup": "^4.64.3",
+    "terser": "^5.51.2"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=22.18.0",
+      "onFail": "warn"
+    }
+  },
+  "exports": {
+    "types": "./event-lite.d.ts",
+    "import": "./event-lite.mjs",
+    "require": "./event-lite.js"
+  },
+  "files": [
+    "browser/import.js",
+    "browser/import.mjs",
+    "dist/event-lite.min.js",
+    "event-lite.d.ts",
+    "event-lite.js",
+    "event-lite.mjs"
+  ],
+  "homepage": "https://github.com/kawanet/event-lite",
+  "jshintConfig": {
+    "bitwise": true,
+    "browser": true,
+    "eqeqeq": true,
+    "noarg": true,
+    "nocomma": true,
+    "node": true,
+    "nonbsp": true,
+    "nonew": true,
+    "regexp": true,
+    "undef": true,
+    "unused": true
+  },
+  "keywords": [
+    "browser",
+    "emitter",
+    "event",
+    "eventlistener",
+    "fire",
+    "trigger"
+  ],
+  "license": "MIT",
+  "main": "event-lite.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kawanet/event-lite.git"
+  },
+  "scripts": {
+    "build": "make clean all",
+    "fixpack": "fixpack",
+    "prepack": "npm run build && npm test",
+    "test": "make test"
+  },
+  "type": "commonjs",
+  "typings": "event-lite.d.ts"
+}

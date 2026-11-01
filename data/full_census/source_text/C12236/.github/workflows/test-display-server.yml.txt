@@ -1,0 +1,138 @@
+name: Display Server Tests
+
+on:
+  workflow_call:
+    inputs:
+      full_matrix:
+        description: Run every distro and scenario; when false, only the PR cells.
+        type: boolean
+        default: true
+
+jobs:
+  resolve-matrix:
+    name: Resolve Display Server Matrix
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      include: ${{ steps.set.outputs.include }}
+    steps:
+      - id: set
+        name: Select distro matrix
+        shell: bash
+        run: |
+          # "runner" cells go through LocalRunner and drive a headed Chrome;
+          # "base" cells auto-install a server. Every cell asserts which server it ends up on.
+          pr='[
+            {"distro":"ubuntu","version":"26.04","scenario":"wayland-runner","build_args":"--build-arg WESTON=1","test":"runner","expect":"wayland"},
+            {"distro":"ubuntu","version":"26.04","scenario":"xvfb-runner","build_args":"--build-arg XVFB=1","test":"runner","expect":"xvfb"},
+            {"distro":"ubuntu","version":"26.04","scenario":"existing-wayland-runner","build_args":"--build-arg WESTON=1","test":"runner:existing-wayland","expect":"wayland","log":"Existing Wayland display; setting"},
+            {"distro":"ubuntu","version":"26.04","scenario":"weston-fallback-runner","build_args":"--build-arg WESTON=1 --build-arg XVFB=1 --build-arg BREAK_WESTON=1","test":"runner","expect":"xvfb","log":"wayland failed to start"},
+            {"distro":"ubuntu","version":"26.04","scenario":"xvfb-autoinstall","test":"base","prefer":"xvfb","expect":"xvfb"},
+            {"distro":"ubuntu","version":"26.04","scenario":"wayland-autoinstall","test":"base","expect":"wayland"},
+            {"distro":"debian","version":"12","scenario":"wayland-runner","build_args":"--build-arg DEBIAN_VERSION=12","test":"runner","expect":"wayland"}
+          ]'
+          rest='[
+            {"distro":"ubuntu","version":"26.04","scenario":"both-installed-runner","build_args":"--build-arg WESTON=1 --build-arg XVFB=1","test":"runner","expect":"wayland"},
+            {"distro":"ubuntu","version":"26.04","scenario":"prefer-xvfb-runner","build_args":"--build-arg WESTON=1 --build-arg XVFB=1","test":"runner","prefer":"xvfb","expect":"xvfb"},
+            {"distro":"ubuntu","version":"24.04","scenario":"wayland-runner","build_args":"--build-arg UBUNTU_VERSION=24.04 --build-arg WESTON=1","test":"runner","expect":"wayland"},
+            {"distro":"debian","version":"13","scenario":"wayland-runner","test":"runner","expect":"wayland"},
+            {"distro":"fedora","version":"43","scenario":"wayland-runner","test":"runner","expect":"wayland"},
+            {"distro":"centos-stream","version":"10","scenario":"wayland-runner","test":"runner","expect":"wayland"},
+            {"distro":"alpine","version":"3.22","scenario":"xvfb-runner","test":"runner","expect":"xvfb"},
+            {"distro":"arch","version":"latest","scenario":"wayland-runner","test":"runner","expect":"wayland"},
+            {"distro":"suse","version":"16.0","scenario":"wayland-runner","test":"runner","expect":"wayland"},
+            {"distro":"void","version":"latest","scenario":"wayland-runner","test":"runner","expect":"wayland"}
+          ]'
+          if [ "${{ inputs.full_matrix }}" = "true" ]; then
+            include=$(jq -c -n --argjson pr "$pr" --argjson rest "$rest" '$pr + $rest')
+          else
+            include=$(jq -c -n --argjson pr "$pr" '$pr')
+          fi
+          echo "include=$include" >> "$GITHUB_OUTPUT"
+
+  display-server-e2e-tests:
+    needs: [resolve-matrix]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    env:
+      IMAGE: display-server-test:${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.scenario }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.resolve-matrix.outputs.include) }}
+
+    name: "Display Server Tests: ${{ matrix.distro }}:${{ matrix.version }} (${{ matrix.scenario }})"
+
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 🧑‍🔧 Get Core Dependencies
+        uses: ./.github/workflows/actions/get-core-dependencies
+
+      - name: Download Build Archive
+        uses: ./.github/workflows/actions/download-archive
+        with:
+          name: webdriverio
+          path: .
+          filename: webdriverio-build.zip
+
+      - name: Build test container
+        run: |
+          docker build \
+            ${{ matrix.build_args }} \
+            -f e2e/wdio/display-server/docker/${{ matrix.distro }}.dockerfile \
+            -t "$IMAGE" \
+            e2e/wdio/display-server/docker/
+
+      - name: Run Display Server E2E tests in container
+        timeout-minutes: 15 # a step timeout counts as a failure, so the failure() steps below still run; a job timeout would skip them
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            -e CI=true \
+            -e NODE_ENV=test \
+            -e WDIO_LOG_LEVEL=debug \
+            -e DISPLAY_SERVER_PREFERENCE=${{ matrix.prefer }} \
+            -e EXPECTED_DISPLAY_SERVER=${{ matrix.expect }} \
+            "$IMAGE" \
+            bash -c "
+              set -e
+              set -o pipefail
+
+              # Fix permissions for testuser to access workspace
+              sudo chown -R testuser:testuser /workspace/
+              sudo chmod -R 755 /workspace/
+
+              # pnpm is already installed in the Docker image
+              pnpm install --frozen-lockfile
+
+              cd e2e && pnpm test:display-server:${{ matrix.test }}
+            "
+
+      - name: Check the launcher log
+        if: matrix.log
+        # The end state alone can't show that Weston was tried first, or that an existing Weston was used.
+        run: grep -F "${{ matrix.log }}" e2e/wdio/display-server/logs/wdio.log
+
+      - name: Display logs on failure
+        if: failure()
+        run: |
+          echo "=== Test failed, displaying diagnostic logs ==="
+
+          for log in e2e/wdio/display-server/logs/*.log; do
+            [ -f "$log" ] || continue
+            echo "=== $log ==="
+            cat "$log"
+          done
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: display-server-e2e-logs-${{ matrix.distro }}-${{ matrix.version }}-${{ matrix.scenario }}
+          path: |
+            e2e/wdio/display-server/logs/
+            e2e/wdio/display-server/screenshots/

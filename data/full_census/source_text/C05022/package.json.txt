@@ -1,0 +1,57 @@
+{
+  "name": "json-schema-walker",
+  "version": "0.0.0-development",
+  "description": "A system that visits all schema objects in a JSON Schema document and makes callbacks before visiting all of the current schema object's subschemas.",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "rimraf dist && tsc",
+    "test": "pnpm build && pnpm test:types && node test/index.cjs && node --test test/*.test.mjs",
+    "test:types": "tsc --project test/tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonluca/json-schema-walker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jonluca/json-schema-walker/issues"
+  },
+  "homepage": "https://github.com/jonluca/json-schema-walker",
+  "author": "JonLuca DeCaro <jsonwalker@jonlu.ca>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@apidevtools/json-schema-ref-parser": "^15.3.6",
+    "@types/json-schema": "^7.0.15"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.1.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.9.3",
+    "@typescript-eslint/eslint-plugin": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.0",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.4",
+    "rimraf": "^6.1.3",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.0"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "arrowParens": "always",
+    "semi": true,
+    "tabWidth": 2,
+    "trailingComma": "all"
+  },
+  "packageManager": "pnpm@11.5.3"
+}

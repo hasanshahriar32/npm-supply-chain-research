@@ -1,0 +1,58 @@
+name: Functional Tests
+
+on:
+  pull_request:
+    branches:
+    - master
+    paths-ignore:
+    - 'docs/**'
+    - '*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+
+    # https://github.com/actions/runner-images/tree/main/images/macos
+    strategy:
+      matrix:
+        include:
+        - xcodeVersion: '27.0'
+          iosVersion: '27.0'
+          deviceName: 'iPhone 17'
+          platform: xcode-27
+        - xcodeVersion: '26.5'
+          iosVersion: '26.5'
+          deviceName: 'iPhone 17'
+          platform: macos-26
+        - xcodeVersion: '16.4'
+          iosVersion: '18.5'
+          deviceName: 'iPhone 16'
+          platform: macos-15
+      fail-fast: false
+
+    env:
+      CI: true
+      _FORCE_LOGS: 1
+      MOBILE_OS_VERSION: ${{ matrix.iosVersion }}
+      MOBILE_DEVICE_NAME: ${{ matrix.deviceName }}
+      XCODE_VERSION: ${{ matrix.xcodeVersion }}
+    # https://github.com/actions/runner-images/tree/main/images/macos
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version: lts/*
+        check-latest: true
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: "${{ matrix.xcodeVersion }}"
+    - run: xcrun simctl list devices available
+      name: List available devices
+    - run: npm install
+      name: Install dev dependencies
+    - run: npm run e2e-test
+      name: Run e2e tests on Xcode@${{ matrix.xcodeVersion }}

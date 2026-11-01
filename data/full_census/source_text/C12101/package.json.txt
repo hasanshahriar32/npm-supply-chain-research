@@ -1,0 +1,95 @@
+{
+  "name": "@vue/devtools-monorepo",
+  "version": "9.0.0-rc.2",
+  "private": true,
+  "description": "DevTools for Vue.js",
+  "keywords": [
+    "dx",
+    "vue-devtools"
+  ],
+  "homepage": "https://github.com/vuejs/devtools#readme",
+  "bugs": {
+    "url": "https://github.com/vuejs/devtools/issues"
+  },
+  "license": "MIT",
+  "author": "webfansplz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/devtools.git"
+  },
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "pnpm --filter './packages/*' --filter '!vite-plugin-vue-devtools' -r build && pnpm --filter vite-plugin-vue-devtools build",
+    "check": "vp check",
+    "dep:up": "taze -I major -r",
+    "docs": "pnpm -C docs docs:dev",
+    "docs:build": "pnpm -C docs docs:build",
+    "docs:preview": "pnpm -C docs docs:preview",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
+    "pack": "pnpm build",
+    "play": "pnpm --filter @vue/devtools-playground-basic dev",
+    "play:reactivity-graph": "pnpm --filter @vue/devtools-playground-reactivity-graph dev",
+    "play:vapor": "pnpm --filter @vue/devtools-playground-vapor dev",
+    "postinstall": "simple-git-hooks",
+    "release": "bumpp -r",
+    "release-extension": "pnpm build && node scripts/release-extension.mjs && pnpm zip",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run tests/integration",
+    "test:performance": "vitest run --config vitest.performance.config.ts",
+    "test:smoke:chrome": "pnpm --filter @vue/devtools-kit build && pnpm --filter @vue/devtools-client build && pnpm --filter @vue/devtools-chrome build && vitest run --config vitest.smoke.config.ts",
+    "test:smoke:vite": "pnpm --filter @vue/devtools-kit build && pnpm --filter @vue/devtools-client build && pnpm --filter @vue/devtools-agent build && pnpm --filter vite-plugin-vue-devtools build && vitest run --config vitest.smoke.config.ts tests/smoke/vite-client-injection.test.ts tests/smoke/agent.test.ts",
+    "test:unit": "vitest run tests/unit",
+    "test:watch": "vitest",
+    "typecheck": "vue-tsc --noEmit -p packages/client/tsconfig.json",
+    "zip": "pnpm run zip:chrome",
+    "zip:chrome": "pnpm --filter @vue/devtools-chrome build && node scripts/chrome-extension-zip.mjs"
+  },
+  "devDependencies": {
+    "@clack/prompts": "catalog:",
+    "@modelcontextprotocol/client": "catalog:",
+    "@types/chrome": "catalog:",
+    "@types/node": "catalog:",
+    "@vitejs/devtools": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "archiver": "catalog:",
+    "bumpp": "catalog:",
+    "colorjs.io": "catalog:",
+    "happy-dom": "catalog:",
+    "nano-staged": "catalog:",
+    "picocolors": "catalog:",
+    "pinia": "catalog:",
+    "pkg-pr-new": "catalog:",
+    "playwright": "catalog:",
+    "simple-git-hooks": "catalog:",
+    "taze": "catalog:",
+    "typescript": "catalog:",
+    "verkit": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:",
+    "vue-3.6": "catalog:",
+    "vue-tsc": "catalog:"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts --offline && pnpm exec nano-staged"
+  },
+  "nano-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,vue}": [
+      "vp lint --fix",
+      "vp fmt"
+    ],
+    "*.{json,jsonc,json5,yaml,yml,md,mdx,html,css,scss,sass,less,graphql,gql,toml}": "vp fmt"
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+  },
+  "packageManager": "pnpm@12.14.0"
+}

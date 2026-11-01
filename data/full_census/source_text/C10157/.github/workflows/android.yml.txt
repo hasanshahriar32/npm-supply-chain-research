@@ -1,0 +1,259 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ '.github/**', 'android/**' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ '.github/**', 'android/**' ]
+  release:
+    types: [ published ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      # Setup
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - name: Deploy APK signing keystore and related secrets (test signing)
+        if: ${{ github.event_name != 'pull_request' && !github.event.repository.fork }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.APK_SIGNING_TEST_KEYSTORE }}
+          KEYSTORE_PATH: ${{ runner.temp }}/apk_signing_keystore.jks
+        run: echo $KEYSTORE_BASE64 | base64 --decode > $KEYSTORE_PATH
+
+      # Build
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build with Gradle and run tests
+        env:
+          ORG_GRADLE_PROJECT_apkSigningKeystorePath: ${{ runner.temp }}/apk_signing_keystore.jks
+          ORG_GRADLE_PROJECT_apkSigningKeyAlias: signing
+          ORG_GRADLE_PROJECT_apkSigningKeystorePassword: ${{ secrets.APK_SIGNING_TEST_PASSWORD }}
+          ORG_GRADLE_PROJECT_apkSigningKeyPassword: ${{ secrets.APK_SIGNING_TEST_PASSWORD }}
+        run: ./gradlew build
+
+      # Upload binaries to workflow artifacts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: binaries
+          path: |
+            android/clientlib/build/outputs/aar/*.aar
+            android/clientlib-ktx/build/outputs/aar/*.aar
+            android/common/build/outputs/aar/*.aar
+            android/fakedapp/build/outputs/apk/**/*.apk
+            android/fakewallet/build/outputs/apk/**/*.apk
+            android/walletlib/build/outputs/aar/*.aar
+          if-no-files-found: error
+          retention-days: 5
+
+      # Upload javadoc to workflow artifacts
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: clientlib-javadoc
+          path: |
+            android/clientlib/build/docs/*
+            !android/clientlib/build/docs/**/*.zip
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: common-javadoc
+          path: |
+            android/common/build/docs/*
+            !android/common/build/docs/**/*.zip
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          name: walletlib-javadoc
+          path: |
+            android/walletlib/build/docs/*
+            !android/walletlib/build/docs/**/*.zip
+          if-no-files-found: error
+          retention-days: 1
+
+      # Publish to Maven Central (only for releases that start with 'v')
+      - name: Publish to Maven Central (release only)
+        if: ${{ github.event_name == 'release' && startsWith(github.event.release.tag_name, 'v') && !github.event.repository.fork }}
+        env:
+          ORG_GRADLE_PROJECT_signingKey: ${{ secrets.MAVEN_CENTRAL_PUBLISHING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.MAVEN_CENTRAL_PUBLISHING_PRIVATE_KEY_PASSWORD }}
+          ORG_GRADLE_PROJECT_sonatypeUsername: ${{ secrets.MAVEN_CENTRAL_PUBLISHING_USERNAME }}
+          ORG_GRADLE_PROJECT_sonatypePassword: ${{ secrets.MAVEN_CENTRAL_PUBLISHING_PASSWORD }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository -P version=${TAG:1}
+  
+  test:
+    if: ${{ !github.event.repository.fork && (github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork) }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      matrix:
+        include:
+          - api-level: 34
+            recipe_uuid: 9074ccc1-7aba-4c9b-b615-e69ef389738c # Generic Android 14 (API 34)
+
+    steps:
+      # Setup
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.9.16"
+          architecture: "x64"
+      - name: set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+        with:
+          packages: platform-tools
+
+      # Caching
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      # Create Genymotion instance
+      - name: Start Genymotion Cloud SaaS instance
+        uses:  genymobile/genymotion-saas-github-action@2329faa7f6c4417645abaabfd2bd955f44149cf1 # v1
+        with:
+          api_token: ${{ secrets.GMSAAS_API_KEY }}
+          recipe_uuid: ${{ matrix.recipe_uuid }}
+
+      # Run the tests
+      - name: Run Android Integration Tests
+        run: |
+          cd android
+          adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS
+          ./gradlew :fakewallet:connectedV1DebugAndroidTest
+          ./gradlew :fakewallet:installV1Debug :fakedapp:connectedDebugAndroidTest
+
+      # Archive test results
+      - name: Archive fakewallet test results
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fakewallet-connected-test-results-${{ matrix.api-level }}
+          path: android/fakewallet/build/reports/androidTests/connected/
+          retention-days: 7
+      - name: Archive fakedapp test results
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fakedapp-connected-test-results-${{ matrix.api-level }}
+          path: android/fakedapp/build/reports/androidTests/connected/
+          retention-days: 7
+
+  # Note: only runs on 'push' events
+  publish-to-gh-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    concurrency: publish-to-gh-pages
+    if: ${{ github.event_name == 'push' && !github.event.repository.fork }}
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ secrets.PR_BOT_APP_ID }}
+          private-key: ${{ secrets.PR_BOT_PRIVATE_KEY }}
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: gh-pages
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Refresh javadoc directories
+        run: rm -rf clientlib common walletlib
+
+      - name: Download clientlib javadoc
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clientlib-javadoc
+          path: clientlib
+      - name: Download common javadoc
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: common-javadoc
+          path: common
+      - name: Download walletlib javadoc
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: walletlib-javadoc
+          path: walletlib
+
+      - name: Commit and push to gh-pages
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish"
+          else
+            git commit -m "Update clientlib, common, and walletlib javadoc"
+            git push origin gh-pages
+          fi
+
+  # Note: only runs on 'release' events
+  upload-to-release:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: write # needed for uploading files to releases
+    if: ${{ github.event_name == 'release' && !github.event.repository.fork }}
+
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries
+          path: binaries
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: clientlib-javadoc
+          path: clientlib-javadoc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: common-javadoc
+          path: common-javadoc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: walletlib-javadoc
+          path: walletlib-javadoc
+      - name: Compress clientlib javadoc
+        run: tar -cvzf clientlib-javadoc/clientlib-javadoc.tgz -C clientlib-javadoc javadoc
+      - name: Compress common javadoc
+        run: tar -cvzf common-javadoc/common-javadoc.tgz -C common-javadoc javadoc
+      - name: Compress walletlib javadoc
+        run: tar -cvzf walletlib-javadoc/walletlib-javadoc.tgz -C walletlib-javadoc javadoc
+      - name: Upload files to release
+        run: find ${FILES} -type f -exec gh release -R ${GITHUB_REPOSITORY} upload ${TAG} {} +
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          FILES: |
+            binaries/
+            clientlib-javadoc/clientlib-javadoc.tgz
+            common-javadoc/common-javadoc.tgz
+            walletlib-javadoc/walletlib-javadoc.tgz

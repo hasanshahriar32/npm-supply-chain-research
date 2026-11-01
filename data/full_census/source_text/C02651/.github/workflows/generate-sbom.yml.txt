@@ -1,0 +1,61 @@
+name: Generate SBOM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version"
+        default: "main"
+        required: true
+
+env:
+  REGISTRY_URL: "https://registry.npmjs.org"
+  CDXGEN_VERSION: "11.7.0"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      packages: read
+
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          VERSION="${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.version }}"
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Product version: $VERSION"
+
+      - name: Checkout repository
+        uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98 # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.version.outputs.PROJECT_VERSION }}
+
+      - name: Setup Node SDK
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: ${{ env.REGISTRY_URL }}
+
+      - name: Install cdxgen
+        run: |
+          npm install -g @cyclonedx/cdxgen@${{ env.CDXGEN_VERSION }}
+
+      - name: Generate SBOM
+        run: |
+          cdxgen -r -o bom.json --filter=examples
+
+      - name: Upload SBOM
+        uses: eclipse-csi/workflows/upload-sbom@20e3c63807b2bd61b7f1a9f438e5ce588c054efc # main
+        with:
+          sbom-file: bom.json
+          product-name: "langium-workspaces"
+          product-version: ${{ steps.version.outputs.PROJECT_VERSION }}

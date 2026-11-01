@@ -1,0 +1,605 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+env:
+  HUSKY: "0"
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check formatting
+        run: pnpm run formatting
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm run lint
+
+  check-typings:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check typings
+        run: pnpm run check:typings
+
+  dead-code:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check dead code
+        run: pnpm run knip
+
+  ensure-pinned-actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Ensure SHA pinned actions
+        uses: zgosalvez/github-actions-ensure-sha-pinned-actions@62574f011e0d1967d555a862bd28a7abba8684fe # v5.0.9
+
+  js-test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2025-vs2026]
+        node-version: [20, 22, 24, 26]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: ${{ matrix.node-version == 20 && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      - name: Generate docs
+        working-directory: js
+        run: pnpm run docs
+      - name: Run hermetic tests
+        working-directory: js
+        run: pnpm run test:checks
+
+  js-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      artifact-name: ${{ steps.artifact.outputs.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+          registry-url: "https://registry.npmjs.org"
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm run build
+      - name: Determine artifact name
+        id: artifact
+        env:
+          ARTIFACT_NAME: javascript-sdk-dev-${{ github.run_id }}
+        run: |
+          echo "Artifact: $ARTIFACT_NAME"
+          echo "name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+      - name: Pack publishable packages
+        run: node scripts/release/pack-publishable-packages.mjs --output-dir js/artifacts
+      - name: List artifacts before upload
+        shell: bash
+        run: ls -la js/artifacts/
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.artifact.outputs.name }}-dist
+          path: js/artifacts/*.tgz
+          retention-days: 1
+
+  e2e:
+    name: e2e (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+      BRAINTRUST_E2E_PROJECT_NAME: ${{ vars.BRAINTRUST_E2E_PROJECT_NAME }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version-file: .tool-versions
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Prepare e2e run context directory
+        id: run_context
+        shell: bash
+        run: |
+          RUN_CONTEXT_DIR="$(mktemp -d)"
+          touch "$RUN_CONTEXT_DIR/initialized"
+          echo "dir=$RUN_CONTEXT_DIR" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run e2e tests
+        env:
+          BRAINTRUST_E2E_RUN_CONTEXT_DIR: ${{ steps.run_context.outputs.dir }}
+        run: pnpm run test:e2e -- --shard=${{ matrix.shard }}/4
+      - name: Upload e2e run context
+        if: ${{ always() && steps.run_context.outputs.dir != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-run-context-${{ matrix.shard }}
+          path: ${{ steps.run_context.outputs.dir }}
+          retention-days: 1
+
+  e2e-summary:
+    needs: e2e
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+      BRAINTRUST_E2E_PROJECT_NAME: ${{ vars.BRAINTRUST_E2E_PROJECT_NAME }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Download e2e run contexts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: e2e-run-context-*
+          path: ${{ runner.temp }}/e2e-run-context
+      - name: Build e2e Braintrust links summary
+        shell: bash
+        env:
+          BRAINTRUST_E2E_RUN_CONTEXT_DIR: ${{ runner.temp }}/e2e-run-context
+          BRAINTRUST_ORG_NAME: ${{ vars.BRAINTRUST_ORG_NAME }}
+          GITHUB_HEAD_REF: ${{ github.head_ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: |
+          SUMMARY_PATH="$RUNNER_TEMP/e2e-braintrust-links-summary.md"
+          node e2e/scripts/build-pr-e2e-links-comment.mjs --output "$SUMMARY_PATH"
+          cat "$SUMMARY_PATH" >> "$GITHUB_STEP_SUMMARY"
+
+  js-api-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: "https://registry.npmjs.org"
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        name: Install pnpm
+      - name: Get published braintrust version for cache key
+        id: published-version
+        shell: bash
+        run: |
+          PUBLISHED_VERSION=$(cd /tmp && npm view braintrust version 2>/dev/null || echo "none")
+          echo "version=$PUBLISHED_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Published version: $PUBLISHED_VERSION"
+      - name: Cache API compatibility test tarball
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm/_cacache
+          key: braintrust-tarball-${{ steps.published-version.outputs.version }}-${{ runner.os }}
+          restore-keys: |
+            braintrust-tarball-${{ steps.published-version.outputs.version }}-
+            braintrust-tarball-
+      - name: Build baseline from main branch for API compatibility
+        shell: bash
+        run: |
+          CURRENT_REF=$(git rev-parse HEAD)
+          BASELINE_DIR="$HOME/braintrust-baseline"
+          mkdir -p "$BASELINE_DIR"
+
+          echo "Building baseline from main branch..."
+          git checkout origin/main || { echo "Could not checkout main"; exit 0; }
+
+          pnpm install --frozen-lockfile || { echo "Baseline install failed"; git checkout "$CURRENT_REF"; exit 0; }
+          pnpm run build || { echo "Baseline build failed"; git checkout "$CURRENT_REF"; exit 0; }
+
+          mkdir -p "$BASELINE_DIR/js/dev" "$BASELINE_DIR/js/util"
+          cp -R js/dist "$BASELINE_DIR/js/"
+          cp -R js/dev/dist "$BASELINE_DIR/js/dev/"
+          cp -R js/util/dist "$BASELINE_DIR/js/util/"
+          echo "Copied js/dist, js/dev/dist, and js/util/dist to baseline"
+
+          git checkout "$CURRENT_REF"
+
+          echo "BASELINE_DIR=$BASELINE_DIR" >> "$GITHUB_ENV"
+          echo "Baseline created at $BASELINE_DIR"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build current branch
+        run: pnpm run build
+      - name: Run API compatibility test
+        env:
+          BASELINE_DIR: ${{ env.BASELINE_DIR }}
+        run: |
+          cd js && pnpm test:api-compat
+
+  js-smoke-discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      scenarios: ${{ steps.discover.outputs.scenarios }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Discover scenarios
+        id: discover
+        working-directory: js/smoke
+        shell: bash
+        run: |
+          echo "Discovering local and integration scenarios..."
+          SCRIPTDIR="../../integrations"
+          LOCAL=$(find scenarios -mindepth 1 -maxdepth 1 -type d -exec test -f {}/Makefile \; -print | sed 's|scenarios/||' | tr '\n' ' ')
+          INTEGRATIONS=$(find "$SCRIPTDIR" -type f -path '*/smoke/scenarios/*/Makefile' 2>/dev/null | sed "s|^$SCRIPTDIR/||" | sed 's|/Makefile$||' | sed 's|/smoke/scenarios/|/|' | tr '\n' ' ')
+          ALL="${LOCAL} ${INTEGRATIONS}"
+          SCENARIOS=$(printf "%s\n" $ALL | jq -R -s -c 'split("\n") | map(select(length>0))')
+          echo "scenarios=$SCENARIOS" >> "$GITHUB_OUTPUT"
+          echo "Discovered scenarios: $SCENARIOS"
+
+  js-smoke-test:
+    needs: [js-build, js-smoke-discover]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario: ${{ fromJson(needs.js-smoke-discover.outputs.scenarios) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup mise
+        uses: jdx/mise-action@9149ea85001c7435d5a66bb127d6a1b6227cb0a5 # v5.0.0
+        with:
+          working_directory: js/smoke
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.js-build.outputs.artifact-name }}-dist
+          path: js/artifacts
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Prepare artifacts at well-known paths
+        working-directory: js/artifacts
+        shell: bash
+        run: |
+          for f in braintrust-[0-9]*.tgz; do
+            if [ -f "$f" ]; then
+              cp "$f" braintrust-latest.tgz
+              echo "Copied $f to braintrust-latest.tgz"
+              break
+            fi
+          done
+
+          for f in braintrust-browser-[0-9]*.tgz; do
+            if [ -f "$f" ]; then
+              cp "$f" braintrust-browser-latest.tgz
+              echo "Copied $f to braintrust-browser-latest.tgz"
+              break
+            fi
+          done
+
+          for f in braintrust-otel-[0-9]*.tgz; do
+            if [ -f "$f" ]; then
+              cp "$f" braintrust-otel-latest.tgz
+              echo "Copied $f to braintrust-otel-latest.tgz"
+              break
+            fi
+          done
+
+          for f in braintrust-templates-nunjucks-js-[0-9]*.tgz; do
+            if [ -f "$f" ]; then
+              cp "$f" braintrust-templates-nunjucks-js-latest.tgz
+              echo "Copied $f to braintrust-templates-nunjucks-js-latest.tgz"
+              break
+            fi
+          done
+      - name: Build shared test package (once for all scenarios)
+        working-directory: js/smoke/shared
+        shell: bash
+        run: |
+          pnpm install --ignore-workspace --frozen-lockfile
+          pnpm run build
+      - name: Run scenario ${{ matrix.scenario }}
+        working-directory: js/smoke
+        shell: bash
+        env:
+          BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
+          CI: true
+          BRAINTRUST_TAR: ../artifacts/braintrust-latest.tgz
+          BRAINTRUST_BROWSER_TAR: ../artifacts/braintrust-browser-latest.tgz
+          BRAINTRUST_OTEL_TAR: ../artifacts/braintrust-otel-latest.tgz
+          BRAINTRUST_TEMPLATES_NUNJUCKS_JS_TAR: ../artifacts/braintrust-templates-nunjucks-js-latest.tgz
+          SMOKE_V2_SHARED_DIST: shared/dist
+        run: |
+          make test ${{ matrix.scenario }}
+
+  temporal-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24, 26]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: ${{ matrix.node-version == 20 && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build braintrust
+        working-directory: js
+        run: pnpm run build
+      - name: Build @braintrust/temporal
+        working-directory: integrations/temporal-js
+        run: pnpm run build
+      - name: Run @braintrust/temporal tests
+        working-directory: integrations/temporal-js
+        run: pnpm run test
+
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24, 26]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: ${{ matrix.node-version == 20 && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build braintrust
+        working-directory: js
+        run: pnpm run build
+      - name: Build @braintrust/audio
+        working-directory: integrations/audio
+        run: pnpm run build
+      - name: Run @braintrust/audio tests
+        working-directory: integrations/audio
+        run: pnpm run test
+
+  templates-nunjucks-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24, 26]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: ${{ matrix.node-version == 20 && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build braintrust
+        working-directory: js
+        run: pnpm run build
+      - name: Build @braintrust/templates-nunjucks-js
+        working-directory: integrations/templates-nunjucks
+        run: pnpm run build
+      - name: Run @braintrust/templates-nunjucks-js tests
+        working-directory: integrations/templates-nunjucks
+        run: pnpm run test
+
+  otel-js:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24, 26]
+        test-dir: [otel-v1, otel-v2]
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: ${{ matrix.node-version == 20 && 'true' || '' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build Docker image for ${{ matrix.test-dir }}
+        shell: bash
+        run: |
+          docker build -f integrations/otel-js/Dockerfile.test \
+            --build-arg NODE_VERSION=${{ matrix.node-version }} \
+            --build-arg TEST_DIR=${{ matrix.test-dir }} \
+            -t otel-js-test-${{ matrix.test-dir }}-node${{ matrix.node-version }} .
+      - name: Run tests for ${{ matrix.test-dir }}
+        shell: bash
+        run: |
+          docker run --rm otel-js-test-${{ matrix.test-dir }}-node${{ matrix.node-version }}
+
+  js-zod-versions:
+    name: Zod Versions (${{ matrix.zod-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        zod-version: ["3.25.34", "4.2.1"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+      - name: Setup pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .tool-versions
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Setup Zod version
+        working-directory: ./js
+        run: |
+          pnpm add -D zod@${{ matrix.zod-version }}
+      - name: Build package
+        working-directory: ./js
+        run: |
+          pnpm run build
+      - name: Run hermetic tests
+        working-directory: ./js
+        run: pnpm run test:checks
+      - name: Run zod v3 tests
+        if: matrix.zod-version == '3.25.34'
+        working-directory: ./js
+        run: |
+          pnpm test:zod-v3
+      - name: Run zod v4 tests
+        if: matrix.zod-version == '4.2.1'
+        working-directory: ./js
+        run: |
+          pnpm test:zod-v4
+
+  checks-passed:
+    name: checks-passed
+    needs:
+      - formatting
+      - lint
+      - check-typings
+      - dead-code
+      - ensure-pinned-actions
+      - js-test
+      - js-build
+      - e2e
+      - e2e-summary
+      - js-smoke-discover
+      - js-smoke-test
+      - temporal-js
+      - audio
+      - templates-nunjucks-js
+      - otel-js
+      - js-zod-versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    steps:
+      - name: Verify all required checks passed
+        run: |
+          FAILED=0
+
+          check_result() {
+            local job_name="$1"
+            local job_result="$2"
+
+            if [ "$job_result" != "success" ] && [ "$job_result" != "skipped" ]; then
+              echo "Job '$job_name' finished with result: $job_result"
+              FAILED=1
+            fi
+          }
+
+          check_result "formatting" "${{ needs.formatting.result }}"
+          check_result "lint" "${{ needs.lint.result }}"
+          check_result "check-typings" "${{ needs.check-typings.result }}"
+          check_result "dead-code" "${{ needs.dead-code.result }}"
+          check_result "ensure-pinned-actions" "${{ needs.ensure-pinned-actions.result }}"
+          check_result "js-test" "${{ needs.js-test.result }}"
+          check_result "js-build" "${{ needs.js-build.result }}"
+          check_result "e2e" "${{ needs.e2e.result }}"
+          check_result "e2e-summary" "${{ needs.e2e-summary.result }}"
+          check_result "js-smoke-discover" "${{ needs.js-smoke-discover.result }}"
+          check_result "js-smoke-test" "${{ needs.js-smoke-test.result }}"
+          check_result "temporal-js" "${{ needs.temporal-js.result }}"
+          check_result "audio" "${{ needs.audio.result }}"
+          check_result "templates-nunjucks-js" "${{ needs.templates-nunjucks-js.result }}"
+          check_result "otel-js" "${{ needs.otel-js.result }}"
+          check_result "js-zod-versions" "${{ needs.js-zod-versions.result }}"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "One or more required checks failed"
+            exit 1
+          fi
+
+          echo "All required checks passed"

@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  # PRs have their own canary releases which don't publish the GitHub Action. They only run when
+  # the PR changes the published package or its build, or the release process itself, so the
+  # release can be debugged on a PR. `release` is not a required check, so not running is safe.
+  # Types are configured so this also runs when labels are added or removed.
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+    # Keep in sync with `push.paths` below: every path there must also be here, followed by the
+    # build and release files that only matter for canaries.
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - action.yml
+      - isChromatic.*
+      - package.json
+      - storybook-addon.*
+      - yarn.lock
+      - tsconfig.json
+      - tsdown.config.ts
+      - .tool-versions
+      - .yarnrc.yml
+      - .github/actions/setup/**
+      - .github/workflows/release.yml
+      - scripts/publishAction.mjs
+      - scripts/release.mjs
+
+  # Pushes to main trigger a release and publish the GitHub Action. To allow the occasional update
+  # to markdown and config files, only changes to actual source code and the dependencies bundled
+  # with it trigger a release.
+  push:
+    branches:
+      - main
+    # Keep in sync with `pull_request.paths` above: add any path here to that list too.
+    paths:
+      - action-src/**
+      - bin-src/**
+      - node-src/**
+      - action.yml
+      - isChromatic.*
+      - package.json
+      - storybook-addon.*
+      - yarn.lock
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # One Release run at a time: superseded PR runs (opened + labeled bursts) cancel;
+  # pushes to main queue so real releases serialize. The npm plugin's retry logic
+  # only avoids versions already visible on npm, so concurrent runs of the same
+  # commit would collide on the identical canary version.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+      - uses: ./.github/actions/setup
+      - name: Prepare repository
+        run: git fetch --unshallow --tags
+        # Update NPM since we're using trusted publishing and need a newer version
+      - name: Update NPM
+        run: npm install -g npm@latest
+      - name: Create Release
+        run: yarn run release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SENTRY_ORG: chromatic-lt
+          SENTRY_PROJECT: cli
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

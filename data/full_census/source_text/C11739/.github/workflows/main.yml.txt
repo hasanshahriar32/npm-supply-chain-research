@@ -1,0 +1,41 @@
+jobs:
+  unix:
+    name: '${{matrix.node}} on ${{matrix.os}}'
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{matrix.node}}
+      - run: npm install
+      - run: npm test
+      - uses: codecov/codecov-action@v5
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+        node:
+          - lts/hydrogen
+          - node
+  # Just run quick tests on windows.
+  windows:
+    name: '${{matrix.node}} on ${{matrix.os}}'
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{matrix.node}}
+      - run: npm install
+      - run: npm run test-api
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+        node:
+          - lts/hydrogen
+          - node
+name: main
+on:
+  - pull_request
+  - push

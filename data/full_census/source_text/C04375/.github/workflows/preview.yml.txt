@@ -1,0 +1,54 @@
+name: Preview
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  preview:
+    name: Publish preview package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    if: github.event.pull_request.user.type != 'Bot'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Size
+        run: npm run size
+
+      - name: Audit signatures
+        run: npm audit signatures
+
+      - name: Prune package.json
+        uses: igordanchenko/actions/prune-package-json@70afc5be4de156d0dd40c8ae40fec49e8ff84fc1 # v1.3.4
+
+      - name: Publish preview
+        run: npx --yes -- pkg-pr-new publish --no-template

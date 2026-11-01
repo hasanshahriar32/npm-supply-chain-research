@@ -1,0 +1,57 @@
+{
+    "private": true,
+    "type": "module",
+    "author": {
+        "name": "Peter Placzek",
+        "email": "tadashi@animesu.net",
+        "url": "https://github.com/tada5hi"
+    },
+    "license": "MIT",
+    "version": "1.0.0",
+    "workspaces": [
+        "./packages/*"
+    ],
+    "keywords": [
+        "error",
+        "typescript",
+        "error-handling",
+        "http",
+        "exception",
+        "serialization",
+        "type-guard",
+        "error-classes"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tada5hi/ebec.git"
+    },
+    "bugs": {
+        "url": "https://github.com/tada5hi/ebec/issues"
+    },
+    "homepage": "https://github.com/tada5hi/ebec#readme",
+    "engines": {
+        "node": ">=22.0.0"
+    },
+    "devDependencies": {
+        "@tada5hi/commitlint-config": "^1.3.1",
+        "@tada5hi/eslint-config": "^2.3.1",
+        "@tada5hi/tsconfig": "^0.7.2",
+        "@types/node": "^25.6.0",
+        "@vitest/coverage-v8": "^4.1.9",
+        "eslint": "^10.8.1",
+        "husky": "^9.1.7",
+        "nx": "^24.0.2",
+        "tsdown": "^0.22.3",
+        "typescript": "^6.0.3",
+        "typescript-eslint": "^8.66.0",
+        "vitest": "^4.1.11"
+    },
+    "scripts": {
+        "build": "npx nx run-many -t build",
+        "test": "npx nx run-many -t test",
+        "test:coverage": "npx nx run-many -t test:coverage",
+        "lint": "eslint packages/",
+        "lint:fix": "eslint packages/ --fix",
+        "prepare": "husky"
+    }
+}

@@ -1,0 +1,45 @@
+{
+    "name": "@hapi/formula",
+    "version": "4.0.0",
+    "description": "Math and string formula parser.",
+    "keywords": [
+        "formula",
+        "math",
+        "parser",
+        "string"
+    ],
+    "license": "BSD-3-Clause",
+    "repository": "git://github.com/hapijs/formula",
+    "files": [
+        "src",
+        "API.md"
+    ],
+    "type": "module",
+    "types": "src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.d.ts",
+            "default": "./src/index.js"
+        }
+    },
+    "scripts": {
+        "test": "vitest run --coverage",
+        "typecheck": "tsc --noEmit",
+        "lint": "oxlint",
+        "lint:fix": "oxlint --fix",
+        "fmt": "oxfmt --check",
+        "fmt:fix": "oxfmt",
+        "check": "npm run lint && npm run fmt && npm run typecheck && npm test"
+    },
+    "devDependencies": {
+        "@hapi/oxc-plugin": "^1.0.1",
+        "@vitest/coverage-v8": "^4.1.9",
+        "oxfmt": "^0.57.0",
+        "oxlint": "^1.72.0",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.9"
+    },
+    "engines": {
+        "node": ">=22"
+    }
+}

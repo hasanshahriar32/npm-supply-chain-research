@@ -1,0 +1,65 @@
+name: Publish Package 🚀
+
+on:
+  workflow_run:
+    workflows:
+      - Tag release 🏷️
+    branches:
+      - main
+      - next
+    types:
+      - completed
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  publish:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 20
+          fetch-tags: false
+
+      - name: Setup Node version ⚙️
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          cache: yarn
+          cache-dependency-path: 'yarn.lock'
+          node-version: '24.22.2'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies 🔧
+        run: yarn install --frozen-lockfile
+
+      - name: Build 🔨
+        run: yarn build
+
+      - name: Check release tag 🔖
+        id: tag_check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "tag_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG exists on origin"
+          else
+            echo "tag_exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG does not exist on origin"
+          fi
+
+      # This will tell npm to publish your scoped package with public access
+      - name: Publish package 🚀
+        if: steps.tag_check.outputs.tag_exists == 'true'
+        run: npm publish --provenance --access public
+
+      - name: Skip publish (tag missing) ℹ️
+        if: steps.tag_check.outputs.tag_exists != 'true'
+        run: echo "Skipping publish because tag ${{ steps.tag_check.outputs.tag_name }} was not found on origin."

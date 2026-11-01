@@ -1,0 +1,24 @@
+name: Test NPM package
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-npm-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e # v1
+        with:
+          node-version: 22.x
+      - run: npm ci
+      - run: npm run test:package

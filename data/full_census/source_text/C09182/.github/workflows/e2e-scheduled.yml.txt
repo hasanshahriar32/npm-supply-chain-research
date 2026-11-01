@@ -1,0 +1,129 @@
+name: E2E Tests (Scheduled)
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      cli_version:
+        description: 'npm version/tag to test (e.g., latest, 5.20.0)'
+        required: true
+        default: 'latest'
+      suite:
+        description: 'Vitest suite filter (e.g., new.test.ts; use all for the full suite)'
+        required: true
+        default: 'all'
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [22, 24, 26]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Restore Vitest cache
+        uses: actions/cache@v6
+        with:
+          path: packages/@sanity/cli-e2e/node_modules/.vite/vitest
+          key: vitest-e2e-scheduled-cache-${{ matrix.os }}-node${{ matrix.node-version }}-${{ github.run_id }}
+          restore-keys: |
+            vitest-e2e-scheduled-cache-${{ matrix.os }}-node${{ matrix.node-version }}-
+
+      - name: Install CLI from npm
+        run: |
+          CLI_VERSION="${{ inputs.cli_version || 'latest' }}"
+          INSTALL_DIR=$(mktemp -d)
+          npm install --prefix "$INSTALL_DIR" "sanity@${CLI_VERSION}" "create-sanity@latest"
+          echo "E2E_BINARY_PATH=$INSTALL_DIR/node_modules/.bin/sanity" >> "$GITHUB_ENV"
+          echo "E2E_CREATE_SANITY_BINARY_PATH=$INSTALL_DIR/node_modules/.bin/create-sanity" >> "$GITHUB_ENV"
+          echo "E2E_REGISTRY_MODE=true" >> "$GITHUB_ENV"
+          "$INSTALL_DIR/node_modules/.bin/sanity" --version
+          "$INSTALL_DIR/node_modules/.bin/create-sanity" --help > /dev/null
+
+      - name: Build test infrastructure
+        run: pnpm --filter @sanity/cli-test build
+
+      - name: Run E2E tests
+        env:
+          E2E_NODE_VERSION: ${{ matrix.node-version }}
+          E2E_TEST_SUITE: ${{ inputs.suite || 'all' }}
+          SANITY_E2E_TOKEN: ${{ secrets.SANITY_E2E_TOKEN }}
+          SANITY_E2E_PROJECT_ID: ${{ secrets.SANITY_E2E_PROJECT_ID }}
+          SANITY_E2E_DATASET: ${{ secrets.SANITY_E2E_DATASET }}
+          SANITY_E2E_ORGANIZATION_ID: ${{ secrets.SANITY_E2E_ORGANIZATION_ID }}
+        run: |
+          set -o pipefail
+          test_args=()
+          if [ "$E2E_TEST_SUITE" != "all" ]; then
+            test_args+=("$E2E_TEST_SUITE")
+          fi
+          # Run sanity new only on Node 22 to avoid concurrent claims into the shared test organization.
+          if [ "$E2E_NODE_VERSION" != "22" ]; then
+            test_args+=(--exclude '__tests__/new.test.ts' --passWithNoTests)
+          fi
+          pnpm --filter @sanity/cli-e2e test "${test_args[@]}" 2>&1 | tee "$RUNNER_TEMP/e2e-log.txt"
+
+      - name: Upload test log to GitHub Actions Artifacts
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-log-node${{ matrix.node-version }}
+          path: ${{ runner.temp }}/e2e-log.txt
+          retention-days: 7
+          overwrite: true
+
+  notify-failure:
+    if: failure()
+    needs: [e2e]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack on failure
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.SLACK_E2E_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": ${{ toJSON(format('Scheduled E2E failed for sanity@{0}', inputs.cli_version || 'latest')) }},
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":red_circle: *Scheduled E2E failed*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ${{ toJSON(format('*Package:* `sanity@{0}`', inputs.cli_version || 'latest')) }}
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ${{ toJSON(format('*Run:* <{0}/{1}/actions/runs/{2}|View logs>', github.server_url, github.repository, github.run_id)) }}
+                  }
+                }
+              ]
+            }

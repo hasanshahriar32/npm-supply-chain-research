@@ -1,0 +1,81 @@
+{
+  "name": "image-blob-reduce",
+  "version": "5.0.1",
+  "description": "High quality image resizing for blobs in browsers (`pica` wrapper with some sugar)",
+  "keywords": [
+    "resize",
+    "scale",
+    "image",
+    "lanczos",
+    "canvas",
+    "blob"
+  ],
+  "repository": "nodeca/image-blob-reduce",
+  "license": "MIT",
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/puzrin"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/nodeca"
+    }
+  ],
+  "files": [
+    "dist/"
+  ],
+  "main": "./dist/image-blob-reduce.js",
+  "module": "./dist/image-blob-reduce.mjs",
+  "types": "dist/image-blob-reduce.cjs.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*",
+    ".": {
+      "import": {
+        "types": "./dist/image-blob-reduce.es.d.ts",
+        "default": "./dist/image-blob-reduce.mjs"
+      },
+      "require": {
+        "types": "./dist/image-blob-reduce.cjs.d.ts",
+        "default": "./dist/image-blob-reduce.js"
+      }
+    },
+  "./browser": {
+      "import": {
+        "types": "./dist/image-blob-reduce.es.d.ts",
+        "default": "./dist/image-blob-reduce.browser.min.mjs"
+      },
+      "default": "./dist/image-blob-reduce.browser.min.js"
+    }
+  },
+  "scripts": {
+    "test": "npm run lint && npm run build && npm run type-check && npm run test:unit && vitest run --project browser && vitest run --project dist && vitest run --project package",
+    "test:unit": "vitest run --project unit",
+    "test:browser": "npm run build && vitest run --project browser",
+    "test:dist": "npm run build && vitest run --project dist",
+    "test:package": "npm run build && vitest run --project package",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint .",
+    "build": "node support/build-dist.mjs",
+    "gh-pages": "gh-pages -d . -s {demo,dist}/* -f",
+    "prepack": "npm run build",
+    "postpublish": "npm run gh-pages"
+  },
+  "dependencies": {
+    "pica": "^10.0.1"
+  },
+  "devDependencies": {
+    "@vitest/browser": "^4.1.6",
+    "@vitest/browser-playwright": "^4.1.6",
+    "@types/node": "^24.12.2",
+    "eslint": "^9",
+    "gh-pages": "^6.3.0",
+    "neostandard": "^0.13.0",
+    "playwright": "^1.60.0",
+    "rollup-plugin-dts": "^6.4.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
+  }
+}

@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    branches: [master]
+    types:
+      - completed
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
+
+jobs:
+  release-please:
+    name: release
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          target-branch: master
+
+      - uses: actions/checkout@v6
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - uses: pnpm/action-setup@v4
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - run: corepack enable
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - uses: actions/setup-node@v6
+        with:
+          cache: "pnpm"
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - run: pnpm install --frozen-lockfile
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - run: git config user.email $(git --no-pager show -s --format='%ae' HEAD)
+        if: ${{ steps.release.outputs.releases_created }}
+      - run: git config user.name $(git --no-pager show -s --format='%an' HEAD)
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - run: pnpm build
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - run: pnpm publish -r --access public --provenance --no-git-check
+        if: ${{ steps.release.outputs.releases_created }}

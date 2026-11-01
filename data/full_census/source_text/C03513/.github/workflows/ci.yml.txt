@@ -1,0 +1,39 @@
+---
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        node_version:
+          - 18
+    name: Node ${{ matrix.node_version }} on ${{ matrix.os }}
+    steps:
+      - name: Use LF EOL
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          git config --global core.autocrlf false
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          cache: "yarn"
+          node-version: ${{ matrix.node_version }}
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+      - name: Test
+        run: yarn test
+      - name: Codecov
+        run: yarn codecov

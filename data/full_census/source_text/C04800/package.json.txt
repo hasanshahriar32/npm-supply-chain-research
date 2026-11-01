@@ -1,0 +1,101 @@
+{
+  "name": "hookified",
+  "version": "3.1.0",
+  "description": "Event Emitting and Middleware Hooks",
+  "type": "module",
+  "main": "./dist/node/index.js",
+  "module": "./dist/node/index.js",
+  "types": "./dist/node/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/node/index.d.ts",
+        "default": "./dist/node/index.js"
+      },
+      "require": {
+        "types": "./dist/node/index.d.cts",
+        "default": "./dist/node/index.cjs"
+      },
+      "default": "./dist/node/index.js"
+    },
+    "./browser": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/browser/index.js",
+      "default": "./dist/browser/index.global.js"
+    }
+  },
+  "scripts": {
+    "lint": "biome check --write --error-on-warnings",
+    "test": "pnpm lint && vitest run --coverage",
+    "test:ci": "biome check --error-on-warnings && vitest run --coverage",
+    "clean": "rimraf ./dist ./coverage ./site/dist",
+    "build": "tsdown",
+    "benchmark": "pnpm benchmark:hooks && pnpm benchmark:emit && pnpm benchmark:emit-multi",
+    "benchmark:hooks": "pnpm tsx benchmark/hook.ts",
+    "benchmark:emit": "pnpm tsx benchmark/emit.ts",
+    "benchmark:emit-multi": "pnpm tsx benchmark/emit-multi.ts",
+    "benchmark:readme": "pnpm tsx scripts/benchmark-readme.ts",
+    "website:build": "docula build",
+    "website:serve": "docula serve",
+    "website:dev": "docula dev",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "hooks",
+    "eventemitter",
+    "eventemitter3",
+    "middleware",
+    "events",
+    "hooks",
+    "event-hooks",
+    "hook-system",
+    "event-driven",
+    "event-emitter",
+    "hook-handlers",
+    "middleware",
+    "emit",
+    "event-management",
+    "before-after-hooks",
+    "event-listeners",
+    "custom-hooks",
+    "hook-utilities",
+    "typescript-hooks"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jaredwray/hookified.git"
+  },
+  "author": "Jared Wray <me@jaredwray.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jaredwray/hookified/issues"
+  },
+  "homepage": "https://github.com/jaredwray/hookified#readme",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@12.13.0+sha512.1e55719bf26e809dce5c5084fdebaa64efb3da9038ae5d68a9f8a68311f1a45841c8c3b76a37298c3b66f6bcc80409a9b7f33c78a7168a3e90fb65a5d8235ae4",
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
+    "@monstermann/tinybench-pretty-printer": "^0.3.0",
+    "@types/node": "^24.19.2",
+    "@vitest/coverage-v8": "^5.0.4",
+    "docula": "^3.0.2",
+    "emittery": "^2.1.0",
+    "eventemitter3": "^5.0.4",
+    "hookable": "^6.1.2",
+    "pino": "^10.4.0",
+    "rimraf": "^6.1.3",
+    "tinybench": "^6.2.2",
+    "tsdown": "^0.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4",
+    "wrangler": "^4.151.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE"
+  ]
+}

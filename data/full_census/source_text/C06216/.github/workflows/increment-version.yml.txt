@@ -1,0 +1,97 @@
+name: Increment Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: "Version type to increment"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - premajor
+
+permissions: {}
+
+jobs:
+  increment-version:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # The contract check needs the last release tag.
+          fetch-depth: 0
+
+      # v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: "22.23.4"
+          package-manager-cache: false
+          registry-url: "https://registry.npmjs.org"
+
+      # Node 22 bundles npm 10; the cooldown requires npm >=11.10.
+      # Drop this step after Node 22 support ends and all selected Node versions bundle npm >=11.10.
+      - name: Use npm with release-age support
+        run: npm install -g npm@11.21.1
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        run: |
+          npm version ${GITHUB_EVENT_INPUTS_VERSION_TYPE} --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_INPUTS_VERSION_TYPE: ${{ github.event.inputs.version_type }}
+
+      - name: Update package-lock.json
+        run: npm install
+
+      # Pull requests may merge planned contract changes before a release.
+      # This keeps them out of a patch release.
+      - name: Check SDK compatibility with the last release
+        run: |
+          LAST_RELEASE=$(git describe --tags --abbrev=0 --match 'v[0-9]*')
+          echo "Comparing with ${LAST_RELEASE}"
+          npm run build
+          git worktree add --detach "$RUNNER_TEMP/compat-baseline" "$LAST_RELEASE"
+          npm run check:compatibility -- "$RUNNER_TEMP/compat-baseline/src/index.ts"
+
+      - name: Create branch and commit changes
+        run: |
+          BRANCH_NAME="version-bump-v${NEW_VERSION}"
+          git checkout -b "$BRANCH_NAME"
+          git add package.json package-lock.json
+          git commit -m "Bump version to v${NEW_VERSION}"
+          git push origin "$BRANCH_NAME"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_EVENT_INPUTS_VERSION_TYPE: ${{ github.event.inputs.version_type }}
+        run: |
+          gh pr create \
+            --title "Bump version to v${NEW_VERSION}" \
+            --body "This PR bumps the version to v${NEW_VERSION} using npm version ${GITHUB_EVENT_INPUTS_VERSION_TYPE}." \
+            --base main \
+            --head "${BRANCH_NAME}" \
+            --assignee "${GITHUB_ACTOR}"
+
+      - name: Trigger CI on the new branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yml -f ref="${BRANCH_NAME}"

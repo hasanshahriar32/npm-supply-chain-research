@@ -1,0 +1,106 @@
+name: Functional Tests
+
+on:
+  pull_request:
+    branches:
+    - master
+    paths-ignore:
+    - 'docs/**'
+    - '*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - platformVersion: "16.0"
+          apiLevel: 36
+          emuTag: google_apis
+          arch: x86_64
+        - platformVersion: "11.0"
+          apiLevel: 30
+          emuTag: google_apis
+          arch: x86
+        - platformVersion: "9.0"
+          apiLevel: 28
+          emuTag: default
+          arch: x86
+        - platformVersion: "8.0"
+          apiLevel: 26
+          emuTag: default
+          arch: x86
+
+    env:
+      CI: true
+      ANDROID_AVD: emulator
+      ANDROID_SDK_VERSION: ${{ matrix.apiLevel }}
+      PLATFORM_VERSION: ${{ matrix.platformVersion }}
+      EMU_TAG: ${{ matrix.emuTag }}
+      _FORCE_LOGS: 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    - name: Enable KVM group perms
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/*
+        check-latest: true
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '22'
+        cache: 'gradle'
+    - run: npm install --no-package-lock
+      name: Install dev dependencies
+    - name: AVD cache
+      uses: actions/cache@v3
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-${{ matrix.apiLevel }}
+    # https://github.com/marketplace/actions/android-emulator-runner
+    - uses: reactivecircus/android-emulator-runner@v2
+      if: steps.avd-cache.outputs.cache-hit != 'true'
+      name: Generate AVD snapshot for caching
+      with:
+        script: echo "Generated AVD snapshot for caching."
+        avd-name: ${{ env.ANDROID_AVD }}
+        force-avd-creation: false
+        api-level: ${{ matrix.apiLevel }}
+        disable-spellchecker: true
+        target: ${{ matrix.emuTag }}
+        emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+        arch: ${{ matrix.arch }}
+        disable-animations: true
+    - run: nohup adb logcat > logcat.log &
+      name: Capture Logcat
+    - uses: reactivecircus/android-emulator-runner@v2
+      name: e2e_api${{ matrix.apiLevel }}
+      with:
+        script: scripts/e2e.sh
+        avd-name: ${{ env.ANDROID_AVD }}
+        force-avd-creation: false
+        api-level: ${{ matrix.apiLevel }}
+        disable-spellchecker: true
+        target: ${{ matrix.emuTag }}
+        emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+        arch: ${{ matrix.arch }}
+        disable-animations: true
+    - name: Save logcat output
+      if: ${{ always() }}
+      uses: actions/upload-artifact@master
+      with:
+        name: logcat-api${{ matrix.apiLevel }}
+        path: logcat.log

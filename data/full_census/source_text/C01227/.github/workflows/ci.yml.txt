@@ -1,0 +1,19 @@
+name: "CI"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "*"
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: braintree/web-sdk-github-actions/.github/workflows/ci.yml@7a0129438dde00a728cc851ce2cab9820bb264ed # main
+    with:
+      lint-command: "npx prettier --check ."

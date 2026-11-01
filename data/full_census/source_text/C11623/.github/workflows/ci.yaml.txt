@@ -1,0 +1,267 @@
+name: "CI"
+on:
+    push:
+        branches: ["main"]
+    pull_request:
+
+jobs:
+    "typecheck":
+        name: "Typecheck"
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18.x"
+            - name: "Install node dependencies and build"
+              run: "npm ci && npm run build"
+            - name: "Typecheck"
+              run: "npm run typecheck"
+
+    "format-check":
+        name: "Check formatting"
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18.x"
+            - name: "Install node dependencies"
+              run: "npm ci"
+            - name: "Check formatting"
+              run: "npm run format:check"
+
+    "test-against-sqld":
+        name: "Tests against sqld"
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        defaults:
+            run:
+                working-directory: ./packages/libsql-client
+        env: { "NODE_OPTIONS": "--trace-warnings" }
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18.x"
+            - name: "Build core"
+              run: "npm ci && npm run build"
+              working-directory: ./packages/libsql-core
+            - name: "Install npm dependencies"
+              run: "npm ci"
+            - name: "Build"
+              run: "npm run build"
+            - name: Run Docker container in the background
+              run: docker run -d -p 8080:8080 -e SQLD_NODE=primary ghcr.io/tursodatabase/libsql-server:latest
+            - name: Verify container is running
+              run: docker ps
+            - name: "Test against sqld"
+              run: "npm test"
+              env: { "URL": "http://localhost:8080", "SERVER": "sqld" }
+
+    "wasm-test":
+        name: "Build and test Wasm on Node.js"
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        defaults:
+            run:
+                working-directory: ./packages/libsql-client-wasm
+        env: { "NODE_OPTIONS": "--trace-warnings" }
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18.x"
+                  cache-dependency-path: "packages/libsql-client-wasm"
+            - name: "Build core"
+              run: "npm ci && npm run build"
+              working-directory: ./packages/libsql-core
+            - name: "Install npm dependencies"
+              run: "npm ci"
+            - name: "Build"
+              run: "npm run build"
+            - name: "Test example"
+              run: "cd examples/node && npm i && node index.js"
+              env: { "URL": "file:///tmp/example.db" }
+
+    "node-test":
+        name: "Build and test on Node.js"
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        defaults:
+            run:
+                working-directory: ./packages/libsql-client
+        env: { "NODE_OPTIONS": "--trace-warnings" }
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18.x"
+            - name: "Build core"
+              run: "npm ci && npm run build"
+              working-directory: ./packages/libsql-core
+            - name: "Install npm dependencies"
+              run: "npm ci"
+            - name: "Setup Python"
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+            - name: "Install pip dependencies"
+              run: "pip install -r ../../testing/hrana-test-server/requirements.txt"
+
+            - name: "Build"
+              run: "npm run build"
+
+            - name: "Test Hrana 1 over WebSocket"
+              run: "python ../../testing/hrana-test-server/server_v1.py npm test"
+              env: { "URL": "ws://localhost:8080", "SERVER": "test_v1" }
+            - name: "Test Hrana 2 over WebSocket"
+              run: "python ../../testing/hrana-test-server/server_v2.py npm test"
+              env: { "URL": "ws://localhost:8080", "SERVER": "test_v2" }
+            - name: "Test Hrana 2 over HTTP"
+              run: "python ../../testing/hrana-test-server/server_v2.py npm test"
+              env: { "URL": "http://localhost:8080", "SERVER": "test_v2" }
+            #    - name: "Test Hrana 3 over WebSocket"
+            #      run: "python ../../testing/hrana-test-server/server_v3.py npm test"
+            #      env: {"URL": "ws://localhost:8080", "SERVER": "test_v3"}
+            #    - name: "Test Hrana 3 over HTTP"
+            #      run: "python ../../testing/hrana-test-server/server_v3.py npm test"
+            #      env: {"URL": "http://localhost:8080", "SERVER": "test_v3"}
+            - name: "Test local file"
+              run: "npm test"
+              env: { "URL": "file:///tmp/test.db" }
+
+            - name: "Test example"
+              run: "cd examples && npm i && node example.js"
+              env: { "URL": "file:///tmp/example.db" }
+
+    "workers-test":
+        name: "Build and test with Cloudflare Workers"
+        if: false
+        runs-on: ubuntu-latest
+        timeout-minutes: 2
+        defaults:
+            run:
+                working-directory: ./packages/libsql-client
+        env:
+            "CLOUDFLARE_API_TOKEN": "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+            "CLOUDFLARE_ACCOUNT_ID": "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+        steps:
+            - name: "Checkout this repo"
+              uses: actions/checkout@v4
+            - name: "Setup Node.js"
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "lts/Hydrogen"
+            - name: "Build core"
+              run: "npm ci && npm run build"
+              working-directory: ./packages/libsql-core
+            - name: "Install npm dependencies"
+              run: "npm ci"
+
+            - name: "Setup Python"
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.10"
+            - name: "Install pip dependencies"
+              run: "pip install -r ../../testing/hrana-test-server/requirements.txt"
+
+            - name: "Build"
+              run: "npm run build"
+            - name: "Install npm dependencies of the Workers test"
+              run: "cd smoke_test/workers && npm link ../.."
+
+            - name: "Local test with Hrana 1 over WebSocket"
+              run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v1.py node --dns-result-order=ipv4first test.js"
+              env: { "LOCAL": "1", "URL": "ws://localhost:8080" }
+            - name: "Local test with Hrana 2 over WebSocket"
+              run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v2.py node --dns-result-order=ipv4first test.js"
+              env: { "LOCAL": "1", "URL": "ws://localhost:8080" }
+            - name: "Local test with Hrana 2 over HTTP"
+              run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v2.py node --dns-result-order=ipv4first test.js"
+              env: { "LOCAL": "1", "URL": "http://localhost:8080" }
+#    - name: "Local test with Hrana 3 over WebSocket"
+#      run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v3.py node --dns-result-order=ipv4first test.js"
+#      env: {"LOCAL": "1", "URL": "ws://localhost:8080"}
+#    - name: "Local test with Hrana 3 over HTTP"
+#      run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v3.py node --dns-result-order=ipv4first test.js"
+#      env: {"LOCAL": "1", "URL": "http://localhost:8080"}
+
+# - name: "Non-local test with Hrana 1 over WebSocket"
+#   run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v1.py node test.js"
+#   env: {"LOCAL": "0", "URL": "ws://localhost:8080"}
+# - name: "Non-local test with Hrana 2 over WebSocket"
+#   run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v2.py node test.js"
+#   env: {"LOCAL": "0", "URL": "ws://localhost:8080"}
+# - name: "Non-local test with Hrana 2 over HTTP"
+#   run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v2.py node test.js"
+#   env: {"LOCAL": "0", "URL": "http://localhost:8080"}
+#    - name: "Non-local test with Hrana 3 over WebSocket"
+#      run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v3.py node test.js"
+#      env: {"LOCAL": "0", "URL": "ws://localhost:8080"}
+#    - name: "Non-local test with Hrana 3 over HTTP"
+#      run: "cd smoke_test/workers && python ../../../../testing/hrana-test-server/server_v3.py node test.js"
+#      env: {"LOCAL": "0", "URL": "http://localhost:8080"}
+
+# "vercel-test":
+#   name: "Build and test with Vercel Edge Functions"
+#   runs-on: ubuntu-latest
+#   env:
+#     VERCEL_TOKEN: "${{ secrets.VERCEL_TOKEN }}"
+#     VERCEL_PROJECT_NAME: "smoke-test"
+#   steps:
+#   - name: "Checkout this repo"
+#     uses: actions/checkout@v4
+#   - name: "Setup Node.js"
+#     uses: actions/setup-node@v4
+#     with:
+#       node-version: "lts/Hydrogen"
+#       cache: "npm"
+#   - name: "Install npm dependencies"
+#     run: "npm ci"
+
+#   - name: "Checkout hrana-test-server"
+#     uses: actions/checkout@v4
+#     with:
+#       repository: "libsql/hrana-test-server"
+#       path: "hrana-test-server"
+#   - name: "Setup Python"
+#     uses: actions/setup-python@v4
+#     with:
+#       python-version: "3.10"
+#       cache: "pip"
+#   - name: "Install pip dependencies"
+#     run: "pip install -r hrana-test-server/requirements.txt"
+
+#   - name: "Build"
+#     run: "npm run build"
+#   - name: "Install npm dependencies of the Vercel test"
+#     run: "cd smoke_test/vercel && npm install"
+
+#   - name: "Test with Hrana 1 over WebSocket"
+#     run: "cd smoke_test/vercel && python ../../hrana-test-server/server_v1.py node test.js"
+#     env: {"URL": "ws://localhost:8080"}
+#   - name: "Test with Hrana 2 over WebSocket"
+#     run: "cd smoke_test/vercel && python ../../hrana-test-server/server_v2.py node test.js"
+#     env: {"URL": "ws://localhost:8080"}
+#   - name: "Test with Hrana 2 over HTTP"
+#     run: "cd smoke_test/vercel && python ../../hrana-test-server/server_v2.py node test.js"
+#     env: {"URL": "http://localhost:8080"}
+#    - name: "Test with Hrana 3 over WebSocket"
+#      run: "cd smoke_test/vercel && python ../../hrana-test-server/server_v3.py node test.js"
+#      env: {"URL": "ws://localhost:8080"}
+#    - name: "Test with Hrana 3 over HTTP"
+#      run: "cd smoke_test/vercel && python ../../hrana-test-server/server_v3.py node test.js"
+#      env: {"URL": "http://localhost:8080"}

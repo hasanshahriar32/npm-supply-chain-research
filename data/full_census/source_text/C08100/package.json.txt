@@ -1,0 +1,51 @@
+{
+  "name": "plop-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "type": "module",
+  "scripts": {
+    "test": "turbo run test --parallel",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "plop": "node ./packages/plop/bin/plop.js",
+    "prepare": "husky"
+  },
+  "bugs": {
+    "url": "https://github.com/plopjs/plop/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plopjs/plop.git"
+  },
+  "homepage": "https://plopjs.com",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.2",
+    "@changesets/cli": "^2.29.8",
+    "@eslint/js": "^9.39.2",
+    "@vitest/eslint-plugin": "^1.6.6",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.8.1",
+    "turbo": "^2.7.5",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "eslint --cache --fix"
+    ]
+  },
+  "packageManager": "yarn@4.9.4"
+}

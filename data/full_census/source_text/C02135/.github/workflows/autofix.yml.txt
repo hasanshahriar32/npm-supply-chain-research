@@ -1,0 +1,41 @@
+name: autofix.ci # needed to securely identify the workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3
+        with:
+          cache: true
+          install: false
+
+      - name: 📦 Install dependencies
+        run: pnpm install
+
+      - name: Dedupe dependencies
+        if: ${{ contains(github.head_ref, 'renovate') }}
+        run: pnpm dedupe
+
+      - name: 🔠 Lint project
+        run: pnpm lint --fix
+
+      - name: ⚙️ Check engine ranges
+        run: pnpm test:versions --fix
+
+      - uses: autofix-ci/action@7a166d7532b277f34e16238930461bf77f9d7ed8 # 7a166d7532b277f34e16238930461bf77f9d7ed8
+        with:
+          commit-message: 'chore: apply automated fixes'

@@ -1,0 +1,77 @@
+{
+  "name": "@pmndrs/detect-gpu",
+  "version": "6.0.28",
+  "packageManager": "pnpm@10.13.1",
+  "description": "Classify GPU's based on their benchmark score in order to provide an adaptive experience.",
+  "author": "Tim van Scherpenzeel",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "homepage": "https://github.com/pmndrs/detect-gpu#readme",
+  "bugs": {
+    "url": "https://github.com/pmndrs/detect-gpu/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pmndrs/detect-gpu.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "gpu",
+    "detect",
+    "webgl",
+    "webgl2",
+    "three.js",
+    "babylonjs",
+    "three",
+    "babylon",
+    "3d",
+    "typescript",
+    "javascript"
+  ],
+  "scripts": {
+    "lint": "oxlint --type-aware --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "tsdown",
+    "dev": "pnpm run --parallel /^dev:/",
+    "dev:build": "tsdown --watch",
+    "dev:serve": "echo 'open http://localhost:8000/local.html' && python3 -m http.server 8000",
+    "update-benchmarks": "node ./scripts/update_benchmarks.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/tar": "^7.0.87",
+    "@vitest/coverage-v8": "^4.1.4",
+    "csv-parse": "^6.2.1",
+    "jsdom": "^29.0.2",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.59.0",
+    "oxlint-tsgolint": "^0.21.1",
+    "tar": "^7.0.0",
+    "tsdown": "^0.21.7",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
+  }
+}

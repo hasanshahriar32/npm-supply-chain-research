@@ -1,0 +1,33 @@
+name: API Check
+
+on: workflow_call
+
+jobs:
+  check-api:
+    name: Check Type Perf
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: amplify-data
+      - name: Setup node and build the repository
+        uses: ./amplify-data/.github/actions/node-and-build
+      - name: Run checks
+        working-directory: ./amplify-data
+        run: yarn check:type-perf
+      - name: Type Perf Check Instructions
+        if: failure()
+        run: |
+          echo
+          echo "Oh no!! The Type Perf Check Failed!"
+          echo
+          echo "The changes in this PR introduced type performance degradation that exceeds the configured threshold (1%)"
+          echo
+          echo "Check the error message above to see which benchmark file(s) are affected."
+          echo 
+          echo "If this change is expected, please baseline the benchmarks. Run `yarn baseline:benchmarks`"
+          echo
+          echo "Then commit and push the changes."
+          echo
+          exit 1

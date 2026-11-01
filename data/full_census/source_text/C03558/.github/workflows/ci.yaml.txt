@@ -1,0 +1,75 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  TZ: "America/New_York"
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.4.1
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24.15.0
+          cache: 'pnpm'
+
+      # - name: Setup Turbo Cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: node_modules/.cache/turbo
+      #     key: turbo-${{ github.job }}-${{ github.ref_name }}-${{ github.sha }}
+      #     restore-keys: turbo-${{ github.job }}-${{ github.ref_name }}-
+
+      - name: Install Dependencies
+        run: |
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar/angular' \
+            --filter '!@fullcalendar-tests/*' \
+            install
+
+      - name: Lint
+        # DISABLED!
+        if: false
+        run: |
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar/angular' \
+            --filter '!@fullcalendar-tests/*' \
+            run lint
+
+      - name: Build
+        run: |
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar/angular' \
+            --filter '!@fullcalendar-tests/*' \
+            run build
+
+      # execute only connector-package tests, as "smoke" tests. they're fast
+      # Vue disabled for now. giving playwright errors:
+      #   --filter '@fullcalendar/vue3' \
+      - name: Test
+        run: |
+          pnpm \
+            --filter '@fullcalendar/react' \
+            run test

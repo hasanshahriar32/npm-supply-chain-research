@@ -1,0 +1,58 @@
+name: code-coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+    - name: Install Socket Firewall
+      uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+      with:
+        mode: firewall-free
+        firewall-version: "1.15.2"
+    - name: Enable corepack
+      run: corepack enable
+    - name: Use Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 24
+        cache: 'pnpm'
+
+    - name: Install Dependencies
+      run: sfw pnpm install --frozen-lockfile
+
+    - name: Build    
+      run: pnpm build
+
+    - name: Test Services
+      run: pnpm test:services:start
+
+    - name: Wait for Services
+      run: sleep 5
+
+    - name: Testing    
+      run: pnpm test:ci
+      
+    - name: Code Coverage
+      uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./packages/qified/coverage/lcov.info, \
+         ./packages/redis/coverage/lcov.info, \
+         ./packages/valkey/coverage/lcov.info, \
+         ./packages/nats/coverage/lcov.info, \
+         ./packages/rabbitmq/coverage/lcov.info

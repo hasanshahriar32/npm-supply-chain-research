@@ -1,0 +1,40 @@
+on: ["pull_request"]
+
+name: Test Coverage
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v7
+
+    - uses: pnpm/action-setup@v6
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22.x
+        cache: pnpm
+
+    - name: pnpm install, lint, format check, type-check, API docs check, build, package checks, pnpm test:coverage
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm lint
+        pnpm format --check
+        pnpm type-check
+        pnpm test:api-docs
+        pnpm build
+        pnpm size
+        pnpm test:package
+        pnpm test:build-watch
+        pnpm test --coverage
+
+    - name: Coverage
+      uses: romeovs/lcov-reporter-action@v0.4.0
+      with:
+        lcov-file: ./coverage/lcov.info

@@ -1,0 +1,51 @@
+name: Publish packages to npm
+on:
+  push:
+    paths: [packages/**, .changeset/*, __tests__/**, .github/**]
+    branches: [main]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+  TURBO_CACHE: remote:rw
+jobs:
+  test:
+    name: ⬣, 🔎, 🔨 Test before releasing
+    uses: ./.github/workflows/build-and-test.yml
+    secrets: inherit
+  publish:
+    name: 🚀 Release packages
+    needs: [test]
+    runs-on: [ubuntu-latest]
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    strategy:
+      matrix:
+        node-version: ["24.x"]
+    if: "${{ contains(github.event.head_commit.message, '[bump]') || contains(github.event.head_commit.message, 'chore(packages): publish packages') }}"
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Use pnpm
+        uses: pnpm/action-setup@v6
+      - name: Use Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+      - name: Install dependencies
+        run: pnpm install
+      - name: Publish to npm
+        uses: changesets/action@v1
+        with:
+          commit: "chore(packages): publish packages"
+          title: "chore(packages): publish packages"
+          publish: pnpm publish-packages
+          version: pnpm version-packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

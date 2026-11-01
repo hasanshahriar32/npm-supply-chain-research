@@ -1,0 +1,48 @@
+{
+  "name": "level-mem",
+  "version": "6.0.1",
+  "description": "A convenience package bundling LevelUP & MemDOWN",
+  "license": "MIT",
+  "main": "level-mem.js",
+  "scripts": {
+    "test": "standard && hallmark && nyc node test.js",
+    "hallmark": "hallmark --fix",
+    "coverage": "nyc report -r lcovonly",
+    "dependency-check": "dependency-check . test.js",
+    "prepublishOnly": "npm run dependency-check"
+  },
+  "files": [
+    "level-mem.js",
+    "CHANGELOG.md",
+    "UPGRADING.md"
+  ],
+  "dependencies": {
+    "level-packager": "^6.0.1",
+    "memdown": "^6.1.1"
+  },
+  "devDependencies": {
+    "dependency-check": "^3.3.0",
+    "hallmark": "^4.0.0",
+    "nyc": "^15.1.0",
+    "standard": "^16.0.3",
+    "tape": "^5.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Level/mem.git"
+  },
+  "homepage": "https://github.com/Level/mem",
+  "keywords": [
+    "level",
+    "leveldb",
+    "stream",
+    "database",
+    "db",
+    "store",
+    "storage",
+    "json"
+  ],
+  "engines": {
+    "node": ">=10"
+  }
+}

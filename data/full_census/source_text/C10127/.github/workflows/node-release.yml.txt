@@ -1,0 +1,99 @@
+name: "[davey-node] Release to npm"
+env:
+  DEBUG: napi:*
+  APP_NAME: davey
+  MACOSX_DEPLOYMENT_TARGET: '10.13'
+  CARGO_INCREMENTAL: '1'
+permissions:
+  contents: read
+'on':
+  workflow_dispatch:
+jobs:
+  test:
+    name: Build and test
+    uses: ./.github/workflows/node-ci.yml
+    secrets: inherit
+
+  publish:
+    name: Publish
+    needs: [test]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: davey-node
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+      prerelease: ${{ steps.set-version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ./davey-node/package.json
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: ./davey-node/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: ./davey-node/artifacts
+      - name: Create npm dirs
+        run: pnpm napi create-npm-dirs
+      - name: Move artifacts
+        run: pnpm artifacts
+      - name: List packages
+        run: ls -R ./npm
+        shell: bash
+      - name: Capture package version
+        id: set-version
+        shell: bash
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Pre-releases (e.g. 0.2.0-beta.1) are published under their identifier (e.g. "beta") instead of "latest"
+          if [[ "$VERSION" == *-* ]]; then
+            TAG=$(echo "${VERSION#*-}" | sed -E 's/[^a-zA-Z].*$//')
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${TAG:-next}" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish
+        run: |
+          npm config set provenance true
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+          npm publish --access public
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Also applies to the platform packages published by napi prepublish
+          NPM_CONFIG_TAG: ${{ steps.set-version.outputs.tag }}
+
+  release:
+    name: Create release
+    needs: [publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pull changelog
+        run: .github/scripts/changelog-section.sh davey-node/CHANGELOG.md "${{ needs.publish.outputs.version }}" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: "js-${{ needs.publish.outputs.version }}"
+          name: "davey-node@${{ needs.publish.outputs.version }}"
+          target_commitish: ${{ github.sha }}
+          body_path: ${{ runner.temp }}/release-notes.md
+          prerelease: ${{ needs.publish.outputs.prerelease }}

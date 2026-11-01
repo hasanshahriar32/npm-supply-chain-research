@@ -1,0 +1,87 @@
+on:
+  push:
+    paths:
+      - "misc/**"
+      - "crypto/**"
+      - "jsonrpc/**"
+      - "browser/**"
+      - "relay/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "misc/**"
+      - "crypto/**"
+      - "jsonrpc/**"
+      - "browser/**"
+      - "relay/**"
+      - ".github/workflows/ci.yml"
+
+name: CI Checks
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # don't abort all jobs in matrix if one fails
+      matrix:
+        test-prefix:
+          - misc/logger
+          - misc/encoding
+          - misc/keyvaluestorage
+          - misc/time
+          - misc/heartbeat
+          - misc/environment
+          - misc/cacao
+          - misc/identity-keys
+          - misc/events
+          - misc/did-jwt
+          - misc/safe-json
+          - crypto/ecies-25519
+          - crypto/crypto
+          - crypto/randombytes
+          - jsonrpc/types
+          - jsonrpc/provider
+          - jsonrpc/utils
+          - jsonrpc/http-connection
+          - jsonrpc/ws-connection
+          - browser/window-getters
+          - browser/window-metadata
+          - relay/relay-api
+          - relay/relay-auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check node_modules cache
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-nodemodules-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nodemodules-
+
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      - name: Prettier
+        run: npm run prettier -- --filter=./${{ matrix.test-prefix }}
+
+      - name: Lint
+        run: npm run lint -- --filter=./${{ matrix.test-prefix }}
+
+      - name: Build
+        run: npm run build -- --filter=./${{ matrix.test-prefix }}
+
+      - name: Test
+        run: npm run test -- --filter=./${{ matrix.test-prefix }}
+        env:
+          TEST_PROJECT_ID: ${{ secrets.TEST_PROJECT_ID }}

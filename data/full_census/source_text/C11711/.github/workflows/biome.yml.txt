@@ -1,0 +1,31 @@
+name: biome
+
+on:
+  push:
+    branches: ['next']
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  biome:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup Utoo
+        uses: utooland/setup-utoo@v1
+
+      - name: Install dependencies
+        run: utoo install
+      - name: Run Biome
+        run: npx biome ci .

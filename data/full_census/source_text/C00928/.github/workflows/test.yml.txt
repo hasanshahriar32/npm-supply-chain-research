@@ -1,0 +1,58 @@
+name: Run Tests
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+
+jobs:
+  test-node:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      checks: write
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use pnpm and Node.js ${{ matrix.node-version }}
+        uses: pnpm/setup@84cb39b217b10273981911c288cd62326dc7c6d2 # v2.0.2
+        with:
+          runtime: node@${{ matrix.node-version }}
+          cache: true
+          require-lockfile: true
+
+      - name: Audit Signatures
+        run: pnpm audit signatures
+
+      - name: Run Tests and Linting
+        run: pnpm check
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-reports-${{ matrix.node-version }}
+          path: test/reports/
+
+  test-bun:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
+      - name: Install Bun Packages
+        run: bun install --no-save
+
+      - name: Run Bun Tests
+        run: bun run test

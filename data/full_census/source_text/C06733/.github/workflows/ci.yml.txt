@@ -1,0 +1,25 @@
+name: 'CI'
+on: [push, pull_request]
+permissions: {}
+jobs:
+  build:
+    name: 'Builds and Compiles'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          submodules: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.x'
+      - run: ./build/setup-emsdk.sh
+      - run: echo "/opt/dev/emsdk/upstream/emscripten" >> $GITHUB_PATH
+      - run: echo "/opt/dev/emsdk" >> $GITHUB_PATH
+      - run: npm ci
+      - run: npm run build-onig
+      - run: npm run build-wasm
+      - run: npm run build-tsc
+      - run: npm run package
+      - run: npm test

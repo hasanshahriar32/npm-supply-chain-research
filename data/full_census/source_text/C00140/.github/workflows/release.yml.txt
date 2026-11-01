@@ -1,0 +1,86 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version bump (patch/minor/major) or an explicit version like 8.0.0'
+        required: true
+        default: patch
+      dry-run:
+        description: 'Run the gate and a publish dry-run without bumping, tagging, or publishing'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write # push the version bump/tag and create the GitHub release
+  id-token: write # npm trusted publishing (OIDC) + provenance
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          registry-url: 'https://registry.npmjs.org'
+
+      # Node 22 ships npm 10; trusted publishing (OIDC) needs npm >= 11.5.1.
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      # Gate: never bump/tag/publish a failing build.
+      - run: npm test
+
+      # Compute the target version and stage the bump (no commit/tag yet) so we
+      # know the number before touching the CHANGELOG.
+      - name: Compute version
+        id: version
+        run: |
+          NEW=$(npm version "${{ github.event.inputs.version }}" --no-git-tag-version)
+          # Bare version, no leading "v" — matches the repo's tag convention.
+          echo "number=${NEW#v}" >> "$GITHUB_OUTPUT"
+
+      # Promote the curated "## [Unreleased]" section to a dated version heading
+      # and extract those lines as the GitHub release notes.
+      - name: Update CHANGELOG and extract notes
+        id: notes
+        run: node .github/scripts/changelog-release.mjs "${{ steps.version.outputs.number }}"
+
+      - name: Publish (dry run)
+        if: ${{ github.event.inputs.dry-run == 'true' }}
+        run: |
+          echo "DRY RUN — would release ${{ steps.version.outputs.number }}"
+          echo '--- release notes ---'
+          cat "${{ steps.notes.outputs.file }}"
+          npm publish --provenance --dry-run
+
+      - name: Publish, then commit/tag/push and release
+        if: ${{ github.event.inputs.dry-run != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Auth is via npm trusted publishing (OIDC) — no NPM_TOKEN needed.
+          # Publish first: it's the step most likely to fail (auth) and the only
+          # irreversible one. If it fails, nothing has been committed/tagged/
+          # pushed, so a re-run starts from a clean tree.
+          npm publish --provenance
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json CHANGELOG.md
+          # --no-verify: skip husky/lint-staged on the automated release commit.
+          git commit --no-verify -m "release: ${{ steps.version.outputs.number }}"
+          # Annotated tag so `git push --follow-tags` actually pushes it (it
+          # skips lightweight tags); bare version to match the tag convention.
+          git tag -a "${{ steps.version.outputs.number }}" -m "${{ steps.version.outputs.number }}"
+          git push --follow-tags origin main
+          gh release create "${{ steps.version.outputs.number }}" \
+            --title "${{ steps.version.outputs.number }}" \
+            --notes-file "${{ steps.notes.outputs.file }}"

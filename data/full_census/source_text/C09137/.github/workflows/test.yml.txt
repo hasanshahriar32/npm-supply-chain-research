@@ -1,0 +1,73 @@
+name: tests
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  yarn-lockfile-check:
+    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main
+
+  # Since the Windows unit tests take much longer, we run the linux unit tests first and then run the windows unit tests in parallel with NUTs
+  linux-unit-tests:
+    needs: yarn-lockfile-check
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main
+
+  windows-unit-tests:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsWindows.yml@main
+
+  external-nuts-deploy-retrieve:
+    name: external-nuts-deploy-retrieve
+    needs: linux-unit-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          - 'yarn test:nuts:tracking'
+          - 'yarn test:nuts:deploy:metadata:metadata-dir'
+          - 'yarn test:nuts:deploy:metadata:manifest'
+          - 'yarn test:nuts:deploy:metadata:metadata'
+          - 'yarn test:nuts:deploy:metadata:source-dir'
+          - 'yarn test:nuts:deploy:metadata:test-level'
+          - 'yarn test:nuts:static'
+        os:
+          - ubuntu-latest
+          - windows-latest
+    uses: salesforcecli/github-workflows/.github/workflows/externalNut.yml@main
+    with:
+      packageName: '@salesforce/sf-plugins-core'
+      externalProjectGitUrl: 'https://github.com/salesforcecli/plugin-deploy-retrieve'
+      preBuildCommands: 'shx rm -rf node_modules/@oclif/core node_modules/@oclif/table node_modules/@salesforce/kit node_modules/@salesforce/core node_modules/@salesforce/ts-types node_modules/@salesforce/cli-plugins-testkit'
+      command: ${{ matrix.command }}
+      os: ${{ matrix.os }}
+    secrets: inherit
+
+  external-nuts:
+    name: external-nuts
+    needs: linux-unit-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - plugin-org
+          - plugin-data
+          - plugin-schema
+          - plugin-limits
+          - plugin-signups
+          - plugin-templates
+          - plugin-custom-metadata
+          - plugin-settings
+          - plugin-community
+          - plugin-user
+        os:
+          - ubuntu-latest
+          - windows-latest
+    uses: salesforcecli/github-workflows/.github/workflows/externalNut.yml@main
+    with:
+      packageName: '@salesforce/sf-plugins-core'
+      externalProjectGitUrl: 'https://github.com/salesforcecli/${{matrix.repo}}'
+      preBuildCommands: 'shx rm -rf node_modules/@oclif/core node_modules/@oclif/table node_modules/@salesforce/kit node_modules/@salesforce/core node_modules/@salesforce/ts-types'
+      command: yarn test:nuts
+      os: ${{ matrix.os }}
+    secrets: inherit

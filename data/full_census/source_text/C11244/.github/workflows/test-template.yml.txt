@@ -1,0 +1,38 @@
+on:
+  workflow_call:
+    inputs:
+      runner:
+        required: true
+        type: string
+      node-version:
+        required: true
+        type: string
+      container-runtime:
+        required: true
+        type: string
+      workspace:
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: "Run"
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - name: Code checkout
+        uses: actions/checkout@v7
+
+      - name: Podman setup
+        if: ${{ inputs.container-runtime == 'podman' }}
+        uses: ./.github/actions/podman-setup
+
+      - name: Install Node ${{ inputs.node-version }} and Dependencies
+        uses: ./.github/actions/npm-setup
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Run tests
+        run: npm run test:ci -- --coverage.include="${TEST_PATH}/**/*.ts" "${TEST_PATH}"
+        env:
+          CI: true
+          TEST_PATH: ${{ inputs.workspace == 'testcontainers' && 'packages/testcontainers' || format('packages/modules/{0}', inputs.workspace) }}

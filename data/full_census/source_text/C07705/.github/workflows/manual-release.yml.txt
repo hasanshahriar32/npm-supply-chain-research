@@ -1,0 +1,60 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Git tag to release (e.g. v3.0.1)'
+        required: true
+        type: string
+      skip_npm:
+        description: 'Skip npm publish (dry run)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: ${{ inputs.tag }}
+          generate_release_notes: true
+
+  build:
+    name: Build Prebuilds
+    needs: create-release
+    uses: ./.github/workflows/build-artifacts.yml
+    with:
+      tag: ${{ inputs.tag }}
+    secrets: inherit
+
+  publish:
+    name: Trigger npm publish
+    needs: [create-release, build]
+    if: ${{ inputs.skip_npm != true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger publish workflow
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh workflow run publish.yml -R "$REPO" -f tag="$TAG"
+          echo "Publish workflow triggered for $TAG"

@@ -1,0 +1,409 @@
+name: Node CI
+
+on:
+  push:
+    branches: [ "master", "alpha", "beta", "*.x" ]
+
+  pull_request:
+    branches: [ "master", "alpha", "beta", "*.x" ]
+
+env:
+  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+jobs:
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+    - run: npm run lint
+
+  test:
+    name: SQL Server Linux / Node.js ${{ matrix.node-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x, 26.x]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v6
+
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Generate TLS Certificate
+      run: |
+        openssl req -x509 -newkey rsa:4096 -nodes -addext "extendedKeyUsage = serverAuth" -subj '/CN=localhost' -keyout ./test/fixtures/mssql.key -out ./test/fixtures/mssql.crt
+
+    - name: Start containers
+      run: |
+        docker compose -f "test/docker-compose.linux.yml" up --detach
+
+    - name: Set up CI configuration
+      shell: bash
+      run: cp -f test/config.ci.ts test/config.ts
+
+    - run: npm ci
+
+    - name: run unit tests
+      run: npx nyc --reporter=lcov npm run test
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.4)
+      env:
+        TEDIOUS_TDS_VERSION: 7_4
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.3B)
+      env:
+        TEDIOUS_TDS_VERSION: 7_3_B
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.3A)
+      env:
+        TEDIOUS_TDS_VERSION: 7_3_A
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.2)
+      env:
+        TEDIOUS_TDS_VERSION: 7_2
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.1)
+      env:
+        TEDIOUS_TDS_VERSION: 7_1
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-windows:
+    name: SQL Server ${{ matrix.mssql-version }} Windows / Node.js ${{ matrix.node-version }}
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        mssql-version: [2016, 2017, 2019, 2022, 2025]
+        node-version: [22.x, 24.x, 26.x]
+      fail-fast: false
+
+    steps:
+    - name: Install SQL Server ${{ matrix.mssql-version }}
+      uses: tediousjs/setup-sqlserver@v4
+      with:
+        sqlserver-version: ${{ matrix.mssql-version }}
+        install-updates: true
+
+    - uses: actions/checkout@v6
+
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Set up TLS Key and Certificate
+      shell: powershell
+      run: |
+        $certificate = New-SelfSignedCertificate `
+          -Type SSLServerAuthentication `
+          -Subject "CN=$env:COMPUTERNAME" -FriendlyName 'SQL Server RSA2048 G1' `
+          -DnsName "$env:COMPUTERNAME",'localhost.' `
+          -KeyAlgorithm 'RSA' -KeyLength 2048 -Hash 'SHA256' `
+          -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.1' `
+          -NotAfter (Get-Date).AddMonths(36) `
+          -KeyExportPolicy NonExportable -KeySpec KeyExchange `
+          -Provider 'Microsoft RSA SChannel Cryptographic Provider' `
+          -CertStoreLocation Cert:\LocalMachine\My `
+
+        # Grant the SQL Server service account read access to the certificate's private key
+        $serviceAccount = (Get-CimInstance Win32_Service -Filter "Name='MSSQLSERVER'").StartName
+        $keyContainerName = $certificate.PrivateKey.CspKeyContainerInfo.UniqueKeyContainerName
+        $keyPath = Join-Path "$env:ProgramData\Microsoft\Crypto\RSA\MachineKeys" $keyContainerName
+        $acl = Get-Acl $keyPath
+        $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($serviceAccount, 'Read', 'Allow')))
+        Set-Acl $keyPath $acl
+
+        # Register the certificate with the SQL Server instance
+        $instanceId = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL').MSSQLSERVER
+        Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$instanceId\MSSQLServer\SuperSocketNetLib" -Name Certificate -Value $certificate.Thumbprint.ToLower()
+
+        Restart-Service MSSQLSERVER
+
+        # Convert UA certificate raw data to Base64
+        $output = @(
+        '-----BEGIN CERTIFICATE-----'
+        [System.Convert]::ToBase64String($certificate.RawData, 1)
+        '-----END CERTIFICATE-----'
+        )
+        # Output PEM file to the path
+        $output -join "`n" | Out-File -FilePath test\fixtures\mssql.crt -Encoding ascii -NoNewLine
+
+    - name: Set up CI configuration
+      shell: bash
+      run: cp -f test/config.ci.ts test/config.ts
+
+    - run: npm ci
+
+    - name: run unit tests
+      run: npx nyc --reporter=lcov npm run test
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.4)
+      env:
+        TEDIOUS_TDS_VERSION: 7_4
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.3B)
+      env:
+        TEDIOUS_TDS_VERSION: 7_3_B
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.3A)
+      env:
+        TEDIOUS_TDS_VERSION: 7_3_A
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.2)
+      env:
+        TEDIOUS_TDS_VERSION: 7_2
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: run integration tests (TDS 7.1)
+      env:
+        TEDIOUS_TDS_VERSION: 7_1
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  azure-sql-auth:
+    name: Azure SQL Server / Node.js 22.x
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Only run these tests if we have access to the secrets
+    if: ${{ github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+
+    - name: Set up CI configuration
+      shell: bash
+      run: cp -f test/config.azure-default.ts test/config.ts
+
+    - name: run integration tests
+      env:
+        AZURE_SERVER: ${{ secrets.AZURE_SERVER }}
+        AZURE_USERNAME: ${{ secrets.AZURE_USERNAME }}
+        AZURE_PASSWORD: ${{ secrets.AZURE_PASSWORD }}
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  azure-ad-auth:
+    name: Azure SQL Server / Node.js 22.x
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Only run these tests if we have access to the secrets
+    if: ${{ github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+
+    - name: Set up CI configuration
+      shell: bash
+      run: cp -f test/config.azure-ad-password.ts test/config.ts
+
+    - name: run integration tests
+      env:
+        AZURE_SERVER: ${{ secrets.AZURE_SERVER }}
+        AZURE_AD_SP_CLIENT_ID: ${{ secrets.AZURE_AD_SP_CLIENT_ID }}
+        AZURE_AD_SP_TENANT_ID: ${{ secrets.AZURE_AD_SP_TENANT_ID }}
+        AZURE_AD_USERNAME: ${{ secrets.AZURE_AD_USERNAME }}
+        AZURE_AD_PASSWORD: ${{ secrets.AZURE_AD_PASSWORD }}
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  token-credential-auth:
+    name: Azure SQL Server / Node.js 22.x
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Only run these tests if we have access to the secrets
+    if: ${{ github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+
+    - name: Set up CI configuration
+      shell: bash
+      run: cp -f test/config.token-credential.ts test/config.ts
+
+    - name: run integration tests
+      env:
+        AZURE_SERVER: ${{ secrets.AZURE_SERVER }}
+        AZURE_AD_SP_CLIENT_ID: ${{ secrets.AZURE_AD_SP_CLIENT_ID }}
+        AZURE_AD_SP_TENANT_ID: ${{ secrets.AZURE_AD_SP_TENANT_ID }}
+        AZURE_AD_USERNAME: ${{ secrets.AZURE_AD_USERNAME }}
+        AZURE_AD_PASSWORD: ${{ secrets.AZURE_AD_PASSWORD }}
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+
+  azure-ad-service-principal-auth:
+    name: Azure SQL Server / Node.js 22.x
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Only run these tests if we have access to the secrets
+    if: ${{ github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name }}
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+
+    - name: set up test configuration
+      shell: bash
+      run: cp -f test/config.azure-ad-sp-secret.ts test/config.ts
+
+    - name: run integration tests
+      env:
+        AZURE_SERVER: ${{ secrets.AZURE_SERVER }}
+        AZURE_AD_SP_CLIENT_ID: ${{ secrets.AZURE_AD_SP_CLIENT_ID }}
+        AZURE_AD_SP_TENANT_ID: ${{ secrets.AZURE_AD_SP_TENANT_ID }}
+        AZURE_AD_SP_CLIENT_SECRET: ${{ secrets.AZURE_AD_SP_CLIENT_SECRET }}
+      run: npx nyc --reporter=lcov npm run test-integration
+
+    - uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  pre-release:
+    name: Pre-Release
+    needs: [test, test-windows]
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for npm provenance
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Use Node.js 22
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: 'npm'
+
+    - run: npm ci
+
+    - name: Verify the integrity of provenance attestations and registry signatures for installed dependencies
+      run: npm audit signatures
+
+    - env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: npm run semantic-release

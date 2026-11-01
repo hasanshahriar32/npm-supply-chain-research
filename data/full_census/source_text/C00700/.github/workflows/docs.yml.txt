@@ -1,0 +1,55 @@
+name: Deploy docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Publish as version[?]:'
+        default: 'latest'
+
+permissions:
+  contents: write
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/setup@v3
+        with:
+          cache: true
+          install: true
+
+      - name: Build specific version
+        run: pnpm docs:build --base /${{ github.event.inputs.version }}/
+        if: ${{ github.event.inputs.version != 'latest' }}
+
+      - name: Deploy to specific version
+        uses: JamesIves/github-pages-deploy-action@v4.9.0
+        if: ${{ github.event.inputs.version != 'latest' }}
+        with:
+          folder: ./docs/.vitepress/dist
+          branch: gh-pages
+          # Specific folder for this version
+          target-folder: ${{ github.event.inputs.version }}
+          clean: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Deploy docs for ${{ github.event.inputs.version }}'
+
+      - name: Build latest
+        run: pnpm docs:build
+        if: ${{ github.event.inputs.version == 'latest' }}
+
+      - name: Deploy to latest
+        if: ${{ github.event.inputs.version == 'latest' }}
+        uses: JamesIves/github-pages-deploy-action@v4.9.0
+        with:
+          folder: ./docs/.vitepress/dist
+          clean: true
+          clean-exclude: v*
+          branch: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Deploy docs for latest'

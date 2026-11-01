@@ -1,0 +1,89 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install -g corepack@0.31.0 # todo: delete if https://github.com/nodejs/corepack/issues/612 is resolved
+    - run: corepack enable
+    - run: pnpm install
+    - run: pnpm lint
+    - run: pnpm test -- --coverage
+    - name: Coverage
+      uses: codecov/codecov-action@v3
+  run_windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - run: npm install -g corepack@0.31.0 --force # todo: delete if https://github.com/nodejs/corepack/issues/612 is resolved
+    - run: corepack enable
+    - run: pnpm install
+    - run: pnpm test
+  create_tgz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm install -g corepack@0.31.0 # todo: delete if https://github.com/nodejs/corepack/issues/612 is resolved
+      - run: corepack enable
+      - run: pnpm install
+      - run: pnpm build
+      - run: npm pack
+      - name: rename tgz
+        run: mv $(ls | grep .tgz) umzug.tgz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarball
+          path: umzug.tgz
+  test_tgz:
+    runs-on: ubuntu-latest
+    needs: [create_tgz]
+    strategy:
+      matrix:
+        node: [20, 18, 16, 14, 12]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarball
+      - run: ls
+      - name: remove local node_modules
+        run: rm -rf examples/node_modules
+      - name: install tgz
+        working-directory: examples/0-vanilla
+        run: |
+          npm init -y
+          npm install ../../umzug.tgz
+      - name: run vanilla example
+        working-directory: examples/0-vanilla
+        run: |
+          node migrate up
+          node migrate down
+          node migrate create --name new-migration.js
+          node migrate up
+      - name: run vanilla esm example
+        if: matrix.node != 12
+        working-directory: examples/0.5-vanilla-esm
+        run: |
+          npm init -y
+          sed -i 's|"name"|"type": "module",\n  "name"|g' package.json
+          npm install ../../umzug.tgz
+          cat package.json
+
+          node migrate.mjs up
+          node migrate.mjs down
+          node migrate.mjs create --name new-migration-1.mjs
+          node migrate.mjs create --name new-migration-2.js
+          node migrate.mjs up
+
+          cd migrations
+          cat $(ls . | grep new-migration-1)
+          cat $(ls . | grep new-migration-2)
+
+          # hard to test this with vitest transpiling stuff for us, so make sure .mjs and .js have same content
+          cmp $(ls . | grep new-migration-1) $(ls . | grep new-migration-2)
+      - run: ls -R

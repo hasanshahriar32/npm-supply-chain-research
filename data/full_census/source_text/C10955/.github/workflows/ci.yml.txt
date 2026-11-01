@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - ".changeset/**"
+      - README.md
+      - ".vscode/**"
+      - packages/runed/CHANGELOG.md
+  pull_request:
+    paths-ignore:
+      - ".changeset/**"
+      - README.md
+      - ".vscode/**"
+      - packages/runed/CHANGELOG.md
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Run svelte-check
+    runs-on: macos-latest
+    if: "!contains(github.event.head_commit.message, 'chore(release): version package')"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build:packages
+
+      - name: Sync
+        run: pnpm sync
+
+      - name: Run svelte-check
+        run: pnpm check
+
+  test:
+    runs-on: macos-latest
+    name: Test
+    if: "!contains(github.event.head_commit.message, 'chore(release): version package')"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install Playwright Browsers
+        working-directory: ./packages/runed
+        run: pnpm exec playwright install --with-deps
+
+      - run: pnpm test
+
+  lint:
+    runs-on: macos-latest
+    name: Lint
+    if: "!contains(github.event.head_commit.message, 'chore(release): version package')"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - run: pnpm lint

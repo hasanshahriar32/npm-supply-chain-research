@@ -1,0 +1,139 @@
+# Copyright 2019-2023 Tauri Programme within The Commons Conservancy
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
+
+name: Lint Rust
+
+on:
+  push:
+    branches:
+      - v1
+      - v2
+    paths: &paths
+      - '.github/workflows/lint-rust.yml'
+      - '.scripts/ci/affected-rust-packages.js'
+      - 'plugins/**'
+      - '!plugins/*/guest-js/**'
+      - '!plugins/*/android/**'
+      - '!plugins/*/*.md'
+      - '!plugins/*/package.json'
+      - '!plugins/*/api-iife.js'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+  pull_request:
+    branches:
+      - v1
+      - v2
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Lists the plugins the change affects and splits them in shards, linted one after the other in
+  # a single job per platform; see test-rust.yml for the reasoning.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      shards: ${{ steps.affected.outputs.shards }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # a pull request checks out its merge commit, whose first parent is the base branch
+          fetch-depth: 2
+      - id: affected
+        run: node .scripts/ci/affected-rust-packages.js
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.before }}
+          ALL: ${{ github.event_name == 'workflow_dispatch' }}
+          GLOBAL_PATHS: .github/workflows/lint-rust.yml
+
+  clippy:
+    name: clippy (${{ matrix.platform.target }}, ${{ matrix.shard.name }})
+    needs: changes
+    if: ${{ needs.changes.outputs.shards != '[]' && needs.changes.outputs.shards != '' }}
+    runs-on: ${{ matrix.platform.os }}
+    # a stuck step (e.g. `apt-get` waiting on an unreachable mirror) otherwise runs for 6 hours
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
+        platform:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            cargo: 'cargo'
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            cargo: 'cargo'
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            cargo: 'cargo'
+          - target: aarch64-apple-ios
+            os: macos-latest
+            cargo: 'cargo'
+          - target: aarch64-linux-android
+            os: ubuntu-latest
+            cargo: 'cross'
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: install Linux dependencies
+        if: contains(matrix.platform.target, 'unknown-linux')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev webkit2gtk-4.1 libayatana-appindicator3-dev
+
+      - name: Install cross
+        if: ${{ matrix.platform.cargo == 'cross' }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross@0.2.5
+
+      - name: Install clippy with stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: ${{ matrix.platform.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # One entry per target shared by every shard (the default key is per job and runner
+          # OS, which the Linux and Android jobs, and the macOS and iOS ones, would share), only
+          # written from `v2`/`v3` and by a single shard; see test-rust.yml for the reasoning.
+          key: ${{ matrix.platform.target }}
+          save-if: ${{ (github.ref == 'refs/heads/v2' || github.ref == 'refs/heads/v3') && matrix.shard.save }}
+
+      # The shard's packages are linted one after the other, and a failing package does not stop
+      # the others: the step fails at the end if any did.
+      - name: clippy ${{ matrix.shard.name }}
+        shell: bash
+        env:
+          PACKAGES: ${{ matrix.shard.packages }}
+          CARGO: ${{ matrix.platform.cargo }}
+          TARGET: ${{ matrix.platform.target }}
+        run: |
+          failed=()
+          for package in $PACKAGES; do
+            echo "::group::clippy $package"
+            if ! $CARGO clippy --package "$package" --target "$TARGET" --all-targets -- -D warnings; then
+              failed+=("$package")
+            # the features of `dialog` cannot all be enabled at once
+            elif [ "$package" != tauri-plugin-dialog ] && ! $CARGO clippy --package "$package" --target "$TARGET" --all-targets --all-features -- -D warnings; then
+              failed+=("$package (--all-features)")
+            fi
+            echo "::endgroup::"
+          done
+
+          if [ ${#failed[@]} -gt 0 ]; then
+            for package in "${failed[@]}"; do
+              echo "::error title=clippy failed::$package"
+            done
+            exit 1
+          fi

@@ -1,0 +1,319 @@
+name: Main
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - v4-main
+      - beta
+      - release
+      - 'release-*'
+      - 'lts-*'
+    tags:
+      - '*'
+
+env:
+  TURBO_API: http://127.0.0.1:9080
+  TURBO_TOKEN: this-is-not-a-secret
+  TURBO_TEAM: myself
+
+# felixmosh/turborepo-gh-artifacts (our remote-cache proxy) looks up existing
+# artifacts via the Actions API before uploading a new one. Without an explicit
+# `actions: read` grant, that lookup silently fails, so it can't find artifacts
+# it just wrote moments earlier in the same or an upstream job -- it re-uploads
+# duplicates under the same hash and callers restoring that hash can get an
+# incomplete/wrong copy, which is indistinguishable from a "poisoned" cache
+# entry. See https://github.com/felixmosh/turborepo-gh-artifacts/issues/5.
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ci-main-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  # Every other job below independently runs `pnpm install`, which triggers
+  # `turbo run build:pkg` for every library package via the root "prepare"
+  # script. With no ordering between them, lint/browser-tests/special-build-tests
+  # would all start at once and race to compute+write the same build:pkg
+  # cache entries to the shared remote cache concurrently. This job does
+  # nothing but populate that cache once, up front, so every other job's own
+  # `pnpm install` gets a clean cache hit instead of racing to write it
+  # themselves.
+  install:
+    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  dx:
+    needs: [install]
+    if: |
+      github.event_name == 'pull_request' && (
+        github.base_ref == 'main' || github.base_ref == 'v4-main'
+      )
+    uses: ./.github/workflows/blueprint-tests.yml
+
+  lint:
+    needs: [install]
+    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          restore-lint-caches: ${{ secrets.ACTIONS_RUNNER_DEBUG != 'true' }}
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          ACTIONS_RUNNER_DEBUG: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+          DISABLE_TURBO_CACHE: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+          cache-key-suffix: lint
+      - name: Oxfmt
+        run: pnpm lint:oxfmt
+        env:
+          TURBO_FORCE: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+      - name: Prettier (gjs/gts)
+        run: pnpm lint:prettier
+        env:
+          TURBO_FORCE: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+      - name: Oxlint
+        run: pnpm lint:oxlint
+      - name: Tutorial starters match their solutions
+        run: pnpm lint:tutorials
+      - name: Guide links and anchors
+        run: pnpm lint:docs
+      - name: Lint
+        run: pnpm lint
+        env:
+          TURBO_FORCE: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+      - name: Root scripts
+        run: pnpm test:scripts
+      - name: Check Uncompiled Packages for TypeScript Compilation Errors
+        run: pnpm check:types
+        env:
+          TURBO_FORCE: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' }}
+
+  special-build-tests:
+    needs: [install]
+    if: |
+      github.event_name == 'pull_request' && (
+        github.base_ref == 'main' || github.base_ref == 'beta'
+      )
+    timeout-minutes: 12
+    runs-on: ubuntu-latest
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Enable All In-progress Features
+            command: pnpm test
+            feature-override: ENABLE_ALL_OPTIONAL
+            full-compat: ''
+          - name: Disable All In-progress Features
+            command: pnpm test
+            feature-override: DISABLE_ALL
+            full-compat: ''
+          - name: Remove All Deprecations
+            # @warp-drive/legacy-tests is excluded: it specifically tests the
+            # legacy Model/Store compat surface that EMBER_DATA_FULL_COMPAT
+            # assumes has already been removed, so a full-compat build has
+            # nothing meaningful to test there (see PR discussion).
+            command: pnpm turbo test:production --concurrency=1 --log-order=stream --filter='!@warp-drive/legacy-tests'
+            feature-override: ''
+            full-compat: 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          with-cert: true
+          cache-key-suffix: special-build-tests-${{ matrix.name }}
+      - name: ${{ matrix.name }}
+        # -k sends SIGKILL 30s after SIGTERM in case a hung child (e.g. a
+        # wedged headless Chrome) doesn't respond to SIGTERM alone, so a stuck
+        # run fails fast and loud instead of silently eating the job timeout.
+        run: timeout -k 30s 9m ${{ matrix.command }}
+        env:
+          CI: true
+          WARP_DRIVE_FEATURE_OVERRIDE: ${{ matrix.feature-override }}
+          EMBER_DATA_FULL_COMPAT: ${{ matrix.full-compat }}
+
+  browser-tests:
+    needs: [install]
+    timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        launcher: [Chrome] # Firefox currently has an issue on ubuntu we cannot replicate on macos 03/29/2023
+        stage: [development, production]
+    runs-on: ubuntu-latest
+    name: Test ${{matrix.launcher}} (${{ matrix.stage }})
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          jobs: 4
+          parallel-build: true
+          with-cert: true
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-key-suffix: browser-tests-${{ matrix.stage }}
+
+      - name: Check for Test Failure Retry
+        id: retry-test-failures
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: failed-test-log.txt
+          key: failed-test-log_${{ github.sha }}_${{ matrix.stage }}
+
+      - name: ${{ matrix.stage }}
+        run: timeout $BROWSER_TIMEOUT pnpm run ${{ matrix.stage == 'production' && 'test:production' || 'test' }}
+        env:
+          TESTEM_CI_LAUNCHER: ${{ matrix.launcher }}
+          CI: true
+          DEBUG: ${{ secrets.ACTIONS_RUNNER_DEBUG == 'true' && 'engine,socket.io*' }}
+          # DISPLAY_TEST_NAMES: true # uncomment this line to see the test names in the logs
+          FORCE_COLOR: 2
+          BROWSER_TIMEOUT: 600 # 10 minutes
+
+      - name: Upload testem logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: client-testem-logs-${{ matrix.stage }}
+          path: './tests/dont-write-new-tests-here/testem.log'
+          retention-days: 1
+
+      - name: Maybe Cache Failures
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: failed-test-log.txt
+          key: failed-test-log_${{ github.sha }}_${{ matrix.stage }}
+
+      - name: Archive Tests Execution File
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: (success() || failure()) && steps.retry-test-failures.outputs.cache-hit != 'true'
+        with:
+          name: tests-execution-file-partition-${{ matrix.stage }}
+          path: 'tests/dont-write-new-tests-here/test-execution-*.json'
+          retention-days: 1
+
+  lts:
+    needs: [install]
+    strategy:
+      fail-fast: false
+      matrix:
+        # see tests/dont-write-new-tests-here/.try.mjs for why only 6.12 is listed
+        scenario: [ember-lts-6.12]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          with-cert: true
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-key-suffix: lts-${{ matrix.scenario }}
+      - name: Basic tests with ${{ matrix.scenario }}
+        timeout-minutes: 12
+        env:
+          CI: true
+        # `@embroider/try apply` rewrites this package's package.json in place
+        # to pin the scenario's dependency versions (verified: it touches
+        # nothing else), and package.json is already a tracked build:tests/
+        # test input in turbo.json -- so routing through turbo here, instead
+        # of calling the package's own build:tests/test scripts directly,
+        # gets scenario-aware caching for free: a rerun of the same scenario
+        # on the same commit is a cache hit, while different scenarios still
+        # get distinct hashes because their pinned versions differ.
+        run: |
+          cd tests/dont-write-new-tests-here;
+          pnpm dlx @embroider/try apply ${{ matrix.scenario }};
+          pnpm install --no-frozen-lockfile --ignore-scripts --prefer-offline;
+          pnpm exec turbo run test;
+
+  # @ember-data/codemods has shipped broken three times without CI noticing:
+  # a host-platform compiled binary as `bin` (#9979), a `bin` entry pointing at
+  # a file absent from the tarball (#10539), and a bundle with no shebang. All
+  # were invisible to unit tests because they only exist in the packed artifact.
+  # This job packs the real tarball and installs+runs it the way consumers do.
+  # No `if:` on purpose: it must also run on pushes to release branches.
+  codemods-packaging:
+    needs: [install]
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-key-suffix: codemods-packaging
+      - name: Pack tarball (runs prepack, mirroring the release tool)
+        run: |
+          cd packages/codemods
+          pnpm run prepack
+          mkdir -p "$RUNNER_TEMP/codemods-smoke"
+          pnpm pack --pack-destination "$RUNNER_TEMP/codemods-smoke"
+          echo "TARBALL=$(ls $RUNNER_TEMP/codemods-smoke/*.tgz)" >> "$GITHUB_ENV"
+      - name: Smoke test (npm)
+        run: node tests/codemods/scripts/verify-tarball.mjs --tarball "$TARBALL" --pm npm
+      - name: Smoke test (pnpm)
+        run: node tests/codemods/scripts/verify-tarball.mjs --tarball "$TARBALL" --pm pnpm
+      # musl coverage: @ast-grep/napi must resolve its -musl platform package.
+      # An alpine container is the cheap substitute for a cross-OS matrix —
+      # Linux is the strictest platform for every other failure mode here.
+      # (yarn dlx is intentionally not covered: its loader invokes node
+      # directly rather than via the shebang, so npm/pnpm already cover
+      # every distinct bin-execution path available on these runners.)
+      - name: Smoke test (npm, musl/alpine)
+        run: |
+          docker run --rm \
+            -v "$TARBALL:/smoke/pkg.tgz:ro" \
+            -v "$PWD/tests/codemods:/smoke/tests-codemods:ro" \
+            node:22-alpine \
+            node /smoke/tests-codemods/scripts/verify-tarball.mjs --tarball /smoke/pkg.tgz --pm npm
+
+  releases:
+    timeout-minutes: 12
+    needs: [install]
+    if: |
+      github.event_name == 'pull_request' && (
+        github.base_ref == 'main' || github.base_ref == 'beta'
+      ) || github.event_name == 'push' && (
+        endsWith(github.ref, '/main') || endsWith(github.ref, '/beta')
+      )
+    strategy:
+      fail-fast: false
+      matrix:
+        release: [ember-canary]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/setup
+        with:
+          with-cert: true
+          install: true
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-key-suffix: releases-${{ matrix.release }}
+      - name: Basic tests with ${{ matrix.release }}
+        env:
+          CI: true
+        # See the matching note on the `lts` job above: routing through turbo
+        # here (instead of the package's own build:tests/test scripts) gets
+        # scenario-aware caching for free, since @embroider/try apply's
+        # package.json rewrite is already a tracked turbo input.
+        run: |
+          cd tests/dont-write-new-tests-here;
+          pnpm dlx @embroider/try apply ${{ matrix.release }};
+          pnpm install --no-frozen-lockfile --ignore-scripts --prefer-offline;
+          pnpm exec turbo run test;

@@ -1,0 +1,21 @@
+name: Package size report
+
+on:
+  pull_request:
+
+jobs:
+  pkg-size-report:
+    name: Package size report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Package size report
+        id: pkg-size-report
+        uses: privatenumber/pkg-size-action@a637fb0897b6f14f18e776d8c3dbccb34a1ad27b # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          display-size: uncompressed, gzip

@@ -1,0 +1,32 @@
+name: Continuous Integration / Deployment
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  testing:
+    name: ESLint and TypeScript compilation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v7
+
+      - name: Add problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/eslint.json" && echo "::add-matcher::.github/problemMatchers/tsc.json"
+
+      - name: Install pnpm, Node.js and dependencies
+        uses: pnpm/setup@v2.1.0 # Pinned due to https://github.com/pnpm/setup/issues/47.
+        with:
+          cache: true
+
+      - name: Check lint on discord-api-types
+        run: pnpm test:lint
+
+      - name: Run TSC
+        run: pnpm build:ci
+
+      - name: Run Type Tests
+        run: pnpm test:types

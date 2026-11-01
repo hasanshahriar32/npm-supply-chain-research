@@ -1,0 +1,54 @@
+# Actions are pinned to full commit SHAs; see .github/dependabot.yml for why and how they are updated.
+name: Publish Dashboard Package
+
+on:
+  push:
+    tags:
+      - 'dashboard-*'  # Triggers on tags like dashboard-1.0.0, dashboard-1.0.1, etc.
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container: node:24
+    permissions:
+      id-token: write  # Required for OIDC trusted publishing
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pgboss
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+
+      # `npm ci`, not `npm install`: the published artifact has to be built from
+      # the locked tree. `npm install` is also free to rewrite package.json —
+      # @react-router/dev adds `isbot` to `dependencies` and shells out to it —
+      # which on a release run would mean publishing a manifest nobody reviewed.
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install dashboard dependencies
+        working-directory: packages/dashboard
+        run: npm ci
+
+      - name: Publish to npm
+        working-directory: packages/dashboard
+        run: npm publish --provenance --access public
+        env:
+          DATABASE_URL: postgres://postgres:postgres@postgres:5432/pgboss

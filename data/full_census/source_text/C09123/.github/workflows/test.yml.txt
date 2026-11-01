@@ -1,0 +1,39 @@
+name: tests
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  yarn-lockfile-check:
+    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main
+  # Since the Windows unit tests take much longer, we run the linux unit tests first and then run the windows unit tests in parallel with NUTs
+  linux-unit-tests:
+    needs: yarn-lockfile-check
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main
+  windows-unit-tests:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsWindows.yml@main
+  nuts:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/nut.yml@main
+    secrets: inherit
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        command:
+          - 'yarn test:nuts:bulk:export'
+          - 'yarn test:nuts:bulk:import'
+          - 'yarn test:nuts:bulk:update'
+          - 'yarn test:nuts:bulk:results'
+          - 'yarn test:nuts:data:bulk-upsert-delete'
+          - 'yarn test:nuts:data:create'
+          - 'yarn test:nuts:data:query'
+          - 'yarn test:nuts:data:record'
+          - 'yarn test:nuts:data:search'
+          - 'yarn test:nuts:data:tree'
+          - 'yarn test:nuts:force:data:bulk-upsert-delete-status'
+      fail-fast: false
+    with:
+      os: ${{ matrix.os }}
+      command: ${{ matrix.command }}

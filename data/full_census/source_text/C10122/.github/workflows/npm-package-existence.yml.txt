@@ -1,0 +1,132 @@
+name: npm-package-existence
+
+on:
+  # Verify the changesets release PR: every package it will publish must already
+  # exist on npm, since trusted publishing (OIDC) cannot create a new name, and
+  # every version it bumps past must already be published, since merging it means
+  # no later release will ever publish those.
+  pull_request:
+    branches:
+      - main
+  # Refresh the cached record of packages and versions known to exist on npm once
+  # the release that publishes them has finished. Refreshing on push to main
+  # instead would race that release and record its versions as absent. A publish
+  # does not reach the registry instantly either - npm scans it for malware first -
+  # so the refresh waits that out rather than the workflow trying to time it; see
+  # refresh-npm-package-record.mts.
+  #
+  # release-npm-packages.yml raises this event, rather than this workflow listening
+  # for it to complete, for cache access: only a trusted trigger may write to the
+  # default branch's cache scope, which is what pull request runs restore from, and
+  # workflow_run is untrusted - a fork pull request can cascade into it - so its
+  # save is denied. repository_dispatch is trusted, GITHUB_TOKEN may raise it, and
+  # it always runs the default branch. See
+  # https://github.blog/changelog/2026-06-26-read-only-actions-cache-for-untrusted-triggers/.
+  #
+  # A dispatch of a type not listed below starts no run and reports no error, so
+  # keep the type in step with the step that raises it.
+  repository_dispatch:
+    types:
+      - npm-release-published
+
+permissions:
+  contents: read
+
+env:
+  # Cache entries are immutable, so the key embeds a hash of every releasable
+  # package's CHANGELOG.md and the prefix is used as a restore-key to pick up the
+  # most recent record when that exact key is absent. The changelogs are the
+  # signal because they change exactly when the record can: `changeset version`
+  # writes a changelog entry for every package whose version it bumps, and adding,
+  # removing or renaming a package changes the set of changelog files, while
+  # dependency bumps and other package.json edits - which have no bearing on the
+  # record - leave them untouched. This assumes every package has a CHANGELOG.md;
+  # if one ever lacks it, the only cost is that it is not recorded and the release
+  # PR verifies it against the registry directly.
+  #
+  # One entry is written per release, after that release published, and it is
+  # keyed by the changelogs of the very commit whose versions it describes. A
+  # release PR's own changelogs differ, so its restore falls through to the prefix
+  # and finds that entry - the record of the versions it is about to supersede.
+  #
+  # The prefix is versioned: bump it when the record's format changes, so runs do
+  # not restore a record written in the previous shape.
+  #
+  # The key globs cover the workspace roots from the root package.json that hold
+  # releasable packages. private/* is deliberately left out: those packages are
+  # all private, and .changeset/config.json sets privatePackages.version to
+  # false, so they are never published and cannot affect the record.
+  CACHE_KEY_PREFIX: published-packages-v2-
+  CACHE_PATH_SUFFIX: published-packages
+
+jobs:
+  ensure-packages-exist-on-npm:
+    runs-on: ubuntu-latest
+    name: Ensure packages to publish exist on npm
+    # Only relevant on the changesets release PR, which is what actually
+    # triggers the OIDC publish. New package names must be published manually
+    # once and configured as trusted publishers before that release runs, and the
+    # versions the PR bumps past must already be on npm, since merging it means no
+    # later release will publish them.
+    if: github.event_name == 'pull_request' && github.head_ref == 'changeset-release/main'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Include full git history so the set to publish, and the versions it
+        # supersedes, can be diffed against main.
+        with:
+          ref: ${{github.event.pull_request.head.sha}}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # Node >= 24 runs the .mts script directly via native type stripping.
+          node-version: 24
+      # Restore only: a pull request cannot write to the cache scope this reads
+      # from, and the record is just an optimization. On a miss everything is
+      # verified against the registry instead.
+      - name: Restore record of published packages
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/${{ env.CACHE_PATH_SUFFIX }}
+          key: ${{ env.CACHE_KEY_PREFIX }}${{ hashFiles('packages/*/CHANGELOG.md', 'smithy-typescript-ssdk-libs/*/CHANGELOG.md') }}
+          restore-keys: ${{ env.CACHE_KEY_PREFIX }}
+      - name: Ensure packages to publish exist on npm
+        env:
+          PUBLISHED_PACKAGES_RECORD: ${{ runner.temp }}/${{ env.CACHE_PATH_SUFFIX }}/record.json
+        run: node ./scripts/npm-packages/ensure-packages-exist-on-npm.mts origin/main
+
+  refresh-npm-package-record:
+    runs-on: ubuntu-latest
+    name: Refresh record of published packages
+    # Comfortably over the wait budget in shared.mts, which is what makes this job
+    # long-running, so that a hang is cut short well before the 6 hour default.
+    timeout-minutes: 40
+    # The release raises the event only once it has published, so a release that
+    # failed, was cancelled or published nothing never gets here: those versions
+    # stay absent from the registry, which is what the next release PR's check must
+    # discover for itself - so there is nothing to record.
+    if: github.event_name == 'repository_dispatch'
+    steps:
+      # main, which is what repository_dispatch always runs, and the branch whose
+      # cache scope the record below is stored under.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          # Node >= 24 runs the .mts script directly via native type stripping.
+          node-version: 24
+      - name: Restore record of published packages
+        id: cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/${{ env.CACHE_PATH_SUFFIX }}
+          key: ${{ env.CACHE_KEY_PREFIX }}${{ hashFiles('packages/*/CHANGELOG.md', 'smithy-typescript-ssdk-libs/*/CHANGELOG.md') }}
+          restore-keys: ${{ env.CACHE_KEY_PREFIX }}
+      # An exact key hit means the record already covers this set of packages and
+      # versions - a re-run of an already recorded release - so there is nothing to
+      # query or save. Otherwise the registry is queried for whatever the restored
+      # record does not cover and the updated record is saved by this action's post
+      # step.
+      - name: Record which packages and versions exist on npm
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          PUBLISHED_PACKAGES_RECORD: ${{ runner.temp }}/${{ env.CACHE_PATH_SUFFIX }}/record.json
+        run: node ./scripts/npm-packages/refresh-npm-package-record.mts

@@ -1,0 +1,64 @@
+{
+  "name": "async-done",
+  "version": "2.0.0",
+  "description": "Allows libraries to handle various caller provided asynchronous functions uniformly. Maps promises, observables, child processes and streams, and callbacks to callback style.",
+  "author": "Gulp Team <team@gulpjs.com> (https://gulpjs.com/)",
+  "contributors": [
+    "Blaine Bublitz <blaine.bublitz@gmail.com>",
+    "Pawel Kozlowski <pkozlowski.opensource@gmail.com>",
+    "Matthew Podwysocki <matthew.podwysocki@gmail.com>",
+    "Charles Samborski <demurgos@demurgos.net>"
+  ],
+  "funding": "https://github.com/sponsors/gulpjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulpjs/async-done.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">= 22.15.0"
+  },
+  "main": "./index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "LICENSE"
+  ],
+  "scripts": {
+    "format-check": "prettier . --check",
+    "format-write": "prettier . --write",
+    "lint": "eslint .",
+    "test": "node --test --experimental-test-coverage --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=test/lcov.info \"test/*.js\"",
+    "test-types": "tsc -p test/types"
+  },
+  "dependencies": {
+    "end-of-stream": "^1.4.4",
+    "once": "^1.4.0",
+    "stream-exhaust": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^16.11.7",
+    "eslint": "10.11.0",
+    "eslint-config-gulp": "7.0.0",
+    "prettier": "3.9.6",
+    "pumpify": "^2.0.1",
+    "rxjs": "^7.4.0",
+    "streamx": "^2.12.0",
+    "through2": "^4.0.2",
+    "typescript": "^4.4.4"
+  },
+  "keywords": [
+    "promises",
+    "callbacks",
+    "observables",
+    "streams",
+    "end",
+    "completion",
+    "complete",
+    "finish",
+    "done",
+    "async",
+    "error handling"
+  ]
+}

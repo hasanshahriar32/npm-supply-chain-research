@@ -1,0 +1,52 @@
+name: 'Tests: node.js'
+
+on: [pull_request, push]
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      majors: ${{ steps.set-matrix.outputs.requireds }}
+    steps:
+      - uses: ljharb/actions/node/matrix@main
+        id: set-matrix
+        with:
+          versionsAsRoot: true
+          type: 'majors'
+          preset: '>=18'
+
+  majors:
+    needs: [matrix]
+    name: 'latest majors'
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ${{ fromJson(needs.matrix.outputs.majors) }}
+        eslint:
+          - 8
+          - 9
+        exclude:
+          - node-version: 19
+            eslint: 9
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ljharb/actions/node/install@main
+        name: 'nvm install ${{ matrix.node-version }} && npm install'
+        with:
+          node-version: ${{ matrix.node-version }}
+          skip-ls-check: true
+      - run: npm install --no-save eslint@${{ matrix.eslint }}
+      - run: npm prune > /dev/null
+      - run: npm ls > /dev/null
+      - run: npm run cover
+      - uses: codecov/codecov-action@v2
+
+  node:
+    name: 'node 18+'
+    needs: [majors]
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo tests completed'

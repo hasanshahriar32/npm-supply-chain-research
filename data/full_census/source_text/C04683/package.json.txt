@@ -1,0 +1,48 @@
+{
+	"name": "caching-transform",
+	"version": "4.0.0",
+	"description": "Wraps a transform and provides caching",
+	"license": "MIT",
+	"repository": "istanbuljs/caching-transform",
+	"engines": {
+		"node": ">=8"
+	},
+	"scripts": {
+		"pretest": "xo",
+		"tests-only": "nyc -s --no-check-coverage ava",
+		"test": "npm run -s tests-only",
+		"posttest": "nyc report"
+	},
+	"files": [
+		"index.js"
+	],
+	"keywords": [
+		"transform",
+		"cache",
+		"require",
+		"transpile",
+		"fast",
+		"speed",
+		"hash"
+	],
+	"dependencies": {
+		"hasha": "^5.0.0",
+		"make-dir": "^3.0.0",
+		"package-hash": "^4.0.0",
+		"write-file-atomic": "^3.0.0"
+	},
+	"devDependencies": {
+		"ava": "^2.3.0",
+		"nyc": "^15.0.0",
+		"proxyquire": "^2.1.3",
+		"rimraf": "^3.0.0",
+		"sinon": "^8.0.1",
+		"xo": "^0.25.3"
+	},
+	"nyc": {
+		"reporter": [
+			"lcov",
+			"text"
+		]
+	}
+}

@@ -1,0 +1,19 @@
+name: Build & Test
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          # Match the `engines.node` floor the library declares, so CI exercises
+          # the oldest version we claim to support rather than an excluded one.
+          node-version: "22.12"
+          registry-url: "https://registry.npmjs.org"
+      - run: yarn
+      - run: yarn build
+      - run: yarn test

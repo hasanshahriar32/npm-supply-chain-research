@@ -1,0 +1,51 @@
+{
+  "name": "root-polkadot-api",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "experiments"
+  ],
+  "type": "module",
+  "scripts": {
+    "build-core": "pnpm -r build-core",
+    "build-external": "pnpm -r build-external",
+    "build": "pnpm turbo build-core && pnpm install && pnpm build-external",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "test": "pnpm -r test run",
+    "prepare": "husky"
+  },
+  "prettier": {
+    "printWidth": 80,
+    "semi": false,
+    "trailingComma": "all",
+    "jsdocExperimentalFormatCommentsWithoutTags": true,
+    "plugins": [
+      "@homer0/prettier-plugin-jsdoc"
+    ]
+  },
+  "devDependencies": {
+    "@fast-check/vitest": "^0.5.0",
+    "@homer0/prettier-plugin-jsdoc": "^12.0.0",
+    "@rollup/plugin-alias": "^6.0.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@vitest/coverage-v8": "^5.0.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "rollup": "^4.64.12",
+    "rollup-plugin-dts": "^6.5.1",
+    "rollup-plugin-esbuild": "^6.2.1",
+    "tslib": "^2.8.1",
+    "turbo": "^2.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,md}": "prettier --write"
+  },
+  "packageManager": "pnpm@11.15.1+sha512.81350b07e53c9538a02f1f2303b4290fa2d7be04e56e2a970c4cc4b417dc761de196edabd49d55c7dc9580db81007c44143e4e3d7e462b3000d23c255122d065"
+}

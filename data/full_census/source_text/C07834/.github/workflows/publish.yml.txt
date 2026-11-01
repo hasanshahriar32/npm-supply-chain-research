@@ -1,0 +1,43 @@
+on:
+  release:
+    types: [created, edited, published]
+  workflow_dispatch:
+    inputs:
+      dryRun:
+        description: Dry run only
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  # Required for trusted publishing with OIDC
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+
+      # NPM 11.5.1+ (released with Node 24.5.0) is required for OIDC trusted publishing
+      - name: Update npm
+        run: npm install -g npm@11.5.1
+
+      - name: Publish package
+        if: >
+          (github.event_name == 'release' && github.event.action == 'published') ||
+          (github.event_name == 'workflow_dispatch' && !inputs.dryRun)
+        run: npm publish --provenance --access public
+
+      - name: Publish package (dry run)
+        if: >
+          (github.event_name == 'release' && github.event.action != 'published') ||
+          (github.event_name == 'workflow_dispatch' && inputs.dryRun)
+        run: npm publish --dry-run

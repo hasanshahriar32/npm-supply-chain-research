@@ -1,0 +1,97 @@
+{
+  "name": "@pyroscope/nodejs",
+  "version": "0.7.0",
+  "description": "pyroscope nodejs package",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js"
+    }
+  },
+  "main": "./dist/cjs/index.js",
+  "scripts": {
+    "prepublishOnly": "pinst --disable",
+    "postpublish": "pinst --enable",
+    "build": "node tools/generate-version.js && yarn build:cjs && yarn build:esm",
+    "build:cjs": "node tools/cleanup cjs && tsc -p config/tsconfig.cjs.json",
+    "build:esm": "node tools/cleanup esm && tsc -p config/tsconfig.esm.json && echo '{\"type\":\"module\"}' >./dist/esm/package.json",
+    "clean": "node tools/cleanup",
+    "package": "yarn build && yarn pack",
+    "format:fix": "prettier --write .",
+    "lint": "eslint --cache --ext .js,.jsx,.ts,.tsx .",
+    "lint:fix": "yarn lint --fix",
+    "check:version": "node tools/generate-version.js && node tools/check-version.js",
+    "build:test": "node tools/generate-version.js && node tools/cleanup dist-test && tsc -p config/tsconfig.test.json && echo '{\"type\":\"module\"}' >./dist-test/package.json",
+    "test": "yarn build:test && node --test dist-test/test/*.test.js",
+    "test:cov": "yarn build:test && node --test --experimental-test-coverage dist-test/test/*.test.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [],
+  "author": "Grafana Labs",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/grafana/pyroscope-nodejs",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/grafana/pyroscope-nodejs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/grafana/pyroscope-nodejs/issues"
+  },
+  "dependencies": {
+    "@datadog/pprof": "5.14.4",
+    "debug": "^4.4.3",
+    "p-limit": "^7.3.0",
+    "pprof-format": "^2.2.1",
+    "regenerator-runtime": "^0.14.1",
+    "source-map": "^0.7.6"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/node": "^24",
+    "@types/source-map": "^0.5.7",
+    "@typescript-eslint/eslint-plugin": "^8.60.1",
+    "@typescript-eslint/parser": "^8.60.1",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "express": "^5.2.1",
+    "fastify": "^5.8.5",
+    "husky": "^9.1.7",
+    "pinst": "^3.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "express": "^4.0.0 || ^5.0.0",
+    "fastify": "^5.8.5"
+  },
+  "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "resolutions": {
+    "brace-expansion": "^5.0.6",
+    "body-parser": "2.3.0",
+    "fast-uri": "3.1.8",
+    "find-my-way": "9.7.0",
+    "flatted": "^3.4.2",
+    "path-to-regexp": "8.4.0",
+    "picomatch": "^4.0.4",
+    "proxy-addr": "^2.0.8",
+    "qs": "^6.14.1",
+    "undici": "^8.10.1"
+  },
+  "packageManager": "yarn@4.15.0+sha512.07ec708ac11e2eaa4ea2b04cfbb272812f7e74a753f1595eaef4486c663a98306a30cca3e6fc40f7a0b168dcfb3a2490b6a5e0501e20fb69cc36f563dd161c53"
+}

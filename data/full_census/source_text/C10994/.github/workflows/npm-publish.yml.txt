@@ -1,0 +1,60 @@
+name: Publish npm
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - .github/workflows/npm-publish.yml
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: Space-separated package names. Leave empty to publish all packages.
+        required: false
+        type: string
+
+env:
+  RUST_LOG: debug
+  CARGO_INCREMENTAL: 0
+  MACOSX_DEPLOYMENT_TARGET: "10.13"
+
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
+jobs:
+  build:
+    environment: publish
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 24 bundles npm 11.17.0, satisfying the npm >= 11.5.1 requirement
+      # for trusted publishing.
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - run: |
+          echo "Before: corepack version => $(corepack --version || echo 'not installed')"
+          npm install -g corepack@latest
+          echo "After : corepack version => $(corepack --version)"
+          corepack enable
+          pnpm --version
+          pnpm i
+
+      - name: Publish to npm
+        env:
+          PACKAGE_NAMES: ${{ inputs.packages }}
+        run: |
+          filters=()
+          if [[ -n "$PACKAGE_NAMES" ]]; then
+            read -r -a packages <<< "$PACKAGE_NAMES"
+            for package in "${packages[@]}"; do
+              filters+=(--filter "$package")
+            done
+          fi
+          pnpm "${filters[@]}" publish -r --access public

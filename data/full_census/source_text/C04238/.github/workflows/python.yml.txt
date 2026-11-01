@@ -1,0 +1,180 @@
+name: Python
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - bindings/node/**
+  pull_request:
+    paths-ignore:
+      - bindings/node/**
+
+permissions: {}
+
+jobs:
+  build_win_32:
+    permissions:
+      contents: read
+    name: Check it builds for Windows 32-bit
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8  # v1
+        with:
+          toolchain: stable
+          targets: i686-pc-windows-msvc
+
+      # pyo3 configures the build from the interpreter on PATH, so it has to be a 32-bit one.
+      - name: Install Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.14"
+          architecture: x86
+
+      - name: Build
+        run: cargo build --target i686-pc-windows-msvc --manifest-path ./bindings/python/Cargo.toml
+
+  build_and_test:
+    permissions:
+      contents: read
+    name: Check everything builds & tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        # The extension is built with `abi3-py310`, so one binary covers 3.10 through 3.14: test
+        # the oldest and the newest. 3.14t has no stable ABI yet, so pyo3 builds it version-specific.
+        python: ["3.10", "3.14", "3.14t"]
+    defaults:
+      run:
+        working-directory: bindings/python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8  # v1
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry / git / target
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+        with:
+          workspaces: |
+            bindings/python
+            bindings/python/tools/stub-gen
+          shared-key: python
+          # Not ~/.cargo/bin: a cached run once left a stale rustup-init binary in place of
+          # `cargo`, which broke the macOS job. dtolnay/rust-toolchain reinstalls it every run.
+          cache-bin: false
+
+      # Also provides `uvx`, which runs the huggingface_hub CLI that fetches the test fixtures
+      # (see the Makefile) without a separate install step.
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      # The dev dependency group only; `make test` builds and installs the extension itself.
+      - name: Install
+        run: uv sync --no-install-project
+
+      # Test fixtures are immutable, so cache them: the Hub rate-limits a fresh download per run.
+      - name: Cache HF test data
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: bindings/python/data
+          key: hf-test-data-python-${{ hashFiles('bindings/python/Makefile') }}
+          restore-keys: hf-test-data-python-
+
+      - name: Run tests
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          source .venv/bin/activate
+          make test HF="uvx --from huggingface_hub hf"
+
+  quality:
+    permissions:
+      contents: read
+    name: Lint & format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8  # v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry / git / target
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+        with:
+          workspaces: |
+            bindings/python
+            bindings/python/tools/stub-gen
+          shared-key: python
+
+      - name: Lint with Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: "3.14"
+
+      - name: Install
+        run: uv sync --no-install-project
+
+      # `ty` resolves `import tokenizers` through the editable install `make develop` leaves in
+      # the venv; `make check-style` then regenerates the stub and lints both languages.
+      - name: Check style
+        run: |
+          source .venv/bin/activate
+          make develop
+          make check-style
+
+      # `make check-style` rewrote python/tokenizers/tokenizers.pyi from the Rust sources. A
+      # diff here means the committed stub was hand-edited or not regenerated.
+      - name: Committed stub matches the sources
+        run: git diff --exit-code
+
+  audit:
+    permissions:
+      contents: read
+    name: Audit dependencies
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bindings/python
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8  # v1
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry / git / target
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2
+        with:
+          workspaces: bindings/python
+          shared-key: cargo-audit
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run Audit
+        working-directory: .
+        run: cargo audit -D warnings -f bindings/python/Cargo.lock

@@ -1,0 +1,145 @@
+# Inspired and largely copied from type-fest!
+# @see https://github.com/sindresorhus/type-fest/blob/main/.github/workflows/ts-canary.yml
+
+name: 🐦 Canaries
+on:
+  schedule:
+    # Run daily to make it the easiest to track down what changed
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # @see https://typicode.github.io/husky/how-to.html#ci-server-and-docker
+  HUSKY: 0
+
+jobs:
+  test-source:
+    name: 📒 Test source [TypeScript ${{ matrix.typescript-version }}]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript-version:
+          - next # The bleeding-edge
+          - latest # The "current" version
+          - rc # The "best" pre-release version
+          - beta # New features ready to be tested by the general public.
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@20216767ca67f0f7b4d095dc5859c5700a6581cb # v1.12.1
+
+      - name: 📘 Install TypeScript
+        # legacy-peer-deps allows us to avoid peer dependency conflicts for
+        # packages which are not relevant for this check anyway.
+        run: npm --workspace=remeda install -D --legacy-peer-deps typescript@${{ matrix.typescript-version }}
+
+      - name: 🎯 Concrete version
+        run: npx --workspace=remeda tsc --version | tee -a $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Type check
+        run: npm --workspace=remeda run check
+
+      - name: 📋 Run type tests
+        run: npm --workspace=remeda run test:types
+
+  build:
+    name: 🏗️ Build
+    runs-on: ubuntu-latest
+    needs:
+      # No need to build if we already have test failures
+      - test-source
+    outputs:
+      distCacheKey: ${{ steps.hash-dist.outputs.distCacheKey }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Generate the cache key so we can reuse it in the next job.
+      - name: 🔑 Hash distributable
+        id: hash-dist
+        # For the best results this should be kept in sync with the key used by
+        # the same job in the `ci-library` workflow, that way we can reuse the
+        # cache from committed PRs.
+        run: echo "distCacheKey=dist-${{ hashFiles('package-lock.json', 'packages/remeda/src/**/*.ts', 'packages/remeda/tsdown.config.ts') }}" >> $GITHUB_OUTPUT
+
+      - name: 🚚 Lookup distributable
+        id: dist-lookup
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          lookup-only: true
+          path: packages/remeda/dist
+          key: ${{ steps.hash-dist.outputs.distCacheKey }}
+
+      # Only on cache misses do we proceed to building the library.
+
+      - name: ⎔ Setup node
+        if: steps.dist-lookup.outputs.cache-hit != 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: 📥 Download dependencies
+        if: steps.dist-lookup.outputs.cache-hit != 'true'
+        uses: bahmutov/npm-install@20216767ca67f0f7b4d095dc5859c5700a6581cb # v1.12.1
+
+      - name: 🏗️ Build
+        if: steps.dist-lookup.outputs.cache-hit != 'true'
+        run: npm --workspace=remeda run build
+
+      - name: 🚚 Save distributable
+        if: steps.dist-lookup.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/remeda/dist
+          key: ${{ steps.hash-dist.outputs.distCacheKey }}
+
+  test-dist:
+    name: 📦 Test dist [TypeScript ${{ matrix.typescript-version }}]
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        typescript-version:
+          - next # The bleeding-edge
+          - latest # The "current" version
+          - rc # The "best" pre-release version
+          - beta # New features ready to be tested by the general public.
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: 📥 Download dependencies
+        uses: bahmutov/npm-install@20216767ca67f0f7b4d095dc5859c5700a6581cb # v1.12.1
+
+      - name: 📘 Install TypeScript
+        # legacy-peer-deps allows us to avoid peer dependency conflicts for
+        # packages which are not relevant for this check anyway.
+        run: npm --workspace=remeda install -D --legacy-peer-deps typescript@${{ matrix.typescript-version }}
+
+      - name: 🚚 Restore distributable
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/remeda/dist
+          fail-on-cache-miss: true
+          key: ${{ needs.build.outputs.distCacheKey }}
+
+      - name: 🧐 Check distributable
+        run: npm --workspace=remeda run check:dist

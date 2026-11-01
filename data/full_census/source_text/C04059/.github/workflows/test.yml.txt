@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  # No paths-ignore: reusable-ci.yml skips its jobs when only docs change, so
+  # their checks still report.
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: harlan-zw/nuxt-seo/.github/workflows/reusable-ci.yml@main
+    with:
+      test-command: pnpm build && pnpm test
+      playwright: false

@@ -1,0 +1,191 @@
+name: 'Test: Framework'
+
+# The framework's unit tests and live integration tests, shared by
+# CI: Framework CLI (pull requests, Linux) and Release: Framework CLI (every
+# platform). It only runs tests and can only be called by another workflow,
+# so nothing here can publish a release: the release jobs live in
+# release-framework.yml and wait for every job below.
+on:
+  workflow_call:
+    inputs:
+      platforms:
+        description: JSON array of runner labels to test on
+        type: string
+        required: true
+      stage-prefix:
+        description: Prefix for the stages the integration suites deploy to
+        type: string
+        required: true
+      aws-sdk:
+        description: >-
+          SLS_AWS_SDK for the integration shards: '3' for AWS SDK v3, or empty
+          for the default SDK path users run
+        type: string
+        default: ''
+    secrets:
+      SERVERLESS_LICENSE_KEY_DEV:
+        required: true
+      SERVERLESS_ACCESS_KEY_DEV:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  unit:
+    name: 'Unit (${{ matrix.platform }}, Node.js ${{ matrix.node }})'
+    # The CLI runs on whichever Node.js its users have, so the unit tests run
+    # on both supported LTS lines.
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+        node: ['24.x', '26.x']
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: ./packages/sf-core
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 'Setup: Node.js'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: npm
+      - name: 'Setup: npm'
+        uses: ./.github/actions/setup-npm
+      - name: 'Install: Dependencies'
+        run: |
+          cd ../../
+          npm ci
+      - name: 'Test: Unit (sf-core)'
+        run: npm run test:unit
+      - name: 'Test: Unit (serverless)'
+        working-directory: ./packages/serverless
+        run: npm run test:unit
+      # The mcp package's test script sets NODE_OPTIONS with POSIX shell
+      # syntax, which Windows can't run.
+      - name: 'Test: Unit (mcp)'
+        if: ${{ runner.os == 'Linux' }}
+        working-directory: ./packages/mcp
+        run: npm run test:unit
+
+  integration:
+    # The Node.js version here must match the one 'Setup: Node.js' picks below.
+    name: "Integration (${{ matrix.platform }}, Node.js ${{ matrix.platform == 'ubuntu-24.04-arm' && '26.x' || '24.x' }}, ${{ matrix.leg }})"
+    # One leg per test account and platform: separate runners lift the
+    # single-runner ceiling and AWS rate limits stay per account.
+    # tests/integration/shards.json says which suites run in which shard;
+    # suites that need the prerequisites in TESTING.md are pinned to shard 1,
+    # which runs in test-1. fail-fast stays off so one leg failing never
+    # cancels the others mid-deploy, and a flaky leg can be re-run on its own.
+    # CloudFormation rate limits are per account and region, so shards 2 and
+    # 3, which need no prerequisites, deploy into a region per platform
+    # (ubuntu-24.04-arm: us-east-2, windows-latest: us-west-2). Their suites
+    # follow AWS_REGION through tests/utils/testRegion.js; shard 1 and the
+    # resolvers leg stay in us-east-1, where the prerequisites live.
+    # The ARM Linux legs run on Node.js 26 and the others on Node.js 24, so
+    # both versions deploy for real without adding legs or AWS load.
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms) }}
+        leg:
+          - shard 1/3 · test-1
+          - shard 2/3 · test-2
+          - shard 3/3 · test-3
+          - resolvers · test-1
+        include:
+          - leg: shard 1/3 · test-1
+            role: ${{ vars.TEST1_ROLE_ARN }}
+            command: npm run test -- --maxWorkers=8 --shard=1/3
+            needs-serverless-v3: true
+          - leg: shard 2/3 · test-2
+            role: ${{ vars.TEST2_ROLE_ARN }}
+            command: npm run test -- --maxWorkers=8 --shard=2/3
+            region-per-platform: true
+          - leg: shard 3/3 · test-3
+            role: ${{ vars.TEST3_ROLE_ARN }}
+            command: npm run test -- --maxWorkers=8 --shard=3/3
+            region-per-platform: true
+          # The resolvers suite reads the same prerequisites and has always
+          # run without SLS_AWS_SDK, whichever SDK the shards use.
+          - leg: resolvers · test-1
+            role: ${{ vars.TEST1_ROLE_ARN }}
+            command: npm run test:resolvers -- --maxWorkers=8
+            resolvers: true
+    runs-on: ${{ matrix.platform }}
+    defaults:
+      run:
+        working-directory: ./packages/sf-core
+    steps:
+      - name: 'Checkout Code'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 'Setup: Node.js'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # Keep in step with the Node.js version in the job name above.
+          node-version: ${{ matrix.platform == 'ubuntu-24.04-arm' && '26.x' || '24.x' }}
+          check-latest: true
+          cache: npm
+      - name: 'Setup: npm'
+        uses: ./.github/actions/setup-npm
+      - name: 'Setup: AWS Credentials'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ matrix.role }}
+          # Also exported as AWS_REGION, the region the suites deploy to.
+          aws-region: ${{ matrix.region-per-platform && fromJSON('{"ubuntu-24.04-arm":"us-east-2","windows-latest":"us-west-2"}')[matrix.platform] || 'us-east-1' }}
+      # The dev-mode sandbox suites build an image locally from public.ecr.aws;
+      # signed-in pulls aren't limited by the anonymous allowance that runners'
+      # shared IP addresses exhaust. Only Linux runners build images; the
+      # others skip those suites.
+      - name: 'Setup: ECR Public Login'
+        if: ${{ runner.os == 'Linux' }}
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+        with:
+          registry-type: public
+      - name: 'Install: Dependencies'
+        run: |
+          cd ../../
+          npm ci
+      # A test build, so cached Go modules and build output are fine here; the
+      # release jobs build the layers that ship without any cache.
+      - name: 'Setup: Go'
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: dev-mode-bridge/go.mod
+          cache-dependency-path: dev-mode-bridge/go.sum
+      - name: 'Build: Dev Mode Layers'
+        working-directory: ./packages/serverless
+        run: npm run build:devmode:layer
+      - name: 'Build: Dev Mode Web Bridge'
+        working-directory: ./packages/serverless
+        run: npm run build:devmode:web-bridge
+      - name: 'Build: MCP Entry'
+        working-directory: ./packages/serverless
+        run: npm run build:mcp:entry
+      - name: 'Build: Framework'
+        run: npm run build
+      # Only standalone-to-compose, which is pinned to shard 1, deploys with v3.
+      - name: 'Install: Serverless v3'
+        if: ${{ matrix.needs-serverless-v3 }}
+        run: npm install -g serverless@3
+      # bash on every platform: PowerShell, the Windows default, drops the
+      # `--` before the arguments meant for Jest.
+      - name: 'Test: Integration'
+        shell: bash
+        run: ${{ matrix.command }}
+        env:
+          SERVERLESS_LICENSE_KEY_DEV: ${{ secrets.SERVERLESS_LICENSE_KEY_DEV }}
+          SERVERLESS_ACCESS_KEY_DEV: ${{ secrets.SERVERLESS_ACCESS_KEY_DEV }}
+          TEST_STAGE: ${{ inputs.stage-prefix }}
+          # An empty value reads the same as unset: the default SDK path.
+          SLS_AWS_SDK: ${{ !matrix.resolvers && inputs.aws-sdk || '' }}
+          AWS_MAX_ATTEMPTS: 7
+          # The Framework's own retry loop around each AWS request, on both
+          # SDK paths; AWS_MAX_ATTEMPTS only reaches the SDK v3 clients.
+          SLS_AWS_REQUEST_MAX_RETRIES: 8

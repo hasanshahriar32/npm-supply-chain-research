@@ -1,0 +1,118 @@
+name: make-pr-for-nightly
+
+on:
+  schedule:
+    # Daily at:
+    # 6pm MST
+    # 7pm MST
+    # 8pm CST
+    # 9pm EST
+    # 11pm ARG
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      only:
+        type: string
+        required: false
+        description: '[--only] comma-separated list, no spaces, of dependencies that you want to bump.'
+
+jobs:
+  make-pr-for-nightly:
+    env:
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Check out repository as our bot user
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+
+      - name: Set up NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+
+      - name: Look up sf latest-rc version
+        uses: salesforcecli/github-workflows/.github/actions/versionInfo@main
+        id: latest-rc-version
+        with:
+          version: latest-rc
+          npmPackage: '@salesforce/cli'
+
+      - name: Parse latest-rc semver
+        uses: salesforcecli/github-workflows/.github/actions/parse-semver@main
+        id: latest-rc-semver-info
+        with:
+          input_string: ${{ steps.latest-rc-version.outputs.version }}
+
+      - name: Look up sf package.json version
+        uses: salesforcecli/github-workflows/.github/actions/get-json-property@main
+        id: package-json-version
+        with:
+          path: 'package.json'
+          prop_path: 'version'
+
+      - name: Parse package.json semver
+        uses: salesforcecli/github-workflows/.github/actions/parse-semver@main
+        id: package-json-semver-info
+        with:
+          input_string: ${{ steps.package-json-version.outputs.prop }}
+
+      - name: Log version info
+        shell: bash
+        run: |
+          echo "[INFO] Semver version in 'latest-rc' is: $STEPS_LATEST_RC_VERSION_VERSION"
+          echo "[INFO] Semver minor in 'latest-rc' is: $STEPS_LATEST_RC_SEMVER_INFO_MINOR"
+          echo "[INFO] Semver version in 'main' is: $STEPS_PACKAGE_JSON_VERSION_PROP"
+          echo "[INFO] Semver minor in 'main' is: $STEPS_PACKAGE_JSON_SEMVER_INFO_MINOR"
+        env:
+          STEPS_LATEST_RC_VERSION_VERSION: ${{ steps.latest-rc-version.outputs.version }}
+          STEPS_LATEST_RC_SEMVER_INFO_MINOR: ${{ steps.latest-rc-semver-info.outputs.minor }}
+          STEPS_PACKAGE_JSON_VERSION_PROP: ${{ steps.package-json-version.outputs.prop }}
+          STEPS_PACKAGE_JSON_SEMVER_INFO_MINOR: ${{ steps.package-json-semver-info.outputs.minor }}
+
+      - name: Install @salesforce/plugin-release-management
+        run: npm install -g @salesforce/plugin-release-management --omit=dev
+
+      - name: Get Github user info
+        id: github-user-info
+        uses: salesforcecli/github-workflows/.github/actions/getGithubUserInfo@main
+        with:
+          SVC_CLI_BOT_GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+
+      - name: Set git config defaults
+        uses: salesforcecli/github-workflows/.github/actions/gitConfig@main
+        with:
+          username: ${{ steps.github-user-info.outputs.username }}
+          email: ${{ steps.github-user-info.outputs.email }}
+
+      - name: Fetch all branches
+        run: git fetch
+
+      - name: Validate inputs
+        if: ${{ inputs.only != '' }}
+        shell: bash
+        run: |
+          if [[ ! "$INPUT_ONLY" =~ ^[@a-zA-Z0-9/_,.-]+$ ]]; then
+            echo "::error::'only' input contains invalid characters. Must be a comma-separated list of package names."
+            exit 1
+          fi
+        env:
+          INPUT_ONLY: ${{ inputs.only }}
+
+      - name: Build nightly PR (minor)
+        # $ONLY_FLAG is intentionally unquoted — it must word-split into two args (--only <value>)
+        run: sf-release cli:release:build --start-from-github-ref main $ONLY_FLAG --label nightly-automerge --release-channel nightly
+        env:
+          ONLY_FLAG: ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
+        # If the package.json 'minor' IS EQUAL TO the latest-rc 'minor', we want to bump 'minor'
+        if: ${{ fromJSON(steps.package-json-semver-info.outputs.minor) == fromJSON(steps.latest-rc-semver-info.outputs.minor) }}
+
+      - name: Build nightly PR (patch)
+        # $ONLY_FLAG is intentionally unquoted — it must word-split into two args (--only <value>)
+        run: sf-release cli:release:build --start-from-github-ref main --patch $ONLY_FLAG --label nightly-automerge --release-channel nightly
+        env:
+          ONLY_FLAG: ${{ inputs.only && format('--only {0}', inputs.only) || '' }}
+        # If the package.json 'minor' IS GREATER THAN the latest-rc 'minor', we want to bump 'patch'
+        if: ${{ fromJSON(steps.package-json-semver-info.outputs.minor) > fromJSON(steps.latest-rc-semver-info.outputs.minor) }}

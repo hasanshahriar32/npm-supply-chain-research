@@ -1,0 +1,108 @@
+name: Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      runType:
+        description: "Run type"
+        required: true
+        default: Dry run
+        type: choice
+        options:
+          - Dry run
+          - Live
+      versionBump:
+        description: "Version bump strategy"
+        required: true
+        default: prerelease
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - premajor
+          - preminor
+          - prepatch
+          - prerelease
+          - custom
+      customVersion:
+        description: "Custom version"
+        type: string
+
+jobs:
+  Bump_version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        # with:
+        #   bun-version: 1.1.29
+      - run: bun install --frozen-lockfile
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+      - name: Bump version
+        run: npx lerna version ${{ inputs.versionBump == 'custom' && inputs.customVersion || inputs.versionBump }} ${{ inputs.runType == 'Live' && '--yes' || '--yes --dry-run' }}
+      # App token (not the default GITHUB_TOKEN) so the created release triggers the Publish workflow.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+      - name: Create GitHub Release
+        run: |
+          VERSION=$(node -p "require('./lerna.json').version")
+          # Flag semver prereleases (e.g. 8.0.0-next.1) so they fire "prereleased", not "released".
+          PRERELEASE_FLAG=""
+          case "$VERSION" in *-*) PRERELEASE_FLAG=--prerelease ;; esac
+          CHANGELOG_SECTION=$(awk "/^## \[v${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md)
+          if [ -n "$CHANGELOG_SECTION" ]; then
+            PREV_VERSION=$(awk "/^## \[v${VERSION}\]/{getline; while(getline && !/^## \[v/) continue; if(/^## \[v/) {gsub(/^## \[v|\].*/,\"\"); print; exit}}" CHANGELOG.md)
+            CHANGELOG_ANCHOR=$(echo "v${VERSION}" | sed 's/\.//g' | tr '[:upper:]' '[:lower:]')
+            FULL_HEADER=$(awk "/^## \[v${VERSION}\]/" CHANGELOG.md)
+            if [[ "$FULL_HEADER" =~ - ]]; then
+              DATE_PART=$(echo "$FULL_HEADER" | sed 's/.*- //')
+              CHANGELOG_ANCHOR="${CHANGELOG_ANCHOR}---${DATE_PART}"
+            fi
+            # Remove brackets around issue numbers
+            CHANGELOG_SECTION=$(echo "$CHANGELOG_SECTION" | sed -r 's/\[(#[0-9]+)\]/\1/g')
+            # Increase header level for sections
+            CHANGELOG_SECTION=$(echo "$CHANGELOG_SECTION" | sed -r 's/^#(### (Added|Changed|Fixed))$/\1/g')
+            CHANGELOG_LINK="[CHANGELOG entry for v${VERSION}](https://github.com/react-querybuilder/react-querybuilder/blob/main/CHANGELOG.md#${CHANGELOG_ANCHOR})"
+            RELEASE_BODY=$(printf '%s\n\n%s' "$CHANGELOG_SECTION" "$CHANGELOG_LINK")
+            if [ -n "$PREV_VERSION" ]; then
+              COMPARE_LINK="https://github.com/react-querybuilder/react-querybuilder/compare/v${PREV_VERSION}...v${VERSION}"
+              RELEASE_BODY=$(printf '%s\n\n%s' "$RELEASE_BODY" "$COMPARE_LINK")
+            fi
+            echo "Release body content for v$VERSION:"
+            echo "----------------------------------------"
+            echo "$RELEASE_BODY"
+            echo "----------------------------------------"
+          else
+            echo "No changelog section found for version $VERSION; release body will contain only the compare link."
+            # No section for this version, so the topmost changelog version (!= current) is the predecessor.
+            PREV_VERSION=$(awk -v cur="$VERSION" '/^## \[v/{v=$0; gsub(/^## \[v|\].*/,"",v); if (v != cur) {print v; exit}}' CHANGELOG.md)
+            if [ -n "$PREV_VERSION" ]; then
+              RELEASE_BODY="https://github.com/react-querybuilder/react-querybuilder/compare/v${PREV_VERSION}...v${VERSION}"
+            else
+              RELEASE_BODY=""
+            fi
+            echo "Release body content for v$VERSION:"
+            echo "----------------------------------------"
+            echo "$RELEASE_BODY"
+            echo "----------------------------------------"
+          fi
+          if [ "${{ inputs.runType }}" = "Live" ]; then
+            echo "$RELEASE_BODY" | gh release create "v$VERSION" --title "v$VERSION" --notes-file - $PRERELEASE_FLAG
+          else
+            echo "Dry run - release would be created with the above content"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}

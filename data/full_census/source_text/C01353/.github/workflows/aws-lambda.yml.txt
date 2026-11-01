@@ -1,0 +1,48 @@
+name: AWS Lambda tests
+
+permissions: read-all
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install libcurl4-openssl-dev and net-tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install libcurl4-openssl-dev
+        sudo apt-get install net-tools
+
+    - run: sam --version
+
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Install Ruby
+      uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1.299.0
+      with:
+        ruby-version: '3.1'
+
+    - name: Install Node
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        node-version: 22
+
+    - name: Run tests
+      run: |
+        cd test/aws-lambda
+        bundle install
+        bundle exec maze-runner
+
+    - name: Upload test artifacts
+      if: failure()
+      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+      with:
+        name: aws-lambda-test-results
+        path: test/aws-lambda/maze_output/
+        if-no-files-found: ignore

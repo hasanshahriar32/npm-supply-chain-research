@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - '**'
+    paths-ignore:
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node-version: [24.x, 22.x]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: 📥 Install
+        run: npm install
+
+      - name: Install Examples
+        run: npm run install:examples
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build next-i18next
+        run: npm run build
+
+      # Copy built dist + package.json into each example's node_modules/next-i18next
+      # so examples use the current build instead of the published npm version.
+      - name: Replace examples install with repo build
+        run: npm run move-build-to-examples
+
+      - name: Build examples
+        run: npm run build:examples
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Typecheck pages-router-simple example
+        run: npm run typecheck:example:pages-router-simple

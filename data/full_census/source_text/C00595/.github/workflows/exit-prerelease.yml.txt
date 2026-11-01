@@ -1,0 +1,61 @@
+name: Exit Prerelease Mode
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Exit prerelease mode on release branch"
+        type: string
+        default: "release-"
+        required: true
+
+jobs:
+  exit_prerelease:
+    name: Changesets Exit Prerelease
+    runs-on: ubuntu-latest
+    # Allow GITHUB_TOKEN to have write permissions
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        id: github-actions-bot-app-token
+        with:
+          app-id: 819772
+          private-key: ${{ secrets.APOLLO_GITHUB_ACTIONS_BOT_PRIVATE_KEY }}
+
+      # Check out the repository, using the Github Actions Bot app's token so
+      # that we can push later.
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          token: ${{ steps.github-actions-bot-app-token.outputs.token }}
+          # Checkout release branch entered when workflow was kicked off
+          ref: ${{ github.event.inputs.branch }}
+          # Fetch entire git history so  Changesets can generate changelogs
+          # with the correct commits
+          fetch-depth: 0
+          # We want to commit back further down.
+          persist-credentials: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24.x"
+
+      - name: Write latest version to package.json and package-lock.json
+        run: |
+          version=$(npm show @apollo/client version)
+          npm pkg set version="$version"
+          npm i
+
+      - name: Remove pre.json
+        run: npx rimraf .changeset/pre.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          git commit -m "Exit prerelease mode"
+          git push

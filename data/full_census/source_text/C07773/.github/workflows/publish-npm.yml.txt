@@ -1,0 +1,45 @@
+# This workflow is triggered when a GitHub release is created.
+# It can also be run manually to re-publish to NPM in case it failed for some reason.
+# You can run this workflow by navigating to https://www.github.com/orbcorp/orb-node/actions/workflows/publish-npm.yml
+name: Publish NPM
+on:
+  workflow_dispatch:
+
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  # Trusted Publishing: npm authenticates via the Actions OIDC token instead of
+  # a stored NPM_TOKEN secret.
+  id-token: write
+
+jobs:
+  publish:
+    name: publish
+    # github-hosted deliberately: npm rejects provenance attestations minted on
+    # self-hosted runners ("Only github-hosted runners are supported").
+    runs-on: ubuntu-latest
+    # The trusted-publisher registration names this environment; its deployment
+    # branch policy restricts publishes to jobs running against main.
+    environment: npm
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Node
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          yarn install
+
+      - name: Update npm (OIDC trusted publishing needs >= 11.5.1)
+        # Pinned to 11: npm 12 requires node >= 22 and this workflow runs node 20.
+        run: npm install -g npm@11
+
+      - name: Publish to NPM
+        run: |
+          bash ./bin/publish-npm

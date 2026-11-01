@@ -1,0 +1,88 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  YARN_ENABLE_GLOBAL_CACHE: false
+
+jobs:
+  chore:
+    name: "Testing chores"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: lts/*
+        env:
+          SKIP_YARN_COREPACK_CHECK: 1
+
+      - name: Get the Yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(corepack yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ${{steps.yarn-cache-dir-path.outputs.dir}}
+          key: ${{runner.os}}-yarn-${{hashFiles('**/yarn.lock')}}
+          restore-keys: |
+            ${{runner.os}}-yarn-
+
+      - run: corepack yarn install --immutable
+
+      - name: "Check for type errors"
+        run: corepack yarn typecheck
+
+      - name: "Check for linting errors"
+        run: corepack yarn lint --max-warnings=0
+
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+          - 26
+        platform:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    name: "${{matrix.platform}} w/ Node.js ${{matrix.node}}.x"
+    runs-on: ${{matrix.platform}}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: "Use Node.js ${{matrix.node}}.x"
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: ${{matrix.node}}.x
+        env:
+          SKIP_YARN_COREPACK_CHECK: 1
+
+      - name: Get the Yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(corepack yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+        shell: bash # Needs explicit bash for Windows-support
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ${{steps.yarn-cache-dir-path.outputs.dir}}
+          key: ${{runner.os}}-yarn-${{hashFiles('**/yarn.lock')}}
+          restore-keys: |
+            ${{runner.os}}-yarn-
+
+      - run: corepack yarn install --immutable
+      - run: corepack yarn build # We need the stubs to run the tests
+
+      - run: corepack yarn test
+        env:
+          NOCK_ENV: replay

@@ -1,0 +1,103 @@
+name: Manual NPM Publish
+
+# v7.x releases come from the v7 branch.
+on:
+  workflow_dispatch:
+    inputs:
+      releaseType:
+        description: "Release type - patch, minor or major (from 8.0.0-alpha.N, all give 8.0.0)"
+        required: true
+        type: choice
+        default: "patch"
+        options:
+          - patch
+          - minor
+          - major
+      preRelease:
+        description: 'Pre-release - "yes" publishes X.Y.Z-alpha.N on `next` (the release type applies only from a stable version)'
+        required: true
+        type: choice
+        default: "no"
+        options:
+          - "yes"
+          - "no"
+
+env:
+  NPM_CONFIG_PROVENANCE: true
+
+jobs:
+  authorize:
+    name: Authorize Actor
+    uses: ./.github/workflows/authorize-publisher.yml
+    secrets:
+      WDIO_BOT_GITHUB_TOKEN: ${{ secrets.WDIO_BOT_GITHUB_TOKEN }}
+  release:
+    needs: [authorize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Check Push Access
+        # npm publishes before the git push: stop now if the push token cannot bypass the rulesets of main
+        run: |
+          set -o pipefail
+          api() { curl --fail-with-body --silent --show-error -H "Authorization: Bearer $PUSH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}$1"; }
+          # Assignments, not `$(...)` inside `echo` or `for`, so that a failed API call stops the step
+          repo=$(api "")
+          echo "Write access: $(jq -r '.permissions.push // "not reported for this token"' <<< "$repo")"
+          ids=$(api "/rules/branches/main" | jq -r '[.[].ruleset_id] | unique | .[]')
+          for id in $ids; do
+            ruleset=$(api "/rulesets/$id")
+            name=$(jq -r '.name' <<< "$ruleset")
+            bypass=$(jq -r '.current_user_can_bypass' <<< "$ruleset")
+            echo "Ruleset '$name': current_user_can_bypass=$bypass"
+            if [[ "$bypass" != "always" && "$bypass" != "exempt" ]]; then
+              echo "::error::The push token cannot bypass the ruleset '$name' of main, so the release push would be rejected"
+              exit 1
+            fi
+          done
+        env:
+          PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: 'main'
+          fetch-depth: 0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24.x
+          check-latest: true
+      - name: Git Setup
+        run: |
+          git config --global user.email "bot@webdriver.io"
+          git config --global user.name "WebdriverIO Release Bot"
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build Project
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+      - name: Pick Version
+        id: version
+        run: |
+          CURRENT=$(node -p "require('./package.json').version")
+          if [[ "$PRE_RELEASE" == "yes" ]]; then
+            # From a stable version start X.Y.Z-alpha.0 with the release type, else bump the alpha
+            if [[ "$CURRENT" == *-* ]]; then INCREMENT=""; else INCREMENT="$RELEASE_TYPE"; fi
+            ARGS="$INCREMENT --preRelease=alpha --github.preRelease --github.makeLatest=false --npm.tag=next"
+          else
+            ARGS="$RELEASE_TYPE --npm.tag=latest"
+          fi
+          OUTPUT=$(pnpm exec release-it $ARGS --release-version --ci --npm.skipChecks --no-git.requireCleanWorkingDir)
+          NEXT=$(echo "$OUTPUT" | tail -1)
+          if [[ ! "$NEXT" =~ ^[0-9]+\. ]]; then echo "::error::Cannot compute the next version: '$NEXT'"; exit 1; fi
+          echo "Releasing $NEXT ($CURRENT → $NEXT)"
+          echo "args=$ARGS" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TYPE: ${{ github.event.inputs.releaseType }}
+          PRE_RELEASE: ${{ github.event.inputs.preRelease }}
+      - name: Release
+        run: pnpm exec release-it ${{ steps.version.outputs.args }} --github.release --ci --npm.skipChecks --no-git.requireCleanWorkingDir
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

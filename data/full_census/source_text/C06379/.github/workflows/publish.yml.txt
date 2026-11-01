@@ -1,0 +1,32 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: release
+    runs-on: ubuntu-latest
+    steps:
+      # Setup
+      - uses: actions/checkout@master
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '14.x'
+      - run: npm i -g pnpm@7
+      - run: pnpm i
+      # Publish
+      - run: pnpm compile
+      - run: pnpm test
+        env:
+          GH_TOKEN: ${{ secrets.GH_SPONSORS_TOKEN }}
+      - run: pnpm coverage
+      # This alias makes semantic-release to use pnpm when publishing
+      # Which adds support for "publishConfig.directory"
+      - run: alias npm=pnpm
+      - run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

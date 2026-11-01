@@ -1,0 +1,19 @@
+name: Speakeasy Tagging
+permissions:
+  checks: write
+  contents: write
+  pull-requests: write
+  statuses: write
+"on":
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+jobs:
+  tag:
+    uses: speakeasy-api/sdk-generation-action/.github/workflows/tag.yaml@68f3bfefb79354d39358bf4699863dabd2cea0f6 # v15.60.11
+    with:
+      registry_tags: main
+    secrets:
+      github_access_token: ${{ secrets.GITHUB_TOKEN }}
+      speakeasy_api_key: ${{ secrets.SPEAKEASY_API_KEY }}

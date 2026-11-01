@@ -1,0 +1,37 @@
+name: Version Packages
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'docs/**'
+
+concurrency: version-or-publish-${{ github.ref }}
+
+jobs:
+  version:
+    name: Prepare Release PR
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0 # To get all tags
+          ref: ${{ github.ref }}
+          # Submodules are intentionally not checked out: the Prepare Release PR
+          # job only runs `changeset version`, and commitMode: github-api rejects
+          # executable files anywhere in the working tree (e.g. forge-std scripts).
+      - name: Set up environment
+        uses: ./.github/actions/setup
+      - name: Create Prepare Release PR
+        uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
+        with:
+          title: Prepare Release
+          commit: Prepare Release
+          version: npm run version
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

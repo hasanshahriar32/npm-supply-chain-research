@@ -1,0 +1,64 @@
+{
+  "name": "@rsbuild/plugin-check-syntax",
+  "version": "2.0.1",
+  "repository": "https://github.com/rstackjs/rsbuild-plugin-check-syntax",
+  "homepage": "https://github.com/rstackjs/rsbuild-plugin-check-syntax#readme",
+  "bugs": {
+    "url": "https://github.com/rstackjs/rsbuild-plugin-check-syntax/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "build": "rs lib",
+    "bump": "pnpm version -m \"release: v%s\"",
+    "check": "rs check",
+    "dev": "rs lib -w",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "prepare": "rs hooks",
+    "test": "rs test"
+  },
+  "dependencies": {
+    "acorn": "^8.19.0",
+    "browserslist-to-es-version": "^1.4.2",
+    "htmlparser2": "12.0.0",
+    "source-map": "^0.8.0"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "2.2.13",
+    "@rspack/cli": "^2.2.9",
+    "@rspack/core": "^2.2.9",
+    "@rstackjs/test-utils": "^1.0.0",
+    "@types/node": "^24.19.2",
+    "rslog": "^2.3.0",
+    "rstack": "^0.8.3",
+    "strip-ansi": "^7.2.0",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@rsbuild/core": "^1.0.0 || ^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@rsbuild/core": {
+      "optional": true
+    }
+  },
+  "packageManager": "pnpm@12.11.2",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

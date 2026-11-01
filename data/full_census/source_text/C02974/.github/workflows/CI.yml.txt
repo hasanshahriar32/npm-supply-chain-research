@@ -1,0 +1,72 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: 0 0 * * 0
+jobs:
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - run: npm install
+      - run: npm run -s format:check
+      - run: npm run -s lint
+      - run: npm run -s test:types
+
+  test:
+    name: Test
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        eslint: ["10.x"]
+        node: ["20.19.0", "20.x", "22.x", "24.x", "25.x"]
+        include:
+          - os: ubuntu-latest
+            node: "lts/*"
+            eslint: "8.57.1"
+          - os: macOS-latest
+            node: "lts/*"
+            eslint: "8.57.1"
+          - os: ubuntu-latest
+            node: "lts/*"
+            eslint: "9.x"
+          - os: macOS-latest
+            node: "lts/*"
+            eslint: "9.x"
+          - os: ubuntu-latest
+            node: "lts/*"
+            eslint: "10.x"
+          - os: macOS-latest
+            node: "lts/*"
+            eslint: "10.x"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Install Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install Packages
+        run: npm install
+      - name: Install ESLint ${{ matrix.eslint }}
+        run: npm install --no-save --force eslint@${{ matrix.eslint }}
+      - name: Test
+        run: npm run -s test:tests

@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseType:
+        type: choice
+        description: Release type
+        required: true
+        default: dry-run
+        options:
+          - release
+          - dry-run
+
+jobs:
+  authorize:
+    name: Authorize
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch protection
+        env:
+          RELEASE_TYPE: ${{ github.event.inputs.releaseType }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$RELEASE_TYPE" == "dry-run" ]; then
+            echo "✅ Branch check skipped: dry-run mode allows any branch"
+            echo "Current branch: $REF_NAME"
+            exit 0
+          fi
+          if [ "$REF_NAME" != "v8.x" ]; then
+            echo "❌ This workflow can only be triggered from the v8.x branch."
+            echo "Current branch: $REF_NAME"
+            exit 1
+          fi
+          echo "✅ Branch check passed: running from v8.x"
+
+      - name: ${{ github.actor }} permission check to do a release
+        uses: 'lannonbr/repo-permission-check-action@2bb8c89ba8bf115c4bfab344d6a6f442b24c9a1f' # 2.0.2
+        with:
+          permission: 'write'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: [authorize]
+    permissions:
+      id-token: write # Required for OIDC (AWS + npm Trusted Publishing)
+      contents: write
+    env:
+      GIT_AUTHOR_NAME: amplitude-sdk-bot
+      GIT_AUTHOR_EMAIL: amplitude-sdk-bot@users.noreply.github.com
+      GIT_COMMITTER_NAME: amplitude-sdk-bot
+      GIT_COMMITTER_EMAIL: amplitude-sdk-bot@users.noreply.github.com
+    strategy:
+      matrix:
+        node-version: [24.x] # Ensure npm 11.5.1 or later is installed for OIDC
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2
+        with:
+          role-to-assume: arn:aws:iam::358203115967:role/github-actions-role
+          aws-region: us-west-2
+
+      - name: node_modules cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: Set up Python
+        uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v2
+        with:
+          python-version: '3.8.x'
+
+      - name: Install boto3 for deploy_s3.python
+        run: pip install boto3==1.14.63
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: make test
+
+      # npm auth via OIDC (Trusted Publishing); no NPM_TOKEN needed when package has Trusted Publisher on npmjs.com
+      - name: Release --dry-run # Uses release.config.js
+        if: ${{ github.event.inputs.releaseType == 'dry-run' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+        run: npx semantic-release --dry-run
+
+      - name: Release # Uses release.config.js
+        if: ${{ github.event.inputs.releaseType == 'release' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+        run: npx semantic-release

@@ -1,0 +1,30 @@
+name: test-windows
+
+on:
+  push:
+    branches: '*'
+  pull_request:
+    branches: '*'
+
+jobs:
+  test:
+    # windows-latest is Windows Server 2025, which ships without wmic, so the
+    # integration tests here run against the PowerShell fallback in lib/get.js.
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      # Node 26+ is not yet supported by the coverage tool (c8); revisit
+      # "current" once the toolchain catches up.
+      matrix:
+        node: [24, 22, 20, 18]
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+      - name: Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install dependencies
+        run: npm install
+      - name: Run tests
+        run: npm test

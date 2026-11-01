@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: "ubuntu-latest"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "yarn"
+
+      - name: Use node_modules cache
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('./yarn.lock') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      - name: Project installation
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: yarn install --prefer-offline --frozen-lockfile --non-interactive
+        env:
+          CI: true
+
+      - name: Basic script runs
+        run: node index.js
+
+      - name: Checks
+        run: yarn run check
+        env:
+          # Webpack fails due to crypto enforcements in Node 17+
+          # See, e.g., https://github.com/webpack/webpack/issues/14532
+          NODE_OPTIONS: "--openssl-legacy-provider"

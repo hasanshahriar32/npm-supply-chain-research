@@ -1,0 +1,167 @@
+{
+  "name": "tldts-root",
+  "description": "Library to work against complex domain names, subdomains and URIs.",
+  "private": true,
+  "license": "MIT",
+  "homepage": "https://github.com/remusao/tldts#readme",
+  "author": {
+    "name": "Rémi Berson"
+  },
+  "contributors": [
+    "Alexei <alexeiatyahoodotcom@gmail.com>",
+    "Alexey <kureev-mail@ya.ru>",
+    "Andrew <chefandrew@seomoz.org>",
+    "Johannes Ewald <johannes.ewald@peerigon.com>",
+    "Jérôme Desboeufs <jerome.desboeufs@gmail.com>",
+    "Kelly Campbell <kelly.a.campbell@gmail.com>",
+    "Kiko Beats <josefrancisco.verdu@gmail.com>",
+    "Kris Reeves <krisreeves@searchfanatics.com>",
+    "Krzysztof Jan Modras <chrmod@chrmod.net>",
+    "Olivier Melcher <olivier.melcher@gmail.com>",
+    "Rémi Berson <remi.berson@pm.me>",
+    "Saad Rashid <srashid@lendinghome.com>",
+    "Thomas Parisot <hi@oncletom.io>",
+    "Timo Tijhof <krinklemail@gmail.com>",
+    "Xavier Damman <xdamman@gmail.com>",
+    "Yehezkiel Syamsuhadi <yehezkielbs@gmail.com>"
+  ],
+  "bugs": {
+    "url": "https://github.com/remusao/tldts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/remusao/tldts.git"
+  },
+  "packageManager": "yarn@4.18.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "yarn install --immutable",
+    "build": "tsc --build ./tsconfig.project.json && lerna run build",
+    "watch": "tsc --build ./tsconfig.project.json --watch",
+    "bundle": "lerna run --concurrency 2 bundle",
+    "clean": "lerna run --parallel clean && lerna clean --yes && rimraf node_modules",
+    "format": "prettier --write .",
+    "lint": "eslint .",
+    "test": "lerna run --concurrency 2 test",
+    "bench": "make -C bench",
+    "generate-data": "ts-node -O '{\"module\": \"commonjs\"}' ./packages/tldts-utils/bin/update.js",
+    "update": "git submodule update --init --remote && yarn generate-data",
+    "update:check": "yarn generate-data && git diff --exit-code -- packages/tldts/src/data/trie.ts packages/tldts-icann/src/data/trie.ts packages/tldts-experimental/src/data/hashes.ts",
+    "release": "auto shipit"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.2",
+    "auto": "^11.3.6",
+    "benchmark": "^2.1.4",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "globals": "^17.12.0",
+    "lerna": "^10.0.1",
+    "prettier": "^3.9.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1"
+  },
+  "resolutions": {
+    "lerna/js-yaml": "^4.3.2",
+    "lerna/pacote": "^21.5.1",
+    "nx/smol-toml": "^1.7.1"
+  },
+  "dependenciesMeta": {
+    "nx": {
+      "built": false
+    }
+  },
+  "auto": {
+    "name": "Rémi Berson",
+    "email": "remi@cliqz.com",
+    "plugins": [
+      "npm"
+    ],
+    "labels": [
+      {
+        "name": "PR: Update PSL :scroll:",
+        "description": "Update upstream public suffix list",
+        "changelogTitle": ":scroll: Update Public Suffix List",
+        "releaseType": "patch",
+        "overwrite": true,
+        "color": "#c2e0c6"
+      },
+      {
+        "name": "PR: Breaking Change :boom:",
+        "description": "Increment major version when merged",
+        "changelogTitle": ":boom: Breaking Change",
+        "releaseType": "major",
+        "overwrite": true,
+        "color": "#e2372b"
+      },
+      {
+        "name": "PR: New Feature :rocket:",
+        "description": "Increment minor version when merged",
+        "changelogTitle": ":rocket: New Feature",
+        "releaseType": "minor",
+        "overwrite": true,
+        "color": "#2e449b"
+      },
+      {
+        "name": "PR: Performance :running_woman:",
+        "description": "Increment minor version when merged",
+        "changelogTitle": ":running_woman: Performance",
+        "releaseType": "minor",
+        "overwrite": true,
+        "color": "#ead99f"
+      },
+      {
+        "name": "PR: Bug Fix :bug:",
+        "description": "Increment patch version when merged",
+        "changelogTitle": ":bug: Bug Fix",
+        "releaseType": "patch",
+        "overwrite": true,
+        "color": "#56dd97"
+      },
+      {
+        "name": "PR: Polish :nail_care:",
+        "description": "Increment patch version when merged",
+        "changelogTitle": ":nail_care: Polish",
+        "releaseType": "patch",
+        "overwrite": true,
+        "color": "#a9bbe8"
+      },
+      {
+        "name": "PR: Internal :house:",
+        "description": "Changes only affect internals",
+        "changelogTitle": ":house: Internal",
+        "releaseType": "none",
+        "overwrite": true,
+        "color": "#5b1482"
+      },
+      {
+        "name": "PR: Docs :memo:",
+        "description": "Changes only affect documentation",
+        "changelogTitle": ":memo: Documentation",
+        "releaseType": "none",
+        "overwrite": true,
+        "color": "#d2f28a"
+      },
+      {
+        "name": "skip-release",
+        "description": "Preserve the current version when merged",
+        "releaseType": "skip",
+        "overwrite": true,
+        "color": "#e069cf"
+      },
+      {
+        "name": "PR: Dependencies :nut_and_bolt:",
+        "description": "Changes only update dependencies",
+        "changelogTitle": ":nut_and_bolt: Dependencies",
+        "releaseType": "none",
+        "overwrite": true,
+        "color": "#5dbdcc"
+      }
+    ]
+  }
+}

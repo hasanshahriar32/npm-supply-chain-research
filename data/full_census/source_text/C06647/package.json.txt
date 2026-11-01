@@ -1,0 +1,118 @@
+{
+  "private": true,
+  "name": "micromark-mono",
+  "version": "0.0.1",
+  "description": "",
+  "license": "MIT",
+  "keywords": [],
+  "repository": "micromark/micromark",
+  "bugs": "https://github.com/micromark/micromark/issues",
+  "funding": [
+    {
+      "type": "GitHub Sponsors",
+      "url": "https://github.com/sponsors/unifiedjs"
+    },
+    {
+      "type": "OpenCollective",
+      "url": "https://opencollective.com/unified"
+    }
+  ],
+  "author": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+  "contributors": [
+    "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+    "Bogdan Chadkin <trysound@yandex.ru>",
+    "Christian Murphy <christian.murphy.42@gmail.com>",
+    "Marouane Fazouane <fazouanem3@gmail.com>",
+    "John Otander <johnotander@gmail.com> (https://johno.com)",
+    "Stephan Schneider <stephanschndr@gmail.com>",
+    "Victor Felder <victor@draft.li> (https://draft.li)",
+    "Mudit Ameta <zeusdeux@gmail.com> (https://mudit.xyz)",
+    "Merlijn Vos <merlijn@soverin.net>"
+  ],
+  "type": "module",
+  "workspaces": [
+    "packages/micromark-util-types",
+    "packages/micromark-util-symbol",
+    "packages/micromark-util-character",
+    "packages/micromark-build",
+    "packages/micromark-factory-destination",
+    "packages/micromark-factory-label",
+    "packages/micromark-factory-space",
+    "packages/micromark-factory-title",
+    "packages/micromark-factory-whitespace",
+    "packages/micromark-util-chunked",
+    "packages/micromark-util-classify-character",
+    "packages/micromark-util-combine-extensions",
+    "packages/micromark-util-decode-numeric-character-reference",
+    "packages/micromark-util-decode-string",
+    "packages/micromark-util-edit-map",
+    "packages/micromark-util-encode",
+    "packages/micromark-util-html-tag-name",
+    "packages/micromark-util-normalize-identifier",
+    "packages/micromark-util-resolve-all",
+    "packages/micromark-util-sanitize-uri",
+    "packages/micromark-util-subtokenize",
+    "packages/micromark-core-commonmark",
+    "packages/micromark"
+  ],
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/concat-stream": "^2.0.0",
+    "@types/ms": "^2.0.0",
+    "@types/node": "^26.0.0",
+    "c8": "^12.0.0",
+    "character-entities": "^2.0.0",
+    "commonmark.json": "^0.31.0",
+    "concat-stream": "^2.0.0",
+    "esbuild": "^0.28.0",
+    "globals": "^17.0.0",
+    "gzip-size-cli": "^5.0.0",
+    "ms": "^2.0.0",
+    "prettier": "^3.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-preset-wooorm": "^11.0.0",
+    "rollup": "^4.0.0",
+    "type-coverage": "^2.0.0",
+    "typescript": "^6.0.0",
+    "xo": "^4.0.0"
+  },
+  "scripts": {
+    "build": "tsc --build --clean && tsc && type-coverage && npm run build --workspaces --if-present && rollup -c --silent && gzip-size micromark.min.js && gzip-size --raw micromark.min.js",
+    "format": "remark . -qfo && prettier . -w --log-level warn && xo --fix",
+    "#": "fuzzer turned off for now as `jazzer` is unmaintained, with sec vulns",
+    "#test-fuzz": "esbuild micromark --bundle --conditions=development --format=cjs --platform=node --target=es2022 > test/fuzz-bundle.cjs && node script/generate-fixtures.js && jazzer test/fuzz.cjs test/fixtures -- -max_total_time=1800",
+    "test-api-dev": "node --conditions development test/index.js",
+    "test-api-prod": "node --conditions production test/index.js",
+    "test-api": "npm run test-api-dev && npm run test-api-prod",
+    "test-coverage": "c8 --100 --reporter lcov npm run test-api-dev",
+    "test": "npm run build && npm run format && npm run test-coverage"
+  },
+  "prettier": {
+    "bracketSpacing": false,
+    "semi": false,
+    "singleQuote": true,
+    "tabWidth": 2,
+    "trailingComma": "none",
+    "useTabs": false
+  },
+  "remarkConfig": {
+    "plugins": [
+      "remark-preset-wooorm",
+      [
+        "remark-lint-no-html",
+        false
+      ],
+      [
+        "remark-lint-maximum-line-length",
+        false
+      ]
+    ]
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "detail": true,
+    "ignoreCatch": true,
+    "strict": true
+  }
+}

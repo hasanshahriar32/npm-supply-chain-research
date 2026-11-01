@@ -1,0 +1,52 @@
+{
+  "name": "get-folder-size",
+  "version": "5.0.0",
+  "description": "Get the size of a folder by iterating through its sub-files and -folders.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "bin": {
+    "get-folder-size": "./bin/get-folder-size.js"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "bin/get-folder-size.js"
+  ],
+  "engines": {
+    "node": ">=18.11.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "eslint": "^9.29.0",
+    "globals": "^16.2.0",
+    "memfs": "^4.17.2",
+    "prettier": "^3.5.3",
+    "tap": "^21.1.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.1"
+  },
+  "scripts": {
+    "tap": "tap",
+    "lint": "eslint \"**/*.{ts,js}\" --fix",
+    "lint:nofix": "eslint \"**/*.{ts,js}\"",
+    "format": "prettier --write .",
+    "format:nofix": "prettier --check .",
+    "test": "npm run lint:nofix && npm run tap"
+  },
+  "keywords": [
+    "folder",
+    "directory",
+    "size"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alessioalex/get-folder-size.git"
+  },
+  "author": "Alexandru Vladutu <alexandru.vladutu@gmail.com>",
+  "license": "MIT"
+}

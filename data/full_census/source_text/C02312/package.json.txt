@@ -1,0 +1,52 @@
+{
+  "name": "module-lookup-amd",
+  "version": "10.0.1",
+  "description": "Resolve aliased dependency paths using a RequireJS config",
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "bin/cli.js",
+    "index.js"
+  ],
+  "bin": {
+    "lookup-amd": "bin/cli.js"
+  },
+  "scripts": {
+    "lint": "xo",
+    "fix": "xo --fix",
+    "vitest": "vitest",
+    "test": "npm run lint && vitest run",
+    "test:ci": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dependents/node-module-lookup-amd.git"
+  },
+  "keywords": [
+    "amd",
+    "module",
+    "lookup",
+    "alias"
+  ],
+  "author": "Joel Kemp <joel@mrjoelkemp.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dependents/node-module-lookup-amd/issues"
+  },
+  "homepage": "https://github.com/dependents/node-module-lookup-amd",
+  "engines": {
+    "node": ">=20.19.0 || >=22.12.0"
+  },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "requirejs": "^2.3.8",
+    "requirejs-config-file": "^4.0.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "vitest": "^4.1.10",
+    "xo": "^2.0.2"
+  }
+}

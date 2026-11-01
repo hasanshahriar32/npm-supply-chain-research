@@ -1,0 +1,33 @@
+name: Pull request label policy
+
+on:
+    pull_request:
+        types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+    contents: read # required for actions/checkout to read the repository source
+    issues: read # required to read pull request labels
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    pull-request-label-policy:
+        runs-on: ubuntu-latest
+        name: Pull request label policy
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Use Node.js
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  node-version: 26
+            - name: Install dependencies
+              run: npm clean-install --ignore-scripts
+            - name: Validate pull request label
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+              run: npx just validate-pr-labels "$PULL_REQUEST_NUMBER"

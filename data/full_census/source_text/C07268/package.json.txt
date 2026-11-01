@@ -1,0 +1,35 @@
+{
+  "name": "path2d-polyfill-repo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev": "turbo run dev",
+    "format:check": "prettier --check '**' --ignore-unknown",
+    "format:write": "prettier --write '**' --ignore-unknown",
+    "lint": "eslint .",
+    "prepare-release": "changeset",
+    "publish-packages": "changeset publish",
+    "test": "turbo run test",
+    "validate": "pnpm format:check & pnpm lint & pnpm test",
+    "version-publish-packages": "changeset version && changeset publish"
+  },
+  "prettier": "@qlik/prettier-config",
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@qlik/eslint-config": "^2.1.7",
+    "@qlik/prettier-config": "^1.1.0",
+    "@qlik/tsconfig": "^1.1.0",
+    "@vitest/coverage-v8": "^5.0.5",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.5"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=22.13"
+  }
+}

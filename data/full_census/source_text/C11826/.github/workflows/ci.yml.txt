@@ -1,0 +1,153 @@
+name: CI
+
+permissions: {}
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+    paths-ignore: &paths-ignore
+      - "**/*.md"
+      - "!.github/workflows/ci.yml"
+  push:
+    branches:
+      - main
+    paths-ignore: *paths-ignore
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+          - os: macos-latest
+          - os: ubuntu-24.04-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: warm
+          tools: just
+      - uses: ./.github/actions/pnpm
+      - run: cargo check --all-features --locked
+      - run: just test
+        timeout-minutes: 3
+
+  test-big-endian:
+    name: Test big-endian # s390x-unknown-linux-gnu is a big-endian
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          save-cache: ${{ github.ref_name == 'main' }}
+          cache-key: s390x-unknown-linux-gnu
+          tools: cross
+      - uses: ./.github/actions/pnpm
+      - run: cross check --all-features --locked --target s390x-unknown-linux-gnu
+      - run: cross test --target s390x-unknown-linux-gnu
+        timeout-minutes: 3
+      - run: cross test --all-features --target s390x-unknown-linux-gnu
+        timeout-minutes: 3
+      - run: git diff --exit-code # Must commit everything
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          components: clippy rust-docs
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+      - run: RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --all-features
+      - uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+        with:
+          files: .
+
+  wasm32-wasip1:
+    name: Test wasm32-wasip1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: wasm32-wasip1
+          save-cache: ${{ github.ref_name == 'main' }}
+          tools: wasmtime
+
+      - uses: ./.github/actions/pnpm
+
+      - name: Install target
+        run: rustup target add wasm32-wasip1
+
+      - name: Test
+        run: cargo test --target wasm32-wasip1 --profile wasm-test -- --nocapture
+        timeout-minutes: 3
+        env:
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: "wasmtime run -W bulk-memory=y --dir ${{ github.workspace }}::/ --"
+
+  wasm32-unknown-unknown:
+    name: Check wasm32-unknown-unknown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: wasm32-unknown-unknown
+          save-cache: ${{ github.ref_name == 'main' }}
+
+      - name: Check
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo check --all-features --target wasm32-unknown-unknown
+
+  wasi:
+    name: Test wasi target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: taiki-e/checkout-action@7d1e50e93dc4fb3bba58f85018fadf77898aee8b # v1.4.2
+
+      - uses: oxc-project/setup-rust@3d6fb132fbe7cdcb66bf8ec193911c2945369d12 # v1.0.17
+        with:
+          cache-key: wasi
+          save-cache: ${{ github.ref_name == 'main' }}
+          tools: wasmtime
+
+      - uses: ./.github/actions/pnpm
+
+      - name: Build
+        run: |
+          rustup target add wasm32-wasip1-threads
+          pnpm build --target wasm32-wasip1-threads
+
+      - name: Test
+        run: pnpm run test
+        timeout-minutes: 3
+        env:
+          WASI_TEST: 1
+
+      - name: Cargo Test
+        run: cargo test --target wasm32-wasip1-threads --profile wasm-test -- --nocapture
+        timeout-minutes: 3
+        env:
+          CARGO_TARGET_WASM32_WASIP1_THREADS_RUNNER: "wasmtime run -W bulk-memory=y -W threads=y -W shared-memory=y -S threads=y --dir ${{ github.workspace }}::/ --"
+
+      - run: git diff --exit-code # Must commit index.d.ts

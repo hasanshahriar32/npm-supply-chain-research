@@ -1,0 +1,57 @@
+{
+  "name": "root",
+  "private": true,
+  "version": "0.0.6",
+  "packageManager": "pnpm@12.4.2",
+  "description": "A suite of web components for a mutation testing report.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "nx": {},
+  "scripts": {
+    "clean": "rimraf --glob packages/*/{dist,dist-tsc,src-generated,*.tsbuildinfo}",
+    "all": "nx affected --target=lint:prettier,lint,build,test",
+    "build": "nx run-many --target=build --exclude=root",
+    "lint:prettier": "prettier --check .",
+    "lint:fix": "prettier --write . && nx run-many --target=lint --fix",
+    "build:tsc": "tsc --build",
+    "start": "nx start elements",
+    "start:tsc": "tsc --build --watch",
+    "download-incremental-reports": "bash tasks/download-incremental-reports.sh",
+    "lerna:version:patch": "lerna version patch",
+    "lerna:version:minor": "lerna version minor",
+    "lerna:version:major": "lerna version major",
+    "lerna:publish": "lerna publish from-git --yes --no-verify-access",
+    "generate": "nx run report-schema:generate",
+    "install-browsers": "pnpm --filter mutation-testing-elements exec playwright install chromium firefox"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stryker-mutator/mutation-testing-elements.git"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/stryker-mutator/mutation-testing-elements/issues"
+  },
+  "homepage": "https://github.com/stryker-mutator/mutation-testing-elements#readme",
+  "devDependencies": {
+    "@tsconfig/node-lts": "24.0.1",
+    "@tsconfig/recommended": "1.0.13",
+    "@tsconfig/strictest": "2.0.8",
+    "@types/chai": "5.2.3",
+    "@types/mocha": "10.0.10",
+    "@types/node": "24.19.2",
+    "@types/sinon": "22.0.1",
+    "chai": "6.3.0",
+    "json-schema-to-typescript": "16.0.0",
+    "lerna": "10.1.1",
+    "mocha": "11.8.0",
+    "nx": "24.0.1",
+    "prettier": "3.9.6",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "rimraf": "6.1.3",
+    "sinon": "22.1.0",
+    "@typescript/native": "npm:typescript@7.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "babel-remove-types",
+  "version": "2.0.0",
+  "type": "module",
+  "keywords": [
+    "typescript",
+    "babel",
+    "types"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ember-cli/babel-remove-types"
+  },
+  "license": "MIT",
+  "contributors": [
+    "Chris Freeman",
+    "Chris Manson <chris@manson.ie>"
+  ],
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src test",
+    "prepare": "pnpm build",
+    "prepublishOnly": "pnpm test && pnpm build",
+    "postpublish": "pnpm clean",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/plugin-syntax-decorators": "^7.28.6",
+    "@babel/plugin-transform-typescript": "^7.28.6",
+    "prettier": "^3.8.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/babel__core": "^7.1.18",
+    "@types/babel__traverse": "^7.20.6",
+    "eslint": "^10.1.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^17.4.0",
+    "release-plan": "^0.17.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.1",
+    "vitest": "^4.1.0"
+  },
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  }
+}

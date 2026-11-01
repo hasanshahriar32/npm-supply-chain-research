@@ -1,0 +1,147 @@
+name: PR Bundle Size
+
+on:
+  pull_request:
+    # Default activity types (opened, synchronize, reopened) — synchronize fires
+    # on every push to the PR branch, so reruns are automatic.
+
+concurrency:
+  group: pr-bundle-size-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# Read-only: fork PRs get a read-only token regardless, and this workflow
+# builds untrusted PR code. The comment is posted by pr-bundle-size-comment.yml
+# (workflow_run), which has write access but never runs PR code.
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      themes: ${{ steps.filter.outputs.themes }}
+      components: ${{ steps.filter.outputs.components }}
+      utils: ${{ steps.filter.outputs.utils }}
+      any: ${{ steps.filter.outputs.changes != '[]' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'src/**'
+              - 'rollup.config.mjs'
+              - 'tsconfig.json'
+            themes:
+              - 'packages/themes/**'
+            components:
+              - 'packages/components/**'
+            utils:
+              - 'packages/utils/**'
+
+  size:
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR HEAD
+        uses: actions/checkout@v4
+        with:
+          path: pr
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Checkout base
+        uses: actions/checkout@v4
+        with:
+          path: base
+          ref: ${{ github.event.pull_request.base.sha }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: |
+            pr/pnpm-lock.yaml
+            base/pnpm-lock.yaml
+
+      - name: Install (PR)
+        working-directory: pr
+        run: pnpm install --frozen-lockfile
+
+      - name: Build PR
+        working-directory: pr
+        run: |
+          if [[ "${{ needs.detect.outputs.core }}" == "true" ]]; then
+            pnpm exec rollup -c
+          fi
+          if [[ "${{ needs.detect.outputs.themes }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/themes build
+          fi
+          if [[ "${{ needs.detect.outputs.components }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/components build
+          fi
+          if [[ "${{ needs.detect.outputs.utils }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/utils build
+          fi
+
+      - name: Measure PR sizes
+        working-directory: pr
+        run: node scripts/measure-build.mjs > ../pr-sizes.json
+        env:
+          MEASURE_CORE: ${{ needs.detect.outputs.core }}
+          MEASURE_THEMES: ${{ needs.detect.outputs.themes }}
+          MEASURE_COMPONENTS: ${{ needs.detect.outputs.components }}
+          MEASURE_UTILS: ${{ needs.detect.outputs.utils }}
+
+      - name: Install (base)
+        working-directory: base
+        run: pnpm install --frozen-lockfile
+
+      - name: Build base
+        working-directory: base
+        run: |
+          if [[ "${{ needs.detect.outputs.core }}" == "true" ]]; then
+            pnpm exec rollup -c
+          fi
+          if [[ "${{ needs.detect.outputs.themes }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/themes build
+          fi
+          if [[ "${{ needs.detect.outputs.components }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/components build
+          fi
+          if [[ "${{ needs.detect.outputs.utils }}" == "true" ]]; then
+            pnpm --filter @json-edit-react/utils build
+          fi
+
+      - name: Measure base sizes
+        working-directory: base
+        run: node ../pr/scripts/measure-build.mjs > ../base-sizes.json
+        env:
+          MEASURE_CORE: ${{ needs.detect.outputs.core }}
+          MEASURE_THEMES: ${{ needs.detect.outputs.themes }}
+          MEASURE_COMPONENTS: ${{ needs.detect.outputs.components }}
+          MEASURE_UTILS: ${{ needs.detect.outputs.utils }}
+
+      - name: Format comment
+        run: node pr/scripts/format-size-diff.mjs base-sizes.json pr-sizes.json > comment.md
+
+      - name: Add report to job summary
+        run: cat comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save PR number
+        run: echo "${{ github.event.pull_request.number }}" > pr-number
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-bundle-size
+          path: |
+            comment.md
+            pr-number
+          retention-days: 5

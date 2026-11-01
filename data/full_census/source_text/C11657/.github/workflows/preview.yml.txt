@@ -1,0 +1,69 @@
+name: PR preview release
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/preview.yml
+      # core
+      - packages/typeorm/src/**
+      - packages/typeorm/gulpfile.ts
+      - packages/typeorm/package.json
+      - packages/typeorm/tsconfig*.json
+      # codemod
+      - packages/codemod/src/**
+      - packages/codemod/package.json
+      - packages/codemod/tsconfig*.json
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changes: ${{ steps.detect-changes.outputs.changes }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: detect-changes
+        with:
+          filters: |
+            ci: &ci
+              - .github/workflows/preview.yml
+
+            typeorm:
+              - *ci
+              - packages/typeorm/**
+
+            codemod:
+              - *ci
+              - packages/codemod/**
+
+  preview:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.changes != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-node
+
+      # typeorm
+      - name: build typeorm
+        if: contains(needs.detect-changes.outputs.changes, 'typeorm')
+        run: |
+          pnpm run package
+          echo "PACKAGES=./packages/typeorm/build/package" >> "$GITHUB_ENV"
+
+      # @typeorm/codemod
+      - name: build codemod
+        if: contains(needs.detect-changes.outputs.changes, 'codemod')
+        run: |
+          pnpm run build
+          echo "PACKAGES=${{ env.PACKAGES }} ./packages/codemod" >> "$GITHUB_ENV"
+        working-directory: packages/codemod
+
+      # publish
+      - run: pnpm exec pkg-pr-new publish ${{ env.PACKAGES }} --template='./playground'

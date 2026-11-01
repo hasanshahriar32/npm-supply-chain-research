@@ -1,0 +1,234 @@
+name: release-artifacts-check
+
+# Merge gate on the Changesets "Version Packages" PR. Goes green only when
+# every artifact family whose sources changed since its last release carries
+# freshly rebuilt binaries, and each of the three wheel sets matches its own
+# crate's version (families version independently, so there is no single
+# release version). Non-Changesets PRs short-circuit to success.
+#
+# Workflow:
+#   1. Changesets opens a PR on `changeset-release/main` bumping versions.
+#   2. This check goes red — artifacts are stale or missing.
+#   3. Maintainer comments `/build` on the PR; build-artifacts.yml rebuilds
+#      every platform on GitHub runners and pushes the artifacts to the branch.
+#      (Locally that is: pnpm build:rust, build:rust:ssim, build:rust:milo,
+#      build:rust:codec-png, build:wasm, build:wasm:interpret,
+#      build:wasm:milo, build:wasm:codec-png and the
+#      build:python:*:all scripts with
+#      -- --version <NEW>, committed and pushed.)
+#   4. Check turns green; PR is mergeable; merge fires release.yml.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: verify release artifacts for current version
+    runs-on: ubuntu-latest
+    steps:
+      - name: short-circuit for non-Changesets PRs
+        id: gate
+        run: |
+          if [[ "${{ github.head_ref }}" == changeset-release/* ]]; then
+            echo "release_pr=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release_pr=false" >> "$GITHUB_OUTPUT"
+            echo "Not a Changesets release PR; check is a no-op."
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.release_pr == 'true'
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Need base commit for the staleness diff on binaries whose
+          # filenames don't encode the version (.node, CLI, .wasm), and the
+          # release tags each family's sources are compared against.
+          fetch-depth: 0
+          fetch-tags: true
+          # We only diff LFS pointer hashes (changed pointer = changed
+          # binary); pulling the actual blobs from LFS would burn
+          # bandwidth on every PR sync for no information gained.
+          lfs: false
+
+      - name: verify all expected files present and fresh
+        if: steps.gate.outputs.release_pr == 'true'
+        run: |
+          set -euo pipefail
+          crate_version() { sed -nE 's/^version *= *"([^"]+)".*/\1/p' "crates/$1/Cargo.toml" | head -1; }
+          CORE_VER=$(crate_version blazediff)
+          SSIM_VER=$(crate_version blazediff-ssim)
+          INTERPRET_VER=$(crate_version blazediff-interpret)
+          echo "Wheel versions: blazediff=$CORE_VER blazediff-ssim=$SSIM_VER blazediff-interpret=$INTERPRET_VER"
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          echo "Base SHA: $BASE_SHA"
+
+          # Binaries and WASM only need rebuilding when the crate sources
+          # compiled into them changed since the family's last published
+          # release tag. Version churn from `changeset version` doesn't
+          # count — changed-artifacts.js masks it — so an interpret-only
+          # release doesn't demand fresh core binaries. Same script drives
+          # build-artifacts.yml, keeping what /build produces aligned with
+          # what this check requires.
+          eval "$(node scripts/release/changed-artifacts.js "$BASE_SHA")"
+          echo "families needing fresh artifacts: core=$core ssim=$ssim interpret=$interpret wasm=$wasm wasm_interpret=$wasm_interpret milo=$milo wasm_milo=$wasm_milo codec_png=$codec_png wasm_codec_png=$wasm_codec_png"
+
+          # With per-family version groups there is no all-bump safety net:
+          # crate sources changed without a changeset would ship stale
+          # packages. Fail loudly instead.
+          node scripts/release/changed-artifacts.js --check-bumps "$BASE_SHA"
+
+          missing=()
+          stale=()
+
+          require_file() {
+            local f="$1"
+            if [[ ! -f "$f" ]]; then missing+=("$f"); fi
+          }
+
+          # Files whose names don't encode version: require both presence
+          # AND a diff vs. base, otherwise a leftover from the prior release
+          # would silently satisfy the check.
+          require_fresh_file() {
+            local f="$1"
+            if [[ ! -f "$f" ]]; then
+              missing+=("$f")
+            elif git diff --quiet "$BASE_SHA" -- "$f"; then
+              stale+=("$f (unchanged since $BASE_SHA)")
+            fi
+          }
+
+          # --- Python wheels (version is in filename) ----------------------
+          # One set per PyPI distribution, each at its own crate's version, with
+          # the crate name PEP 427-escaped into the filename.
+          require_wheels() {
+            local crate="$1" version="$2" prefix="${1//-/_}"
+            for plat in \
+                "macosx_10_12_x86_64" \
+                "macosx_11_0_arm64" \
+                "manylinux_2_17_aarch64.manylinux2014_aarch64" \
+                "manylinux_2_17_x86_64.manylinux2014_x86_64" \
+                "win_amd64" \
+                "win_arm64"; do
+              require_file "crates/${crate}/wheels/${prefix}-${version}-cp38-abi3-${plat}.whl"
+            done
+          }
+          require_wheels blazediff "$CORE_VER"
+          require_wheels blazediff-ssim "$SSIM_VER"
+          require_wheels blazediff-interpret "$INTERPRET_VER"
+
+          if [[ "$core" == "true" ]]; then
+            # --- NAPI .node + per-platform CLI -----------------------------
+            for plat in darwin-arm64 darwin-x64 linux-arm64 linux-x64; do
+              require_fresh_file "packages/core-native/core-native-${plat}/blazediff.node"
+              require_fresh_file "packages/core-native/core-native-${plat}/blazediff"
+            done
+            for plat in win32-arm64 win32-x64; do
+              require_fresh_file "packages/core-native/core-native-${plat}/blazediff.node"
+              require_fresh_file "packages/core-native/core-native-${plat}/blazediff.exe"
+            done
+          fi
+
+          if [[ "$wasm" == "true" ]]; then
+            # --- WASM ------------------------------------------------------
+            # The module is the freshness proof for this family. Its JS glue is
+            # not: wasm-bindgen derives it from the exported API alone, so a
+            # release that changes the implementation but not the surface
+            # regenerates it byte-for-byte identical, and a content diff cannot
+            # tell that apart from "never rebuilt". Requiring both went red on
+            # the v6.0.1 release for exactly that reason. build-wasm.sh writes
+            # the pair in one invocation, so the module's freshness already
+            # covers the glue.
+            require_fresh_file "packages/core-wasm/wasm/blazediff_bg.wasm"
+            require_file "packages/core-wasm/wasm/blazediff.js"
+          fi
+
+          if [[ "$wasm_interpret" == "true" ]]; then
+            # --- INTERPRET WASM --------------------------------------------
+            # Same module-is-the-proof reasoning as the core wasm block above.
+            require_fresh_file "packages/interpret-wasm/wasm/blazediff_interpret_bg.wasm"
+            require_file "packages/interpret-wasm/wasm/blazediff_interpret.js"
+          fi
+
+          if [[ "$ssim" == "true" ]]; then
+            # --- SSIM NAPI .node -------------------------------------------
+            for plat in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64; do
+              require_fresh_file "packages/ssim-native/ssim-native-${plat}/blazediff_ssim.node"
+            done
+          fi
+
+          if [[ "$interpret" == "true" ]]; then
+            # --- Interpret NAPI .node --------------------------------------
+            for plat in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64; do
+              require_fresh_file "packages/interpret-native/interpret-native-${plat}/blazediff_interpret.node"
+            done
+          fi
+
+          if [[ "$milo" == "true" ]]; then
+            # --- MILO NAPI .node -------------------------------------------
+            for plat in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64; do
+              require_fresh_file "packages/milo-native/milo-native-${plat}/blazediff_milo.node"
+            done
+          fi
+
+          if [[ "$wasm_milo" == "true" ]]; then
+            # --- MILO WASM -------------------------------------------------
+            # Same module-is-the-proof reasoning as the core wasm block above.
+            require_fresh_file "packages/milo-wasm/wasm/blazediff_milo_bg.wasm"
+            require_file "packages/milo-wasm/wasm/blazediff_milo.js"
+          fi
+
+          if [[ "$codec_png" == "true" ]]; then
+            # --- CODEC-PNG NAPI .node --------------------------------------
+            for plat in darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64; do
+              require_fresh_file "packages/codec-png-native/codec-png-native-${plat}/blazediff_png.node"
+            done
+          fi
+
+          if [[ "$wasm_codec_png" == "true" ]]; then
+            # --- CODEC-PNG WASM --------------------------------------------
+            # Same module-is-the-proof reasoning as the core wasm block above.
+            require_fresh_file "packages/codec-png-wasm/wasm/blazediff_png_bg.wasm"
+            require_file "packages/codec-png-wasm/wasm/blazediff_png.js"
+          fi
+
+          if [[ ${#missing[@]} -gt 0 || ${#stale[@]} -gt 0 ]]; then
+            echo "::error::Release artifacts are not ready."
+            if [[ ${#missing[@]} -gt 0 ]]; then
+              echo "Missing:"
+              for f in "${missing[@]}"; do echo "  - $f"; done
+            fi
+            if [[ ${#stale[@]} -gt 0 ]]; then
+              echo "Stale (committed but not rebuilt for this version):"
+              for f in "${stale[@]}"; do echo "  - $f"; done
+            fi
+            echo
+            echo "Comment '/build' on this PR to rebuild them on CI and push, or"
+            echo "do it locally (only the families listed above need rebuilding):"
+            echo "  git fetch origin && git checkout ${{ github.head_ref }}"
+            # Plain `if`, not `[[ ... ]] && echo`: under `set -e` a false test
+            # would abort the script and swallow every hint after it.
+            if [[ "$core" == "true" ]]; then echo "  pnpm build:rust"; fi
+            if [[ "$ssim" == "true" ]]; then echo "  pnpm build:rust:ssim"; fi
+            if [[ "$interpret" == "true" ]]; then echo "  pnpm build:rust:interpret"; fi
+            if [[ "$wasm" == "true" ]]; then echo "  pnpm build:wasm"; fi
+            if [[ "$wasm_interpret" == "true" ]]; then echo "  pnpm build:wasm:interpret"; fi
+            if [[ "$milo" == "true" ]]; then echo "  pnpm build:rust:milo"; fi
+            if [[ "$wasm_milo" == "true" ]]; then echo "  pnpm build:wasm:milo"; fi
+            if [[ "$codec_png" == "true" ]]; then echo "  pnpm build:rust:codec-png"; fi
+            if [[ "$wasm_codec_png" == "true" ]]; then echo "  pnpm build:wasm:codec-png"; fi
+            echo "  pnpm build:python:all -- --version ${CORE_VER}"
+            echo "  pnpm build:python:ssim:all -- --version ${SSIM_VER}"
+            echo "  pnpm build:python:interpret:all -- --version ${INTERPRET_VER}"
+            # --no-verify: the no-binaries pre-commit hook blocks artifact
+            # commits, since this is normally CI's job.
+            echo "  git add -A && git commit --no-verify -m 'build: release artifacts' && git push"
+            exit 1
+          fi
+
+          echo "All expected release artifacts present and rebuilt."

@@ -1,0 +1,62 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - v4.0
+      - v5
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches:
+      - master
+      - v4.0
+      - v5
+    paths-ignore:
+      - "**/*.md"
+jobs:
+  lint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Use Node.js 22
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Install Packages
+        run: npm ci
+      - name: Lint changed files
+        run: npm run lint:changed
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22"]
+        redis:
+          - tag: "rs-7.4.0-v1"
+            version: "7.4"
+          - tag: "8.2"
+            version: "8.2"
+          - tag: "8.8.0"
+            version: "8.8"
+          - tag: "8.10.0"
+            version: "8.10"
+          - tag: "unstable-40786267336-debian"
+            version: "8.12"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+      - name: Run tests
+        uses: ./.github/actions/run-tests
+        with:
+            node-version: ${{ matrix.node-version }}
+            redis-tag: ${{ matrix.redis.tag }}
+            redis-version: ${{ matrix.redis.version }}
+            otel-authorization-token: ${{ secrets.SELF_CHECK_OTEL_AUTHORIZATION_TOKEN }}

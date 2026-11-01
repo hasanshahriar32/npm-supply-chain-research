@@ -1,0 +1,37 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'nodejs/**'
+      - .github/workflows/node.yml
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'nodejs/**'
+      - .github/workflows/node.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [ 20, 22, 24 ]
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: cd nodejs && npm install
+      - name: Run tests
+        run: cd nodejs && npm run test:verbose

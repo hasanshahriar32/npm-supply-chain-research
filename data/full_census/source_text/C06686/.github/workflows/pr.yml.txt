@@ -1,0 +1,268 @@
+name: Pull request validation
+
+on: pull_request
+
+env:
+  NX_PARALLEL: 4 # ubuntu-latest = 4-core CPU / 16 GB of RAM | macos-14-xlarge (arm) = 6-core CPU / 14 GB of RAM
+  NX_VERBOSE_LOGGING: true
+
+jobs:
+  valid-asset-names:
+    name: Validate Asset Names
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check asset directories are valid for Windows
+        run: |
+          ls assets | python3 -c """
+          import sys
+          assets_dir = sys.stdin.read().strip().split('\n')
+          invalid_asset_dirs = []
+          for dir in assets_dir:
+            if dir.endswith(' '):
+              invalid_asset_dirs.append(dir)
+
+          if invalid_asset_dirs:
+            print('Invalid asset directories, remove the trailing space')
+            print(invalid_asset_dirs)
+            exit(1)
+          """
+  valid-asset-fills:
+    name: Validate Asset Fills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check that all SVGs have the right fill
+        run: |
+          error_found=false
+
+          for file in $(find ./assets -type f -name "*.svg" -print0 | grep -zv '_color.svg' | xargs -0 grep -L 'fill="#212121"'); do
+            echo "Error: $file does not have 'fill=\"#212121\"' or has a different fill."
+            error_found=true
+          done
+
+          if [[ $error_found == true ]]; then
+            exit 1
+          fi
+
+  valid-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+
+      - run: yarn install --immutable
+
+      - name: Validate PR title follows Conventional Commits
+        env:
+          # Pass the title via env to avoid shell injection from untrusted PR titles.
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$PR_TITLE" | yarn commitlint
+
+  build-ios:
+    name: Build iOS library
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+
+      - run: yarn install --immutable
+
+      - name: Run generate script
+        run: yarn deploy:ios
+        working-directory: importer
+
+  build-android:
+    name: Build Android library
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+
+      - run: yarn install --immutable
+
+      - name: Run generate script
+        run: yarn deploy:android
+        working-directory: importer
+
+      - name: Setup Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 11
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          gradle-version: wrapper
+          gradle-home-cache-excludes: |
+            caches
+            jdks
+
+      - name: Build Android library
+        run: ./gradlew assembleRelease
+        working-directory: android
+
+      - name: Generate BUILD.gn file for Android
+        run: python3 generate_build_gn_android.py
+        working-directory: importer
+
+  # Disabling for now until the pipeline job is fixed
+  # build-flutter:
+  #   name: Build Flutter library
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #   - uses: actions/checkout@v7
+
+  #   - uses: actions/setup-node@v4
+  #     with:
+  #       node-version: 22.x
+
+  #   - run: yarn install --immutable
+
+  #   - name: Run generate script
+  #     run: yarn deploy:flutter
+  #     working-directory: importer
+
+  #   # Build Flutter library
+  #   # The name should be same as the package name on pub.dev
+  #   # Tokens are placeholder strings in order for the action to run on forked repos.
+  #   - name: 'fluentui_system_icons'
+  #     uses: k-paxian/dart-package-publisher@master
+  #     with:
+  #       relativePath: 'flutter'
+  #       skipTests: true
+  #       dryRunOnly: true
+  #       accessToken: "placeholder"
+  #       refreshToken: "placeholder"
+
+  build-npm:
+    if: ${{ github.repository_owner == 'microsoft' }}
+    name: Build npm packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      actions: 'read'
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: tree:0
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+
+      - run: yarn install --immutable
+
+      - uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+
+      - name: Format Check
+        run: yarn nx format:check
+
+      - name: Single Version Policy Check
+        run: yarn deps:check
+
+      - name: Package Scripts Check
+        run: yarn scripts:check
+
+      - name: Lint
+        run: yarn nx affected -t lint
+
+      - name: Validate asset metadata
+        run: yarn nx affected -t check:assets-metadata
+
+      - name: Type Check Infra
+        run: yarn nx affected -t type-check:infra
+
+      - name: Install Playwright browsers
+        # `docsite:extract-storybook-llms` crawls the built storybook with Playwright.
+        run: yarn playwright install --with-deps chromium
+
+      - name: Build
+        run: |
+          yarn nx affected -t build
+          yarn nx affected -t extract-storybook-llms
+          yarn nx affected -t build-verify
+          yarn nx affected -t check:types-packaging
+
+      - name: Test
+        run: yarn nx affected -t test
+
+      - name: Bundle-Size
+        env:
+          # Required by monosize-storage-git to read the baseline report artifact
+          # from the target branch via the GitHub API.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          yarn nx affected -t bundle-size
+          yarn monosize compare-reports --branch=${{ github.event.pull_request.base.ref }} --output markdown --quiet > bundle-size-report.md
+
+      - name: Write job summary
+        if: always()
+        run: |
+          # Bundle-size report
+          if [ -f bundle-size-report.md ]; then
+            echo "## 📦 Bundle Size" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat bundle-size-report.md >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Docsite artifact instructions
+          if [ -d packages/docsite/storybook-static ]; then
+            echo "## 📖 Docsite Preview" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The docsite has been built and uploaded as an artifact (\`docsite-storybook-build\`)." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "To preview locally after downloading and extracting:" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```sh' >> $GITHUB_STEP_SUMMARY
+            # npx, not yarn dlx: this runs in whatever folder the artifact was
+            # extracted to, so it only needs Node — not a yarn install.
+            echo "npx http-server ./docsite-storybook-build -o" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload icon-app build artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: icon-app-build
+          path: packages/icon-app/dist/
+          retention-days: 3
+
+      - name: Upload docsite build artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docsite-storybook-build
+          path: packages/docsite/storybook-static/
+          retention-days: 3

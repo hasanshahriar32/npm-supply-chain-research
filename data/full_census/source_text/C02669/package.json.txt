@@ -1,0 +1,51 @@
+{
+  "name": "intl-pluralrules",
+  "version": "2.0.1",
+  "description": "Intl.PluralRules polyfill",
+  "keywords": [
+    "unicode",
+    "cldr",
+    "i18n",
+    "internationalization",
+    "pluralization"
+  ],
+  "author": "Eemeli Aro <eemeli@gmail.com>",
+  "license": "ISC",
+  "homepage": "https://github.com/eemeli/intl-pluralrules#readme",
+  "repository": "eemeli/intl-pluralrules",
+  "files": [
+    "dist/"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./dist/polyfill.js",
+    "./factory": "./dist/factory.js",
+    "./plural-rules": "./dist/plural-rules.js",
+    "./polyfill": "./dist/polyfill.js",
+    "./package.json": "./package.json"
+  },
+  "prettier": {
+    "arrowParens": "avoid",
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "none"
+  },
+  "dependencies": {
+    "make-plural": "^8.1.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.16",
+    "rolldown": "^1.0.0-beta.57",
+    "test262-harness": "^10.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "git clean -fdxe node_modules -e examples/node_modules",
+    "prepublishOnly": "npm test && npm run build",
+    "test": "vitest run test/ --coverage",
+    "pretest262": "rolldown -c test/rolldown.test262.js",
+    "test262": "test262-harness --error-for-failures --features-exclude cross-realm --prelude test/dist/test262-prelude.js 'test262/test/intl402/PluralRules/**/*.js'"
+  }
+}

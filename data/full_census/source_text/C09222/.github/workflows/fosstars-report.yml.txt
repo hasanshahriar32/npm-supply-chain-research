@@ -1,0 +1,34 @@
+name: 'Fosstars (Security)'
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions: {}
+
+jobs:
+  create_fosstars_report:
+    runs-on: ubuntu-latest
+    name: 'Security rating'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: SAP/fosstars-rating-core-action@daf10c3920b53405f6013ee987e7015525fdec30 # v1.14.0
+        with:
+          report-branch: fosstars-report
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Slack Notify
+        if: failure() || cancelled()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: SDK Pipeline Bot
+          SLACK_TITLE: Fosstars scan ${{ job.status }}
+          SLACK_MESSAGE: 'Test failed'
+          MSG_MINIMAL: event,actions url
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_MSG_AUTHOR: ' '
+          SLACK_ICON: https://sap.github.io/cloud-sdk/img/logo.png
+        uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58 # v2.4.0

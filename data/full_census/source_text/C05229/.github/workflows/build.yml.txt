@@ -1,0 +1,27 @@
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare
+        with:
+          node-version: ${{ matrix.node_version }}
+      - run: pnpm build
+      - run: node ./lib/index.mjs
+      - run: pnpm run lint:package
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node_version:
+          - 20.x
+          - 22.x
+          - 24.x
+          - latest
+name: Build
+
+on:
+  pull_request: ~
+  push:
+    branches:
+      - main

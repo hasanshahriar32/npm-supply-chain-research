@@ -1,0 +1,31 @@
+jobs:
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['20', '22', '24', '26']
+    steps:
+      - name: setup repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: setup node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm install
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+    timeout-minutes: 10
+name: Test
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review

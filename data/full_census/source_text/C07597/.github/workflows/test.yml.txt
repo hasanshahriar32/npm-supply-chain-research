@@ -1,0 +1,64 @@
+name: tests
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  yarn-lockfile-check:
+    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main
+  linux-unit-tests:
+    needs: yarn-lockfile-check
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main
+  windows-unit-tests:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsWindows.yml@main
+  sf-integration-tests:
+    needs: linux-unit-tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install sf
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 60
+          command: npm install -g @salesforce/cli@nightly --omit=dev
+          timeout_minutes: 60
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - name: Run tests
+        run: yarn test:integration:sf
+
+  integration-tests:
+    needs: linux-unit-tests
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        test: ['test:integration:install', 'test:integration:link']
+        no-local-package-managers: [true, false]
+        exclude:
+          - os: windows-latest
+            test: test:integration:link
+          - no-local-package-managers: true
+            test: test:integration:link
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+      - run: yarn build
+      - name: Remove package managers
+        if: ${{matrix.no-local-package-managers}}
+        run: |
+          yarn remove yarn npm
+      - name: Run tests
+        run: yarn ${{matrix.test}}

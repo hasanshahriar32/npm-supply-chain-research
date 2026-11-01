@@ -1,0 +1,38 @@
+name: CI
+on: 
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  test:
+    name: Run Tests (${{ matrix.os == 'windows-latest' && 'windows, ' || '' }}${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        # 24.11 is the last 24.x without the require(esm) fix from
+        # https://github.com/nodejs/node/pull/60380, which a bare `24` now resolves
+        # past. Pinned so the async hooks stay covered on a 24.x that still crashes if
+        # they hand `source` back for CommonJS, alongside 20 and 22.
+        node-version: [20, 22, 24.11, 24]
+        include:
+          - os: windows-latest
+            node-version: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }} 
+      # Deno reports no `format` from its synchronous hooks, so the module type
+      # has to be worked out from the file. `test/module-types.test.mjs` runs
+      # its fixture under Deno as well as Node, and skips the Deno half when
+      # Deno is missing.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install Dependencies
+        run: npm install
+      - name: Run Tests
+        run: npm test
+
+

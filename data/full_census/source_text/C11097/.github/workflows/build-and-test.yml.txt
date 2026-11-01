@@ -1,0 +1,37 @@
+name: Build and test webpack-virtual-modules
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        webpack-version: [3, 4, 5]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: "Use Node.js 18.x"
+        uses: actions/setup-node@master
+        with:
+          node-version: 18.x
+
+      - name: "Install nari"
+        run: |
+          npm i -g nari
+
+      - name: "Install"
+        run: |
+          nari
+
+      - name: Install Webpack ${{ matrix.webpack-version }}
+        run: |
+          nari add webpack@${{ matrix.webpack-version }}
+
+      - name: Run tests
+        run: nari test

@@ -1,0 +1,74 @@
+name: ci
+
+on:
+  push:
+    branches: [main, "v*"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # https://consoledonottrack.com/
+  DO_NOT_TRACK: 1
+
+jobs:
+  tasks:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - format
+          - license-header
+          - lint
+          - attw
+          - bundle-size
+          - build
+        include:
+          - task: format
+            diff-check: true
+          - task: license-header
+            diff-check: true
+          - task: bundle-size
+            diff-check: true
+    name: ${{ matrix.task }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: "npm"
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}/${{ matrix.task }}/${{ github.sha }}
+          restore-keys: ${{ runner.os }}/${{ matrix.task }}
+      - run: npm ci
+      - run: npx turbo run ${{ matrix.task }}
+      - name: Check changed files
+        if: ${{ matrix.diff-check }}
+        run: node scripts/gh-diffcheck.js
+  test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [26.x, 24.x, 22.x]
+    name: "test on Node.js ${{ matrix.node-version }}"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}/test/${{ github.sha }}
+          restore-keys: ${{ runner.os }}/test
+      - run: npm ci
+      - run: npx turbo run test --log-order stream

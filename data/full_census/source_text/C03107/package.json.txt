@@ -1,0 +1,58 @@
+{
+  "name": "root",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r --stream build",
+    "lint": "eslint . && markdownlint **/*.md --ignore **/node_modules",
+    "coverage": "pnpm -r --no-bail --workspace-concurrency 1 coverage",
+    "test": "pnpm -r --no-bail --workspace-concurrency 1 test-short",
+    "test:ecosystem-ci": "pnpm test -- --ecosystem-ci",
+    "validate": "pnpm i && pnpm build && pnpm test && pnpm lint",
+    "bump": "changeset version && pnpm i",
+    "release": "pnpm validate && pnpm bump && changeset publish",
+    "ci-version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci-publish": "pnpm build && pnpm test && pnpm lint && changeset publish"
+  },
+  "workspaces": [
+    "packages/@expressive-code/*",
+    "packages/*",
+    "internal/*"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/eslint-parser": "^7.26.10",
+    "@changesets/cli": "^2.29.8",
+    "@eslint/eslintrc": "^3.0.0",
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^18.19.69",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-no-only-tests": "^3.3.0",
+    "eslint-plugin-prettier": "^5.5.5",
+    "globals": "^14.0.0",
+    "happy-dom": "^12.10.3",
+    "markdownlint-cli": "^0.37.0",
+    "prettier": "^3.8.1",
+    "tsm": "^2.3.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.14.1",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "pnpm": {
+    "overrides": {
+      "@astrojs/starlight>astro-expressive-code": "workspace:latest"
+    }
+  }
+}

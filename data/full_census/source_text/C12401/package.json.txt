@@ -1,0 +1,73 @@
+{
+  "name": "merge-refs",
+  "version": "2.0.0",
+  "description": "A function that merges React refs into one.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "source": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./*"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "node -e \"fs.rmSync('./dist', { recursive: true, force: true })\"",
+    "format": "biome format",
+    "lint": "biome lint",
+    "postinstall": "husky",
+    "prepack": "yarn clean && yarn build",
+    "test": "yarn lint && yarn tsc && yarn format && yarn unit",
+    "tsc": "tsc",
+    "unit": "vitest"
+  },
+  "keywords": [
+    "react",
+    "react ref",
+    "react refs",
+    "merge"
+  ],
+  "author": {
+    "name": "Wojciech Maj",
+    "email": "kontakt@wojtekmaj.pl"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "@types/react": "^19.2.0",
+    "@vitest/browser-playwright": "^5.0.5",
+    "husky": "^9.0.0",
+    "playwright": "^1.60.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
+    "vitest-browser-react": "^2.3.0"
+  },
+  "peerDependencies": {
+    "@types/react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "!**/*.spec.ts",
+    "!**/*.spec.tsx"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wojtekmaj/merge-refs.git"
+  },
+  "funding": "https://github.com/wojtekmaj/merge-refs?sponsor=1",
+  "packageManager": "yarn@4.17.1"
+}

@@ -1,0 +1,38 @@
+{
+  "name": "sanity-color-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Sanity.io <hello@sanity.io>",
+  "scripts": {
+    "build": "pnpm --filter @sanity/color build && pnpm --filter figma-plugin-sanity-color build",
+    "changeset": "changeset",
+    "clean": "pnpm --recursive clean",
+    "dev": "pnpm --filter sanity-color-storybook dev",
+    "format": "oxfmt . --no-error-on-unmatched-pattern",
+    "knip": "knip --treat-config-hints-as-errors",
+    "lint": "pnpm run oxlint",
+    "lint:fix": "pnpm lint --fix --fix-suggestions",
+    "oxlint": "oxlint --disable-nested-config",
+    "release": "changeset publish",
+    "storybook:build": "pnpm --filter sanity-color-storybook build",
+    "test": "pnpm --filter @sanity/color test",
+    "test:browser": "pnpm --filter sanity-color-storybook test",
+    "watch": "pnpm --filter @sanity/color watch"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "catalog:",
+    "eslint-plugin-storybook": "^10.6.1",
+    "knip": "^6.38.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "packageManager": "pnpm@12.6.0"
+}

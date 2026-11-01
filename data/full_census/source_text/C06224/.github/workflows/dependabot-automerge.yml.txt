@@ -1,0 +1,34 @@
+name: dependabot-automerge
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# CI runs twice per PR (`push` + `pull_request`), so two automerge runs can race.
+concurrency:
+  group: dependabot-automerge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    if: contains(fromJson('["success","neutral"]'), github.event.workflow_run.conclusion)
+    runs-on: ubuntu-latest
+
+    steps:
+      # No `ref:` on purpose. On `workflow_run` this checks out the default branch,
+      # so the Dependabot PR's own code never runs with the write-scoped token.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Merge Dependabot PR if eligible
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const automerge = require('./.github/scripts/dependabot-automerge.js');
+            await automerge({ github, context, core });

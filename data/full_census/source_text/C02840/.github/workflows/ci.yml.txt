@@ -1,0 +1,247 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - 'v*'
+  pull_request: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  SKIP_YARN_COREPACK_CHECK: 0
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+  test:
+    name: 'Tests'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run Tests
+        run: pnpm node-test-with-coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  floating:
+    name: 'Floating Dependencies'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+      - name: Install Dependencies
+        run: pnpm install --no-lockfile
+      - name: Run Tests
+        run: pnpm node-test
+
+  all-commands-smoke-tests:
+    name: Tests (commands smoke test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    needs:
+      - lint
+      - test
+      - floating
+
+    strategy:
+      fail-fast: false
+      matrix:
+        command:
+          # try:each
+          - npx ember try:each
+
+          # skip-cleanup option
+          - npx ember try:each --skip-cleanup
+
+          # config-path option
+          - npx ember try:each --config-path='../test/fixtures/dummy-ember-try-config.js'
+
+          # both ember-try options
+          - npx ember try:each --config-path='../test/fixtures/dummy-ember-try-config.js' --skip-cleanup true
+
+          # try:ember
+          - npx ember try:ember '> 4.10.0 < 5.2.0'
+          - npx ember try:ember '4.9.0' --config-path='../test/fixtures/dummy-ember-try-config.js'
+          - npx ember try:ember '4.8.3' --skip-cleanup=true
+
+          # try:config
+          - npx ember try:config
+          - npx ember try:config --config-path='../test/fixtures/dummy-ember-try-config.js'
+
+          # try:one <scenario>
+          - npx ember try:one default
+
+          # custom command
+          - npx ember try:one default --- ember help
+
+          # skip-cleanup option
+          - npx ember try:one default --skip-cleanup
+
+          # config-path option
+          - npx ember try:one test1 --config-path='../test/fixtures/dummy-ember-try-config.js'
+
+          # both ember-try options
+          - npx ember try:one test1 --config-path='../test/fixtures/dummy-ember-try-config.js' --skip-cleanup true
+
+          # custom command with options to command
+          - npx ember try:one default --- ember help --silent
+
+          # custom command mixed with ember try's own option
+          - npx ember try:one default --skip-cleanup --- ember help --silent
+
+          # try:reset
+          - npx ember try:reset
+
+          # Environment variables availability
+          - FOO="5" npx ember try:one default --- ./fail-if-no-foo.sh
+
+          - npx ember try:one default --- FOO=5 ./fail-if-no-foo.sh
+
+          # Custom, compound commands
+          - npx ember try:one default --- 'echo 1 && echo 2'
+
+          # Environment variables from config
+          - npx ember try:each --config-path='../test/fixtures/dummy-ember-try-config-different-env-vars.js'
+
+          # fs-extra versions 7.x and above caused a regresion
+          - npx ember try:each --config-path='../test/fixtures/dummy-ember-try-config-fs-extra-scenarios.js'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+
+      - name: install deps
+        run: pnpm install --frozen-lockfile
+      - name: install smoke-test-app deps
+        # using `npm` to install in the smoke-test-app so that `file:` will be treated
+        # as a symlink (npm handles `file:../` as symlink, and `yarn` treats it
+        # as "copy into this directory")
+        run: npm install
+        working-directory: smoke-test-app
+      - run: ${{ matrix.command }}
+        working-directory: smoke-test-app
+
+  npm-smoke-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+
+    name: Smoke Tests (Node v${{ matrix.node }} with npm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    needs:
+      - lint
+      - test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: install deps
+        run: pnpm install --frozen-lockfile
+      - name: install smoke-test-app deps
+        run: npm install
+        working-directory: smoke-test-app
+      - run: npx ember try:one test2 --config-path='../test/fixtures/dummy-ember-try-config-with-npm-scenarios.js'
+        working-directory: smoke-test-app
+
+  yarn-smoke-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+
+    name: Smoke Tests (Node v${{ matrix.node }} with yarn)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    needs:
+      - lint
+      - test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: install deps
+        run: pnpm install --frozen-lockfile
+      - name: install smoke-test-app deps
+        run: yarn install
+        working-directory: smoke-test-app
+      - run: npx ember try:one test2 --config-path='../test/fixtures/dummy-ember-try-config-with-yarn-scenarios.js'
+        working-directory: smoke-test-app
+
+  windows-smoke-tests:
+    name: Smoke Tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    needs:
+      - lint
+      - test
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: pnpm
+
+      - name: install deps
+        run: pnpm install --frozen-lockfile
+      - name: install smoke-test-app deps
+        run: npm install
+        working-directory: smoke-test-app
+      - run: npx ember try:one test2 --config-path='../test/fixtures/dummy-ember-try-config-with-npm-scenarios.js'
+        working-directory: smoke-test-app

@@ -1,0 +1,95 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to release
+        required: true
+        default: plugin-react
+        type: choice
+        options:
+          - plugin-react
+          - plugin-react-swc
+          - plugin-rsc
+      release:
+        description: Release type
+        required: true
+        default: next
+        type: choice
+        options:
+          - next
+          - patch
+          - minor
+          - major
+          - prepatch
+          - preminor
+          - premajor
+      version:
+        description: Specify exact version instead of bumpp release type
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.package }}-${{ inputs.version || inputs.release }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  prepare:
+    if: github.repository == 'vitejs/vite-plugin-react'
+    name: Prepare release PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set node version
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Prepare release
+        id: prepare
+        env:
+          RELEASE: ${{ inputs.version || inputs.release }}
+          RELEASE_PACKAGE: ${{ inputs.package }}
+        run: |
+          node scripts/prepare-release.ts "$RELEASE_PACKAGE" "$RELEASE" >> "$GITHUB_OUTPUT"
+
+      - id: generate-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_GITHUB_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open release PR
+        uses: vitejs/release-scripts/action/release-pr@083fcf277cb3edc873f60d820738be35323d14e7 # v1.10.0
+        with:
+          app-slug: ${{ steps.generate-token.outputs.app-slug }}
+          token: ${{ steps.generate-token.outputs.token }}
+          package-name: ${{ inputs.package }}
+          package-path: packages/${{ inputs.package }}
+          pr-body: ${{ steps.prepare.outputs.pr_body }}
+          tag: ${{ steps.prepare.outputs.tag }}
+          version: ${{ steps.prepare.outputs.version }}

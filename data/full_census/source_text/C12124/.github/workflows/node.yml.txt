@@ -1,0 +1,38 @@
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - master
+      - next
+    paths:
+      - '**'
+      - '!**.md'
+  pull_request:
+    branches:
+      - master
+      - next
+    paths:
+      - '**'
+      - '!**.md'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        node: [14, 16, 18]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+
+      - name: Install Project Dependencies
+        run: yarn --frozen-lockfile
+
+      - name: Test
+        run: yarn test

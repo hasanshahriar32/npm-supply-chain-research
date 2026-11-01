@@ -1,0 +1,70 @@
+name: Main Workflow
+
+on: [push, pull_request]
+
+jobs:
+  run_windows:
+    name: Run (Windows)
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-latest]
+        node: [16.14.0, 18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      - name: Setup Node.js
+        uses: actions/setup-node@master
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup pnpm
+        run: npm install pnpm -g
+
+      - name: Sanitize Package.json
+        uses: jaywcjlove/github-action-package@main
+        with:
+          unset: devDependencies.rollup_3_15_0
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm test
+  run:
+    name: Run
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        node: [16.15.1, 18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+
+      - name: Setup Node.js
+        uses: actions/setup-node@master
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup pnpm
+        run: npm install pnpm -g
+
+      - name: Install
+        run: pnpm install
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm test

@@ -1,0 +1,37 @@
+name: Docs
+
+on:
+  workflow_dispatch:
+
+env:
+  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@svta'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build Site
+        run: npm run build -w site
+
+      - name: Deploy Site
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          publish_dir: ./site/dist/
+          force_orphan: true
+          personal_token: ${{ secrets.GH_ACTIONS }}

@@ -1,0 +1,59 @@
+{
+  "name": "@serialport/binding-mock",
+  "version": "0.0.0-development",
+  "description": "The mock serialport bindings",
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    "require": "./dist/index.js",
+    "default": "./dist/index-esm.mjs"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": "git@github.com:serialport/binding-mock.git",
+  "homepage": "https://github.com/serialport/binding-mock",
+  "scripts": {
+    "test": "mocha",
+    "lint": "tsc && eslint lib/**/*.ts",
+    "format": "eslint lib/**/*.ts --fix",
+    "clean": "rm -rf dist-ts dist",
+    "build": "npm run clean && tsc -p tsconfig-build.json && rollup -c && node -r esbuild-register bundle-types",
+    "prepublishOnly": "npm run build",
+    "semantic-release": "semantic-release"
+  },
+  "keywords": [
+    "serialport-binding",
+    "debug"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@microsoft/api-extractor": "7.36.4",
+    "@rollup/plugin-node-resolve": "15.2.1",
+    "@tsconfig/node18": "18.2.1",
+    "@types/chai": "4.3.20",
+    "@types/mocha": "10.0.10",
+    "@types/node": "22.19.3",
+    "@typescript-eslint/eslint-plugin": "8.51.0",
+    "@typescript-eslint/parser": "8.51.0",
+    "chai": "6.2.2",
+    "esbuild": "0.27.2",
+    "esbuild-register": "3.6.0",
+    "eslint": "8.57.1",
+    "mocha": "11.7.5",
+    "rollup": "3.28.1",
+    "semantic-release": "21.1.0",
+    "typescript": "5.1.6"
+  },
+  "mocha": {
+    "bail": true,
+    "require": [
+      "esbuild-register"
+    ],
+    "spec": "lib/**/*-test.ts"
+  },
+  "dependencies": {
+    "@serialport/bindings-interface": "^1.2.1",
+    "debug": "^4.3.3"
+  }
+}

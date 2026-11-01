@@ -1,0 +1,73 @@
+name: Tests
+
+env:
+  HUSKY: 0
+  NODE_OPTIONS: "--trace-warnings"
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - main
+
+jobs:
+  integration_tests:
+    # Will not run if the event is a PR to bump-meilisearch-v* (so a pre-release PR)
+    # Will not run if the event is a PR to pre-release-beta/*
+    # Will not run if the event is a PR to prototype-beta/*
+    # Will not run if the event is a push on pre-release-beta/*
+    # Will still run for each push to bump-meilisearch-v* and prototype-beta/*
+    if: |
+      github.event_name != 'pull_request' ||
+      !startsWith(github.base_ref, 'bump-meilisearch-v') &&
+      !startsWith(github.base_ref, 'pre-release-beta/') &&
+      !startsWith(github.base_ref, 'prototype-beta/') &&
+      !startsWith(github.head_ref, 'pre-release-beta/')
+    runs-on: ubuntu-latest
+    services:
+      meilisearch:
+        image: getmeili/meilisearch-enterprise:v1.56
+        env:
+          MEILI_MASTER_KEY: "masterKey"
+          MEILI_NO_ANALYTICS: "true"
+          MEILI_EXPERIMENTAL_ALLOWED_IP_NETWORKS: "any"
+        ports:
+          - "7700:7700"
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "22", "24"]
+    name: integration-tests (Node.js ${{ matrix.node-version }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/set-up-node
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Run tests with coverage
+        run: pnpm test --coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v7
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  style_tests:
+    runs-on: ubuntu-latest
+    name: style-check
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/set-up-node
+
+      - name: Run code style check
+        run: pnpm style
+  types_tests:
+    runs-on: ubuntu-latest
+    name: types-check
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/set-up-node
+
+      - name: Build project
+        run: pnpm build
+      - name: Run types check
+        run: pnpm types

@@ -1,0 +1,73 @@
+{
+  "name": "@concordance/react",
+  "version": "2.0.0",
+  "description": "Compare, format, diff and serialize React trees with Concordance",
+  "main": "index.js",
+  "files": [
+    "lib",
+    "index.js"
+  ],
+  "engines": {
+    "node": ">=10.18.0 <11 || >=12.14.0 <13 || >=13.5.0"
+  },
+  "scripts": {
+    "build:fixtures": "babel --presets=module:@babel/preset-react,module:@ava/babel/stage-4 --out-dir=test/fixtures/react --extensions=.jsx test/fixtures/react",
+    "pretest": "npm run -s build:fixtures",
+    "test": "as-i-preach && nyc ava"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/concordancejs/react.git"
+  },
+  "author": "Mark Wubben (https://novemberborn.net/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/concordancejs/react/issues"
+  },
+  "homepage": "https://github.com/concordancejs/react#readme",
+  "keywords": [
+    "concordance-plugin",
+    "concordance",
+    "react"
+  ],
+  "dependencies": {
+    "arrify": "^2.0.1"
+  },
+  "devDependencies": {
+    "@ava/babel": "^1.0.1",
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/preset-react": "^7.9.1",
+    "@novemberborn/eslint-plugin-as-i-preach": "^12.0.0",
+    "ava": "^3.5.1",
+    "concordance": "^4.0.0",
+    "eslint": "^6.8.0",
+    "eslint-plugin-ava": "^10.2.0",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-node": "^11.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-react": "^7.19.0",
+    "eslint-plugin-security": "^1.4.0",
+    "eslint-plugin-standard": "^4.0.1",
+    "eslint-plugin-unicorn": "^17.2.0",
+    "nyc": "^15.0.0",
+    "react": "^16.13.1",
+    "react-test-renderer": "^16.13.1"
+  },
+  "ava": {
+    "babel": {
+      "testOptions": {
+        "presets": [
+          "module:@babel/preset-react"
+        ]
+      }
+    }
+  },
+  "nyc": {
+    "reporter": [
+      "html",
+      "lcov",
+      "text"
+    ]
+  }
+}

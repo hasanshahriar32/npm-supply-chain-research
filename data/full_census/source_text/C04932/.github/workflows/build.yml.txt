@@ -1,0 +1,70 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+# Enabled permissions on GITHUB_TOKEN
+permissions:
+  # To be able to push to the repo
+  contents: write
+  # To update the pr description with canary info
+  pull-requests: write
+  # For pr-check to create a status
+  statuses: write
+  # Needed to create PR statuses/checks
+  checks: write
+  # To post comments on PRs
+  issues: write
+
+jobs:
+  # Run install in one step so deps can be cached for other steps
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      # - uses: ./.github/actions/install-deps
+
+  build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-deps
+      - uses: ./.github/actions/build-cache
+      - run: pnpm build
+
+  lint:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-deps
+      - uses: ./.github/actions/build-cache
+      - run: pnpm lint
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-deps
+      - uses: ./.github/actions/build-cache
+      - run: pnpm test
+
+  test-browser:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/install-deps
+      - uses: ./.github/actions/build-cache
+      - run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./packages/config-vitest
+      - run: pnpm test:browser

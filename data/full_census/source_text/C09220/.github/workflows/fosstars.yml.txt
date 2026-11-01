@@ -1,0 +1,87 @@
+name: 'Fosstars (Security)'
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+  push:
+    paths:
+      - '.github/workflows/fosstars.yml'
+      - '.github/owasp-suppressions.xml'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  security-checks:
+    runs-on: ubuntu-latest
+    name: 'Security rating'
+    permissions:
+      checks: write
+      contents: write
+    steps:
+      - uses: $/.github/actions/setup
+      # OWASP runs in Docker and cannot see the runner's pnpm install. Put the
+      # standalone pnpm bundle in the mounted workspace instead.
+      - name: Install pnpm for OWASP container
+        shell: bash
+        run: |
+          PNPM_VERSION="$(pnpm --version)"
+          archive="${RUNNER_TEMP}/pnpm-linux-x64-musl.tar.gz"
+          curl --proto "=https" --tlsv1.2 -fsSL \
+            "https://github.com/pnpm/pnpm/releases/download/v${PNPM_VERSION}/pnpm-linux-x64-musl.tar.gz" \
+            -o "${archive}"
+          mkdir -p .local/pnpm
+          tar -xzf "${archive}" -C .local/pnpm
+          chmod +x .local/pnpm/pnpm
+      - name: 'Run OWASP Dependency Check'
+        id: depcheck
+        uses: dependency-check/Dependency-Check_Action@1e54355a8b4c8abaa8cc7d0b70aa655a3bb15a6c # main
+        with:
+          project: ${{ github.repository }}
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+          # OWASP Dependency-Check configuration:
+          # - --failOnCVSS 7: Fail the step if any dependency has CVSS >= 7 (High/Critical).
+          # - --nvdApiKey: Use an National Vulnerability Database (NVD) API key to increase rate limits
+          #   for NVD data sync and improve reliability.
+          # Request an API key if required at: https://nvd.nist.gov/developers/request-an-api-key
+          # --pnpm uses the container-mounted path (/github/workspace), not
+          # the runner's host path, since this action runs inside Docker.
+          args: >
+            --failOnCVSS 7
+            --disableYarnAudit
+            --exclude '**/.local/pnpm/**'
+            --nodeAuditSkipDevDependencies
+            --pnpm /github/workspace/.local/pnpm/pnpm
+            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+            --ossIndexUsername ${{ vars.OSS_INDEX_USERNAME }}
+            --ossIndexPassword ${{ secrets.OSS_INDEX_PASSWORD }}
+            --suppression .github/owasp-suppressions.xml
+
+      - name: 'Upload OWASP Dependency Check Report'
+        if: always() && steps.depcheck.conclusion != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: owasp-dependency-check-report
+          path: reports/
+          retention-days: 7
+      - name: 'Run Fosstars Rating'
+        uses: SAP/fosstars-rating-core-action@daf10c3920b53405f6013ee987e7015525fdec30 # v1.14.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Slack Notification'
+        if: ${{ (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && failure() }}
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "username": "Security Checks",
+              "text": "Security checks (Fosstars rating and OWASP dependency check) <https://github.com/SAP/ai-sdk-js/actions/runs/${{ github.run_id }}|failed>.",
+            }

@@ -1,0 +1,94 @@
+{
+  "name": "peggy",
+  "version": "5.1.1",
+  "description": "Parser generator for JavaScript",
+  "files": [
+    "AUTHORS",
+    "bin/*.js",
+    "bin/*.d.ts",
+    "lib",
+    "browser"
+  ],
+  "keywords": [
+    "grammar",
+    "parser generator",
+    "PEG",
+    "PEG.js"
+  ],
+  "homepage": "https://peggyjs.org/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peggyjs/peggy.git"
+  },
+  "bugs": "https://github.com/peggyjs/peggy/issues",
+  "license": "MIT",
+  "author": "David Majda <david@majda.cz> (https://majda.cz/)",
+  "main": "lib/peg.js",
+  "browser": "browser/peggy.min.js",
+  "unpkg": "browser/peggy.min.js",
+  "jsdelivr": "browser/peggy.min.js",
+  "types": "lib/peg.d.ts",
+  "bin": {
+    "peggy": "bin/peggy.js"
+  },
+  "scripts": {
+    "clean": "rimraf -g build browser bin/*.map docs/vendor/peggy docs/js/*.min.js",
+    "parser": "node bin/peggy.js -c src/opts.mjs",
+    "examples": "node bin/peggy.js -c docs/js/options.js docs/js/examples.peggy",
+    "set_version": "package-extract -o lib/version.js -dcs && package-extract -u -o docs/index.html -r '(?<=https:\\/\\/unpkg.com\\/peggy@)(?<version>\\d+\\.\\d+\\.\\d+)(?=\\/browser\\/peggy\\.min\\.js)'",
+    "lint": "eslint .",
+    "docs": "cd docs && npm run build",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:web": "cd web-test && npm test",
+    "test:all": "npm run test && npm run test:web",
+    "benchmark": "node ./benchmark/run_bench.js",
+    "headers": "node ./tools/header.js browser/peggy.min.js docs/js/benchmark-bundle.min.js docs/js/test-bundle.min.js",
+    "deploy": "cpy --flat browser/peggy.min.js docs/vendor/peggy/",
+    "coverage": "npm run rollup && npm run parser -- -m inline && npm test",
+    "ts": "tsup",
+    "build": "npm run clean && npm run make && npm run lint && npm run audit",
+    "make": "npm run parser && npm run ts && npm run examples && npm run docs && npm run headers && npm run deploy",
+    "audit": "npm run test && npm run benchmark",
+    "tidy": "rimraf build",
+    "start": "cd docs && npm start",
+    "version": "npm run set_version && npm run parser && npm run parser && npm run test && npm run examples && git add lib/version.js lib/parser.js docs/index.html test/cli/fixtures/imports_peggy.js test/cli/fixtures/lib.js docs/js/examples.js"
+  },
+  "devDependencies": {
+    "@peggyjs/eslint-config": "^6.0.16",
+    "@swc/core": "^1.16.18",
+    "@types/chai": "^4.3.20",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^26.6.5",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "chai": "^4.5.0",
+    "chai-like": "^1.1.3",
+    "cpy-cli": "^7.0.0",
+    "esbuild-plugin-umd-wrapper": "^3.0.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-compat": "7.0.2",
+    "eslint-plugin-mocha": "^12.0.2",
+    "glob": "^13.0.6",
+    "jest": "^30.5.2",
+    "package-extract": "^4.0.1",
+    "rimraf": "^6.1.3",
+    "source-map": "^0.8.0",
+    "ts-jest": "^29.4.15",
+    "tsup": "^9.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.71.2",
+    "url": "^0.11.4"
+  },
+  "dependencies": {
+    "@peggyjs/from-mem": "4.0.0",
+    "commander": "^14.0.3",
+    "source-map-generator": "2.0.7"
+  },
+  "browserslist": [
+    "defaults, maintained node versions, not op_mini all"
+  ],
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=22"
+  }
+}

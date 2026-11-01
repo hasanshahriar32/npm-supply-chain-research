@@ -1,0 +1,42 @@
+name: tests
+on:
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+jobs:
+  yarn-lockfile-check:
+    uses: salesforcecli/github-workflows/.github/workflows/lockFileCheck.yml@main
+  # Since the Windows unit tests take much longer, we run the linux unit tests first and then run the windows unit tests in parallel with NUTs
+  linux-unit-tests:
+    needs: yarn-lockfile-check
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsLinux.yml@main
+  windows-unit-tests:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/unitTestsWindows.yml@main
+  nuts:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/nut.yml@main
+    secrets: inherit
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false
+    with:
+      os: ${{ matrix.os }}
+  xNuts:
+    needs: linux-unit-tests
+    uses: salesforcecli/github-workflows/.github/workflows/externalNut.yml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ['ubuntu-latest', 'windows-latest']
+    with:
+      packageName: '@salesforce/packaging'
+      externalProjectGitUrl: 'https://github.com/salesforcecli/plugin-packaging'
+      command: 'yarn test:nuts:package'
+      os: ${{ matrix.os }}
+      preSwapCommands: 'yarn upgrade @salesforce/core; yarn upgrade @jsforce/jsforce-node@latest; npx yarn-deduplicate; yarn install'
+      preExternalBuildCommands: 'shx rm -rf node_modules/@salesforce/packaging/node_modules; npm why @salesforce/core --json'
+      useCache: false
+    secrets: inherit

@@ -1,0 +1,44 @@
+{
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/readmeio/oas.git"
+  },
+  "workspaces": [
+    "./packages/*"
+  ],
+  "scripts": {
+    "attw": "turbo run attw --concurrency=1",
+    "bench": "vitest bench",
+    "build": "turbo run build",
+    "changeset": "changeset",
+    "clean": "rm -rf packages/*/node_modules",
+    "format": "npx oxlint --fix && npx oxfmt --write",
+    "lint": "knip && npm run lint:types && npm run lint:js && npx oxfmt --check",
+    "lint:js": "npx oxlint",
+    "lint:types": "npm run lint:types --if-present --workspaces",
+    "prerelease": "npm run build",
+    "release": "changeset publish",
+    "version-packages": "changeset version",
+    "prelint": "npm run build",
+    "pretest": "npm run build",
+    "test": "vitest --coverage"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@changesets/cli": "^2.30.0",
+    "@readme/oxlint-config": "^1.2.1",
+    "@vitest/coverage-v8": "^5.0.0",
+    "knip": "^6.41.0",
+    "oxfmt": "^0.48.0",
+    "oxlint": "^1.63.0",
+    "tsup": "^9.0.0",
+    "turbo": "^2.10.12",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "npm@10.9.4"
+}

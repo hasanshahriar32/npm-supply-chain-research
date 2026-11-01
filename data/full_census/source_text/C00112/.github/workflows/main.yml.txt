@@ -1,0 +1,67 @@
+name: ci
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: npm install
+    - run: npx aegir lint
+    - uses: gozala/typescript-error-reporter-action@v1.0.8
+    - run: npx aegir build
+    - run: npx aegir dep-check
+  test-node:
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node: [16]
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm install
+      - run: npm run pretest
+      - run: npm run test:node
+  test-chrome:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run pretest
+      - run: npx xvfb-maybe npm run test:browser
+  test-firefox:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run pretest
+      - run: npx xvfb-maybe npm run test:browser -- -- --browser firefox
+  test-electron-main:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run pretest
+      - run: npx xvfb-maybe npm run test:electron-main
+  test-electron-renderer:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: npm install
+      - run: npm run pretest
+      - run: npx xvfb-maybe npm run test:electron-renderer

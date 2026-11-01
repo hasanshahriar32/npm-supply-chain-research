@@ -1,0 +1,85 @@
+name: publish
+
+on:
+  push:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab on GitHub.
+  workflow_dispatch:
+
+# each job grants only what it needs: the docs build runs the largest
+# dependency tree, so it must not hold a write token or an OIDC token
+permissions: {}
+
+jobs:
+  update-gh-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup repo
+        uses: ./.github/actions/setup
+
+      - name: Build docs
+        run: pnpm buildDocs
+        env:
+          NEXT_PUBLIC_POSTHOG_KEY: phc_vKr7tmA1TyRlKm9zm5TWVmrTWAybJ2fCk66FtZG49Om
+          NEXT_PUBLIC_POSTHOG_HOST: https://us.i.posthog.com
+          ORAMA_PRIVATE_API_KEY: ${{ secrets.ORAMA_PRIVATE_API_KEY }}
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: ./ark/docs/out
+
+  deploy:
+    needs: update-gh-pages
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # npm trusted publishing: auth comes from the GitHub OIDC token, so no
+    # NPM_TOKEN secret is needed. contents: write covers tag pushes and releases.
+    permissions:
+      contents: write
+      id-token: write
+    # the npm environment only deploys from main, and each package's trusted
+    # publisher requires it. without it, any branch that edits this file to
+    # run on its own push could mint an OIDC token and publish.
+    environment: npm
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup repo
+        uses: ./.github/actions/setup
+
+      # pnpm 10 publish delegates to npm, which needs >=11.5.1 for OIDC.
+      # pnpm 11+ publishes natively, so re-verify OIDC when bumping pnpm.
+      - name: Update npm
+        run: npm install -g npm@11.21.1
+
+      - name: Create and publish versions
+        run: pnpm ci:publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

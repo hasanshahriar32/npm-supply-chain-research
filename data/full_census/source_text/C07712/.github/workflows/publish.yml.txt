@@ -1,0 +1,45 @@
+name: "publish"
+
+on:
+  push:
+    tags:
+      - "*"
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      # Installs node and bun from mise.toml. npm publish authenticates through npm
+      # trusted publishing (OIDC, see id-token permission), no registry token needed.
+      - uses: jdx/mise-action@v5
+        with:
+          version: 2026.5.16
+
+      - run: bun install --frozen-lockfile
+      - name: Update package.json version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          jq --arg version "$TAG" '.version = $version' package.json > tmp.$$.json && mv tmp.$$.json package.json
+      - name: Compile typescript
+        run: bun run build
+
+      - name: Publish to npm
+        run: |
+          if echo "$GITHUB_REF_NAME" | grep -q -- '-beta\|-alpha\|-rc'; then
+            npm publish --tag beta
+          else
+            npm publish
+          fi
+
+      - name: Create a Release
+        uses: elgohr/Github-Release-Action@v5
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          title: Release ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}

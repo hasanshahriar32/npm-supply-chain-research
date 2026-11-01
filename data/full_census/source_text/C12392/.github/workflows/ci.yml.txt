@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        node: ['24']
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: ${{ matrix.node }}
+          cache: true
+          run-install: true
+
+      - name: Restore Vite+ task cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.vite/task-cache
+          key: vite-task-${{ runner.os }}-node${{ matrix.node }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            vite-task-${{ runner.os }}-node${{ matrix.node }}-
+            vite-task-${{ runner.os }}-
+
+      - name: Lint
+        run: vp run lint:ci
+
+      - name: Build
+        run: vp pack
+
+      - name: Test
+        run: vp run test:ci
+
+      - name: Test against published Vitest
+        run: vp run test:compat

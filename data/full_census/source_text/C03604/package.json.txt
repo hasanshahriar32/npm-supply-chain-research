@@ -1,0 +1,68 @@
+{
+    "name": "evt",
+    "version": "2.5.9",
+    "description": "Type safe replacement for node's EventEmitter",
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/garronej/evt"
+    },
+    "main": "dist/lib/index.js",
+    "types": "dist/lib/index.d.ts",
+    "exports": {
+        ".": "./dist/lib/index.js",
+        "./hooks": "./dist/hooks/index.js",
+        "./lib": "./dist/lib/index.js",
+        "./lib/types": "./dist/lib/types/index.js",
+        "./lib/types/helper": "./dist/lib/types/helper/index.js",
+        "./lib/util": "./dist/lib/util/index.js",
+        "./tools/inDepth": "./dist/tools/inDepth/index.js",
+        "./tools/reducers": "./dist/tools/reducers/index.js",
+        "./tools/testing": "./dist/tools/testing/index.js",
+        "./hooks/*": "./dist/hooks/*.js",
+        "./lib/*": "./dist/lib/*.js",
+        "./tools/*": "./dist/tools/*.js",
+        "./operators": "./dist/operators/index.js",
+        "./operators/*": "./dist/operators/*.js"
+    },
+    "scripts": {
+        "test:node": "node ./dist/test",
+        "test:deno": "deno run --reload --unstable --no-check deno_dist/test/mod.ts",
+        "test": "npm run test:node && npm run test:deno",
+        "build": "tsc && denoify"
+    },
+    "author": "u/garronej",
+    "license": "MIT",
+    "dependencies": {
+        "minimal-polyfills": "^2.2.3",
+        "run-exclusive": "^2.2.19",
+        "tsafe": "^1.8.5"
+    },
+    "files": [
+        "src/",
+        "!src/test/",
+        "dist/",
+        "!dist/test/",
+        "!dist/tsconfig.tsbuildinfo"
+    ],
+    "keywords": [
+        "deno",
+        "EventEmitter",
+        "typescript",
+        "functional programming",
+        "qt signal",
+        "events",
+        "ts-evt",
+        "async-await",
+        "promise",
+        "rxjs"
+    ],
+    "homepage": "https://evt.land",
+    "devDependencies": {
+        "@types/react": "^18.0.15",
+        "react": "^18.2.0",
+        "rxjs": "^6.5.4",
+        "@types/node": "^10.0.0",
+        "typescript": "^4.2.3",
+        "denoify": "^1.6.16"
+    }
+}

@@ -1,0 +1,106 @@
+name: CI
+on:
+  push:
+    branches: [master, try]
+  pull_request:
+    branches: [master]
+  schedule:
+  - cron: 0 0 * * 0
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Checkout submodules
+        run: git submodule update --init
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install Packages
+        run: npm install
+      - name: Lint
+        run: npm run -s lint
+
+  test:
+    name: Test
+    strategy:
+      fail-fast: false
+      matrix:
+        eslint: [9]
+        node: [18, 20, 21, 'lts/*']
+        os: [ubuntu-latest]
+        include:
+          # On other platforms
+          - eslint: 9
+            node: 'lts/*'
+            os: windows-latest
+          - eslint: 9
+            node: 'lts/*'
+            os: macos-latest
+          # newer ESLint version
+          - eslint: 10
+            node: 'lts/*'
+            os: 'ubuntu-latest'
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Checkout submodules
+      run: git submodule update --init
+    - name: Install Node.js v${{ matrix.node }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node }}
+    - name: Install Packages
+      run: npm install
+    - name: Install ESLint v${{ matrix.eslint }}
+      run: node scripts/ci-install-eslint ${{ matrix.eslint }}
+    - name: Test
+      run: npm run -s test
+  test-for-old-eslint:
+    name: Test
+    strategy:
+      matrix:
+        eslint: [8]
+        node: ['lts/*']
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Checkout submodules
+      run: git submodule update --init
+    - name: Install Node.js v${{ matrix.node }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node }}
+    - name: Install Packages
+      run: npm install
+    - name: Install ESLint v${{ matrix.eslint }}
+      run: node scripts/ci-install-eslint ${{ matrix.eslint }}
+    - name: Test
+      run: npm run -s test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: setup Node
+        uses: actions/setup-node@v4
+        with:
+          registry-url: "https://registry.npmjs.org"
+          node-version: lts/*
+      - name: Install Packages
+        run: npm install
+      - name: build
+        run: npm run build

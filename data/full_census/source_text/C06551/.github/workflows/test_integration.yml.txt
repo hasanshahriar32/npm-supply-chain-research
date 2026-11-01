@@ -1,0 +1,43 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  integration_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22, 23, 24]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          submodules: true
+          show-progress: false
+          token: ${{ secrets.PDF_PARSE_PRO}}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          package-manager-cache: false
+
+      - name: Clean NPM Cache
+        run: npm cache clean --force
+
+      - name: Install
+        run: npm i
+
+      - name: Run All Tests
+        run: npm run test:all

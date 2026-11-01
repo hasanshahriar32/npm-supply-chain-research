@@ -1,0 +1,38 @@
+name: 👔 Format
+
+on:
+  workflow_dispatch: null
+
+# Allow one concurrent deployment
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+      - name: Install deps
+        run: npm install -f
+      - name: Update deps
+        run: npm update -D -f
+      - name: Format
+        run: npm run eslint-fix
+      - name: Commit
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add .
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "no formatting changed"
+            exit 0
+          fi
+          git commit -m "chore: format"
+          git push
+          echo "pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"

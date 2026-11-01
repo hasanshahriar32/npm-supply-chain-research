@@ -1,0 +1,35 @@
+# Broadly based on example Github action from
+# https://github.com/github/codeql-action#usage
+name: codeql
+# https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#permissions
+# https://github.com/github/codeql-action/issues/572
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: write
+on:
+  push:
+    branches:
+      - main
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+      - name: setup-go
+        uses: actions/setup-go@v7
+        with:
+          go-version: "1.27.x"
+          check-latest: true
+      - name: initialize
+        uses: github/codeql-action/init@v4
+        with:
+          # Limit analysis to Go for now.
+          # Available languages: https://docs.github.com/en/code-security/secure-coding/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#changing-the-languages-that-are-analyzed
+          languages: go
+      - name: autobuild
+        uses: github/codeql-action/autobuild@v4
+      - name: analyze
+        uses: github/codeql-action/analyze@v4

@@ -1,0 +1,66 @@
+name: Playwright Dev Tests
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+  # These tokens can be found in Curated Tests > vercel-storage-next-integration-test-suite > storage > vcs-integration-test-suite-pg
+  POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+  POSTGRES_URL_NON_POOLING: ${{ secrets.POSTGRES_URL_NON_POOLING }}
+  # This token can be found in Curated Tests > vercel-storage-next-integration-test-suite > storage > vcs-integration-test-suite-blob
+  BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+  # These tokens can be found in Curated Tests > vercel-storage-next-integration-test-suite > storage > vcs-integration-test-suite-kv
+  KV_REST_API_URL: ${{ secrets.KV_REST_API_URL }}
+  KV_REST_API_TOKEN: ${{ secrets.KV_REST_API_TOKEN }}
+  # This token can be found in Curated Tests > vercel-storage-next-integration-test-suite > storage > vcs-integration-test-suite-ecfg
+  EDGE_CONFIG: ${{ secrets.EDGE_CONFIG }}
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - uses: actions/cache@v5
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # This will use the cache for browsers. But it will reinstall system deps, which can't be cached
+      # https://github.com/microsoft/playwright/issues/20603#issuecomment-1416243810
+      # Using ./test/next... is mandatory so we are not subject to playwright surprise updates
+      - run: ./test/next/node_modules/.bin/playwright install --with-deps
+
+      - name: Run Playwright tests in development mode
+        run: pnpm integration-test
+        env:
+          BLOB_UPLOAD_SECRET: ${{ secrets.BLOB_UPLOAD_SECRET }}
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: test/next/test-results
+          retention-days: 30

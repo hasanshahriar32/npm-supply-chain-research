@@ -1,0 +1,64 @@
+{
+  "name": "undertaker",
+  "version": "2.0.0",
+  "description": "Task registry that allows composition through series/parallel methods.",
+  "author": "Gulp Team <team@gulpjs.com> (https://gulpjs.com/)",
+  "contributors": [
+    "Blaine Bublitz <blaine.bublitz@gmail.com>",
+    "Damien Lebrun <dinoboff@hotmail.com>"
+  ],
+  "funding": "https://github.com/sponsors/gulpjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gulpjs/undertaker.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">= 22.15.0"
+  },
+  "main": "./index.js",
+  "files": [
+    "LICENSE",
+    "index.js",
+    "lib"
+  ],
+  "scripts": {
+    "format-check": "prettier . --check",
+    "format-write": "prettier . --write",
+    "lint": "eslint .",
+    "pretest": "npm run lint",
+    "test": "nyc mocha --async-only"
+  },
+  "dependencies": {
+    "bach": "^2.0.1",
+    "fast-levenshtein": "^3.0.0",
+    "last-run": "^2.0.0",
+    "undertaker-registry": "^2.0.0"
+  },
+  "devDependencies": {
+    "async-once": "^2.0.0",
+    "del": "^6.1.1",
+    "eslint": "10.11.0",
+    "eslint-config-gulp": "7.0.0",
+    "expect": "^27.5.1",
+    "mocha": "^8.4.0",
+    "nyc": "^15.1.0",
+    "once": "^1.4.0",
+    "prettier": "3.9.6",
+    "through2": "^4.0.2",
+    "undertaker-common-tasks": "^2.0.0",
+    "undertaker-task-metadata": "^2.0.0",
+    "vinyl-fs": "^4.0.0"
+  },
+  "nyc": {
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ]
+  },
+  "keywords": [
+    "registry",
+    "runner",
+    "task"
+  ]
+}

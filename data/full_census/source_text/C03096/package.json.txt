@@ -1,0 +1,63 @@
+{
+  "name": "@expo/results",
+  "version": "1.0.0",
+  "description": "An efficient, standards-compliant library for representing results of successful or failed operations",
+  "main": "build/results.js",
+  "types": "build/results.d.ts",
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "clean": "rm -rf build coverage",
+    "lint": "eslint src",
+    "prepublish": "rm -rf build coverage",
+    "prepare": "tsc",
+    "prettier": "prettier --write 'src/**/*.ts'",
+    "test": "jest"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "coverageDirectory": "<rootDir>/coverage",
+    "coverageProvider": "babel",
+    "roots": [
+      "<rootDir>/src/"
+    ],
+    "testEnvironment": "node"
+  },
+  "eslintConfig": {
+    "extends": "universe/node"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true
+  },
+  "engines": {
+    "node": ">=10"
+  },
+  "keywords": [
+    "result",
+    "fulfilled",
+    "rejected",
+    "allsettled"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/expo/results.git"
+  },
+  "author": "Expo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/expo/results/issues"
+  },
+  "homepage": "https://github.com/expo/results#readme",
+  "devDependencies": {
+    "@babel/core": "^7.15.5",
+    "@types/jest": "^27.0.1",
+    "eslint": "^7.32.0",
+    "eslint-config-universe": "^7.0.1",
+    "jest": "^27.1.1",
+    "prettier": "^2.4.0",
+    "ts-jest": "~27.0.5",
+    "typescript": "^4.4.2"
+  }
+}

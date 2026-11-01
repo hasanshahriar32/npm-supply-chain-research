@@ -1,0 +1,79 @@
+name: 🚀 Auto Release
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # Python 3.11 和 node-gyp 有兼容问题, 导致无法安装依赖
+      # https://github.com/slint-ui/slint/commit/a9c48e33502fdebc36c5aa2f4f516c2218424679#diff-944291df2c9c06359d37cc8833d182d705c9e8c3108e7cfe132d61a06e9133dd
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # 发布开始通知
+      - name: Release start ding talk dev group notify
+        uses: zcong1993/actions-ding@master
+        with:
+          dingToken: ${{ secrets.DING_TALK_TOKEN }}
+          ignoreError: true
+          body: |
+            {
+              "msgtype": "link",
+              "link": {
+                "title": "🚀 开始自动发布 🚀",
+                "text": "🔗 请点击链接查看详情",
+                "messageUrl": "https://github.com/antvis/G/actions/workflows/release.yml",
+                "picUrl": "https://gw.alipayobjects.com/zos/antfincdn/9Ivxcn0hFl/Gtoutu.png"
+              }
+            }
+
+      - name: Build
+        run: pnpm build
+
+      # 自动发布完成后 触发 github.release.published 事件
+      # 如果是 action 自带的 机器人 token, 出于安全考虑, github 会禁止循环触发, 使用真实用户的 token 可解决这个问题
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.CD_GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          npm_config_legacy_peer_deps: true
+        run: pnpm config set //registry.npmjs.org/:_authToken ${NPM_TOKEN} & pnpm release
+
+      # 发布失败通知内部开发群
+      - name: Release failed ding talk dev group notify
+        if: ${{ failure() }}
+        uses: zcong1993/actions-ding@master
+        with:
+          dingToken: ${{ secrets.DING_TALK_TOKEN }}
+          ignoreError: true
+          body: |
+            {
+              "msgtype": "link",
+              "link": {
+                "title": "🚨 自动发布失败 🚨",
+                "text": "🔗 请点击链接查看具体原因, 及时修复, 尝试点击右上角 [Re-run all jobs] 重试, 或手动发布 🚑",
+                "messageUrl": "https://github.com/antvis/G/actions/workflows/release.yml",
+                "picUrl": "https://gw.alipayobjects.com/zos/antfincdn/9Ivxcn0hFl/Gtoutu.png"
+              }
+            }

@@ -1,0 +1,74 @@
+{
+	"name": "@file-type/xml",
+	"version": "1.2.0",
+	"description": "XML detection plugin for file-type",
+	"type": "module",
+	"types": "./lib/index.d.ts",
+	"exports": "./lib/index.js",
+	"scripts": {
+		"clean": "del-cli 'lib/**/*.js' 'lib/**/*.js.map' 'lib/**/*.d.ts' 'src/**/*.d.ts'",
+		"compile-src": "tsc -p lib",
+		"compile": "yarn run  compile-src",
+		"lint:ts": "biome check",
+		"build": "yarn run clean && yarn compile",
+		"test": "mocha",
+		"prepublishOnly": "yarn run build",
+		"update-biome": "yarn add -D --exact @biomejs/biome && npx @biomejs/biome migrate --write"
+	},
+	"keywords": [
+		"file-type",
+		"detect",
+		"detection",
+		"detector",
+		"XML",
+		"signature",
+		"namespace",
+		"SVG",
+		"XHTML",
+		"RSS",
+		"KML",
+		"GML",
+		"MusicXML",
+		"plist",
+		"property list",
+		"xliff",
+		"xlf",
+		"docbook",
+		"TEI",
+		"x3d",
+		"atom",
+		"TTML",
+		"SMIL",
+		"OPML",
+		"MathML",
+		"GPX"
+	],
+	"dependencies": {
+		"sax": "^1.6.1",
+		"strtok3": "^10.3.5"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.15",
+		"@types/sax": "^1.2.7",
+		"chai": "^6.3.0",
+		"del-cli": "^7.0.0",
+		"file-type": "^22.1.1",
+		"mocha": "^12.0.3",
+		"typescript": "^7.0.2"
+	},
+	"files": [
+		"lib/**/*.js",
+		"lib/**/*.d.ts",
+		"lib/*.cjs"
+	],
+	"author": {
+		"name": "Borewit",
+		"url": "https://github.com/Borewit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Borewit/file-type-xml.git"
+	},
+	"license": "MIT",
+	"packageManager": "yarn@4.18.1"
+}

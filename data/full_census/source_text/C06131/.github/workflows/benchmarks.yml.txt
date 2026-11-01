@@ -1,0 +1,86 @@
+name: Benchmark measurements
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'benchmark/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/benchmark*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'benchmark/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/benchmark*.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The `benchmarks` environment requires a reviewer, so each run waits for
+    # approval before it starts.
+    environment: benchmarks
+    steps:
+      - uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Check out baseline
+        id: baseline
+        continue-on-error: ${{ github.event_name == 'push' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha || (github.event.before != '0000000000000000000000000000000000000000' && github.event.before) || github.sha }}
+          path: baseline
+          persist-credentials: false
+      - name: Report unavailable baseline
+        if: steps.baseline.outcome == 'failure'
+        run: echo "::warning::Baseline checkout unavailable (the previous tip may no longer exist after a force push). Reports will contain candidate measurements only, with baseline unavailable."
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Install and build baseline
+        if: steps.baseline.outcome == 'success'
+        run: |
+          pnpm --dir baseline install --frozen-lockfile
+          pnpm --dir baseline --filter seroval --filter seroval-plugins build
+      - name: Install and build candidate
+        run: |
+          pnpm --dir candidate install --frozen-lockfile
+          pnpm --dir candidate --filter seroval --filter seroval-plugins build
+      - name: Test the report harness
+        run: node --test candidate/benchmark/reports/*.test.mjs
+      - name: Measure bundle size
+        run: node candidate/benchmark/reports/measure.mjs --kind size --candidate candidate ${{ steps.baseline.outcome == 'success' && '--baseline baseline' || '' }} --output results
+      - name: Measure speed
+        run: node candidate/benchmark/reports/measure.mjs --kind speed --candidate candidate ${{ steps.baseline.outcome == 'success' && '--baseline baseline' || '' }} --output results
+      - name: Render local reports
+        run: |
+          node candidate/benchmark/reports/report.mjs --input results/size.json --output results
+          node candidate/benchmark/reports/report.mjs --input results/speed.json --output results
+          cat results/size.md results/speed.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-results
+          path: results/
+          if-no-files-found: error
+          retention-days: 30

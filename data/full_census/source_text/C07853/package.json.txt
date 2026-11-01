@@ -1,0 +1,46 @@
+{
+  "name": "testdeck",
+  "private": true,
+  "version": "0.0.3",
+  "description": "TypeScript decorators based wrapper over various test framework interfaces",
+  "author": "Panayot Cankov",
+  "contributors": [
+    {
+      "name": "silkentrance",
+      "url": "https://github.com/silkentrance"
+    }
+  ],
+  "homepage": "https://testdeck.org/",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/testdeck/testdeck.git"
+  },
+  "devDependencies": {
+    "lerna": "latest",
+    "lerna-changelog": "latest"
+  },
+  "scripts": {
+    "postinstall": "lerna bootstrap --no-ci",
+    "build": "lerna run build",
+    "clean": "lerna run clean",
+    "clean-all": "lerna run clean-all",
+    "postclean-all": "npx rimraf node_modules || true",
+    "test": "lerna run test --verbose",
+    "lint": "lerna run lint",
+    "lint-fix": "lerna run lint-fix",
+    "prelerna-publish": "npm run clean-all && npm install && npm run build && npm run test",
+    "lerna-publish": "lerna publish",
+    "changelog": "lerna-changelog"
+  },
+  "changelog": {
+    "repo": "testdeck/testdeck",
+    "labels": {
+      "breaking": ":boom: Breaking Change",
+      "internal": ":house: Internal",
+      "bug": ":bug: Bug Fix",
+      "enhancement": ":rocket: New Feature",
+      "documentation": ":memo: Documentation"
+    }
+  }
+}

@@ -1,0 +1,459 @@
+name: Create release PR / Publish packages
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  pr:
+    name: Conditionally create a release PR
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    outputs:
+      hasChangesets: ${{ steps.store-has-changesets.outputs.hasChangesets }}
+    permissions:
+      pull-requests: write # This allows us to create pull requests
+      contents: write
+      issues: write # Needed for posting/updating docs comments on release PRs
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+          # NOTE: If we use default GITHUB_TOKEN to create the release PR, the checks on the release PR will not be triggered automatically
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+
+      - name: Set up the environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Collect docs URLs from changesets
+        id: docs
+        run: node scripts/collect-changeset-docs-urls.ts
+
+      - name: Create release Pull Request
+        id: pr
+        env:
+          # NOTE: If we use the default GITHUB_TOKEN to create the release PR, the checks on the release PR will not be triggered automatically
+          GITHUB_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN || github.token }}
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          title: Version Packages (v3)
+          version: pnpm version-for-release
+
+      - name: Store hasChangesets for subsequent jobs
+        id: store-has-changesets
+        run: |
+          echo "hasChangesets=${{steps.pr.outputs.hasChangesets}}"
+          echo "hasChangesets=${{steps.pr.outputs.hasChangesets}}" >> $GITHUB_OUTPUT
+
+      # The following two steps are to mark the changesets PR as draft
+      # This is so a user must mark it as ready for review, which will trigger workflows on this PR
+      # Otherwise workflows won't run since the PR is created by an action itself
+
+      - name: Find package versions PR
+        if: steps.pr.outputs.hasChangesets == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: find
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const head  = `${owner}:changeset-release/main`;
+
+            const { data: prs } = await github.rest.pulls.list({ owner, repo, state: "open", head });
+            if (!prs.length) core.setFailed(`No open PR from ${head}`);
+            return { number: prs[0].number };
+
+      - name: Convert to draft
+        if: steps.pr.outputs.hasChangesets == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { number } = ${{ steps.find.outputs.result }};
+            // 1) Get node ID for GraphQL
+            const query = `
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  pullRequest(number:$number) { id, isDraft, number }
+                }
+              }`;
+            const vars = { owner: context.repo.owner, repo: context.repo.repo, number: Number(number) };
+            const res = await github.graphql(query, vars);
+            const pr = res.repository.pullRequest;
+            if (pr.isDraft) return { already: true };
+
+            // 2) Convert to draft
+            const mutation = `
+              mutation($prId:ID!) {
+                convertPullRequestToDraft(input:{pullRequestId:$prId}) {
+                  pullRequest { number, isDraft }
+                }
+              }`;
+            await github.graphql(mutation, { prId: pr.id });
+
+      - name: Sync docs comment on release PR
+        if: steps.pr.outputs.hasChangesets == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          HAS_DOCS: ${{ steps.docs.outputs.has_docs }}
+          COMMENT_BODY: ${{ steps.docs.outputs.comment_body }}
+        with:
+          script: |
+            const { number } = ${{ steps.find.outputs.result }};
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const hasDocs = process.env.HAS_DOCS === "true";
+            const body = process.env.COMMENT_BODY;
+            const marker = '## Documentation PRs to merge';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: number,
+            });
+
+            const existing = comments.find(c => c.body.startsWith(marker));
+
+            if (hasDocs && existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else if (hasDocs) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: number,
+                body,
+              });
+            } else if (existing) {
+              await github.rest.issues.deleteComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+              });
+            }
+
+  pack:
+    name: Generate tarballs for publishing
+    needs: pr
+    if: needs.pr.outputs.hasChangesets == 'false'
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      hasPackages: ${{ steps.detect.outputs.hasPackages }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up the environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build All Packages
+        run: pnpm run --recursive --no-bail --filter './packages/**' --if-present build
+
+      - name: Publish All Packages (dry-run) and save list of packages that need publishing
+        run: pnpm publish --filter "./packages/**" -r --no-git-checks --access public --dry-run --report-summary
+
+      - name: Store the package list to be published
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pnpm-publish-summary.json
+          path: pnpm-publish-summary.json
+          overwrite: true
+          if-no-files-found: error
+
+      - name: Detect packages needing publish
+        id: detect
+        run: |
+          count=$(jq '.publishedPackages | length' pnpm-publish-summary.json 2>/dev/null)
+          if [ "$count" -gt 0 ]; then
+            echo "hasPackages=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No packages to publish."
+            echo "hasPackages=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The --filter parameter filters by exact package name, so there's no risk of a package name being a substring of another package name
+      - name: Generate tarballs for packages that need publishing
+        id: pack
+        if: steps.detect.outputs.hasPackages == 'true'
+        run: |
+          jq -r '.publishedPackages[].name' pnpm-publish-summary.json | while IFS= read -r name; do
+            pnpm pack -r --filter "$name" --pack-destination tarballs
+          done
+
+      - name: Upload packed tarballs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.detect.outputs.hasPackages == 'true'
+        with:
+          name: tarballs
+          path: tarballs
+          overwrite: true
+          if-no-files-found: error
+
+  review:
+    name: Review diffs
+    needs: pack
+    if: needs.pack.outputs.hasPackages == 'true'
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # To download the tarballs to review
+    steps:
+      - name: Download pnpm list json
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pnpm-publish-summary.json
+          path: .
+
+      - name: Download tarballs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarballs
+          path: tarballs
+
+      - name: Show diff between published and proposed packages
+        run: |
+          jq -r '.publishedPackages[] | "\(.name)|\(.version)"' pnpm-publish-summary.json |
+          while IFS='|' read -r name version; do
+            # download latest
+            NORMALIZED_NAME="${name//\//-}"
+            NORMALIZED_NAME="${NORMALIZED_NAME//@/}"
+            TARBALL_URL=$(npm view "$name@latest" dist.tarball)
+
+            curl -s -L "$TARBALL_URL" -o "tarballs/$NORMALIZED_NAME-latest.tgz"
+
+            # unpack both latest and proposed version
+            mkdir -p tarballs/$NORMALIZED_NAME/proposed
+            mkdir -p tarballs/$NORMALIZED_NAME/latest
+            tar -xzf tarballs/$NORMALIZED_NAME-latest.tgz -C tarballs/$NORMALIZED_NAME/latest
+            tar -xzf tarballs/$NORMALIZED_NAME-$version.tgz -C tarballs/$NORMALIZED_NAME/proposed
+
+            # show diffs for review
+            echo "<< Showing files diff for $name >>"
+            git diff --color=always --no-index --name-status tarballs/$NORMALIZED_NAME/latest tarballs/$NORMALIZED_NAME/proposed || true
+            echo "<< Showing package.json diff for $name >>"
+            git diff --color=always --no-index tarballs/$NORMALIZED_NAME/latest/package/package.json tarballs/$NORMALIZED_NAME/proposed/package/package.json || true
+          done
+
+  notify-deploy:
+    name: Notify pre-deploy to Slack
+    needs: [pack, review]
+    if: needs.pack.outputs.hasPackages == 'true'
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions: {} # Slack webhook only, no GitHub API calls
+    steps:
+      - name: Notify pre-deploy
+        continue-on-error: true
+        timeout-minutes: 1
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.PUBLISHING_NOTIFICATIONS_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Deployment review requested by ${{ github.actor }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment review requested by ${{ github.actor }}*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} #${{ github.run_number }}> / Publish packages"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "`npm-publish` waiting for review"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ github.repository }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+  publish:
+    name: Publish packages
+    needs: [pack, review, notify-deploy]
+    if: needs.pack.outputs.hasPackages == 'true'
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      actions: read # To download the tarball to publish, and to read approvals for the deployment-approved notification
+      id-token: write # Needed for npm Trusted Publishing (OIDC)
+    steps:
+      - name: Get approver
+        id: approver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          err=$(mktemp)
+          if approver=$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" --jq '.[0].user.login // empty' 2>"$err"); then
+            if [[ -z "$approver" ]]; then
+              echo "::warning::Approvals API returned no approver; falling back to github.actor=${GITHUB_ACTOR}"
+            fi
+          else
+            echo "::warning::Approvals API call failed (see step log); falling back to github.actor=${GITHUB_ACTOR}"
+            cat "$err" >&2
+            approver=
+          fi
+          echo "login=${approver:-$GITHUB_ACTOR}" >> "$GITHUB_OUTPUT"
+
+      - name: Notify deployment approved
+        continue-on-error: true
+        timeout-minutes: 1
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
+        with:
+          webhook: ${{ secrets.PUBLISHING_NOTIFICATIONS_SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "Deployment review approved by ${{ steps.approver.outputs.login }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment review approved by ${{ steps.approver.outputs.login }}*\n:rocket: Publishing packages now"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} #${{ github.run_number }}>"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "Publish packages • `npm-publish`"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ github.repository }}"
+                    }
+                  ]
+                }
+              ]
+            }
+
+      - name: Download pnpm list json
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pnpm-publish-summary.json
+          path: .
+
+      - name: Download tarballs
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: tarballs
+          path: tarballs
+
+      - name: Setup node to be able to update npm
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      - name: Update npm to make sure it supports Trusted Publishing
+        run: npm install -g npm@latest
+
+      - name: Publish
+        env:
+          NPM_CONFIG_PROVENANCE: true # explicitly enable NPM provenance
+        run: |
+          cd tarballs
+          jq -r '.publishedPackages[] | "\(.name)|\(.version)"' ../pnpm-publish-summary.json |
+          while IFS='|' read -r name version; do
+            NORMALIZED_NAME="${name//\//-}"
+            NORMALIZED_NAME="${NORMALIZED_NAME//@/}"
+            filename=$NORMALIZED_NAME-$version.tgz
+            
+            echo "Publishing $filename"
+            # We can switch to pnpm publish when pnpm supports Trusted publishing
+            npm publish $filename --tag latest --access public
+          done
+
+  github-release:
+    name: Create GitHub tags and releases
+    needs: [pack, publish]
+    if: needs.pack.outputs.hasPackages == 'true'
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # needed to create releases (no dedicated releases scope exists)
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up the environment
+        uses: ./.github/actions/setup-env
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # This step is needed otherwise tag creation fails
+      - run: |
+          git config user.name  "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+
+      - name: Create tags for packages
+        run: pnpm changeset tag
+
+      - name: Push tags
+        run: git push --follow-tags
+
+      - name: Download pnpm publish summary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pnpm-publish-summary.json
+          path: .
+
+      - name: Create GitHub Releases for each published package
+        env:
+          # The default token with content write permissions is used
+          # by the `gh` command line tool internally
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/github-release/create-releases.ts

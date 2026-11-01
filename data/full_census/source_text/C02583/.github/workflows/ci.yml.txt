@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  # Deliberately not restricted to pull requests targeting main: a stacked
+  # branch opened against its parent would otherwise report no checks at all,
+  # which reads as "nothing failed" rather than "nothing ran".
+  pull_request:
+
+permissions:
+  contents: read
+  # The coverage report is posted as a pull request comment.
+  pull-requests: write
+
+jobs:
+  library:
+    name: Library
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Dropzone
+        uses: actions/checkout@v7
+
+      # pnpm has to be set up before setup-node, otherwise `cache: pnpm`
+      # cannot find the store.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      # Playwright lives at the workspace root, so one browser download
+      # serves the library's tests and, once they are wired up, the website's.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - run: pnpm format:check
+      - run: pnpm lint
+      # Ahead of the build, which also runs tsc but only to emit declarations:
+      # this reports a type problem as a type problem rather than as a failed
+      # build. tsconfig turns on the checks beyond type errors too -- unused
+      # locals and parameters, branches that forget to return, fallthrough.
+      - run: pnpm --filter dropzone run typecheck
+      - run: pnpm build:lib
+      - run: pnpm test:coverage
+      - run: pnpm test:e2e
+
+      # Writes the coverage table into the job summary and, on a pull request,
+      # posts it as a comment. A pull request from a fork only gets a
+      # read-only token, so the comment cannot be posted there and the step is
+      # allowed to fail without failing the build.
+      - name: Report coverage
+        if: always()
+        continue-on-error: true
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          vite-config-path: packages/dropzone/vite.config.mjs
+          json-summary-path: packages/dropzone/coverage/coverage-summary.json
+          json-final-path: packages/dropzone/coverage/coverage-final.json
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: packages/dropzone/playwright-report
+          retention-days: 7
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      # The docs build treats broken links, anchors and markdown links as
+      # errors, so this is also the link check.
+      - run: pnpm build:docs
+
+  website:
+    name: Website
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # svelte-check covers what tsc cannot see on its own: the TypeScript
+      # inside .svelte files, including the markup. --threshold warning means
+      # a warning fails the job rather than scrolling past in the log.
+      #
+      # No build has to have run first: in the workspace the library resolves
+      # to its TypeScript source, so this checks the website against the real
+      # thing rather than against declarations that may not exist yet.
+      - name: Check the website's types
+        run: pnpm --filter @dropzone/website run check
+
+      - name: Build the website
+        run: ./scripts/build-site.sh website
+
+      # Both Playwright projects in apps/website are Chromium, so one browser
+      # covers the desktop and mobile runs.
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Test the website
+        run: pnpm --filter @dropzone/website run test
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: website-playwright-report
+          path: apps/website/playwright-report
+          retention-days: 7

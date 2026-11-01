@@ -1,0 +1,55 @@
+name: Test Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node-version: ["22", "24", "26"]
+        include:
+          - os: windows-latest
+            node-version: "22"
+          - os: macos-latest
+            node-version: "22"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Build (cross-platform)
+        if: matrix.os != 'ubuntu-latest'
+        run: pnpm turbo run build --filter=deslop-js --filter=deslop-cli
+
+      - name: Test
+        run: pnpm test
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Test
+        run: pnpm turbo run test --filter=deslop-js
+        if: matrix.os == 'macos-latest'

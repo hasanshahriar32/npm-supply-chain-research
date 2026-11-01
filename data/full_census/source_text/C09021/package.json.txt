@@ -1,0 +1,37 @@
+{
+  "name": "reduce-configs",
+  "version": "2.0.1",
+  "repository": "https://github.com/rstackjs/reduce-configs",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rs lib",
+    "check": "rs check --type-check",
+    "dev": "rs lib -w",
+    "format": "rs fmt",
+    "lint": "rs lint",
+    "test": "rs test",
+    "prepare": "rs hooks",
+    "bump": "pnpm version -m \"release: v%s\""
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "rstack": "^0.8.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

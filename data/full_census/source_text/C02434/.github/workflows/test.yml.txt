@@ -1,0 +1,90 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: Lint
+    uses: the-guild-org/shared-config/.github/workflows/lint.yml@main
+    with:
+      script: pnpm ci:lint
+      packageManager: pnpm
+    secrets:
+      githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+  typecheck:
+    name: typecheck / graphql v${{matrix.graphql_version}} (${{matrix.os}})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        graphql_version: [16]
+
+    steps:
+      - name: Checkout out code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache turbo build setup
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup ENV
+        uses: the-guild-org/shared-config/setup@main
+        with:
+          nodeVersion: 24
+          packageManager: pnpm
+
+      - name: Build
+        run: pnpm build
+
+  test:
+    name:
+      Node.js v${{matrix.node_version}} / GraphQL v${{matrix.graphql_version}} / ESLint v9
+      (${{matrix.os}})
+    timeout-minutes: 60
+    runs-on: ${{ matrix.os }}
+    needs: [typecheck]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node_version: [24]
+        graphql_version: [16]
+
+    steps:
+      - name: Checkout Master
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache turbo build setup
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Setup ENV
+        uses: the-guild-org/shared-config/setup@main
+        with:
+          nodeVersion: ${{matrix.node_version}}
+          packageManager: pnpm
+
+      - name: Test
+        run: pnpm test
+
+      - name: Type Check
+        run: pnpm typecheck
+#
+#      - name: Lint Prettier
+#        run: pnpm lint:prettier

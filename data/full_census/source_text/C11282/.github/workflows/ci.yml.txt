@@ -1,0 +1,65 @@
+name: ci
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - src/**/*
+      - src/*
+      - test
+      - package.json
+      - deno.json
+      - .github/workflows/ci.yml
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/**/*
+      - src/*
+      - test
+      - package.json
+      - deno.json
+      - .github/workflows/ci.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    name: Test on Node
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PNPM setup
+        uses: pnpm/action-setup@v3
+
+      - name: Deno Setup
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      - name: ViTest
+        run: pnpm test
+      
+      - name: Upload coverage report on to coveralls.io...
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

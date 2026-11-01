@@ -1,0 +1,46 @@
+{
+  "name": "@mux/elements",
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=7.0.0"
+  },
+  "version": "0.1.0",
+  "description": "Custom elements for working with media in the browser that Just Work™",
+  "main": "index.js",
+  "repository": "https://github.com/muxinc/elements",
+  "author": "Mux, Inc.",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "prettier": "^3.5.3",
+    "pretty-quick": "^4.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "turbo": "^2.4.4"
+  },
+  "overrides": {
+    "eslint": "^9.22.0",
+    "playwright": "1.45.3",
+    "shelljs": "0.9.2",
+    "typescript": "^5.7.2"
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "scripts/*",
+    "shared/*"
+  ],
+  "scripts": {
+    "format": "prettier --write .",
+    "clean": "turbo run clean",
+    "lint": "turbo run lint --filter '!./examples/*'",
+    "test": "turbo run test --concurrency=1 --filter '!./examples/*'",
+    "dev": "turbo run dev --concurrency=20 --filter '!./examples/*'",
+    "build:packages": "turbo run build --filter '!./examples/*'",
+    "build": "turbo run build",
+    "i18n": "turbo run i18n",
+    "prepare": "husky && npm run vendor:types -w @mux/playback-core"
+  },
+  "packageManager": "npm@11.2.0"
+}

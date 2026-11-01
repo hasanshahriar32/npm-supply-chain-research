@@ -1,0 +1,43 @@
+{
+  "name": "@dropzone/monorepo",
+  "private": true,
+  "description": "Monorepo for the Dropzone library, its documentation and its website.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enyo/dropzone.git"
+  },
+  "scripts": {
+    "build": "pnpm run build:lib && pnpm run build:docs",
+    "build:lib": "pnpm --filter dropzone run build",
+    "build:docs": "pnpm --filter @dropzone/docs run build",
+    "build:website": "./scripts/build-site.sh website",
+    "build:site": "./scripts/build-site.sh",
+    "dev:website": "pnpm --filter @dropzone/website run dev",
+    "dev:docs": "pnpm --filter @dropzone/docs run start",
+    "test": "pnpm --filter dropzone run test",
+    "test:coverage": "pnpm --filter dropzone run test:coverage",
+    "test:watch": "pnpm --filter dropzone run test:watch",
+    "test:e2e": "pnpm --filter dropzone run test:e2e",
+    "format": "oxfmt --ignore-path .gitignore --ignore-path .oxfmtignore .",
+    "format:check": "oxfmt --check --ignore-path .gitignore --ignore-path .oxfmtignore .",
+    "lint": "oxlint",
+    "typecheck": "pnpm --filter dropzone run typecheck && pnpm --filter @dropzone/website run check",
+    "lint:fix": "oxlint --fix",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
+    "@playwright/test": "^1.62.1",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0",
+    "playwright": "^1.62.1"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "packageManager": "pnpm@11.24.0"
+}

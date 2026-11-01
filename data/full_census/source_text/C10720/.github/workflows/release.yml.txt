@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    # Prevent this action from running on forks.
+    if: github.repository == 'stormwarning/stylelint-config-recess-order'
+
+    permissions:
+      # OpenID Connect token needed for provenance.
+      # https://docs.npmjs.com/trusted-publishers
+      id-token: write
+
+      # Allow changesets/action to create release and pull request.
+      contents: write
+      pull-requests: write
+
+    steps:
+      # https://github.com/actions/checkout
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          # This makes Actions fetch all Git history so that Changesets can
+          # generate changelogs with the correct commits.
+          fetch-depth: 0
+
+      # https://github.com/pnpm/action-setup
+      - uses: pnpm/action-setup@v6
+        with:
+          version: latest
+
+      # https://github.com/actions/setup-node
+      - name: Setup Node.js 24.x
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      # https://github.com/changesets/action
+      - name: Create release PR or publish to npm
+        id: changesets
+        uses: changesets/action@v2
+        with:
+          pr-title: 'Publish release'
+          commit-message: 'Publish release'
+          # This expects you to have a script called release which does a build
+          # for your packages and calls changeset publish
+          publish-script: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

@@ -1,0 +1,44 @@
+{
+  "private": true,
+  "name": "media-elements",
+  "version": "0.0.0",
+  "description": "A collection of HTMLMediaElement compatible elements and add-ons.",
+  "author": "@muxinc",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://github.com/muxinc/media-elements#readme",
+  "bugs": {
+    "url": "https://github.com/muxinc/media-elements/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muxinc/media-elements.git"
+  },
+  "workspaces": [
+    "scripts/*",
+    "packages/custom-media-element",
+    "packages/media-played-ranges-mixin",
+    "packages/super-media-element",
+    "packages/media-tracks",
+    "packages/castable-video",
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "clean": "rimraf packages/*/dist",
+    "lint": "turbo lint",
+    "test": "turbo test --concurrency=1",
+    "dev": "turbo run dev --concurrency=20 --filter '!./examples/*' & turbo watch build --filter '!./examples/*'",
+    "build": "turbo build"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.5.4",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "npm@11.0.0",
+  "engines": {
+    "node": "24.x"
+  }
+}

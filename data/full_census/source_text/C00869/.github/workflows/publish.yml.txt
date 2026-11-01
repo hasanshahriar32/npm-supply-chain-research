@@ -1,0 +1,50 @@
+name: Publish Package
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --audit=false --fund=false
+      - name: Verify tag matches package version
+        run: node -e "const version=require('./package.json').version; const tag=process.env.GITHUB_REF_NAME; const expected='v'+version; if (tag !== expected) throw new Error('Tag '+tag+' does not match package version '+expected);"
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
+      - name: Build and test
+        run: npm test
+      - name: Verify published package contents
+        run: npm run pack:check
+      - name: Publish to npm with provenance
+        run: |
+          unset NODE_AUTH_TOKEN
+          unset NPM_TOKEN
+          npm publish --provenance
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            --verify-tag

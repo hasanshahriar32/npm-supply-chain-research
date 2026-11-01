@@ -1,0 +1,41 @@
+name: Continuous Deployment
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      - name: Setup node for npmjs.org as registry
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies 🔧
+        run: yarn install --immutable
+
+      - name: Build 🏗️
+        run: yarn build
+
+      - name: Set npm publish tag
+        id: npm_tag
+        run: |
+          if [[ "${{ github.event.release.tag_name }}" == *"-rc"* ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: NPM PKG Publish 🎉
+        run: npm publish --workspaces --access public --tag ${{ steps.npm_tag.outputs.tag }} --provenance

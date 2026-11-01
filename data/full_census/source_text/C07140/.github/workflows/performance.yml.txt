@@ -1,0 +1,16 @@
+name: performance
+
+on: [pull_request]
+
+jobs:
+  compressed-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: preactjs/compressed-size-action@v2
+        env:
+          MINIFY: 'true'
+        with:
+          omit-unchanged: 'true'
+          pattern: './packages/react-native-web/dist/{index.js,**/*.js}'
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'

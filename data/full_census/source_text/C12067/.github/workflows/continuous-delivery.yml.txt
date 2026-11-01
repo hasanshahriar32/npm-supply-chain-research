@@ -1,0 +1,58 @@
+name: Continuous Delivery
+
+on:
+  workflow_dispatch:
+    inputs:
+      prNumber:
+        description: The number of the PR that is being deployed
+        required: true
+      ref:
+        description: The branch that is being deployed. Should be a branch on the given repository
+        required: false
+        default: main
+      repository:
+        description: The {owner}/{repository} that is being deployed.
+        required: false
+        default: vladfrangu/async_event_emitter
+  push:
+    branches:
+      - main
+
+jobs:
+  Publish:
+    name: Publish Next to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          fetch-depth: 0
+          repository: ${{ github.event.inputs.repository || 'vladfrangu/async_event_emitter' }}
+          ref: ${{ github.event.inputs.ref || 'main' }}
+
+      - name: Add TypeScript problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/tsc.json"
+
+      - name: Use Node.js v22
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install Dependencies
+        run: yarn --immutable
+
+      - name: Bump Version & Publish
+        run: |
+          # Resolve the tag to be used. "next" for push events, "pr-{prNumber}" for dispatch events.
+          TAG=$([[ ${{ github.event_name }} == 'push' ]] && echo 'next' || echo 'pr-${{ github.event.inputs.prNumber }}')
+
+          yarn config set npmAuthToken ${NODE_AUTH_TOKEN}
+          yarn config set npmPublishRegistry "https://registry.yarnpkg.com"
+
+          yarn bump --preid "${TAG}.$(git rev-parse --verify --short HEAD)"
+
+          yarn npm publish --tag ${TAG}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}

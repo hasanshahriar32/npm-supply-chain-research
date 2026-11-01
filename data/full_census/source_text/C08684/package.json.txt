@@ -1,0 +1,44 @@
+{
+  "private": true,
+  "engines": {
+    "node": "^20.9.0 || >=22",
+    "pnpm": "10.33.3"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "nx run-many --target=build --exclude='@react-docgen-internal/*'",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings=0",
+    "fix": "eslint . --fix --report-unused-disable-directives --max-warnings=0",
+    "test": "nx run-many --target=test --exclude='@react-docgen-internal/*' --output-style=stream",
+    "copy:changelog:react-docgen": "cp ./packages/react-docgen/CHANGELOG.md ./packages/website/src/app/docs/release-notes/react-docgen/page.mdx",
+    "copy:changelog:cli": "cp ./packages/react-docgen-cli/CHANGELOG.md ./packages/website/src/app/docs/release-notes/cli/page.mdx",
+    "changesets-release": "pnpm build && changeset publish",
+    "changesets-version": "changeset version && pnpm install --lockfile-only && pnpm copy:changelog:react-docgen && pnpm copy:changelog:cli"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/changelog-github": "0.6.0",
+    "@changesets/cli": "2.31.0",
+    "@eslint/eslintrc": "3.3.5",
+    "@eslint/js": "10.0.1",
+    "@types/node": "20.19.39",
+    "@vitest/coverage-v8": "4.1.5",
+    "cpy": "13.2.2",
+    "eslint": "10.3.0",
+    "eslint-config-next": "16.2.4",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "5.5.5",
+    "execa": "9.6.1",
+    "globals": "17.6.0",
+    "nx": "22.7.1",
+    "prettier": "3.8.3",
+    "prettier-plugin-tailwindcss": "0.8.0",
+    "rimraf": "6.1.3",
+    "tempy": "3.2.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.2",
+    "vite": "7.3.2",
+    "vitest": "4.1.5"
+  },
+  "packageManager": "pnpm@10.33.3"
+}

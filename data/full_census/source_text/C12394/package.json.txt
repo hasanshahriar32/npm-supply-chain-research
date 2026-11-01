@@ -1,0 +1,54 @@
+{
+  "name": "detect-element-overflow",
+  "version": "2.0.0",
+  "description": "A function that tells you whether a given element is overflowing its container or not. Useful for creating dropdowns and tooltips.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "source": "./src/index.ts",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./*": "./*"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "node -e \"fs.rmSync('./dist', { recursive: true, force: true })\"",
+    "format": "biome format",
+    "lint": "biome lint",
+    "postinstall": "husky",
+    "prepack": "yarn clean && yarn build",
+    "test": "yarn lint && yarn tsc && yarn format",
+    "tsc": "tsc"
+  },
+  "keywords": [
+    "collision",
+    "collision-detection",
+    "position"
+  ],
+  "author": {
+    "name": "Wojciech Maj",
+    "email": "kontakt@wojtekmaj.pl"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "husky": "^9.0.0",
+    "typescript": "^7.0.2"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "!**/*.spec.ts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wojtekmaj/detect-element-overflow.git"
+  },
+  "funding": "https://github.com/wojtekmaj/detect-element-overflow?sponsor=1",
+  "packageManager": "yarn@4.17.1"
+}

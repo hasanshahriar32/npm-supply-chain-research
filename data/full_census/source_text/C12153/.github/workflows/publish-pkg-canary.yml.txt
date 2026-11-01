@@ -1,0 +1,79 @@
+name: Publish Single Package Canary to NPM
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to release from"
+        required: true
+        default: "master"
+      packageName:
+        description: "Name of the package to publish (e.g., @walletconnect/heartbeat)"
+        required: true
+      packageDir:
+        description: "Relative path to the package directory (e.g., misc/heartbeat)"
+        required: true
+      version:
+        description: "Specific version to publish (e.g., 1.2.3)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code 🛎️
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          # Fetch all history so npm version can determine versions correctly
+          fetch-depth: 0
+
+      - name: Setup Node ⚙️
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          registry-url: "https://registry.npmjs.org"
+          # Cache npm dependencies based on the lock file
+          cache: "npm"
+
+      - name: Install dependencies 🔧
+        run: npm ci
+
+      # --- Validate Version Format ---
+      # Ensure the provided version string includes '-canary-' as this workflow
+      # is intended specifically for canary releases.
+      - name: Validate canary version format 🔍
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ -canary- ]]; then
+            echo "❌ Invalid version format for canary: '$VERSION'. It must include '-canary-'."
+            exit 1
+          fi
+          echo "✅ Version format '$VERSION' is valid for canary."
+
+      # --- Versioning Step ---
+      # Use npm version to update the package.json in the specific package directory
+      - name: Set package version 🔢
+        run: |
+          echo "Setting version for package in directory: ${{ github.event.inputs.packageDir }}"
+          cd ${{ github.event.inputs.packageDir }}
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version --allow-same-version
+        # --allow-same-version prevents errors if the version is accidentally the same as current
+
+      # --- Build Step ---
+      # Build the target package AND any workspace packages it depends on.
+      - name: Build package and dependencies 🏗️
+        run: npx turbo build --filter=./${{ github.event.inputs.packageDir }}
+
+      # --- Publish Step ---
+      - name: Publish to NPM 🚀
+        run: |
+          echo "Publishing package from directory: ${{ github.event.inputs.packageDir }} with canary tag"
+          cd ${{ github.event.inputs.packageDir }}
+          npm publish --access public --tag canary
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

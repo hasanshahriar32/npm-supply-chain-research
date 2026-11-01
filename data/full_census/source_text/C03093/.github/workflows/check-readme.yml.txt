@@ -1,0 +1,38 @@
+name: Check README
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check-readme:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github
+            packages
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Generate README
+        run: yarn generate-root-readme
+
+      - name: Check for README changes
+        run: |
+          if [ -n "$(git status --porcelain README.md)" ]; then
+            echo "README.md has been modified. Please commit the changes."
+            git diff README.md
+            exit 1
+          fi

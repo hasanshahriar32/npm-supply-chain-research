@@ -1,0 +1,37 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Verify
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Installing dependencies
+        run: npm ci
+      - name: Checking formatting with Prettier
+        run: npm run format:check
+      - name: Checking code with ESLint
+        run: npm run lint
+      - name: Building the package
+        run: npm run build
+      - name: Running tests
+        run: npm test
+      - name: Testing the package in a temporary project
+        run: npm i --prefix test-project && npm run test:project
+      - name: Building the documentation
+        run: npm run build:docs

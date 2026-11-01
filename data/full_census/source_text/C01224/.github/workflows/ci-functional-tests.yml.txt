@@ -1,0 +1,30 @@
+name: "Functional Tests"
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    name: "Functional Tests"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5  # v2
+      - name: Use Node.js
+        uses: actions/setup-node@7c12f8017d5436eb855f1ed4399f037a36fbd9e8  # v2
+        with:
+          node-version-file: .nvmrc
+      - run: npm install
+      - run: npx playwright install --with-deps
+      - run: sudo apt-get install xvfb
+      # there's a weird typescript incompatibility with jest types and mocha types
+      # for whatever reason, just removing the mocha types module fixes the issue
+      # in addition, the jsdom type definitions don't play nicely with the functional tests
+      - run: rm -rf node_modules/@types/mocha node_modules/@types/jsdom
+      - run: xvfb-run --auto-servernum npm run test:functional

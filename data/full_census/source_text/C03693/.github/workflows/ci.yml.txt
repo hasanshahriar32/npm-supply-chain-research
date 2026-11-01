@@ -1,0 +1,31 @@
+name: Node CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['24']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: gjtorikian/actions/setup-languages@main
+        with:
+          node: true
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build Typescript
+        run: npm run build
+
+      - name: Run tests
+        run: npm test

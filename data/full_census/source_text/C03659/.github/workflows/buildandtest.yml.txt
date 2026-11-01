@@ -1,0 +1,410 @@
+name: Build & Test
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  diff_check:
+    uses: ./.github/workflows/skip-ci.yml
+
+  job_test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: [diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      - name: Test
+        run: yarn test
+
+  job_native_link_check:
+    name: Android Native Link Check
+    runs-on: ubuntu-latest
+    needs: [diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      # Guards against regressing the #6398 fix: verifies libsentry-tm-perf-logger.so
+      # still links for armeabi-v7a under --no-undefined when the reactnative prefab
+      # reference is unresolved. Uses the runner's preinstalled NDK (ANDROID_NDK_LATEST_HOME).
+      - name: Check libsentry-tm-perf-logger.so links (armeabi-v7a)
+        run: ./scripts/check-tm-perf-logger-link.sh
+
+  job_lint:
+    name: Lint
+    # SwiftLint's Linux binary needs libxml2.so.2, which Ubuntu 26.04 no longer ships
+    runs-on: ubuntu-24.04
+    needs: [diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Install Dependencies
+        run: yarn install
+
+      # Default of ubuntu and apt packages are too old compared to macos packages.
+      # This is required for using a newer version of clang-format.
+      - name: Setup clang-format V22
+        run: |
+          wget -O - https://apt.llvm.org/llvm.sh | sudo bash -s 22
+          sudo apt-get install -y clang-22 clang-format-22 lld-22 lldb-22
+
+      - name: Set clang-format V22 as default
+        run: |
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-22 200
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-22 200
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-22 200
+          clang --version
+          clang-format --version
+
+      - name: Install Swiftly and Swift
+        run: |
+          # Install Swift dependencies first
+          sudo apt-get update
+          sudo apt-get -y install libcurl4-openssl-dev libz3-dev libncurses-dev libedit-dev libxml2-dev
+
+          ARCH=$(uname -m)
+          SWIFTLY_FILE="swiftly-${ARCH}.tar.gz"
+          curl -sL "https://download.swift.org/swiftly/linux/swiftly-${ARCH}.tar.gz" -o "$SWIFTLY_FILE"
+          tar zxf "$SWIFTLY_FILE"
+
+          ./swiftly init --quiet-shell-followup
+          . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+          hash -r
+
+          # Install Swift 6.0 (compatible with SwiftLint 0.63.2)
+          swiftly install 6.0
+          swift --version
+
+          # Export Swift toolchain path for SwiftLint's SourceKit
+          SWIFT_BIN=$(which swift)
+          SWIFT_TOOLCHAIN=$(dirname $(dirname "$SWIFT_BIN"))
+          SOURCEKIT_PATH=$(find "${SWIFT_TOOLCHAIN}" -name "libsourcekitdInProc.so" -print -quit 2>/dev/null)
+          if [ -n "$SOURCEKIT_PATH" ]; then
+            echo "LINUX_SOURCEKIT_LIB_PATH=$(dirname "$SOURCEKIT_PATH")" >> $GITHUB_ENV
+          else
+            echo "ERROR: libsourcekitdInProc.so not found under ${SWIFT_TOOLCHAIN}"
+            exit 1
+          fi
+
+      - name: Lint
+        run: |
+          . "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh"
+          yarn lint
+
+  job_check_integrity:
+    name: Check package integrity
+    runs-on: ubuntu-latest
+    needs: [diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      - name: Save initial lock file
+        run: cp yarn.lock yarn.lock.initial
+      - name: Install Dependencies (update lock if necessary)
+        run: yarn install
+      - name: Check lock file integrity
+        run: |
+          [ "$(diff yarn.lock.initial yarn.lock)" = "" ]
+
+  job_build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Install Dependencies
+        run: yarn install
+      - name: Build
+        run: yarn build
+      - name: Archive dist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: dist
+          path: packages/core/dist
+      - name: Archive ts3.8
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ts3.8
+          path: packages/core/ts3.8
+      - name: Archive Expo Plugin
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: expo-plugin
+          path: packages/core/plugin/build
+      - name: Pack
+        run: yarn build:tarball
+      - name: Archive Artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/packages/core/*.tgz
+            ${{ github.workspace }}/packages/expo-upload-sourcemaps/*.tgz
+
+  job_validate_tarball:
+    name: Validate tarball
+    runs-on: ubuntu-latest
+    needs: [job_build, diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          node-version: 22
+      - name: Download tarball artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ${{ github.sha }}
+          path: artifacts
+      - name: Verify executable bits in tarball
+        run: |
+          set -e
+          TARBALL=$(find artifacts -name 'sentry-react-native-*.tgz' -print -quit)
+          [ -n "$TARBALL" ] || { echo "::error::tarball not found in artifacts/"; exit 1; }
+          echo "Tarball: $TARBALL"
+          FAILED=0
+          for entry in package/scripts/sentry-xcode.sh \
+                       package/scripts/sentry-xcode-debug-files.sh \
+                       package/scripts/collect-modules.sh \
+                       package/scripts/eas-build-hook.js \
+                       package/scripts/expo-upload-sourcemaps.js; do
+            mode=$(tar -tvf "$TARBALL" "$entry" 2>/dev/null | awk 'NR==1{print $1}')
+            if [ -z "$mode" ]; then
+              echo "::error::$entry missing from tarball"
+              FAILED=1
+            elif [ "$mode" != "-rwxr-xr-x" ]; then
+              echo "::error::$entry has mode $mode, expected -rwxr-xr-x"
+              FAILED=1
+            else
+              echo "OK: $entry ($mode)"
+            fi
+          done
+          exit $FAILED
+      - name: Install tarball into fresh project
+        run: |
+          set -e
+          CORE_TARBALL=$(find "$PWD/artifacts" -name 'sentry-react-native-*.tgz' -print -quit)
+          EXPO_TARBALL=$(find "$PWD/artifacts" -name 'sentry-expo-upload-sourcemaps-*.tgz' -print -quit)
+          [ -n "$CORE_TARBALL" ] || { echo "::error::core tarball not found"; exit 1; }
+          [ -n "$EXPO_TARBALL" ] || { echo "::error::expo-upload-sourcemaps tarball not found"; exit 1; }
+          mkdir -p /tmp/install-test
+          cd /tmp/install-test
+          npm init -y >/dev/null
+          # Install both local tarballs together so the @sentry/expo-upload-sourcemaps
+          # cross-dep is satisfied locally. On a release branch the bumped version
+          # is not on the npm registry yet (workspace:* resolves to the version
+          # we are about to publish), and a registry fetch would fail with ETARGET.
+          npm install --no-save "$EXPO_TARBALL" "$CORE_TARBALL"
+          # workspace:* spec must have been resolved by yarn pack (#6037 regression)
+          if grep -q 'workspace:' node_modules/@sentry/react-native/package.json; then
+            echo "::error::published package.json still contains unresolved workspace: spec"
+            grep workspace: node_modules/@sentry/react-native/package.json
+            exit 1
+          fi
+          # bin entries must be linked into node_modules/.bin and executable
+          for bin in sentry-eas-build-on-complete \
+                     sentry-eas-build-on-error \
+                     sentry-eas-build-on-success \
+                     sentry-expo-upload-sourcemaps; do
+            if [ ! -x "node_modules/.bin/$bin" ]; then
+              echo "::error::node_modules/.bin/$bin missing or not executable"
+              ls -la node_modules/.bin/ | grep -i sentry || true
+              exit 1
+            fi
+            echo "OK: node_modules/.bin/$bin"
+          done
+          # sentry-xcode.sh is invoked directly by the iOS build phase, so it
+          # must remain executable after install (#6047)
+          if [ ! -x node_modules/@sentry/react-native/scripts/sentry-xcode.sh ]; then
+            echo "::error::scripts/sentry-xcode.sh is not executable after install"
+            ls -la node_modules/@sentry/react-native/scripts/sentry-xcode.sh
+            exit 1
+          fi
+          echo "OK: scripts/sentry-xcode.sh executable"
+
+  job_type_check:
+    name: Type Check Typescript 3.8
+    runs-on: ubuntu-latest
+    needs: [job_build, diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    env:
+      YARN_ENABLE_IMMUTABLE_INSTALLS: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      - name: Download dist
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: dist
+          path: packages/core/dist
+      - name: Download ts3.8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ts3.8
+          path: packages/core/ts3.8
+      - name: Install Global Dependencies
+        run: npm i -g yalc
+      - name: Type Check
+        working-directory: dev-packages/type-check
+        run: yarn type-check
+  job_circular_dep_check:
+    name: Circular Dependency Check
+    runs-on: ubuntu-latest
+    needs: [job_build, diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      - name: Download dist
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: dist
+          path: packages/core/dist
+      - name: Download Expo Plugin
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: expo-plugin
+          path: packages/core/plugin/build
+      - name: Run madge
+        run: yarn circularDepCheck
+
+  job_api_report:
+    name: API Report Check
+    runs-on: ubuntu-latest
+    needs: [job_build, diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Install Dependencies
+        run: yarn install
+      - name: Download dist
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: dist
+          path: packages/core/dist
+      - name: Check API Report
+        working-directory: packages/core
+        run: yarn api-report:check
+
+  job_bundle:
+    name: Bundle
+    runs-on: ubuntu-latest
+    needs: [job_test, job_build, diff_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+    strategy:
+      # we want that the matrix keeps running, default is to cancel them if it fails.
+      fail-fast: false
+      matrix:
+        platform: ['ios', 'android']
+        dev: [true, false]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: corepack enable
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Install Dependencies
+        run: yarn install
+      - name: Build
+        run: yarn build
+      - name: Make Sample Build Directory
+        run: mkdir build
+        working-directory: samples/react-native
+      - name: Bundle
+        run: |
+          yarn run react-native bundle \
+          --entry-file index.js \
+          --platform ${{ matrix.platform }} \
+          --dev ${{ matrix.dev }} \
+          --reset-cache \
+          --bundle-output build/bundle.${{ matrix.platform }}.js \
+          --sourcemap-output build/bundle.${{ matrix.platform }}.map
+        working-directory: samples/react-native

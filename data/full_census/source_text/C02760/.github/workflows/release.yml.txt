@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: ./.github/workflows/test.yml
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: test
+    environment: npm-trusted-publisher
+    permissions:
+      id-token: write # for publishing releases
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Install
+        run: yarn install --immutable
+      - name: Get GitHub app token
+        id: secret-service
+        uses: electron/secret-service-action@23b9042f797e34674f0fe2c91608f57f9661ccf2 # v1.1.0
+      - name: Run semantic release
+        uses: electron/semantic-trusted-release@672a62fe17fce21a0d10de5a6825ee54817af317 # v1.1.2
+        with:
+          github-token: ${{ fromJSON(steps.secret-service.outputs.secrets).GITHUB_TOKEN }}

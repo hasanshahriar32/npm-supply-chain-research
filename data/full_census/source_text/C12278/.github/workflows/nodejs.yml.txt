@@ -1,0 +1,105 @@
+name: diagnostics-webpack-plugin
+
+on:
+  push:
+    branches:
+      - main
+      - next
+  pull_request:
+    branches:
+      - main
+      - next
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint - ${{ matrix.os }} - Node v${{ matrix.node-version }}
+
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [lts/*]
+
+    runs-on: ${{ matrix.os }}
+
+    concurrency:
+      group: lint-${{ matrix.os }}-v${{ matrix.node-version }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Security audit
+        run: npm run security
+
+  test:
+    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}, Webpack ${{ matrix.webpack-version }}, ESLint ${{ matrix.eslint-version }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [22.x, 24.x, 26.x]
+        webpack-version: [latest]
+        eslint-version: [latest]
+        include:
+          # The oldest ESLint the peer range names, which the checks are never
+          # run against otherwise: what `npm ci` installs is the newest.
+          - os: ubuntu-latest
+            node-version: 22.x
+            webpack-version: latest
+            eslint-version: 9.x
+
+    runs-on: ${{ matrix.os }}
+
+    concurrency:
+      group: test-${{ matrix.os }}-v${{ matrix.node-version }}-${{ matrix.webpack-version }}-eslint-${{ matrix.eslint-version }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install webpack ${{ matrix.webpack-version }}
+        run: npm i webpack@${{ matrix.webpack-version }}
+
+      - name: Install ESLint ${{ matrix.eslint-version }}
+        if: matrix.eslint-version != 'latest'
+        run: npm i eslint@${{ matrix.eslint-version }}
+
+      - name: Run tests for webpack version ${{ matrix.webpack-version }}
+        run: npm run test:coverage
+
+      - name: Submit coverage data to codecov
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        with:
+          files: ./lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}

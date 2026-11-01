@@ -1,0 +1,85 @@
+name: Guide snippets (local network)
+
+# Executes the docs guide snippets (examples/guides/*.ts) on every PR
+# against a local stellar/quickstart network, so a change that breaks the
+# documented flows at runtime cannot merge. The snippets keep their real
+# testnet URLs and passphrase; config/guides-snippet-preload.ts redirects them
+# to the service container at the transport layer. Depends on nothing
+# outside the runner, so it is reliable enough to be a required check.
+# Real-testnet drift (Horizon deployments, friendbot changes, protocol
+# upgrades) is only checked at release time: `preversion` runs
+# `pnpm test:guides` against real testnet. Bump this workflow's image pin
+# periodically so the local network tracks what testnet actually runs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Rapid pushes to a PR would otherwise stack redundant quickstart runs.
+concurrency:
+  group: guides-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run_guides_local:
+    # Stable, short status-check context: this name is listed in the
+    # protect-main ruleset as a required check. Renaming it strands every PR
+    # on an "Expected" check (see the build_and_test (20) placeholder in
+    # tests.yml for how that ends). Never add a paths: filter to this
+    # workflow either — a required check skipped by a path filter blocks
+    # merge forever.
+    name: guides-local
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      quickstart:
+        # Protocol 28 is the highest that a released quickstart tag
+        # (testing, latest, future) supports (core v28.0.1). Testnet runs a
+        # newer protocol, and the release tier (pnpm test:guides) covers it.
+        # 07-contract-auth needs protocol 27 or later (AddressV2). e2e.yml
+        # pins its own image and protocol: when bumping either workflow's
+        # image, confirm PROTOCOL_VERSION is still <= that image's
+        # core_supported_protocol_version.
+        image: stellar/quickstart:testing@sha256:1d57fcdc3bc3775f841c4eed877cfc10e406ab7b879c0531844549aeff52ff0a
+        ports:
+          - 8000:8000
+        env:
+          ENABLE_LOGS: true
+          NETWORK: local
+          ENABLE_SOROBAN_RPC: true
+          PROTOCOL_VERSION: 28
+        options: >-
+          --health-cmd "curl --no-progress-meter --fail-with-body -X POST
+          \"http://localhost:8000/soroban/rpc\" -H 'Content-Type:
+          application/json' -d
+          '{\"jsonrpc\":\"2.0\",\"id\":8675309,\"method\":\"getNetwork\"}' &&
+          curl --no-progress-meter \"http://localhost:8000/friendbot\" | grep
+          '\"invalid_field\": \"addr\"'" --health-interval 10s --health-timeout
+          5s --health-retries 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node (22.x)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22.x"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --network-concurrency 1
+
+      - name: Run guide snippets against local network
+        run: pnpm run test:guides:local

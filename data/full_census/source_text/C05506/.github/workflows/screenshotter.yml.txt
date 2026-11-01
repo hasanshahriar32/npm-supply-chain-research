@@ -1,0 +1,103 @@
+name: Screenshotter
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  screenshotter:
+    strategy:
+      matrix:
+        browser: [chrome, firefox, safari]
+        include:
+          - browser: chrome
+            os: ubuntu-latest
+            image: selenium/standalone-chromium:145.0-20260222
+          - browser: firefox
+            os: ubuntu-latest
+            image: selenium/standalone-firefox:128.0-20260222
+          - browser: safari
+            os: macos-26
+            image: '' # no Selenium container needed on macOS
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    services:
+      selenium:
+        image: ${{ matrix.image }}
+        options: --shm-size=2g
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install ImageMagick
+        if: matrix.browser == 'safari'
+        run: brew install imagemagick
+
+      - name: Enable SafariDriver
+        if: matrix.browser == 'safari'
+        run: sudo safaridriver --enable
+
+      - name: Run screenshotter (Chromium & Firefox)
+        if: matrix.browser != 'safari'
+        run: |
+          TOKEN="$(cat /proc/sys/kernel/random/uuid | sha256sum | head -c 64)"
+          echo "::add-mask::$TOKEN"
+          echo "TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "::stop-commands::$TOKEN"
+
+          # run in Docker container
+          # mount .git readonly to prevent modification
+          docker run --rm \
+            --network ${{ job.services.selenium.network }} \
+            -v "$PWD:/code" \
+            -v "$PWD/.git:/code/.git:ro" \
+            -w /code \
+            -e CI=true \
+            node:24 \
+            /bin/bash -c 'corepack enable && node dockers/screenshotter/screenshotter.js -b ${{ matrix.browser }} --verify --diff --new --katex-ip $HOSTNAME --selenium-ip selenium'
+          echo "::$TOKEN::"
+        timeout-minutes: 10
+
+      - name: Run screenshotter (macOS)
+        if: matrix.browser == 'safari'
+        run: node dockers/screenshotter/screenshotter.js -b safari --verify --diff --new --wait 0.3
+        timeout-minutes: 10
+
+      - name: Print Selenium Docker logs
+        if: always() && matrix.browser != 'safari'
+        run: |
+          echo "::stop-commands::$TOKEN"
+          docker logs ${{ job.services.selenium.id }}
+          echo "::$TOKEN::"
+
+      - name: Print SafariDriver logs
+        if: always() && matrix.browser == 'safari'
+        run: log show --predicate 'process == "safaridriver" OR process == "Safari"' --last 10m --style compact
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: new-${{ matrix.browser }}
+          path: test/screenshotter/new
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: diff-${{ matrix.browser }}
+          path: test/screenshotter/diff

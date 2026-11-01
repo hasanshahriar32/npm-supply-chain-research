@@ -1,0 +1,202 @@
+name: build
+
+on:
+  pull_request: ~
+  push:
+    branches: ['main']
+    tags: ['v*']
+    paths-ignore:
+      - 'docs/**'
+  workflow_call:
+    inputs:
+      canary-release-skip-checks:
+        description: 'Release canary version (true skips tests and checks)'
+        type: boolean
+        required: false
+        default: false
+      # This allows cleanly separating this workflow_call from other event triggers
+      is-workflow-call:
+        description: 'Indicates that the workflow was triggered via workflow_call'
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      SLACK_WEBHOOK:
+        required: false
+
+permissions: {}
+
+jobs:
+  tests:
+    if: inputs.canary-release-skip-checks == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [26, 24, 22]
+    steps:
+      - uses: $/.github/actions/setup
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: pnpm run generate
+      - parallel:
+          - run: pnpm run test:unit
+          - run: pnpm run test:integration
+          - run: pnpm run test:self
+          - run: pnpm run test:build-packages
+          - name: Type Tests
+            run: pnpm run test:type
+      - name: Slack Notify
+        if: ${{ github.event_name != 'pull_request' && (failure() || cancelled()) }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: SDK Pipeline Bot
+          SLACK_TITLE: Build tests ${{ job.status }} (${{ matrix.node-version }})
+          SLACK_MESSAGE: 'Test failed'
+          MSG_MINIMAL: event,actions url
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_MSG_AUTHOR: ' '
+          SLACK_ICON: https://sap.github.io/cloud-sdk/img/logo.png
+        uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58 # v2.4.0
+
+  checks:
+    if: inputs.canary-release-skip-checks == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: $/.github/actions/setup
+      - name: Test Service Version Check
+        run: pnpm run check:test-service
+      - parallel:
+          - name: REUSE Compliance Check
+            uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0
+          - name: Static Code Check
+            run: pnpm run lint
+          - name: Undeclared dependency Check
+            run: pnpm run check:dependencies --reporter=github-actions
+          - name: Check public api
+            uses: $/.github/actions/check-public-api
+            with:
+              force_internal_exports: 'true'
+              excluded_packages: 'eslint-config, util, test-util'
+          - name: Self tests for tools
+            run: pnpm run test:self
+          - name: Circular dependency Check
+            run: pnpm run check:circular
+          - name: API Doc Check
+            run: pnpm run doc
+          - name: License Check
+            uses: $/.github/actions/check-license
+      - name: Slack Notify
+        if: ${{ github.event_name != 'pull_request' && (failure() || cancelled()) }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: SDK Pipeline Bot
+          SLACK_TITLE: Build checks ${{ job.status }}
+          SLACK_MESSAGE: 'Test failed'
+          MSG_MINIMAL: event,actions url
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_MSG_AUTHOR: ' '
+          SLACK_ICON: https://sap.github.io/cloud-sdk/img/logo.png
+        uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58 # v2.4.0
+
+  e2e-tests:
+    if: inputs.canary-release-skip-checks == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: $/.github/actions/setup
+      - run: pnpm run test:e2e
+
+  canary-release-pre-check:
+    if: inputs.is-workflow-call && inputs.canary-release-skip-checks == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      skip-release: ${{ steps.date-check.outputs.skip-release }}
+    needs: [tests, checks, e2e-tests]
+    env:
+      REF_NAME: ${{ github.ref_name }}
+      REF: ${{ github.ref }}
+    steps:
+      - uses: $/.github/actions/setup
+      - name: Check if latest commit is within 24 hrs
+        id: date-check
+        run: |
+          lastCommitDate=$(git --no-pager log -n 1 "$REF_NAME" --pretty=format:"%at")
+          curDate=$(date +%s)
+          dateDiff=$(( curDate - lastCommitDate ))
+          echo "$lastCommitDate, $curDate, $dateDiff"
+
+          if [[ $dateDiff -gt 86400 ]]
+          then
+              echo "No new commit found on $REF within the last 24 hrs."
+              echo "skip-release=true" >> "$GITHUB_OUTPUT"
+          else
+              echo "skip-release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  canary-release:
+    # execute canary release if:
+    # either the canary-release was scheduled and the canary-pre-check step resulted in skip-release=false
+    # or the canary-release input is true
+    if: always() && inputs.is-workflow-call && (needs.canary-release-pre-check.outputs.skip-release == 'false' || inputs.canary-release-skip-checks == true)
+    runs-on: ubuntu-latest
+    needs: [canary-release-pre-check]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: $/.github/actions/setup
+        with:
+          persist-credentials: true
+          package-manager-cache: false
+      - name: Canary Release
+        run: |
+          date=`date +%Y%m%d%H%M%S`
+          rm -f .changeset/*.md
+          cp canary-release-changeset.md .changeset
+          pnpm changeset pre enter "${date}"
+          pnpm changeset version
+          pnpm changeset pre exit
+          pnpm changeset publish --tag canary
+      - name: Slack Notify
+        if: ${{ github.event_name == 'schedule' && (failure() || cancelled()) }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_USERNAME: Cloud SDK Pipeline Bot
+          SLACK_TITLE: 'Canary Release Failed: ${{ job.status }}'
+          SLACK_MESSAGE: 'Canary release failed for ${{ github.repository }} (ref: ${{ github.ref_name }}).'
+          MSG_MINIMAL: event,actions url
+          SLACK_COLOR: ${{ job.status }}
+          SLACK_MSG_AUTHOR: ' '
+          SLACK_ICON: https://sap.github.io/cloud-sdk/img/logo.png
+        uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58 # v2.4.0
+
+  draft-github-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: [tests, checks]
+    permissions:
+      contents: write
+    steps:
+      - uses: $/.github/actions/setup
+      - name: Get Changelog
+        id: get-changelog
+        uses: $/.github/actions/get-changelog
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ steps.get-changelog.outputs.changelog }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --verify-tag \
+            --notes "$CHANGELOG" \
+            --draft

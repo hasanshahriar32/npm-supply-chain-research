@@ -1,0 +1,75 @@
+name: size
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  BUNDLE_SIZE: true
+
+permissions: {}
+
+jobs:
+  # Build current and upload stats.json
+  # You may replace this with your own build method. All that
+  # is required is that the stats.json be an artifact
+  build-head:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 💾 Save PR number
+        run: echo "${{ github.event.pull_request.number }}" > pr-number.txt
+
+      - parallel:
+          - name: ⏫ Upload stats.json
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+            with:
+              name: head-stats
+              path: ./packages/*/stats.json
+
+          - name: ⏫ Upload PR number
+            uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+            with:
+              name: pr-number
+              path: pr-number.txt
+
+  # Build base for comparison and upload stats.json
+  # You may replace this with your own build method. All that
+  # is required is that the stats.json be an artifact
+  build-base:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.base_ref }}
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: ⏫ Upload stats.json
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: base-stats
+          path: ./packages/*/stats.json

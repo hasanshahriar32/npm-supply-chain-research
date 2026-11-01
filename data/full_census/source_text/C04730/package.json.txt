@@ -1,0 +1,72 @@
+{
+  "version": "3.3.3",
+  "license": "MIT",
+  "name": "numeric-quantity",
+  "author": "Jake Boone <jakeboone02@gmail.com>",
+  "description": "Number parser with support for mixed numbers, vulgar fractions, and Roman numerals",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/numeric-quantity.legacy-esm.js",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "types": "./dist/numeric-quantity.d.mts",
+        "default": "./dist/numeric-quantity.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "types": "./dist/numeric-quantity.legacy-esm.d.ts",
+  "sideEffects": false,
+  "unpkg": "./dist/numeric-quantity.iife.umd.min.js",
+  "bugs": {
+    "url": "https://github.com/jakeboone02/numeric-quantity/issues"
+  },
+  "homepage": "https://github.com/jakeboone02/numeric-quantity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakeboone02/numeric-quantity.git"
+  },
+  "keywords": [
+    "parse",
+    "number",
+    "convert",
+    "fraction",
+    "decimal",
+    "roman",
+    "numerals"
+  ],
+  "scripts": {
+    "start": "bun --hot ./main.html",
+    "build": "bunx --bun tsdown",
+    "docs": "typedoc",
+    "test": "bun test",
+    "watch": "bun test --watch",
+    "lint": "oxlint",
+    "publish:npm": "np",
+    "fmt": "oxfmt"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.2",
+    "@types/node": "^26.6.1",
+    "@types/web": "^0.0.356",
+    "@typescript/native-preview": "^7.0.0-dev.20260527.2",
+    "np": "^12.1.1",
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "pkg-pr-new": "^0.0.88",
+    "tsdown": "^0.23.0",
+    "typedoc": "^0.28.20",
+    "typescript": "^6"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

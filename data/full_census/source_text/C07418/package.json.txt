@@ -1,0 +1,170 @@
+{
+  "name": "ts-patch",
+  "version": "4.0.1",
+  "description": "Patch typescript to support custom transformers in tsconfig.json",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./compiler": "./dist/compiler/typescript.js",
+    "./compiler/typescript": "./dist/compiler/typescript.js",
+    "./compiler/tsc": "./dist/compiler/tsc.js",
+    "./compiler/tsserver": "./dist/compiler/tsserver.js",
+    "./compiler/tsserverlibrary": "./dist/compiler/tsserverlibrary.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "compile": "yarn run compile:core && yarn run compile:patch",
+    "build": "yarn run clean && yarn run compile:patch && yarn run compile:core",
+    "compile:core": "tsc -p projects/core",
+    "compile:patch": "tsc -p projects/patch",
+    "------------ ": "-------------",
+    "clean": "npx -y rimraf -g dist coverage *.tsbuildinfo test/.tmp",
+    "clean:global": "yarn run clean && npx -y rimraf -g ./**/node_modules ./**/yarn.lock",
+    "reset": "yarn run clean:global && yarn install && yarn build",
+    "------------  ": "-------------",
+    "test": "jest",
+    "perf": "cd test && yarn run perf",
+    "------------": "-------------",
+    "prepare": "ts-patch install -s && yarn prepare:test",
+    "prepare:test": "cd test && yarn install",
+    "postbuild": "node scripts/postbuild.js"
+  },
+  "private": true,
+  "keywords": [
+    "typescript",
+    "transform",
+    "transformer",
+    "plugin",
+    "config",
+    "ast"
+  ],
+  "author": {
+    "name": "Ron S.",
+    "url": "http://twitter.com/ron"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nonara/ts-patch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nonara/ts-patch/issues"
+  },
+  "homepage": "https://github.com/nonara/ts-patch#readme",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "global-prefix": "^4.0.0",
+    "minimist": "^1.2.8",
+    "resolve": "^1.22.12",
+    "semver": "^7.7.4",
+    "strip-ansi": "^6.0.1"
+  },
+  "bin": {
+    "ts-patch": "./dist/bin/ts-patch.js",
+    "tspc": "./dist/bin/tspc.js"
+  },
+  "engines": {
+    "node": ">=22.15.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/minimist": "^1.2.2",
+    "@types/mock-fs": "^4.13.1",
+    "@types/node": "^25.6.0",
+    "@types/resolve": "^1.20.1",
+    "@types/semver": "^7.7.1",
+    "@types/shelljs": "^0.10.0",
+    "jest": "^30.3.0",
+    "rimraf": "^6.1.3",
+    "shelljs": "^0.10.0",
+    "standard-version": "^9.5.0",
+    "ts-expose-internals": "npm:ts-expose-internals@5.6.3",
+    "ts-jest": "^29.4.9",
+    "ts-next": "npm:typescript@6.0.3",
+    "ts-node": "^10.9.1",
+    "ts-patch": "^3.3.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "6.0.3"
+  },
+  "workspaces": {
+    "packages": [
+      "projects/path",
+      "projects/core"
+    ],
+    "nohoist": [
+      "jest",
+      "ts-jest",
+      "typescript"
+    ]
+  },
+  "directories": {
+    "resources": "./dist/resources"
+  },
+  "standard-version": {
+    "types": [
+      {
+        "type": "feat",
+        "section": "Features"
+      },
+      {
+        "type": "feature",
+        "section": "Features"
+      },
+      {
+        "type": "fix",
+        "section": "Bug Fixes"
+      },
+      {
+        "type": "perf",
+        "section": "Performance Improvements"
+      },
+      {
+        "type": "revert",
+        "section": "Reverts"
+      },
+      {
+        "type": "docs",
+        "section": "Documentation",
+        "hidden": true
+      },
+      {
+        "type": "style",
+        "section": "Styles",
+        "hidden": true
+      },
+      {
+        "type": "chore",
+        "section": "Miscellaneous Chores",
+        "hidden": true
+      },
+      {
+        "type": "refactor",
+        "section": "Code Refactoring",
+        "hidden": true
+      },
+      {
+        "type": "test",
+        "section": "Tests",
+        "hidden": true
+      },
+      {
+        "type": "build",
+        "section": "Build System",
+        "hidden": true
+      },
+      {
+        "type": "ci",
+        "section": "Continuous Integration",
+        "hidden": true
+      },
+      {
+        "type": "change",
+        "section": "Changes"
+      }
+    ]
+  }
+}

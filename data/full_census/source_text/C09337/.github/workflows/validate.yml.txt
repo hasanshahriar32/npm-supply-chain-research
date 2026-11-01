@@ -1,0 +1,60 @@
+name: Validate
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    name: Lint & Test
+    runs-on: ${{ matrix.os }}
+    env:
+      CI: true
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-cypress-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            cypress-${{ runner.os }}-cypress-
+
+      - name: Install Dependencies
+        run: |
+          pnpm install
+          pnpm --filter @playroom/cypress exec cypress install
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm package
+
+      - name: Cypress
+        run: |
+          pnpm cypress:verify
+          pnpm cypress
+
+      - name: Upload Cypress screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cypress-screenshots-${{ matrix.os }}
+          path: cypress/screenshots
+          if-no-files-found: ignore

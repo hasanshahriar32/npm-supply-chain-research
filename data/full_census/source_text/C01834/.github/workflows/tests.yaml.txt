@@ -1,0 +1,120 @@
+name: Tests
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+jobs:
+  types:
+    runs-on: ubuntu-latest
+    name: types
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - name: Check types
+        run: pnpm test:types
+  lint:
+    runs-on: ubuntu-latest
+    name: lint
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - name: Lint files
+        run: pnpm lint
+  unit:
+    runs-on: ubuntu-latest
+    name: unit (${{ matrix.node-version || '.tool-versions' }})
+    strategy:
+      matrix:
+        # The least Node.js the packages declare, and the one the repository is developed on
+        include:
+          - node-version: 22
+          - node-version-file: .tool-versions
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          node-version-file: ${{ matrix.node-version-file }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - run: git config --global user.name 'CI'
+      - run: git config --global user.email 'dummy@example.org'
+      - name: Run tests
+        run: pnpm test:unit
+      # One upload per commit, from the leg of the version the repository is developed on
+      - name: Collect coverage
+        uses: coverallsapp/github-action@main
+        if: success() && matrix.node-version-file
+        with:
+          flag-name: actions linux
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel: true
+          fail-on-error: false
+  unit-windows:
+    runs-on: windows-latest
+    name: Windows / unit
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v7
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .tool-versions
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - run: git config --global user.name 'CI'
+      - run: git config --global user.email 'dummy@example.org'
+      - name: Run tests
+        run: pnpm test:unit --test-timeout=60000
+      - name: Collect coverage
+        uses: coverallsapp/github-action@main
+        with:
+          flag-name: actions windows
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel: true
+          fail-on-error: false
+  finish:
+    needs: [unit, unit-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Upload collected coverage
+        uses: coverallsapp/github-action@main
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true

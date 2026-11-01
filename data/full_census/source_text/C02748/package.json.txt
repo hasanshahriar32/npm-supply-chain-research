@@ -1,0 +1,41 @@
+{
+  "name": "nice-try",
+  "version": "5.0.0",
+  "description": "Tries to execute a function and discards any error that occurs",
+  "keywords": [
+    "try",
+    "catch",
+    "error"
+  ],
+  "homepage": "https://github.com/electerious/nice-try",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/electerious/nice-try.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./promises": "./src/promises.js"
+  },
+  "main": "src/index.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "eslint": "eslint \"**/*.js\"",
+    "format": "npm run eslint -- --fix && npm run prettier -- --write",
+    "lint": "npm run eslint && npm run prettier -- --check",
+    "prettier": "prettier --ignore-path .gitignore \"**/*.{js,json,md,yml}\"",
+    "test": "npm run lint && node --test"
+  },
+  "devDependencies": {
+    "@electerious/eslint-config": "^6.0.0",
+    "@electerious/prettier-config": "^5.0.0",
+    "eslint": "^10.8.1",
+    "prettier": "^3.6.2"
+  },
+  "authors": [
+    "Tobias Reich <tobias@electerious.com>"
+  ]
+}

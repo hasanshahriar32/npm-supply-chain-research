@@ -1,0 +1,36 @@
+{
+  "scripts": {
+    "build": "vp run -r build",
+    "lint": "vp run _lint",
+    "fix": "vp fmt && vp lint --fix-suggestions",
+    "test": "vp run _test",
+    "test:watch": "vp test --watch"
+  },
+  "devDependencies": {
+    "@nx/js": "^23.0.0",
+    "@swc-node/register": "^1.11.1",
+    "@swc/core": "^1.15.41",
+    "@typescript/native-preview": "7.0.0-dev.20260621.1",
+    "nx": "23.0.0",
+    "publint": "^0.3.21",
+    "typescript": "6.0.3",
+    "vite-plus": "^0.2.1"
+  },
+  "devEngines": {
+    "packageManager": [
+      {
+        "name": "pnpm",
+        "version": "11.8.0",
+        "onFail": "download"
+      },
+      {
+        "name": "npm"
+      }
+    ],
+    "runtime": {
+      "name": "node",
+      "version": "26.3.1",
+      "onFail": "download"
+    }
+  }
+}

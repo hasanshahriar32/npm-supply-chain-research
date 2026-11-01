@@ -1,0 +1,68 @@
+name: ' 📚 Build Dictionaries'
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Reference Branch'
+        type: string
+        required: false
+      new-branch:
+        description: 'PR Branch to create'
+        type: string
+        default: build-dictionaries
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository_owner == 'streetsidesoftware'
+    runs-on: ubuntu-latest
+    env:
+      NEW_BRANCH: ${{ inputs.new-branch || 'build-dictionaries' }}
+      REF_BRANCH: ${{ inputs.ref || github.event.inputs.ref }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ env.REF_BRANCH }}
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Normalize package.json
+        run: |
+          pnpm update-package-json
+
+      - name: Sort Source
+        run: |
+          pnpm run lint:fix:sort-source-files
+      - name: Re-Install to build
+        run: |
+          pnpm run setup
+      - name: Build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm run conditional-build
+
+      - name: PR
+        uses: ./.github/actions/pr
+        with:
+          commit-message: 'fix: Workflow Bot -- Build Dictionaries'
+          branch: ${{ env.NEW_BRANCH }}
+          base: ${{ env.REF_BRANCH }}
+          body: |
+            ## Updated Dictionaries
+          app_id: ${{ secrets.AUTOMATION_APP_ID }}
+          app_private_key: ${{ secrets.AUTOMATION_PRIVATE_KEY }}

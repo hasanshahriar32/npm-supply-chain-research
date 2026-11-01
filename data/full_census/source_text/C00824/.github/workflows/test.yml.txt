@@ -1,0 +1,83 @@
+
+name: npm test
+
+on:
+    push:
+        branches:
+          - master
+          - main
+        # temporary disable until build workflow is configured properly
+        # branches-ignore:
+        #   - '**'
+        paths:
+          #- 'dist/**'
+          - '**'
+jobs:
+
+    test:
+        runs-on: ubuntu-latest
+
+        strategy:
+            max-parallel: 1
+            matrix:
+                node-version:
+                   #- 10.x
+                   - 12.x
+                   - 14.x
+                include:
+                    #- node-version: 10.x
+                    #  region: "us-east-1"
+                    - node-version: 12.x
+                      region: "us-east-1"
+                    - node-version: 14.x
+                      region: "us-east-2"
+        steps:
+        - uses: actions/checkout@v2
+        - name: Use Node.js ${{ matrix.node-version }}
+          uses: actions/setup-node@v1
+          with:
+            node-version: ${{ matrix.node-version }}
+
+        - run: npm install
+        # peer dependency
+        #- run: npm install aws-sdk
+        #- run: npm run build --if-present
+        -
+          shell: bash
+          run: CI=true npm test
+          env:
+              AWS_ACCESS_KEY_ID: AKIAWS5577QLD5TL6AZN
+              AWS_SECRET_ACCESS_KEY: ${{ secrets.KEYSECRET_AKIAWS5577QLD5TL6AZN }}
+              AWS_REGION: ${{ matrix.region }}
+              CI: true
+
+
+    tag:
+      name: Tag
+      needs: test
+      runs-on: ubuntu-latest
+      steps:
+        - name: checkout
+          uses: actions/checkout@v2
+        - uses: Klemensas/action-autotag@stable
+          with:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            tag_prefix: "v"
+            #tag_suffix: " (beta)"
+            #tag_message: "Custom message goes here."
+
+
+    # publish if the version number in package.json differs from the latest on NPM
+    publish:
+        needs: tag
+        runs-on: ubuntu-latest
+        steps:
+        - uses: actions/checkout@v2
+        - name: Use Node.js 12
+          uses: actions/setup-node@v1
+          with:
+            node-version: 12
+        - uses: JS-DevTools/npm-publish@v1
+          with:
+            token: ${{ secrets.NPM_TOKEN }}
+            access: public

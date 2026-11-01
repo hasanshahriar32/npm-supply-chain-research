@@ -1,0 +1,58 @@
+{
+  "name": "mchr",
+  "version": "4.5.0",
+  "description": "Generate beautiful Cucumber.js reports for multiple instances (browsers / devices)",
+  "type": "module",
+  "keywords": [
+    "cucumber",
+    "html",
+    "test report",
+    "multiple-cucumber-html-reporter",
+    "html report",
+    "json to html"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "lint": "biome lint",
+    "format": "biome format",
+    "format:fix": "biome format --write",
+    "lint:fix": "biome lint --write",
+    "prepare": "husky",
+    "release": "release-it",
+    "release.ci": "pnpm release --ci",
+    "beta": "pnpm release.ci --preRelease=beta",
+    "release.patch": "pnpm release.ci patch",
+    "release.minor": "pnpm release.ci minor",
+    "release.major": "pnpm release.ci major",
+    "release.premajor": "pnpm beta premajor",
+    "release.preminor": "pnpm beta preminor",
+    "release.prepatch": "pnpm beta prepatch"
+  },
+  "author": "Wasiq Bhamla",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.3",
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@release-it-plugins/lerna-changelog": "^9.0.0",
+    "@release-it/bumper": "^8.0.1",
+    "@types/node": "^26.6.5",
+    "husky": "^9.1.7",
+    "lerna-changelog": "^2.2.0",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "release-it": "^20.2.1",
+    "typescript": "^7.0.2"
+  },
+  "lint-staged": {
+    "**/*.{ts,mjs,json}": [
+      "pnpm format:fix",
+      "pnpm format",
+      "pnpm lint:fix",
+      "pnpm lint"
+    ]
+  },
+  "packageManager": "pnpm@12.15.0"
+}

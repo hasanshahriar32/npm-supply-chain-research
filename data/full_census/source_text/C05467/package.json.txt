@@ -1,0 +1,67 @@
+{
+  "name": "ismobilejs",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "0.0.0-development",
+  "description": "A simple JS library that detects mobile devices.",
+  "keywords": [
+    "ismobile",
+    "device detection",
+    "mobile devices",
+    "useragent"
+  ],
+  "homepage": "https://github.com/kaimallea/isMobile",
+  "license": "MIT",
+  "author": {
+    "name": "Kai Mallea",
+    "email": "kmallea@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kaimallea/isMobile.git"
+  },
+  "main": "cjs/index.js",
+  "module": "esm/index.js",
+  "sideEffects": [
+    "./dist/isMobile.min.js"
+  ],
+  "jsdelivr": "dist/isMobile.min.js",
+  "types": "types",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:browser": "vitest run --project browser",
+    "test:package": "node --test scripts/package.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint --deny-warnings .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm run build && npm test && npm run test:package",
+    "prepack": "npm run build",
+    "release": "semantic-release"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@rollup/plugin-babel": "^7.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/node": "^22.0.0",
+    "acorn": "^8.18.0",
+    "oxlint": "^1.85.0",
+    "prettier": "^3.9.9",
+    "puppeteer": "^25.12.0",
+    "rollup": "^4.63.5",
+    "semantic-release": "^25.0.9",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  },
+  "files": [
+    "cjs",
+    "esm",
+    "dist",
+    "types"
+  ]
+}

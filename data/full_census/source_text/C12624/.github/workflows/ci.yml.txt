@@ -1,0 +1,264 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+        tags:
+            - 'v*'
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        name: Build
+        steps:
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Build
+              run: pnpm build
+            - name: Check bundle size
+              run: |
+                  echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
+                  for file in dist/html2canvas-pro.cjs dist/html2canvas-pro.js dist/html2canvas-pro.min.js dist/html2canvas-pro.esm.js; do
+                    if [ -f "$file" ]; then
+                      size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+                      size_kb=$(echo "scale=1; $size / 1024" | bc)
+                      echo "- \`$file\`: **${size_kb} KB** ($size bytes)" >> $GITHUB_STEP_SUMMARY
+                      # Alert if CJS bundle exceeds 560 KB
+                      if [ "$file" = "dist/html2canvas-pro.cjs" ] && [ "$size" -gt 573440 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::CJS bundle exceeds 560 KB (${size_kb} KB)"
+                      fi
+                      # Alert if UMD bundle exceeds 600 KB
+                      if [ "$file" = "dist/html2canvas-pro.js" ] && [ "$size" -gt 614400 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::UMD bundle exceeds 600 KB (${size_kb} KB)"
+                      fi
+                      # Alert if minified bundle exceeds 300 KB (raised from
+                      # 250 KB in v2.5.0 when background-clip: text, masking,
+                      # backdrop-filter and box-reflect landed; current size
+                      # is ~275 KiB)
+                      if [ "$file" = "dist/html2canvas-pro.min.js" ] && [ "$size" -gt 307200 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::Minified bundle exceeds 300 KB (${size_kb} KB)"
+                      fi
+                      # Alert if ESM bundle exceeds 550 KB
+                      if [ "$file" = "dist/html2canvas-pro.esm.js" ] && [ "$size" -gt 563200 ]; then
+                        echo "::warning file=$file,title=Bundle size warning::ESM bundle exceeds 550 KB (${size_kb} KB)"
+                      fi
+                    fi
+                  done
+            - name: Report bundle sizes
+              if: always()
+              run: |
+                echo "### 📦 Bundle Sizes" >> $GITHUB_STEP_SUMMARY
+                echo "| Format | Size |" >> $GITHUB_STEP_SUMMARY
+                echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+                CJS_SIZE=$(stat -f%z dist/html2canvas-pro.cjs 2>/dev/null || stat -c%s dist/html2canvas-pro.cjs 2>/dev/null)
+                UMD_SIZE=$(stat -f%z dist/html2canvas-pro.js 2>/dev/null || stat -c%s dist/html2canvas-pro.js 2>/dev/null)
+                MIN_SIZE=$(stat -f%z dist/html2canvas-pro.min.js 2>/dev/null || stat -c%s dist/html2canvas-pro.min.js 2>/dev/null)
+                ESM_SIZE=$(stat -f%z dist/html2canvas-pro.esm.js 2>/dev/null || stat -c%s dist/html2canvas-pro.esm.js 2>/dev/null)
+                echo "| CJS | $CJS_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+                echo "| UMD | $UMD_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+                echo "| UMD (minified) | $MIN_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+                echo "| ESM | $ESM_SIZE bytes |" >> $GITHUB_STEP_SUMMARY
+            # Examples import the published package name; tsconfig.examples.json
+            # maps it to dist/types, so this must run after the build above.
+            - name: Typecheck examples
+              run: pnpm typecheck:examples
+            - name: Pack
+              run: |
+                  pnpm pack
+                  mv html2canvas-*.tgz html2canvas-pro.tgz
+                  tar --list --verbose --file=html2canvas-pro.tgz
+            - name: Upload npm pack
+              uses: actions/upload-artifact@v6
+              with:
+                  name: pnpm-package
+                  path: html2canvas-pro.tgz
+                  if-no-files-found: error
+            - name: Upload dist
+              uses: actions/upload-artifact@v6
+              with:
+                  name: dist
+                  path: dist
+                  if-no-files-found: error
+            - name: Upload build
+              uses: actions/upload-artifact@v6
+              with:
+                  name: build
+                  path: build
+                  if-no-files-found: error
+
+    test:
+        runs-on: ubuntu-latest
+        name: Test
+        steps:
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Lint
+              run: pnpm lint
+            - name: Unit tests
+              run: pnpm unittest:coverage
+    browser-test:
+        strategy:
+            fail-fast: false
+            matrix:
+                config:
+                    - os: ubuntu-latest
+                      name: Linux Firefox Stable
+                      targetBrowser: Firefox_Stable
+                      playwrightBrowser: firefox
+                    - os: ubuntu-latest
+                      name: Linux Chrome Stable
+                      targetBrowser: Chrome_Stable
+                      playwrightBrowser: chromium
+                    - os: macos-latest
+                      name: OSX Safari Stable
+                      targetBrowser: Safari_Stable
+                      playwrightBrowser: webkit
+        runs-on: ${{ matrix.config.os }}
+        name: ${{ matrix.config.name }}
+        env:
+            TARGET_BROWSER: ${{ matrix.config.targetBrowser }}
+        needs: build
+        steps:
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Download library
+              uses: actions/download-artifact@v7
+              with:
+                  name: dist
+                  path: dist
+            - name: Download test-runner
+              uses: actions/download-artifact@v7
+              with:
+                  name: build
+                  path: build
+            - name: Ensure browser test prerequisites
+              run: pnpm prebrowser
+            - name: Cache Playwright browser
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ms-playwright
+                      ~/Library/Caches/ms-playwright
+                  key: ${{ runner.os }}-playwright-${{ matrix.config.playwrightBrowser }}-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: ${{ runner.os }}-playwright-${{ matrix.config.playwrightBrowser }}-
+            - name: Install Playwright browser
+              run: pnpm exec playwright install --with-deps ${{ matrix.config.playwrightBrowser }}
+            - name: Run browser tests
+              run: pnpm reftests:pw -- --browser=${{ matrix.config.playwrightBrowser }}
+            - name: Upload screenshots
+              uses: actions/upload-artifact@v6
+              with:
+                  name: reftest-results-${{ matrix.config.targetBrowser }}
+                  path: tmp/reftests
+                  if-no-files-found: error
+                  compression-level: 6
+                  overwrite: false
+    filter-pixels:
+        runs-on: ubuntu-latest
+        name: Filter pixels (Chromium and WebKit)
+        timeout-minutes: 20
+        needs: build
+        steps:
+            - uses: actions/checkout@v5
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  cache: 'pnpm'
+            - run: pnpm install --frozen-lockfile
+            - uses: actions/download-artifact@v7
+              with:
+                  name: dist
+                  path: dist
+            - uses: actions/download-artifact@v7
+              with:
+                  name: build
+                  path: build
+            - name: Cache Playwright browser
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.cache/ms-playwright
+                      ~/Library/Caches/ms-playwright
+                  key: ${{ runner.os }}-playwright-chromium-webkit-${{ hashFiles('pnpm-lock.yaml') }}
+                  restore-keys: ${{ runner.os }}-playwright-chromium-webkit-
+            - run: pnpm exec playwright install --with-deps chromium webkit
+            - run: node scripts/filter-descriptor-regressions.mjs
+            - run: node scripts/filter-surface-benchmark.mjs
+            - uses: actions/upload-artifact@v6
+              if: always()
+              with:
+                  name: filter-pixels-and-memory
+                  path: |
+                      tmp/filter-surface-regressions
+                  if-no-files-found: warn
+
+    # Native WKWebView diagnostics run separately on v* tags or manual dispatch.
+    # See wkwebview-pixels.yml; they do not gate NPM publication.
+    publish:
+        runs-on: ubuntu-latest
+        name: Publish NPM
+        if: startsWith(github.ref, 'refs/tags/v')
+        needs: [browser-test, filter-pixels]
+        permissions:
+            contents: write
+            # Required for OIDC trusted publishing to npm
+            id-token: write
+        steps:
+            - uses: actions/checkout@v5
+            - name: Download NPM package
+              uses: actions/download-artifact@v7
+              with:
+                  name: pnpm-package
+                  path: npm
+            - name: Download library
+              uses: actions/download-artifact@v7
+              with:
+                  name: dist
+                  path: dist
+            - name: Create Github Release
+              uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: ${{ github.ref }}
+                  body: |
+                    Please refer to [CHANGELOG.md](https://github.com/yorickshan/html2canvas-pro/blob/main/CHANGELOG.md) for details.
+                  draft: false
+                  prerelease: ${{ contains(github.ref, '-rc.') || contains(github.ref, '-alpha.') }}
+                  files: |
+                    dist/html2canvas-pro.cjs
+                    dist/html2canvas-pro.js
+                    dist/html2canvas-pro.min.js
+                    dist/html2canvas-pro.esm.js
+            - name: Unpack pnpm package
+              run: cd npm && tar -xvzf "html2canvas-pro.tgz"
+            - uses: pnpm/action-setup@v6
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: 24
+                  registry-url: 'https://registry.npmjs.org'
+            # NPM Publish using OIDC trusted publishing (recommended approach)
+            # To enable: Configure trusted publishing at https://www.npmjs.com/settings/html2canvas-pro/publishing
+            - name: NPM Publish (OIDC)
+              run: |
+                  cd npm/package
+                  pnpm publish --access public --no-git-checks

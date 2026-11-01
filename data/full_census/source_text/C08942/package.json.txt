@@ -1,0 +1,48 @@
+{
+  "name": "atlassian-openapi",
+  "version": "1.0.21",
+  "description": "This is a package that lets you deal with the Atlassian flavour of the OpenAPI 3.0 specification.",
+  "repository": "github:robertmassaioli/atlassian-openapi",
+  "keywords": [
+    "atlassian",
+    "openapi",
+    "swagger"
+  ],
+  "author": "Robert Massaioli",
+  "license": "MIT",
+  "main": "lib/index",
+  "typings": "lib/index",
+  "files": [
+    "lib/**",
+    "swagger-v3.json"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test-watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "coverage:badges": "istanbul-badges-readme",
+    "lint": "eslint 'src/**/*.ts*'",
+    "build": "tsc --project tsconfig.build.json",
+    "generate:swagger-v3-base": "json2ts -i swagger-v3.json -o src/swagger-v3-generated.ts --unreachableDefinitions --style.singleQuote --no-unknownAny",
+    "prepare": "husky && npm run build"
+  },
+  "dependencies": {
+    "jsonpointer": "^5.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "eslint": "^10.8.1",
+    "husky": "^9.1.7",
+    "istanbul-badges-readme": "^1.9.0",
+    "jest": "^30.4.2",
+    "json-schema-to-typescript": "^15.0.4",
+    "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.67.0"
+  }
+}

@@ -1,0 +1,68 @@
+name: playwright
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+    paths:
+      - 'packages/motion/**'
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      deployments: write
+    name: Test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Run a build step here
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        with:
+          version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm i --no-frozen-lockfile
+      
+      - name: Build Motion
+        run: pnpm build
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Install playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install
+
+      # System deps (e.g. libwayland-server for webkit) are not covered by the
+      # browser cache and must be installed on every run.
+      - name: Install playwright system dependencies
+        run: npx playwright install-deps
+
+      - name: Run tests
+        run: pnpm test:e2e

@@ -1,0 +1,70 @@
+name: Devtools
+
+on:
+  workflow_call:
+
+concurrency:
+  group: devtools-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: '**/pnpm-lock.yaml'
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-devtools-${{ hashFiles('pnpm-lock.yaml', 'packages/chrome-devtools/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-devtools-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile && find . -maxdepth 6 -type d \( -name ".cache" -o -name ".modern-js" \) -exec rm -rf {} +
+        env:
+          PLAYWRIGHT_CACHE_HIT: ${{ steps.playwright-cache.outputs.cache-hit }}
+          RUN_DEVTOOLS_POSTINSTALL: 'true'
+
+      - name: Restore Turborepo cache
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-${{ github.ref_name }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.ref_name }}-
+            ${{ runner.os }}-turbo-
+
+      - name: Install Cypress
+        run: npx cypress install
+
+      - name: Build shared packages
+        run: pnpm run build:packages
+
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install xvfb
+
+      - name: E2E Chrome Devtools Dev
+        run: npx kill-port 3009 3010 3011 3012 3013 4001 && pnpm run app:manifest:dev & echo "done" && npx wait-on tcp:3009 tcp:3010 tcp:3011 tcp:3012 tcp:3013 && sleep 10 && pnpm exec turbo run test:e2e --filter=@module-federation/devtools --only
+
+      - name: E2E Chrome Devtools Prod
+        run: npx kill-port 3009 3010 3011 3012 3013 4001 && npx kill-port 3009 3010 3011 3012 3013 4001 && pnpm run app:manifest:prod & echo "done" && npx wait-on tcp:3009 tcp:3010 tcp:3011 tcp:3012 tcp:3013 && sleep 30 && pnpm exec turbo run test:e2e --filter=@module-federation/devtools --only
+
+      - name: Kill devtools ports
+        run: npx kill-port 3013 3009 3010 3011 3012 4001 || true

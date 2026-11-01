@@ -1,0 +1,71 @@
+name: Test
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash # Use bash even on Windows
+
+jobs:
+  test:
+    name: Test Node.js ${{ matrix.node }} with ${{ matrix.dependencies }} dependencies on ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false # our tests are a bit flaky in CI
+      matrix:
+        node: [22.13]
+        os:
+          - ubuntu-24.04
+          - windows-latest
+        dependencies:
+          # default `package-lock.json` dependencies
+          - "default"
+        include:
+          # test with minimal dependencies (only puppeteer-core and its dependencies)
+          - node: 22.13
+            os: ubuntu-24.04
+            dependencies: "minimal"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Node.JS ${{ matrix.node }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          package-manager-cache: false
+
+      - name: Get NPM cache directory
+        id: npm-cache
+        run: echo "cache-dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache node modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          # Use a different cache key for `-minimal` dependencies, since they won't match the `package-lock.json` hash
+          # Cache key format is adapted from https://github.com/actions/setup-node/blob/670825a89dc0abd596e7a3abd0f5e3f6e5faf37c/src/cache-restore.ts#L43-L44
+          key: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('**/package-lock.json') }}${{ case(matrix.dependencies == 'default', '', '-${{ matrix.dependencies }}') }}
+          restore-keys: node-cache-${{ runner.os }}-${{ runner.arch }}-npm-${{ hashFiles('**/package-lock.json') }}
+          path: ${{ steps.npm-cache.outputs.cache-dir }}
+
+      # throws an error if package-lock.json is out-of-date
+      - run: npm ci
+
+      - run: npm run lint
+
+      - name: Install minimal dependencies
+        run: node ./scripts/install-minimum.js
+        if: matrix.dependencies == 'minimal'
+
+      # We use aa-exec since Ubuntu 24.04's AppArmor profile blocks the use
+      # of puppeteer otherwise, see
+      # https://github.com/puppeteer/puppeteer/issues/12818
+      - name: Run tests
+        run: |
+          is_ubuntu=$(node -e 'console.log(os.platform() === "linux" && os.version().toLowerCase().includes("ubuntu"));')
+          if [ "$is_ubuntu" = "true" ]; then
+            aa-exec --profile=chrome npm test
+          else
+            npm test
+          fi

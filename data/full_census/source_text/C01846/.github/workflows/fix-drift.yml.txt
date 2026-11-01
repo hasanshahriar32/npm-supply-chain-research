@@ -1,0 +1,2259 @@
+name: Fix Drift
+on:
+  workflow_dispatch:
+  # The deprecation detector fires on its OWN schedule, NOT off a drift-failure
+  # gate — a model family vanishing from a live `/models` listing does not, by
+  # itself, red the Drift Tests workflow (a vanished family simply stops
+  # appearing in `live`), so a Drift-Tests-failure trigger would never fire.
+  #
+  # This cron is the ONLY automatic trigger, and exactly one is the invariant: a
+  # second automatic leg admits TWO Fix Drift runs for the same morning, each
+  # re-running the whole sync and each firing its own Slack alert
+  # (`concurrency: drift-fix` serialises runs but does not dedupe them). Pinned
+  # by the double-fire guard in src/__tests__/fix-drift-workflow.test.ts.
+  schedule:
+    - cron: "10 6 * * *" # Daily 6:10am UTC (offset from test-drift.yml's 6:00am)
+
+concurrency:
+  group: drift-fix
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # THE AUTOMATION BOUNDARY. The only thing this job does autonomously is the
+  # DETERMINISTIC, zero-agent model-family sync below (`drift-sync.ts` /
+  # `drift-sync-check.ts`), which only ever performs a mechanical, data-only
+  # edit to `model-registry.ts`, the matching membership re-pin of that set in
+  # `logic-pin.test.ts` (gate-1b proves the diff is a pin-only edit of a
+  # `(include|exclude)Families.<provider>` key and nothing else), or drops a
+  # needs-human dedup note file — never arbitrary code generation, so there is
+  # no adversarial diff to police.
+  #
+  # General (non-model-churn) drift is not auto-fixed here at all: it is caught
+  # by the daily `Drift Tests` workflow, which alerts on its own, and fixed by a
+  # human like any other bug.
+  sync:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # These govern the AMBIENT GITHUB_TOKEN, which this job never uses: every
+    # write goes through the minted app token (`gh` reads GH_TOKEN, and the push
+    # goes through the `insteadOf` credential built from the same token). So
+    # `contents: read` is the whole ceiling this job needs — a write grant here
+    # would widen the token handed to every `run:` block in a job that clones a
+    # third-party repo and shells out to provider SDKs, and buy nothing.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The clean-re-collect gate exercises every live leg, so without a local
+      # daemon the Ollama leg would spuriously quarantine/error on a missing host
+      # instead of behaving as it does under test-drift.yml's own daily run.
+      #
+      # THIS RUNS FIRST, AND EVERY BYTE IT EXECUTES IS CHECKSUM-PINNED. Both
+      # halves matter and neither alone is sufficient.
+      #
+      # `sh <(curl …)` of a MUTABLE URL is arbitrary third-party code executing as
+      # the runner user, and it used to sit six steps after the app token was
+      # minted — a token with `contents: write` + `pull-requests: write` on this
+      # repo, live for the rest of the job. Ordering it ahead of the mint means the
+      # token does not exist yet while that code runs, so it cannot be read out of
+      # the job's state; it also starts the token's one-hour life AFTER the slowest
+      # setup step instead of before it, which is strictly better for a job with
+      # `timeout-minutes: 30`.
+      #
+      # But reordering alone does not close it. A compromised payload can plant a
+      # `git`, `gh` or `node` earlier on PATH, or write a shell rc, and every later
+      # step — the ones that DO hold the token — would execute it.
+      #
+      # ollama.com/install.sh IS NOT USED, and pinning it was not enough. Its own
+      # bytes can be pinned, but the script then streams
+      # `https://ollama.com/download/ollama-linux-<arch>.tar.zst` — a mutable,
+      # unversioned URL carrying no digest — straight into `sudo tar -x` under
+      # /usr/local, so a SECOND unpinned payload plants root-owned binaries on
+      # PATH just as effectively as the script could. It cannot be fixed in place
+      # either: the script pipes that download through `zstd -d` into `tar`, so it
+      # never holds the file and has nothing to verify. (On a GPU host it also adds
+      # NVIDIA CUDA apt/yum repos and runs `$PACKAGE_MANAGER -y install` — more
+      # unpinned root execution this job has no use for.)
+      #
+      # So the release artifact is fetched DIRECTLY and verified before anything
+      # unpacks it: one URL, pinned to an immutable release tag, whose bytes must
+      # match a reviewed sha256 or the step hard-`exit 1`s before `tar` runs. The
+      # tarball is the whole product — `bin/ollama` plus `lib/ollama/*` — and this
+      # step already ran `ollama serve` itself rather than using the systemd unit
+      # install.sh sets up, so nothing else in that script was load-bearing here.
+      #
+      # Every other byte this job executes is already pinned: each `uses:` by
+      # commit SHA, and `pnpm install --frozen-lockfile` by the lockfile's own
+      # integrity hashes. With this, nothing in the job runs code it has not
+      # verified.
+      #
+      # WHEN THIS FAILS: Ollama cut a new release, or an artifact was rebuilt.
+      # Pick the version at https://github.com/ollama/ollama/releases, take
+      # `ollama-linux-amd64.tar.zst`'s digest from that release's own
+      # `sha256sum.txt`, and update BOTH values below together. The failure is loud
+      # and alerted (the end-of-job catch-all covers the infra/setup window), never
+      # silent — unverified bytes must not be unpacked as root just because
+      # verifying them was inconvenient.
+      - name: Provision Ollama daemon (drift-sync-check re-collect gate)
+        env:
+          # ollama-linux-amd64.tar.zst from the v0.32.6 release, 1420686963 bytes.
+          # Digest agreed on 2026-08-05 by three independent sources: the release's
+          # sha256sum.txt, the GitHub release API's own asset `digest` field, and
+          # sha256 of the downloaded bytes.
+          OLLAMA_VERSION: v0.32.6
+          OLLAMA_TARBALL_SHA256: dec2fa50d24e6868ca3c4c977d69d059399372105f951a9acc320a5a79aadcfc
+        run: |
+          set -euo pipefail
+          # Fail on a MISSING decompressor rather than discovering it mid-pipe,
+          # where `tar` would be handed a truncated stream as root.
+          if ! command -v zstd >/dev/null 2>&1; then
+            echo "::error::zstd is not installed on this runner, so the pinned Ollama tarball cannot be unpacked. Install zstd before this step."
+            exit 1
+          fi
+          TARBALL="${RUNNER_TEMP}/ollama-linux-amd64.tar.zst"
+          curl -fsSL "https://github.com/ollama/ollama/releases/download/${OLLAMA_VERSION}/ollama-linux-amd64.tar.zst" -o "$TARBALL"
+          ACTUAL="$(sha256sum "$TARBALL" | cut -d' ' -f1)"
+          if [ "$ACTUAL" != "${OLLAMA_TARBALL_SHA256}" ]; then
+            echo "::error::the Ollama ${OLLAMA_VERSION} tarball does not match its pinned sha256 — REFUSING to unpack it as root. Expected ${OLLAMA_TARBALL_SHA256}, got ${ACTUAL}. Check the release's sha256sum.txt and re-pin OLLAMA_VERSION/OLLAMA_TARBALL_SHA256 in .github/workflows/fix-drift.yml if the change is legitimate."
+            exit 1
+          fi
+          # Only now, on bytes that matched. The archive is `bin/ollama` +
+          # `lib/ollama/*`, so /usr/local puts the binary on the default PATH.
+          zstd -d -c "$TARBALL" | sudo tar -xf - -C /usr/local
+          ollama serve > /tmp/ollama-serve.log 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+              echo "ollama daemon ready"; break
+            fi
+            sleep 1
+          done
+          ollama pull qwen2:0.5b
+
+      - name: Mint app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: "1108748"
+          private-key: ${{ secrets.DEVOPS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # drift-sync-check.ts's clean-re-collect gate (gate 3) shells out the FULL
+      # drift-report-collector, which includes the AG-UI schema drift leg — and
+      # that leg reads this checkout.
+      - name: Clone ag-ui repo
+        run: git clone --depth 1 https://github.com/ag-ui-protocol/ag-ui.git ../ag-ui
+
+      # drift-sync.ts commits its own mechanical edit (or needs-human note file)
+      # directly onto this branch; this step only prepares the branch and the
+      # identity to commit under.
+      - name: Configure git
+        id: gitcfg
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          git config user.name "aimock-drift-bot"
+          git config user.email "drift-bot@copilotkit.ai"
+          # The pre-sync HEAD (the commit the workflow ran on), recorded BEFORE
+          # the fix branch is created. The needs-human persist step below compares
+          # HEAD against this base to tell a real new note (a commit to push) from
+          # a re-fire of an already-persisted note (nothing to push).
+          echo "base_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git checkout -B "fix/drift-$(date +%Y-%m-%d)-${RUN_ID}"
+
+      # Step 1: the deterministic (zero-LLM) model-family sync.
+      #
+      # drift-sync.ts fetches each provider's live `/models` listing directly (no
+      # drift-report.json input needed), diffs it against the frozen
+      # `model-registry.ts` classification, and:
+      #   - a deprecated family (of EITHER reference class) -> mechanical,
+      #     comment-marked record in deprecatedFamilies, gated behind
+      #     drift-sync-check.ts (allowlist + checksum-pin re-assert + clean
+      #     re-collect) BEFORE the edit is kept, then commits. The provider's own
+      #     listing already says the family is gone, so this is a fact to write
+      #     down, not a decision to escalate — it NEVER reports needs-human, and
+      #     the mock keeps serving (includeFamilies is untouched).
+      #   - a genuinely new/unclassified family, or a registry structural
+      #     mismatch -> NEVER auto-edited; drops a family-keyed dedup note file
+      #     under drift-proposals/ and reports needs-human (the job goes RED
+      #     below so a human sees it — and the note is already in the repo on
+      #     subsequent runs, so a re-fire is not PR spam).
+      - name: Run deterministic drift sync
+        id: sync
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          # The drift-sync-check re-collect gate exercises every live leg
+          # (including Ollama), so it needs the same env as the daily run.
+          OLLAMA_HOST: 127.0.0.1:11434
+          OLLAMA_MODEL: qwen2:0.5b
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          SYNC_LOG: ${{ runner.temp }}/drift-sync.log
+        run: |
+          # `set +e` covers ONLY the sync itself: a non-zero exit is a
+          # CLASSIFIED outcome here (needs-human and gate-failed both exit 1 by
+          # design — `return outcome.ok ? 0 : 1` in runDriftSyncCli), so it must
+          # not kill the step before the reason is read. pipefail is on so the
+          # two tolerated pipelines below say so with an explicit `|| true`
+          # instead of passing by accident on grep's no-match exit 1.
+          set -uo pipefail
+          set +e
+          npx tsx scripts/drift-sync.ts 2>&1 | tee "${SYNC_LOG}"
+          SYNC_EXIT=${PIPESTATUS[0]}
+          set -e
+          REASON="$(grep '^reason=' "${SYNC_LOG}" | tail -n1 || true)"
+          REASON="${REASON#reason=}"
+          # Stable, date-independent identity of this run's changeset (the sorted
+          # set of applied + deferred family outcomes, hashed — see
+          # computeChangesetKey in drift-sync.ts). BOTH PR-open paths dedup on
+          # this, so a daily re-fire of the same drift never opens a second PR in
+          # ANY run shape — including the mixed run that commits a registry edit
+          # with no new note file.
+          CHANGESET_KEY="$(grep '^changeset-key=' "${SYNC_LOG}" | tail -n1 || true)"
+          CHANGESET_KEY="${CHANGESET_KEY#changeset-key=}"
+
+          # A CRASH MUST NOT BE SILENT.
+          #
+          # drift-sync.ts's fatal handler (`drift-sync fatal error: …` then exit
+          # 1) fires BEFORE its first console.log, because runDriftSyncCli awaits
+          # fetchProviderChurnInput for EVERY provider up front — so a crash emits
+          # no `reason=` line at all. Left unclassified, `set +e` above carries
+          # that to an implicit exit 0: the job ends GREEN, every alert `if:` keyed
+          # on a reason value is false, and the catch-all needs the job to have
+          # failed — so an unattended crash reports NOTHING.
+          #
+          # Not hypothetical: an invalid GOOGLE_API_KEY makes Gemini answer 400,
+          # and isInfraSkip() only absorbs 401/402/403/429/5xx — so a 400 throws
+          # straight out through that fatal handler.
+          #
+          # An UNRECOGNISED reason is treated identically: a run that cannot be
+          # classified must not be reported as a success.
+          case "${REASON}" in
+            ok-no-churn | ok-applied | needs-human | gate-failed) ;;
+            *)
+              if [ -n "${REASON}" ]; then
+                CRASH_DETAIL="printed an unrecognised reason '${REASON}'"
+              else
+                CRASH_DETAIL="printed no reason= line at all (it crashed)"
+              fi
+              REASON="sync-crashed"
+              echo "::error::drift-sync exited ${SYNC_EXIT} and ${CRASH_DETAIL} — classifying as sync-crashed so it cannot pass silently"
+              ;;
+          esac
+
+          # STALE-KEY PREFLIGHT: "we looked and nothing changed" must not share
+          # an encoding with "we could not look".
+          #
+          # fetchProviderChurnInput turns an unusable credential into a SKIP, not
+          # an error: a missing key becomes "<ENV> not set", and isInfraSkip()
+          # absorbs 401/402/403, so a revoked or expired key becomes an "infra
+          # error (status 401)" skip. With every provider skipped the core has no
+          # live listing to diff, reports ok-no-churn and exits 0 — a GREEN job
+          # with no alert, byte-for-byte identical to a genuinely quiet day. Left
+          # alone, revoked keys disable the sync indefinitely and nobody is told.
+          #
+          # An unusable credential is not the only way to end up not having looked.
+          # Only TRANSIENT skips (a 429 or a 5xx from the provider's own /models
+          # endpoint) are tolerated — they resolve on their own and must not red a
+          # daily cron; EVERY other skip class counts, including a live listing
+          # that came back too short to trust and any class added to drift-sync.ts
+          # in future. That classification is made in drift-sync.ts
+          # (isProviderUncheckedSkip), not here, and it is an allowlist of the
+          # tolerated class rather than of the faults — so a new skip class fails
+          # CLOSED instead of silently reading as "checked fine".
+          #
+          # Scoped to ok-no-churn deliberately: that is the exact window where the
+          # skip is INVISIBLE. On any other reason the run already produces its
+          # own signal, and reclassifying would break the PR paths.
+          #
+          # Keyed on the MACHINE line `unchecked-providers=<csv>`, exactly like
+          # `reason=` and `changeset-key=` above. Keying a fail-closed safety
+          # guard on drift-sync.ts's human-facing log prose instead would couple it
+          # to an indent, a wording and an em-dash in a `console.log`.
+          #
+          # An ABSENT line is a FAULT, not "nothing to report": it means the log
+          # could not be read, or drift-sync did not get as far as printing it. An
+          # unknown must not resolve to the answer that passes.
+          if [ "${REASON}" = "ok-no-churn" ]; then
+            UNCHECKED_LINE=""
+            GREP_STATUS=0
+            # grep exits 1 for NO MATCH and 2 for an ERROR (unreadable log — e.g.
+            # `tee` failed, or the runner's disk filled). The status is captured
+            # rather than swallowed so the two stay distinguishable: collapsed
+            # together, an unreadable log reads as PROOF that every provider was
+            # checked — the answer that passes.
+            UNCHECKED_LINE="$(grep '^unchecked-providers=' "${SYNC_LOG}" | tail -n1)" || GREP_STATUS=$?
+            if [ "${GREP_STATUS}" -ge 2 ]; then
+              REASON="provider-unchecked"
+              echo "::error::could not READ ${SYNC_LOG} to check whether every provider was actually checked (grep exited ${GREP_STATUS}) — an unreadable log is not evidence that the credentials worked"
+            elif [ "${GREP_STATUS}" -ne 0 ]; then
+              REASON="provider-unchecked"
+              echo "::error::drift-sync printed no 'unchecked-providers=' line at all, so this run cannot prove any provider was actually checked — treating 'no churn' as unproven rather than as a quiet day"
+            else
+              UNCHECKED="${UNCHECKED_LINE#unchecked-providers=}"
+              if [ -n "${UNCHECKED}" ]; then
+                REASON="provider-unchecked"
+                echo "::error::drift-sync reported no churn, but these providers were never actually checked — 'nothing changed' here means 'could not look': ${UNCHECKED}. The per-provider reason is on the '[skipped] <provider>: …' lines of the drift-sync-log artifact (an unusable credential, or a live /models listing too short to trust)"
+              fi
+            fi
+          fi
+          # A PROCESS THAT SAID IT WAS FINE AND THEN DIED IS NOT A QUIET DAY.
+          #
+          # The exit code has to be gated on as well as published: `reason=ok-*`
+          # plus a non-zero drift-sync exit leaves every reason-keyed alert `if:`
+          # false and the catch-all (which needs `failure()`) silent, so the run
+          # is byte-identical to a genuinely quiet day. Reachable from any
+          # Node-level failure after the log lines are printed — an unhandled
+          # rejection on a dangling promise, an OOM on the way out.
+          #
+          # Scoped to the `ok-*` reasons: those are the ones that claim the run was
+          # FINE, and they are the window where the death is invisible.
+          # `needs-human` and `gate-failed` both exit non-zero BY DESIGN
+          # (`return outcome.ok ? 0 : 1`), and both already raise their own alert.
+          # Reclassified into the existing `sync-crashed` bucket rather than a new
+          # reason, so no alert `if:` has to learn a new value.
+          case "${REASON}" in
+            ok-*)
+              if [ "${SYNC_EXIT}" -ne 0 ]; then
+                echo "::error::drift-sync printed reason=${REASON} and then exited ${SYNC_EXIT} — a process that reports a clean run and then dies is not a quiet day; classifying as sync-crashed"
+                REASON="sync-crashed"
+              fi
+              ;;
+          esac
+          {
+            echo "exit_code=${SYNC_EXIT}"
+            echo "reason=${REASON}"
+            echo "changeset_key=${CHANGESET_KEY}"
+          } >> "$GITHUB_OUTPUT"
+          echo "drift-sync exited ${SYNC_EXIT} (reason=${REASON}, changeset_key=${CHANGESET_KEY})"
+          # These two are the UNCLASSIFIABLE reasons, and the only ones that fail the
+          # step: red here is what stops the PR paths below, which are all gated on
+          # `success()`. Every other reason — `ok-*`, `needs-human`, `gate-failed` —
+          # leaves the step green and is handled by a step keyed on its value (the
+          # gate-failure alert covers `gate-failed` from its own `always()` window,
+          # and fails the job itself).
+          if [ "${REASON}" = "sync-crashed" ] || [ "${REASON}" = "provider-unchecked" ]; then
+            exit 1
+          fi
+
+      # THE CANCELLATION POST GOES FIRST, AHEAD OF THE ARTIFACT UPLOADS.
+      #
+      # A cancelled job — a manual cancel, or this job's own
+      # `timeout-minutes: 30` firing — gets ONE bounded budget to run whatever
+      # remains: GitHub's documented cancellation timeout period is 5 minutes,
+      # after which "the server will forcibly terminate all jobs and steps
+      # marked for cancellation that are still running". The runner works
+      # through the remaining steps IN ORDER, so whatever sits earliest spends
+      # that budget first — which is why this cheap POST is the first thing the
+      # runner reaches once the job starts cancelling.
+      #
+      # Both `always()` artifact uploads therefore sit BELOW it. `upload-artifact`
+      # retries internally against the artifact service, so a degraded or slow
+      # artifact service can consume the whole budget and kill every alert after
+      # it. GitHub's own docs warn about exactly this: "Avoid using `always` for
+      # any task that could suffer from a critical failure … otherwise the
+      # workflow may hang until it times out."
+      #
+      # The end-of-job catch-all also covers cancellation, and remains the
+      # backstop for the case this step's own POST fails (it stands down only on
+      # this step's positive `posted=true`, never on its step outcome — see the
+      # catch-all's comment). It cannot take this position instead: it reads
+      # `steps.alert_needs_human` / `steps.alert_gate`, which come later, and
+      # actionlint rejects that forward reference outright.
+      - name: Alert on job CANCELLATION (posts ahead of the artifact uploads)
+        id: alert_cancelled
+        if: cancelled()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SYNC_REASON: ${{ steps.sync.outputs.reason }}
+        run: |
+          set -euo pipefail
+          # Slack renders a LITERAL \n when the payload carries the two
+          # characters backslash-n, which is what a bash double-quoted "\n"
+          # already is: jq --arg then escapes it to \\n. A REAL newline is what
+          # jq encodes into a line break. Same idiom as test-drift.yml, and the
+          # same in every alert below.
+          NL=$'\n'
+          # A CANCELLED job did not "fail" anywhere — saying it did would send a
+          # human hunting for a broken step that does not exist.
+          if [ -z "${SYNC_REASON:-}" ]; then
+            WHERE="during INFRA/SETUP or drift-sync itself, BEFORE any reason was reported — most plausibly the job's own 30-minute timeout-minutes firing (or a manual cancel)"
+          else
+            WHERE="AFTER drift-sync reported reason='${SYNC_REASON}' — most plausibly the job's own 30-minute timeout-minutes firing (or a manual cancel)"
+          fi
+          echo "::error::Drift-sync job was CANCELLED ${WHERE}"
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::SLACK_WEBHOOK not set — cannot send cancellation alert"
+            exit 1
+          fi
+          MSG="🧱⏹️ *Drift-sync job — CANCELLED / TIMED OUT* — the job was cancelled ${WHERE}; nothing was synced and no PR was opened. Manual intervention needed.${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY: `&&`-chained, so this exists only when the
+          # POST returned 0 — see the catch-all's comment below.
+            echo "posted=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload drift-sync log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: drift-sync-log
+          path: ${{ runner.temp }}/drift-sync.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Step 2: defense-in-depth re-assertion of drift-sync-check.ts against the
+      # now-committed state, ONLY when the sync actually applied a mechanical
+      # edit (reason=ok-applied). drift-sync.ts already gates its OWN edit behind
+      # this exact check before committing (reverting on failure); this runs it
+      # again on the committed result, so nothing reaches a PR on the strength of
+      # a single in-process verdict.
+      - name: Assert drift-sync-check (defense-in-depth)
+        id: assert
+        if: steps.sync.outputs.reason == 'ok-applied'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OLLAMA_HOST: 127.0.0.1:11434
+          OLLAMA_MODEL: qwen2:0.5b
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ASSERT_LOG: ${{ runner.temp }}/drift-sync-check.log
+        run: |
+          set +e
+          npx tsx scripts/drift-sync-check.ts 2>&1 | tee "${ASSERT_LOG}"
+          ASSERT_EXIT=${PIPESTATUS[0]}
+          set -e
+          REASON="$(grep '^reason=' "${ASSERT_LOG}" | tail -n1)"
+          REASON="${REASON#reason=}"
+          echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
+          if [ "$ASSERT_EXIT" -ne 0 ]; then
+            echo "::error::drift-sync-check refused (exit ${ASSERT_EXIT}, reason=${REASON}) — not opening a PR"
+            exit "$ASSERT_EXIT"
+          fi
+          echo "drift-sync-check: sync verified data-only, pins intact, clean re-collect"
+
+      - name: Upload drift-sync-check log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: drift-sync-check-log
+          path: ${{ runner.temp }}/drift-sync-check.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      # Inject the credential only when a push is actually coming
+      # (`persist-credentials: false` above leaves none behind). BOTH push paths
+      # need it: the ok-applied mechanical-edit PR and the needs-human
+      # note-persist PR below.
+      - name: Configure git for push
+        # Named so the gate-failure alert can report THIS step as the failing one
+        # rather than "an unidentified step".
+        id: gitcfg_push
+        if: >-
+          success() &&
+          (steps.sync.outputs.reason == 'ok-applied' ||
+           steps.sync.outputs.reason == 'needs-human')
+        run: git config --local url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
+
+      # Step 3: push the branch drift-sync committed onto and open a data-only
+      # PR. Select the PR by HEAD-SHA match so a stale/unrelated open PR on the
+      # same head branch is never mistaken for the one just pushed.
+      - name: Push branch + create PR
+        id: pr
+        if: steps.sync.outputs.reason == 'ok-applied' && success()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHANGESET_KEY: ${{ steps.sync.outputs.changeset_key }}
+        run: |
+          set -euo pipefail
+          # ---- RECORD WHAT ACTUALLY HAPPENS IN HERE ----------------------------
+          # Actions hands a later step only `outcome` — success/failure/skipped —
+          # so the gate-failure alert below cannot see WHY this step died and used
+          # to print a hand-written list of the causes someone imagined. Persist
+          # the real exit code and the real stderr so it can quote them instead.
+          # Same six lines in the sibling needs-human step; see the alert for the
+          # incident that earned them.
+          #
+          # stderr is captured to a file and REPLAYED to the console on exit
+          # (fd 3 holds the console), so nothing is lost from the job log — it
+          # just lands at the end of the step rather than interleaved. A `tee`
+          # through process substitution would keep the interleaving but races
+          # with step exit, and a truncated last line is the one line this reads.
+          DRIFT_STATUS_DIR="${RUNNER_TEMP}/drift-step-status"
+          mkdir -p "$DRIFT_STATUS_DIR"
+          exec 3>&2
+          exec 2> "${DRIFT_STATUS_DIR}/pr.err"
+          trap 'rc=$?; printf "%s\n" "$rc" > "${DRIFT_STATUS_DIR}/pr.rc"; exec 2>&3; cat "${DRIFT_STATUS_DIR}/pr.err" >&2; exit $rc' EXIT
+          # De-dup (idempotent across daily re-fires): the mechanical edit is
+          # never auto-merged, so an un-merged drift is re-detected every cron run
+          # and would otherwise open a brand-new PR each day. Skip when an open PR
+          # already carries this run's stable changeset marker — keyed on the
+          # date-independent changeset key, NOT the date-stamped branch name or
+          # the diff bytes. An applied edit deserves exactly ONE open PR,
+          # re-findable across runs.
+          #
+          # So an EMPTY key must fail CLOSED rather than dedup-blind:
+          # computeChangesetKey returns "" only when every outcome is a no-op
+          # (i.e. ok-no-churn), and this step runs only on ok-applied, so an empty
+          # key here means drift-sync misbehaved.
+          if [ -z "${CHANGESET_KEY:-}" ]; then
+            echo "::error::changeset_key is empty on an ok-applied run — the PRIMARY dedup guard cannot run, and opening a PR anyway is how daily duplicate PRs start. Refusing."
+            exit 1
+          fi
+          # SINGLE SOURCE OF TRUTH for every `<!-- drift-* -->` marker this step
+          # writes into a PR body. The body writer below emits exactly this array,
+          # the marker self-heal below re-asserts exactly this array, and the
+          # dedup guard matches an entry of it — so a marker added here is wired
+          # into all three at once and cannot slip through one of them.
+          MARKER="drift-changeset: ${CHANGESET_KEY}"
+          MARKERS=("$MARKER")
+
+          # ---- RE-ASSERT THIS STEP'S OWN MARKERS --------------------------------
+          # The dedup guard below matches an HTML comment this step wrote into a PR
+          # BODY — machine state parked inside prose a HUMAN owns and edits. A
+          # wholesale body rewrite deletes it, and the next scheduled run then
+          # finds no PR carrying the changeset key and opens a duplicate.
+          #
+          # Validate-and-FAIL would surface that a run sooner but still leave a
+          # human to repair it, and rewriting prose is a thing humans keep doing.
+          # So REPAIR: restore whichever markers went missing, log loudly, and let
+          # dedup proceed. The guard below is not weakened or bypassed.
+          #
+          # Identity must be body-INDEPENDENT, since a body-keyed lookup cannot
+          # find a PR whose body lost the key: the head branch ends in
+          # "-<changeset key>", and renaming a branch closes any open PR whose head
+          # it is, so for an open PR that suffix is fixed. Never listed with a
+          # `<key> in:body` search: that index is BODY-keyed and lags an edit by
+          # minutes, so it is blind to precisely the deletion this repair exists
+          # for. (`is:unmerged` below is a STATE predicate and carries neither
+          # property — see the window note.)
+          #
+          # `--state all`, NOT `--state open`, and the repair then scoped to OPEN or
+          # CLOSED. A CLOSED PR carrying this marker is how a human REJECTS a
+          # changeset, and that decision lives in exactly one place: that PR's body.
+          # So a human editing a closed PR's body — which is a normal thing to do to
+          # a PR you have just declined, e.g. writing down why — deleted the only
+          # record of the rejection. The dedup listing below could not find it either
+          # (`--search "<key> in:body"` is body-keyed, and the key is what was
+          # deleted), so the rejection was lost PERMANENTLY and this workflow
+          # re-proposed the identical changeset the next morning and every morning
+          # after. The self-heal exists to repair exactly that deletion and was
+          # looking only at open PRs.
+          #
+          # This does NOT widen candidacy: the filter is unchanged, and every
+          # candidate still has to carry THIS run's changeset key as the last segment
+          # of its head branch — which is what keeps a human's `fix/drift-<slug>`
+          # branch out of it. MERGED is excluded because a merged PR is an ACCEPTED
+          # decision, never a pending proposal and never a rejection, so no guard
+          # here consults it and appending machine markers to it would be a write
+          # with no reader.
+          #
+          # ---- THE WINDOW IS PART OF THE ANSWER --------------------------------
+          # `--limit N` is not "up to N", it is a WINDOW: gh returns the newest N
+          # rows matching the query and drops the rest with no flag, no warning
+          # and no count. The `--state` filter above is applied CLIENT-side by the
+          # jq below, so a plain `--state all` listing spends its whole window on
+          # every PR this repo has — renovate, human, bot — and the merged ones,
+          # which no guard in this step consults, crowd out the ones that decide.
+          #
+          # Measured on this repo on 2026-08-05: `--state all --limit 200` came
+          # back FULL, 184 of the 200 MERGED, reaching back only as far as #125.
+          # The repo had 26 unmerged-closed PRs and this listing could see 14 —
+          # twelve were ALREADY outside the window. A closed drift PR that ages
+          # out the same way does not make this step cautious, it makes it wrong:
+          # "no closed PR carries this key" is what it reads, so it re-proposes a
+          # changeset a human REJECTED, every morning, exactly the bug the widened
+          # state filter exists to fix, restored silently by a window nobody
+          # watched.
+          #
+          # So the merged population is excluded SERVER-side by a second listing.
+          # `--search "is:unmerged"` is a STATE predicate, not a body one: unlike
+          # `<key> in:body` it cannot be defeated by the very body edit this
+          # self-heal is here to repair, and a PR closed moments ago matches it
+          # under either indexed state (open is unmerged too). Same measurement:
+          # it returned the complete unmerged population, 28 rows, back to #1.
+          # `--state closed` is NOT a substitute — gh maps it to CLOSED-or-MERGED
+          # and that query returned 186 merged against 14 closed, just as full.
+          #
+          # The plain listing is UNIONED rather than replaced. It is the one view
+          # that needs no search index at all, so it stays as the index-free
+          # floor; the unmerged listing supplies the aged-out closed PRs it can no
+          # longer reach. Neither is trusted alone, and plain entries win on
+          # collision so nothing this step already saw today can change under it.
+          PR_LIST_LIMIT=200
+          # SATURATION IS A FAULT, NOT A RESULT. A truncated listing is
+          # indistinguishable from a complete one — same shape, same exit code —
+          # and every guard downstream reads "absent" where the honest answer is
+          # "did not look". A listing that comes back FULL cannot be proven
+          # complete, so it is REFUSED rather than believed: fail-closed and loud
+          # beats a duplicate PR nobody can explain.
+          assert_listing_complete() {
+            if [ "$(printf '%s' "$2" | jq 'length')" -ge "${PR_LIST_LIMIT}" ]; then
+              echo "::error::the ${1} came back FULL at its --limit of ${PR_LIST_LIMIT}, so it is TRUNCATED and every PR older than the newest ${PR_LIST_LIMIT} is invisible to it. Answering a dedup or rejection lookup from a truncated listing reports 'not proposed' / 'not rejected' for a PR that exists, which opens a duplicate PR or re-proposes a changeset a human rejected. Refusing to decide on it — narrow the query or raise --limit in .github/workflows/fix-drift.yml."
+              exit 1
+            fi
+          }
+          if ! MANAGED="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --json number,url,state,body,headRefName 2>&1)"; then
+            echo "::error::gh pr list failed, so this run cannot prove the dedup marker it owns is still intact on the PRs it manages — refusing to risk a duplicate: ${MANAGED}"
+            exit 1
+          fi
+          if ! printf '%s' "$MANAGED" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list returned a non-array payload — refusing to self-heal markers against it: ${MANAGED}"
+            exit 1
+          fi
+          if ! UNMERGED="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --search "is:unmerged" --json number,url,state,body,headRefName 2>&1)"; then
+            echo "::error::gh pr list (is:unmerged) failed, so this run cannot see the closed PRs that carry human rejections and would re-propose a rejected changeset — refusing: ${UNMERGED}"
+            exit 1
+          fi
+          if ! printf '%s' "$UNMERGED" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list (is:unmerged) returned a non-array payload — refusing to self-heal markers against it: ${UNMERGED}"
+            exit 1
+          fi
+          # Only the unmerged listing is audited for saturation: the plain one is
+          # EXPECTED to be full (merged PRs alone exceed the limit) and is not
+          # relied on for completeness — that is exactly why it is unioned with a
+          # query whose population is bounded by the repo's unmerged PRs.
+          assert_listing_complete "unmerged-PR listing this step's marker self-heal reads" "$UNMERGED"
+          # A PR LISTING MUST NEVER TRAVEL THROUGH argv. Linux caps a SINGLE
+          # argument at MAX_ARG_STRLEN — 128 KiB, fixed at 32 pages and
+          # INDEPENDENT of the far larger total ARG_MAX (2 MiB on the runner) —
+          # so `--argjson a "$MANAGED"` makes execve fail E2BIG, which bash
+          # reports as "Argument list too long" and the step dies with exit 126
+          # before jq runs at all. That is a hard daily red, not a degraded
+          # answer, and it is what killed this cron on 2026-08-06 and 2026-08-07
+          # (runs 31079603526 / 31154443828, both at this same union in the
+          # sibling needs-human step). Measured on this repo 2026-08-07: this
+          # step's plain listing 801 KB and its is:unmerged listing 131 KB —
+          # BOTH over the per-argument cap on their own, so the total is not the
+          # binding constraint and trimming one payload would not have helped.
+          # Lowering --limit is NOT the fix either: the window is load-bearing
+          # (see above), and shrinking it re-opens the silent "not proposed"
+          # answer that duplicate PRs come from.
+          #
+          # `--slurpfile` reads through a file descriptor instead, so size is
+          # bounded by the filesystem, not by execve. It binds an ARRAY OF THE
+          # FILE'S JSON VALUES: a file holding one array binds `[[…]]`, so every
+          # reference is `$a[0]`, never `$a`. Getting that wrong does not error —
+          # it silently compares an array-of-array against PR numbers and matches
+          # nothing, which is the same duplicate-PR failure by another route.
+          MANAGED_FILE="${RUNNER_TEMP}/drift-managed.json"
+          UNMERGED_FILE="${RUNNER_TEMP}/drift-unmerged.json"
+          printf '%s' "$MANAGED" > "$MANAGED_FILE"
+          printf '%s' "$UNMERGED" > "$UNMERGED_FILE"
+          MANAGED="$(jq -cn --slurpfile a "$MANAGED_FILE" --slurpfile b "$UNMERGED_FILE" \
+            '($a[0] | map(.number)) as $seen
+             | $a[0] + [$b[0][] | . as $p | select(($seen | index($p.number)) == null)]')"
+          MINE="$(printf '%s' "$MANAGED" | jq -c --arg k "$CHANGESET_KEY" '
+            map(select((.state == "OPEN" or .state == "CLOSED")
+                       and (.headRefName | test("^fix/drift-"))
+                       and (.headRefName | endswith("-" + $k))))')"
+          REASSERTED="$MINE"
+          while IFS= read -r pr; do
+            [ -n "$pr" ] || continue
+            HEAL_N="$(printf '%s' "$pr" | jq -r '.number')"
+            HEAL_BODY="$(printf '%s' "$pr" | jq -r '.body // ""')"
+            # Every candidate here matched the branch-key anchor (MINE requires
+            # it), which proves the PR IS this changeset's PR — so it is entitled
+            # to every marker in MARKERS. The sibling needs-human step also has a
+            # note-path anchor and must therefore scope this per candidate.
+            MISSING=()
+            for m in "${MARKERS[@]}"; do
+              case "$HEAL_BODY" in *"<!-- ${m} -->"*) ;; *) MISSING+=("$m") ;; esac
+            done
+            # An intact body is left BYTE-IDENTICAL: no edit, no API write, no
+            # duplicated marker — which is what makes a re-run a no-op rather
+            # than an appending ratchet.
+            [ "${#MISSING[@]}" -gt 0 ] || continue
+            HEAL_FILE="${RUNNER_TEMP}/drift-marker-reassert-${HEAL_N}.md"
+            # APPEND-ONLY: human prose is copied through verbatim; only the
+            # missing marker lines are added after it.
+            {
+              printf '%s\n\n' "$HEAL_BODY"
+              printf '%s\n' "<!-- The marker comment(s) below are machine state the Fix Drift dedup guards match on. They went missing from this body and were restored automatically. Deleting them makes this workflow open a duplicate PR for the same changeset. -->"
+              for m in "${MISSING[@]}"; do printf '<!-- %s -->\n' "$m"; done
+            } > "$HEAL_FILE"
+            if ! HEAL_ERR="$(gh pr edit "$HEAL_N" --body-file "$HEAL_FILE" 2>&1)"; then
+              echo "::error::PR #${HEAL_N} has LOST dedup marker(s) [${MISSING[*]}] and re-asserting them FAILED, so this run cannot dedup against it and would open a duplicate: ${HEAL_ERR}"
+              exit 1
+            fi
+            echo "::warning::PR #${HEAL_N} was missing dedup marker(s) [${MISSING[*]}] — a body edit dropped machine state this workflow owns. RE-ASSERTED them; dedup below now matches and no duplicate PR is opened."
+            REASSERTED="$(printf '%s' "$REASSERTED" | jq -c --argjson n "$HEAL_N" --rawfile b "$HEAL_FILE" \
+              'map(if .number == $n then .body = $b else . end)')"
+          done < <(printf '%s' "$MINE" | jq -c '.[]')
+
+          # FAIL CLOSED on an API fault. A swallowed `gh` failure (a 401 after a
+          # token hiccup, a secondary rate limit, a GitHub 5xx) becomes the
+          # assertion "there are no open PRs", which does not degrade this guard —
+          # it DISABLES it, and the very next thing this step does is open the
+          # duplicate PR the guard exists to prevent. "Found nothing" and "could
+          # not look" are different facts and must not share an encoding.
+          #
+          # `--limit 200`: `gh pr list` defaults to 30, which silently truncates
+          # this guard's view — once 30 newer PRs exist, the older already-proposed
+          # PR falls out of the window and the guard opens a duplicate. The limit
+          # is load-bearing, not cosmetic.
+          #
+          # `--state all`, NOT `--state open` (unlike the self-heal listing above,
+          # which repairs only live PRs): a CLOSED proposal is a REJECTION this
+          # guard has to see, or closing a PR to reject it earns an identical one
+          # the next morning, daily, forever. `--search` narrows server-side on the
+          # changeset key, so — unlike the self-heal listing above — a merged PR
+          # cannot spend a slot here and widening the state filter cannot crowd the
+          # older matching PR out of the `--limit` window. The audit below holds
+          # that reasoning to account rather than assuming it.
+          if ! ALL_PRS="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --search "${CHANGESET_KEY} in:body" --json number,url,body,state 2>&1)"; then
+            echo "::error::gh pr list failed, so this run cannot prove changeset ${CHANGESET_KEY} is not already proposed — refusing to open a possibly-duplicate PR: ${ALL_PRS}"
+            exit 1
+          fi
+          if ! printf '%s' "$ALL_PRS" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list returned a non-array payload — refusing to dedup against it: ${ALL_PRS}"
+            exit 1
+          fi
+          assert_listing_complete "changeset-keyed dedup listing for ${CHANGESET_KEY}" "$ALL_PRS"
+          # Fold the self-heal's own view in. `--search "<key> in:body"` is a
+          # BODY-keyed index and lags an edit by minutes, so a PR whose marker this
+          # step just restored is very likely STILL absent from ALL_PRS — dropping
+          # it here would re-open exactly the duplicate the repair just prevented.
+          # Union rather than replace, in both directions: ALL_PRS reaches PRs the
+          # self-heal's branch-key anchor never selects, and the self-heal reaches
+          # the closed PRs whose body no longer contains the key at all. Self-heal
+          # entries win on collision — they carry the post-repair body.
+          #
+          # Through FILES, not argv, for the MAX_ARG_STRLEN reason spelled out on
+          # the self-heal union above. Neither operand is bounded: REASSERTED
+          # carries the FULL body of every bot-managed PR it selected (measured
+          # 34 KB across this repo's current bot PRs, against a 60 KB largest
+          # single body and GitHub's 65 KB body ceiling — so three such PRs clear
+          # the 128 KiB cap), and every self-heal APPENDS to a body, so the
+          # payload only grows. This site had not crashed yet purely because the
+          # ok-applied path did not run on the mornings the needs-human one did.
+          ALL_PRS_FILE="${RUNNER_TEMP}/drift-all-prs.json"
+          REASSERTED_FILE="${RUNNER_TEMP}/drift-reasserted.json"
+          printf '%s' "$ALL_PRS" > "$ALL_PRS_FILE"
+          printf '%s' "$REASSERTED" > "$REASSERTED_FILE"
+          ALL_PRS="$(jq -cn --slurpfile a "$ALL_PRS_FILE" --slurpfile b "$REASSERTED_FILE" \
+            '($b[0] | map(.number)) as $healed
+             | [$a[0][] | . as $p | select(($healed | index($p.number)) == null)] + $b[0]')"
+          # PRECEDENCE: a still-OPEN PR carrying this marker is a PENDING proposal
+          # and WINS, so it is tested BEFORE the closed-rejection test below. A
+          # closure is only a rejection once NO open PR still carries the changeset.
+          #
+          # The ORDER is load-bearing, not stylistic. `--search "<key> in:body"` is
+          # a state-BLIND query, so one changeset routinely matches SEVERAL PRs at
+          # once, and closing the spam DUPLICATE is the single most natural response
+          # to duplicate-PR spam there is — which leaves a [CLOSED, OPEN] pair for
+          # one changeset. Tested the other way round, that closure reads as "a
+          # human rejected this changeset" and suppresses a decision still PENDING
+          # in the open PR.
+          DUP="$(printf '%s' "$ALL_PRS" | jq -c --arg m "$MARKER" \
+            'map(select(((.body // "") | contains($m)) and .state == "OPEN")) | .[0] // empty')"
+          if [ -n "$DUP" ]; then
+            # Emit the PR so the success notify can name it. That step is gated on
+            # `steps.pr.outputs.url != ''`, so a dedup path that emits nothing
+            # skips it — a green, silent run.
+            {
+              echo "url=$(printf '%s' "$DUP" | jq -r '.url')"
+              echo "number=$(printf '%s' "$DUP" | jq -r '.number')"
+              echo "deduped=true"
+            } >> "$GITHUB_OUTPUT"
+            echo "ok-applied: changeset ${CHANGESET_KEY} already proposed in open PR #$(printf '%s' "$DUP" | jq -r '.number') — not opening a duplicate"
+            exit 0
+          fi
+          # A CLOSED-but-never-MERGED PR carrying this marker, with no open PR
+          # still carrying it, is a human REJECTION of this exact changeset —
+          # respect it. A genuinely different drift produces a different changeset
+          # key, so this suppresses the rejected proposal and nothing else.
+          #
+          # `.state == "CLOSED"` and NEVER "MERGED": gh reports a merged PR as
+          # MERGED, so a proposal a human accepted can never read as one they
+          # rejected.
+          #
+          # The suppression is NOT silent. `rejected`/`rejected_url` are read by
+          # the "SUPPRESSED (human-rejected) changeset" notification below, which
+          # names the closing PR and the way back out. Fail-open is fine here;
+          # fail-silent-to-a-human is not.
+          REJECTED_PR="$(printf '%s' "$ALL_PRS" | jq -c --arg m "$MARKER" \
+            'map(select(((.body // "") | contains($m)) and .state == "CLOSED")) | .[0] // empty')"
+          if [ -n "$REJECTED_PR" ]; then
+            REJECTED="$(printf '%s' "$REJECTED_PR" | jq -r '.number')"
+            {
+              echo "rejected=${REJECTED}"
+              echo "rejected_url=$(printf '%s' "$REJECTED_PR" | jq -r '.url')"
+            } >> "$GITHUB_OUTPUT"
+            echo "ok-applied: changeset ${CHANGESET_KEY} was REJECTED by a human (closed PR #${REJECTED}) — not re-proposing it"
+            # TOLD ONCE, NOT TOLD EVERY MORNING.
+            #
+            # The closure is permanent and the changeset key is deliberately
+            # date-independent, so `rejected` on its own would re-post a
+            # byte-identical suppression notice every daily run for ever, on the
+            # same channel as the real alerts — and a channel people learn to
+            # ignore is silence by another route. So the notice is keyed on a state
+            # that CHANGES: an ack marker appended (append-only, the same idiom as
+            # the marker self-heal above) to the closed PR's own body, the only
+            # place that outlives a run.
+            #
+            # `rejected` is still published on EVERY run — it is what keeps the
+            # needs-human alert suppressed, and that must hold as long as the
+            # rejection does. Only the POSTING is one-shot.
+            #
+            # The ack is only READ here, never WRITTEN: it means "a human has
+            # already been told", and nothing in this step can make that true. The
+            # write is a RECEIPT and lives in "Record the suppression ack" below,
+            # after the notice and gated on that POST's own proof of delivery.
+            ACK_MARKER="drift-suppression-reported: ${CHANGESET_KEY}"
+            if printf '%s' "$REJECTED_PR" | jq -e --arg a "<!-- ${ACK_MARKER} -->" \
+              '(.body // "") | contains($a)' >/dev/null; then
+              echo "rejected_ack=true" >> "$GITHUB_OUTPUT"
+              echo "ok-applied: this suppression was already reported (PR #${REJECTED} carries the ack marker) — not re-posting it"
+            fi
+            exit 0
+          fi
+          # The changeset key is the LAST branch segment on purpose: it is the
+          # body-INDEPENDENT anchor the marker self-heal above uses to recognise
+          # this PR again if a human ever deletes its body markers. Keep it last —
+          # the self-heal matches on `endswith("-<key>")`.
+          BRANCH="$(git rev-parse --abbrev-ref HEAD)-${CHANGESET_KEY}"
+          git checkout -B "$BRANCH"
+          git push -u origin "$BRANCH"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          echo "Pushed branch ${BRANCH} at ${HEAD_SHA}"
+
+          PR_BODY_FILE="${RUNNER_TEMP}/drift-sync-pr-body.md"
+          {
+            echo "## Summary"
+            echo ""
+            echo "Auto-generated, DATA-ONLY model-family sync (zero-LLM)."
+            echo ""
+            # Emitted from the SINGLE MARKERS array built at the top of this step,
+            # so the set written here is by construction the set the marker
+            # self-heal re-asserts and the set the dedup guard matches.
+            for m in "${MARKERS[@]}"; do
+              echo "<!-- ${m} -->"
+            done
+            echo ""
+            echo "> **Needs human review + merge.** This PR was opened by the"
+            echo "> deterministic drift-sync pipeline after \`drift-sync-check\`"
+            echo "> passed (changed-file allowlist, checksum-pin re-assert, clean"
+            echo "> re-collect). It is NOT auto-merged — review CI, the diff, and"
+            echo "> merge."
+            echo ""
+            echo "### drift-sync-check verdict"
+            echo ""
+            echo '```'
+            cat "${RUNNER_TEMP}/drift-sync-check.log" 2>/dev/null || echo "(see drift-sync-log / drift-sync-check-log artifacts)"
+            echo '```'
+            echo ""
+            echo "### drift-sync outcome"
+            echo ""
+            echo '```'
+            cat "${RUNNER_TEMP}/drift-sync.log" 2>/dev/null || echo "(see drift-sync-log artifact)"
+            echo '```'
+          } > "$PR_BODY_FILE"
+
+          gh pr create \
+            --title "fix(drift-sync): mechanical model-family sync ($(date +%Y-%m-%d))" \
+            --assignee jpr5 \
+            --body-file "$PR_BODY_FILE"
+
+          PR_URL=""
+          PR_NUMBER=""
+          LOOKUP_ERR=""
+          for attempt in $(seq 1 6); do
+            # Keep WHY the lookup came back empty. Swallowed, a hard API failure
+            # reads as "not indexed yet": the loop then times out and blames a
+            # missing PR for what was really a 401 or a rate limit.
+            if MATCH="$(gh pr list --state open --limit 200 --json url,number,headRefOid \
+              --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | {url, number}" 2>&1)"; then
+              LOOKUP_ERR=""
+            else
+              LOOKUP_ERR="$MATCH"
+              MATCH=""
+            fi
+            if [ -n "$MATCH" ]; then
+              PR_URL="$(printf '%s' "$MATCH" | jq -r '.url')"
+              PR_NUMBER="$(printf '%s' "$MATCH" | jq -r '.number')"
+              break
+            fi
+            echo "PR for head SHA not resolved yet (attempt $attempt/6)${LOOKUP_ERR:+ — gh error: ${LOOKUP_ERR}}, waiting 10s..."
+            sleep 10
+          done
+          if [ -z "$PR_URL" ]; then
+            if [ -n "$LOOKUP_ERR" ]; then
+              echo "::error::Could not look up the PR for pushed SHA $HEAD_SHA — gh kept failing: ${LOOKUP_ERR}"
+            else
+              echo "::error::No open PR found whose head matches pushed SHA $HEAD_SHA"
+            fi
+            exit 1
+          fi
+          echo "Matched PR #$PR_NUMBER: $PR_URL"
+          {
+            echo "url=$PR_URL"
+            echo "number=$PR_NUMBER"
+            echo "head_sha=$HEAD_SHA"
+          } >> "$GITHUB_OUTPUT"
+
+      # PERSIST the needs-human note, so the decision is REACHABLE in the repo.
+      # drift-sync.ts has already committed the note file(s) — and, in a mixed run,
+      # its already-gated mechanical registry edit — onto the fix branch via
+      # commitSyncChanges, but that commit lives only in the runner's working tree,
+      # and the "Push branch + create PR" step above fires only on
+      # reason == 'ok-applied'. So this step pushes a DISTINCT branch and opens a
+      # needs-human PR. NO AUTO-MERGE, and NO two-run hand-off for a new family:
+      # `includeFamilies` is checksum-pinned, so adding a family moves the pin and
+      # reds the freeze test gate-2 re-runs, while gate-1's allowlist bars drift-sync
+      # from re-pinning — a follow-up run reports `gate-failed`, not `ok-applied`. A
+      # human classifies BY HAND in one commit (registry + both re-pins + the note +
+      # the offline /models wave) and closes the PR. The note still has to persist:
+      # it is what makes the decision reachable and reviewable in the repo.
+      #
+      # Re-fire discipline (no PR spam): three layers, idempotent in EVERY run
+      # shape, applied in this order. PRIMARY — skip when an open PR already carries
+      # this run's stable, date-independent CHANGESET KEY marker; this is the layer
+      # that covers the MIXED run, whose committed diff is a registry edit with NO
+      # new note file and which the per-note check therefore cannot see at all.
+      # NOTHING TO PUSH — this run produced no new commit at all, because
+      # drift-sync.ts's ensureProposalNote already deduped the note against main.
+      # SECONDARY — skip when an open PR already proposes one of this run's note
+      # files, matched by the per-note body marker. The Slack alert below still
+      # fires either way.
+      #
+      # ONE ROLLING PR. The changeset key dedups an IDENTICAL family set only, so
+      # while a decision waited, every new or vanished family minted a new key and
+      # a new sibling PR beside the open one (#406..#412 and #475..#484 were each
+      # open together). So a run whose set differs is written onto the open
+      # ROLLING PR (force-push with lease, then a body rewrite) instead of opening
+      # another. That PR lives on `drift-needs-human/rolling-<date>-<run id>`, a
+      # branch with NO changeset key: its content changes, so a key in its name
+      # would go stale.
+      - name: Persist needs-human note + open PR
+        id: needs_human_pr
+        if: steps.sync.outputs.reason == 'needs-human' && success()
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BASE_SHA: ${{ steps.gitcfg.outputs.base_sha }}
+          RUN_ID: ${{ github.run_id }}
+          CHANGESET_KEY: ${{ steps.sync.outputs.changeset_key }}
+          # The login gh reports for every PR the app token above opens (app slug
+          # `copilotkit-bot`; checked on #337..#541). The rolling-PR guard reads it.
+          DRIFT_BOT_LOGIN: app/copilotkit-bot
+        run: |
+          set -euo pipefail
+          # ---- RECORD WHAT ACTUALLY HAPPENS IN HERE ----------------------------
+          # Actions hands a later step only `outcome` — success/failure/skipped —
+          # so the gate-failure alert below cannot see WHY this step died and used
+          # to print a hand-written list of the causes someone imagined. On
+          # 2026-08-06 and 2026-08-07 it printed "push rejected, gh pr create
+          # error, or PR-match polling exhausted" while THIS step had actually
+          # died with `jq: Argument list too long` and exit 126, which is none of
+          # the three. Persist the real exit code and the real stderr so the alert
+          # can quote them. Same six lines in the sibling ok-applied PR step.
+          #
+          # stderr is captured to a file and REPLAYED to the console on exit
+          # (fd 3 holds the console), so nothing is lost from the job log — it
+          # just lands at the end of the step rather than interleaved. A `tee`
+          # through process substitution would keep the interleaving but races
+          # with step exit, and a truncated last line is the one line this reads.
+          DRIFT_STATUS_DIR="${RUNNER_TEMP}/drift-step-status"
+          mkdir -p "$DRIFT_STATUS_DIR"
+          exec 3>&2
+          exec 2> "${DRIFT_STATUS_DIR}/needs_human_pr.err"
+          trap 'rc=$?; printf "%s\n" "$rc" > "${DRIFT_STATUS_DIR}/needs_human_pr.rc"; exec 2>&3; cat "${DRIFT_STATUS_DIR}/needs_human_pr.err" >&2; exit $rc' EXIT
+          HEAD_SHA="$(git rev-parse HEAD)"
+
+          # An EMPTY key must fail CLOSED rather than fall through to an
+          # unconditional push + PR. computeChangesetKey returns "" only when every
+          # outcome is a no-op (ok-no-churn), which cannot be true on a needs-human
+          # run, so an empty key here means drift-sync misbehaved. Checked FIRST
+          # because every lookup below — the marker self-heal, then the dedup
+          # listing — is keyed on it.
+          if [ -z "${CHANGESET_KEY:-}" ]; then
+            echo "::error::changeset_key is empty on a needs-human run — the PRIMARY dedup guard cannot run, and pushing anyway is how daily duplicate PRs start. Refusing."
+            exit 1
+          fi
+
+          # SINGLE SOURCE OF TRUTH for every `<!-- drift-* -->` marker this step
+          # writes into a PR body. The body writer at the bottom emits exactly this
+          # array, the marker self-heal below re-asserts exactly this array, and
+          # each dedup guard matches an entry of it, so a marker added here is wired
+          # into all three at once. A hand-enumerated repair list instead covers
+          # only the markers someone remembered, leaving the forgotten one's dedup
+          # path defeatable by a body edit.
+          MARKER="drift-changeset: ${CHANGESET_KEY}"
+          MARKERS=("$MARKER")
+
+          # The note file(s) drift-sync.ts committed this run. Resolved HERE, not
+          # further down next to the per-note guard, because the marker set —
+          # hence the self-heal — depends on it. Pure local read, no side effects.
+          #
+          # A plain `read` loop, NOT `mapfile`: `mapfile` is a bash-4 builtin, and
+          # it was the ONLY bash-4-or-newer construct anywhere in this workflow.
+          # The runner has bash 5 so it worked in production — but it also meant
+          # this step's body was the one body a test could not EXECUTE on a stock
+          # macOS dev box (bash 3.2), which is exactly how a hand-written mirror
+          # of these guards gets written instead of a run of them. The filter that
+          # used to follow is folded in, so the intermediate array is gone too.
+          # `|| [ -n "$f" ]` keeps a final line that carries no trailing newline.
+          NOTES=()
+          while IFS= read -r f || [ -n "$f" ]; do
+            case "$f" in drift-proposals/*) NOTES+=("$f") ;; esac
+          done < <(git diff --name-only "$BASE_SHA" HEAD)
+          # Index-parallel with NOTES (the loop above never appends an empty
+          # element), so the per-note dedup guard below can match on
+          # NOTE_MARKERS[i] while still naming NOTES[i] in its log line — one
+          # source for the marker text, not two.
+          NOTE_MARKERS=()
+          for note in "${NOTES[@]:-}"; do
+            [ -n "$note" ] || continue
+            NOTE_MARKERS+=("drift-proposal-note: ${note}")
+          done
+          if [ "${#NOTE_MARKERS[@]}" -gt 0 ]; then
+            MARKERS+=("${NOTE_MARKERS[@]}")
+          fi
+
+          # ---- RE-ASSERT THIS STEP'S OWN MARKERS --------------------------------
+          # Every dedup guard below matches an HTML comment this step wrote into a
+          # PR BODY — machine state parked inside prose a HUMAN owns and edits — so
+          # this repairs whichever markers went missing, logs loudly, and lets dedup
+          # proceed. Same rationale as the ok-applied path above; no guard below is
+          # weakened or bypassed.
+          #
+          # Identity MUST be body-INDEPENDENT, and here there are TWO anchors,
+          # neither forgeable by a body edit:
+          #   (a) the head branch ends in "-<changeset key>" (renaming a branch
+          #       closes any open PR whose head it is, so for an open PR that suffix
+          #       is fixed). This is the anchor for the mixed run whose committed
+          #       diff carries NO note file, where there is no note path to match on.
+          #   (b) the PR's changed files include one of THIS run's note paths. This
+          #       is the anchor for a re-fire whose outcome set changed and so
+          #       hashes to a DIFFERENT changeset key: (a) cannot match it, the
+          #       changeset guard legitimately does not fire, and the per-note
+          #       marker is the ONLY thing standing between it and a duplicate PR.
+          # Never listed with a `<key> in:body` search: that index is BODY-keyed
+          # AND lags an edit by minutes, so it cannot see a body this step is about
+          # to repair. (`is:unmerged` below is a STATE predicate and carries
+          # neither property — see the window note.)
+          #
+          # `--state all`, not `--state open`, for the reason spelled out on the
+          # ok-applied step above: a CLOSED PR's body is where a human's REJECTION of
+          # a changeset lives, and editing that body used to destroy the record
+          # permanently, so this workflow re-proposed the rejected changeset every
+          # morning. The CLOSED half of the population is admitted through anchor (a)
+          # ONLY — see `select_state` below — because anchor (b) is the one that runs
+          # the fail-closed changed-file audit, and letting every closed bot PR the
+          # repo has ever had into that audit would turn one truncated file list into
+          # a daily red cron. MERGED is excluded throughout: an accepted decision is
+          # neither a pending proposal nor a rejection.
+          #
+          # `author` is requested because it — not the branch shape — is the only
+          # signal that recognises a bot PR predating the trailing changeset key
+          # (see bot_managed below). Dropping it from this field list silently
+          # narrows candidacy back to keyed branches, so the presence check below
+          # fails closed on it rather than letting coverage quietly shrink.
+          #
+          # ---- THE WINDOW IS PART OF THE ANSWER --------------------------------
+          # Same window defect, same remedy, as the ok-applied step above; the two
+          # steps each carry their own listing, so a fix applied to one of them
+          # leaves the other saturating exactly as before. `--limit N` is a WINDOW:
+          # gh returns the newest N rows and drops the rest with no flag, no
+          # warning and no count, and this listing's `--state` filter is applied
+          # CLIENT-side by the jq below, so merged PRs no guard here consults spend
+          # the window that decides. Measured on this repo on 2026-08-05:
+          # `--state all --limit 200` came back FULL, 184 of 200 MERGED, reaching
+          # back only to #125, with twelve of the repo's 26 unmerged-closed PRs
+          # ALREADY outside it. A rejection that ages out that way reads as "never
+          # rejected" and gets re-proposed every morning, silently.
+          #
+          # `--search "is:unmerged"` is a STATE predicate: no merged PR can spend a
+          # slot, it is not defeated by the body edit this self-heal repairs, and a
+          # just-closed PR matches under either indexed state. It returned the
+          # complete unmerged population, 28 rows, back to #1. `--state closed` is
+          # NOT a substitute — gh maps it to CLOSED-or-MERGED (186 merged against
+          # 14 closed on the same measurement). The plain listing is UNIONED, not
+          # replaced: it is the index-free floor, and plain entries win on
+          # collision.
+          PR_LIST_LIMIT=200
+          # SATURATION IS A FAULT, NOT A RESULT — a truncated listing is
+          # indistinguishable from a complete one, and the guards below then read
+          # "absent" where the honest answer is "did not look". Refuse it.
+          assert_listing_complete() {
+            if [ "$(printf '%s' "$2" | jq 'length')" -ge "${PR_LIST_LIMIT}" ]; then
+              echo "::error::the ${1} came back FULL at its --limit of ${PR_LIST_LIMIT}, so it is TRUNCATED and every PR older than the newest ${PR_LIST_LIMIT} is invisible to it. Answering a dedup or rejection lookup from a truncated listing reports 'not proposed' / 'not rejected' for a PR that exists, which opens a duplicate PR or re-proposes a changeset a human rejected. Refusing to decide on it — narrow the query or raise --limit in .github/workflows/fix-drift.yml."
+              exit 1
+            fi
+          }
+          if ! MANAGED="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --json number,url,state,body,headRefName,files,author 2>&1)"; then
+            echo "::error::gh pr list failed, so this run cannot prove the dedup markers it owns are still intact on the PRs it manages — refusing to risk a duplicate: ${MANAGED}"
+            exit 1
+          fi
+          if ! printf '%s' "$MANAGED" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list returned a non-array payload — refusing to self-heal markers against it: ${MANAGED}"
+            exit 1
+          fi
+          if ! UNMERGED="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --search "is:unmerged" --json number,url,state,body,headRefName,files,author 2>&1)"; then
+            echo "::error::gh pr list (is:unmerged) failed, so this run cannot see the closed PRs that carry human rejections and would re-propose a rejected changeset — refusing: ${UNMERGED}"
+            exit 1
+          fi
+          if ! printf '%s' "$UNMERGED" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list (is:unmerged) returned a non-array payload — refusing to self-heal markers against it: ${UNMERGED}"
+            exit 1
+          fi
+          # Only the unmerged listing is audited: the plain one is EXPECTED to be
+          # full (merged PRs alone exceed the limit) and is not relied on for
+          # completeness — which is exactly why it is unioned with a query whose
+          # population is bounded by the repo's unmerged PRs.
+          assert_listing_complete "unmerged-PR listing this step's marker self-heal reads" "$UNMERGED"
+          # THIS IS THE LINE THAT KILLED THE CRON on 2026-08-06 and 2026-08-07
+          # (runs 31079603526 / 31154443828, both `jq: Argument list too long`,
+          # exit 126, at script line 150). A PR LISTING MUST NEVER TRAVEL THROUGH
+          # argv: Linux caps a SINGLE argument at MAX_ARG_STRLEN — 128 KiB, fixed
+          # at 32 pages and INDEPENDENT of the far larger total ARG_MAX (2 MiB on
+          # the runner) — so `--argjson a "$MANAGED"` makes execve fail E2BIG and
+          # the step dies before jq runs at all. Measured on this repo
+          # 2026-08-07: this step's plain listing 988 KB and its is:unmerged
+          # listing 182 KB (it also asks for `files` and `author`, so it is the
+          # larger of the two steps' listings) — BOTH over the per-argument cap
+          # on their own, which is why the total was never the binding
+          # constraint. Lowering --limit is NOT the fix: the window is
+          # load-bearing (see above) and shrinking it re-opens the silent "not
+          # proposed" answer that duplicate PRs come from.
+          #
+          # `--slurpfile` reads through a file descriptor instead, so size is
+          # bounded by the filesystem, not by execve. It binds an ARRAY OF THE
+          # FILE'S JSON VALUES: a file holding one array binds `[[…]]`, so every
+          # reference is `$a[0]`, never `$a`. Getting that wrong does not error —
+          # it silently compares an array-of-array against PR numbers and matches
+          # nothing, which is the same duplicate-PR failure by another route.
+          MANAGED_FILE="${RUNNER_TEMP}/drift-managed.json"
+          UNMERGED_FILE="${RUNNER_TEMP}/drift-unmerged.json"
+          printf '%s' "$MANAGED" > "$MANAGED_FILE"
+          printf '%s' "$UNMERGED" > "$UNMERGED_FILE"
+          MANAGED="$(jq -cn --slurpfile a "$MANAGED_FILE" --slurpfile b "$UNMERGED_FILE" \
+            '($a[0] | map(.number)) as $seen
+             | $a[0] + [$b[0][] | . as $p | select(($seen | index($p.number)) == null)]')"
+          # `has("author")`, not "the login is non-empty": gh always emits every key
+          # it was asked for, so an ABSENT key means the `--json` list above (or
+          # gh's payload shape) changed and half of bot_managed's coverage went with
+          # it — a fail-silent narrowing that makes the self-heal select nothing on
+          # exactly the PRs it exists for. A merely odd login (a deleted account) is
+          # not that, and must not wedge the daily cron.
+          if ! printf '%s' "$MANAGED" | jq -e 'length == 0 or all(has("author"))' >/dev/null 2>&1; then
+            echo "::error::gh pr list returned PR(s) with NO author field, so this run cannot tell which of them are the drift bot's own — half of the candidate filter is blind and the marker self-heal would skip the very PRs it exists for. Refusing to risk a duplicate: ${MANAGED}"
+            exit 1
+          fi
+          NOTES_JSON="$(printf '%s\n' "${NOTES[@]:-}" | jq -R . | jq -sc 'map(select(. != ""))')"
+          # Index-parallel with NOTES_JSON (both are built from arrays the loop
+          # above keeps index-parallel), so the selection below can hand back the
+          # exact marker STRINGS a candidate is entitled to. The marker text
+          # therefore still has ONE source — NOTE_MARKERS — and never gets a second
+          # copy inside a jq program.
+          NOTE_MARKERS_JSON="$(printf '%s\n' "${NOTE_MARKERS[@]:-}" | jq -R . | jq -sc 'map(select(. != ""))')"
+
+          # ---- ONE DEFINITION OF EVERY CANDIDATE-SELECTION PREDICATE ------------
+          # Every fact the selection turns on is derived HERE, once, and carried
+          # forward with each candidate (`keyAnchored`, `wantMarkers`) so nothing
+          # downstream re-derives it. "Is one of THIS run's note paths among this
+          # PR's changed files?" is needed by the filter AND by the per-candidate
+          # marker scoping below, and a second hand-written copy of it is one edit
+          # away from disagreeing — worse, written as `jq -e … >/dev/null 2>&1` it
+          # turns a jq fault, a malformed payload or a missing `.files` into "note
+          # not present": exit 0, no warning, duplicate PR.
+          #
+          # bot_managed restricts candidacy to PRs THIS WORKFLOW created, since this
+          # step APPENDS machine markers to a candidate's body and folds it into the
+          # bot's dedup set — done to a human's PR, that suppresses a genuine
+          # needs-human PR indefinitely. `^fix/drift-` alone is not a bot marker:
+          # the prefix is not reserved to the bot. There are TWO sufficient signals,
+          # because either alone under-covers:
+          #
+          #   keyed_branch — the trailing changeset key, generalised from "this run's
+          #     key" to "a changeset key" (16 lowercase hex — computeChangesetKey's
+          #     sha256 slice) plus the date-and-run-id segments both branch builders
+          #     emit. So a bot PR carrying a DIFFERENT key still qualifies (which is
+          #     what the note-path anchor exists for) while `fix/drift-alert-signal`
+          #     does not. A test RUNS both branch builders' own `BRANCH=` assignments
+          #     and asserts this pattern matches what each produces, so changing
+          #     either branch shape reds instead of silently selecting nothing.
+          #
+          #   bot_author — the PR was OPENED BY the drift bot. Load-bearing, not
+          #     belt-and-braces: the trailing key is the NEWEST segment of the branch
+          #     shape, so bot PRs on plain `drift-needs-human/<date>-<run id>`
+          #     branches exist and fail keyed_branch. On the branch shape alone they
+          #     are not candidates at all, so NEITHER anchor above is consulted and
+          #     the self-heal selects nothing on precisely the PRs it exists for. The
+          #     author is body-INDEPENDENT and branch-shape-INDEPENDENT, which is
+          #     what makes those anchors reachable on them.
+          #
+          # bot_author is ANDed with the drift branch PREFIX so that widening
+          # candidacy cannot drag an unrelated bot PR (a dependency bump, another
+          # workflow) into this step's fail-closed changed-file audit below. Both
+          # branch builders emit one of those prefixes, so the AND costs no coverage.
+          # shellcheck disable=SC2016 # $-names here are JQ variables, not shell ones
+          JQ_LIB='
+            def keyed_branch:
+              (.headRefName // "")
+              | test("^(fix/drift-|drift-needs-human/)[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+-[0-9a-f]{16}$");
+            def drift_branch:
+              (.headRefName // "") | test("^(fix/drift-|drift-needs-human/)");
+            def bot_author:
+              (($ENV.DRIFT_BOT_LOGIN // "") | ascii_downcase) as $bot
+              | $bot != "" and (((.author.login // "") | ascii_downcase) == $bot);
+            def bot_managed: keyed_branch or (drift_branch and bot_author);
+            def key_anchored($k): (.headRefName // "") | endswith("-" + $k);
+            # WHICH STATES EACH ANCHOR MAY REACH. (No apostrophes in here: JQ_LIB is
+            # a single-quoted shell string, and one would terminate it.)
+            # OPEN reaches both anchors, as before. CLOSED reaches anchor (a) only: it
+            # is admitted so a REJECTION marker can be repaired on the closed PR that
+            # records it, and anchor (a) needs no changed-file list, so it cannot drag
+            # the closed backlog into the fail-closed truncation audit below.
+            # MERGED reaches neither — an accepted decision is not a proposal.
+            def select_state($k):
+              (.state == "OPEN") or (.state == "CLOSED" and key_anchored($k));
+            def files_usable: (.files | type) == "array";
+            def file_paths: [.files[] | .path];
+            def files_truncated: (file_paths | length) >= 100;
+            def matched_note_idx($notes):
+              file_paths as $p
+              | [ range(0; ($notes | length)) as $i
+                  | select(($p | index($notes[$i])) != null)
+                  | $i ];
+          '
+          # shellcheck disable=SC2016 # $-names here are JQ variables, not shell ones
+          JQ_CANDIDATES='
+            map(select(bot_managed and select_state($k)))
+            | map(. + {
+                keyAnchored: key_anchored($k),
+                wantMarkers: (if files_usable
+                              then [ matched_note_idx($notes)[] | $noteMarkers[.] ]
+                              else [] end)
+              })
+            | map(select(.keyAnchored or ((.wantMarkers | length) > 0)))
+          '
+          # A bot-managed PR whose changed-file list this run CANNOT READ is not
+          # evidence that the note is absent from it — and "absent" is the answer
+          # that opens the duplicate. Two ways to be unreadable, both of which a
+          # bare `[.files[]?.path]` would collapse to an empty list with no signal:
+          #   - the payload is not an array at all (a gh/API fault), and
+          #   - gh's GraphQL files connection truncated at its `first: 100` ceiling,
+          #     so the note may sit in a tail nobody fetched.
+          # Only load-bearing for a PR the branch-key anchor did NOT already select
+          # (anchor (a) needs no file list), so a bot PR of this run's own changeset
+          # is unaffected.
+          # shellcheck disable=SC2016 # $-names here are JQ variables, not shell ones
+          JQ_UNPROVEN='
+            [ .[]
+              | select(bot_managed
+                       and select_state($k)
+                       and ((key_anchored($k)) | not)
+                       and ((files_usable | not) or files_truncated))
+              | .number ]
+          '
+          UNPROVEN_ERR="${RUNNER_TEMP}/drift-candidate-audit.err"
+          if ! UNPROVEN="$(printf '%s' "$MANAGED" | jq -c --arg k "$CHANGESET_KEY" \
+            "${JQ_LIB}${JQ_UNPROVEN}" 2>"$UNPROVEN_ERR")"; then
+            echo "::error::the candidate-PR changed-file audit itself FAILED, so this run cannot tell whether an open bot PR already proposes one of this run's notes — refusing to risk a duplicate: $(cat "$UNPROVEN_ERR" 2>/dev/null)"
+            exit 1
+          fi
+          if [ "$(printf '%s' "$UNPROVEN" | jq -r 'length')" -gt 0 ]; then
+            echo "::error::open bot-managed PR(s) #$(printf '%s' "$UNPROVEN" | jq -r 'map(tostring) | join(", #")') came back with an UNREADABLE or 100-file-TRUNCATED changed-file list, so this run cannot prove they do not already propose note(s) [${NOTES[*]:-}]. Reading that as 'note not present' is exactly how a duplicate PR gets opened. Refusing."
+            exit 1
+          fi
+          MINE_ERR="${RUNNER_TEMP}/drift-candidate-select.err"
+          if ! MINE="$(printf '%s' "$MANAGED" | jq -c --arg k "$CHANGESET_KEY" \
+            --argjson notes "$NOTES_JSON" --argjson noteMarkers "$NOTE_MARKERS_JSON" \
+            "${JQ_LIB}${JQ_CANDIDATES}" 2>"$MINE_ERR")"; then
+            echo "::error::selecting the PRs whose dedup markers this run owns FAILED, so it cannot prove those markers are still intact — refusing to risk a duplicate: $(cat "$MINE_ERR" 2>/dev/null)"
+            exit 1
+          fi
+          if ! printf '%s' "$MINE" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::the candidate-PR selection did not return an array — refusing to self-heal markers against it: ${MINE}"
+            exit 1
+          fi
+          # keyAnchored/wantMarkers/files are SELECTION SCRATCH, not PR state: strip
+          # them before this list is folded into the dedup view further down.
+          REASSERTED="$(printf '%s' "$MINE" | jq -c 'map(del(.keyAnchored, .wantMarkers, .files))')"
+          while IFS= read -r pr; do
+            [ -n "$pr" ] || continue
+            HEAL_N="$(printf '%s' "$pr" | jq -r '.number')"
+            HEAL_BODY="$(printf '%s' "$pr" | jq -r '.body // ""')"
+            # WHICH markers this PR is entitled to, scoped to the anchor that
+            # matched it. Anchor (a) — the head branch ends in THIS run's key —
+            # proves the PR *is* this changeset's PR, so it owns every marker in
+            # MARKERS. Anchor (b) only proves it proposes a note this run also
+            # carries: restore that note's marker and NOTHING else. Stamping this
+            # run's changeset key onto a PR that merely shares a note would
+            # assert it proposes a changeset it does not carry — in a mixed run,
+            # the registry-edit half — and would then suppress that half forever.
+            #
+            # BOTH facts come from the single selection program above — the branch
+            # anchor as `keyAnchored`, the note-path match as the `wantMarkers` it
+            # already resolved through NOTE_MARKERS — so neither is re-derived here.
+            WANT=()
+            if ! ANCHOR_A="$(printf '%s' "$pr" | jq -r '.keyAnchored')"; then
+              echo "::error::candidate PR entry carries no keyAnchored flag — the selection program did not produce it, so this run cannot tell which markers PR #${HEAL_N} owns. Refusing."
+              exit 1
+            fi
+            if [ "$ANCHOR_A" = "true" ]; then
+              WANT=("${MARKERS[@]}")
+            else
+              if ! WANT_LINES="$(printf '%s' "$pr" | jq -r '.wantMarkers[]' 2>&1)"; then
+                echo "::error::candidate PR #${HEAL_N} carries no readable wantMarkers list, so this run cannot tell which note marker it is entitled to — refusing to guess: ${WANT_LINES}"
+                exit 1
+              fi
+              while IFS= read -r m; do
+                [ -n "$m" ] || continue
+                WANT+=("$m")
+              done <<< "$WANT_LINES"
+            fi
+            MISSING=()
+            for m in "${WANT[@]}"; do
+              case "$HEAL_BODY" in *"<!-- ${m} -->"*) ;; *) MISSING+=("$m") ;; esac
+            done
+            # An intact body is left BYTE-IDENTICAL: no edit, no API write, no
+            # duplicated marker. That is also what makes re-running this step (or
+            # this whole workflow) a no-op rather than an appending ratchet.
+            [ "${#MISSING[@]}" -gt 0 ] || continue
+            HEAL_FILE="${RUNNER_TEMP}/drift-marker-reassert-${HEAL_N}.md"
+            # APPEND-ONLY: the human-written prose is copied through verbatim and
+            # only the missing marker lines are added after it.
+            {
+              printf '%s\n\n' "$HEAL_BODY"
+              printf '%s\n' "<!-- The marker comment(s) below are machine state the Fix Drift dedup guards match on. They went missing from this body and were restored automatically. Deleting them makes this workflow open a duplicate PR for the same changeset. -->"
+              for m in "${MISSING[@]}"; do printf '<!-- %s -->\n' "$m"; done
+            } > "$HEAL_FILE"
+            if ! HEAL_ERR="$(gh pr edit "$HEAL_N" --body-file "$HEAL_FILE" 2>&1)"; then
+              echo "::error::PR #${HEAL_N} has LOST dedup marker(s) [${MISSING[*]}] and re-asserting them FAILED, so this run cannot dedup against it and would open a duplicate: ${HEAL_ERR}"
+              exit 1
+            fi
+            echo "::warning::PR #${HEAL_N} was missing dedup marker(s) [${MISSING[*]}] — a body edit dropped machine state this workflow owns. RE-ASSERTED them; dedup below now matches and no duplicate PR is opened."
+            REASSERTED="$(printf '%s' "$REASSERTED" | jq -c --argjson n "$HEAL_N" --rawfile b "$HEAL_FILE" \
+              'map(if .number == $n then .body = $b else . end)')"
+          done < <(printf '%s' "$MINE" | jq -c '.[]')
+
+          # ALERT CONTENT: the "Alert on needs-human decision" step below renders its
+          # PR link from THIS step's `url` output, and this step has FOUR early
+          # returns (changeset-key dedup hit; closed-rejection; no new commit;
+          # per-note dedup hit). So the open-PR lookup is HOISTED above all of them
+          # and each emits `url=`/`number=` via emit_pr before exiting — otherwise
+          # the alert falls through to a contentless variant naming no PR at all, on
+          # the very paths that HAVE a PR to name.
+          #
+          # `--limit 200`: `gh pr list` defaults to 30, which silently truncates the
+          # dedup guards' view — once 30 newer PRs exist, the older already-proposed
+          # PR falls out of the window, the guard misses it and a duplicate PR gets
+          # opened. Load-bearing, not cosmetic.
+          #
+          # FAIL CLOSED on an API fault: a swallowed gh failure (401, secondary rate
+          # limit, 5xx) becomes "there are no open PRs", which DISABLES both dedup
+          # guards below rather than degrading them, and the step then opens the
+          # duplicate they exist to prevent.
+          #
+          # `--state all`, NOT `--state open`: the alert this step feeds tells humans
+          # to "set `Decision: include` … or close to reject", so a dedup view that
+          # cannot see a CLOSED PR turns following that instruction into a brand-new
+          # identical PR the next morning, and every morning after. `--search`
+          # narrows server-side on the changeset key, so — unlike the self-heal
+          # listing above — a merged PR cannot spend a slot here and widening the
+          # state filter cannot push the older matching PR out of the window. The
+          # audit below holds that reasoning to account rather than assuming it.
+          if ! ALL_PRS="$(gh pr list --state all --limit "${PR_LIST_LIMIT}" \
+            --search "${CHANGESET_KEY} in:body" --json number,url,body,state 2>&1)"; then
+            echo "::error::gh pr list failed, so this run cannot prove this decision is not already proposed — refusing to open a possibly-duplicate PR: ${ALL_PRS}"
+            exit 1
+          fi
+          if ! printf '%s' "$ALL_PRS" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            echo "::error::gh pr list returned a non-array payload — refusing to dedup against it: ${ALL_PRS}"
+            exit 1
+          fi
+          assert_listing_complete "changeset-keyed dedup listing for ${CHANGESET_KEY}" "$ALL_PRS"
+          # Fold the self-heal's own view in, exactly as the ok-applied path above
+          # does and for the same reason: the `<key> in:body` index lags a body
+          # edit, so a PR whose marker this step just restored is likely still
+          # absent here, while the self-heal reaches the closed PRs whose body no
+          # longer contains the key at all.
+          #
+          # Through FILES, not argv, for the MAX_ARG_STRLEN reason spelled out on
+          # the self-heal union above. Neither operand is bounded: REASSERTED
+          # carries the FULL body of every bot-managed PR it selected (measured
+          # 34 KB across this repo's current bot PRs, against a 60 KB largest
+          # single body and GitHub's 65 KB body ceiling — so three such PRs clear
+          # the 128 KiB cap), and every self-heal APPENDS to a body, so the
+          # payload only grows.
+          ALL_PRS_FILE="${RUNNER_TEMP}/drift-all-prs.json"
+          REASSERTED_FILE="${RUNNER_TEMP}/drift-reasserted.json"
+          printf '%s' "$ALL_PRS" > "$ALL_PRS_FILE"
+          printf '%s' "$REASSERTED" > "$REASSERTED_FILE"
+          ALL_PRS="$(jq -cn --slurpfile a "$ALL_PRS_FILE" --slurpfile b "$REASSERTED_FILE" \
+            '($b[0] | map(.number)) as $healed
+             | [$a[0][] | . as $p | select(($healed | index($p.number)) == null)] + $b[0]')"
+          # Only OPEN PRs can carry a still-pending decision; the guards below
+          # keep using this narrowed view.
+          OPEN_PRS="$(printf '%s' "$ALL_PRS" | jq -c 'map(select(.state == "OPEN"))')"
+
+          # Emit the PR a human must act on, so the Slack alert can name AND
+          # link it. No-op when there is no PR to name (nothing was found and
+          # nothing was opened) — the alert then says so explicitly.
+          emit_pr() {
+            [ -n "${2:-}" ] || return 0
+            {
+              echo "number=${1}"
+              echo "url=${2}"
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          # Resolved ahead of the guards, so every path below can cite it.
+          DUP_NUMBER=""
+          DUP_URL=""
+          DUP="$(printf '%s' "$OPEN_PRS" | jq -c --arg m "$MARKER" \
+            'map(select((.body // "") | contains($m))) | .[0] // empty')"
+          if [ -n "$DUP" ]; then
+            DUP_NUMBER="$(printf '%s' "$DUP" | jq -r '.number')"
+            DUP_URL="$(printf '%s' "$DUP" | jq -r '.url')"
+          fi
+
+          # PRIMARY de-dup, matched by the "drift-changeset: <key>" body marker this
+          # step writes below. Keyed on the stable, date-independent changeset key,
+          # which is non-empty here even when NO note file is in the diff — so this
+          # guard fires where the per-note loop below cannot, and the mixed run
+          # (registry edit, no new drift-proposals/* note) stops re-detecting the
+          # same un-merged edit and opening a near-identical PR every cron run.
+          # Tested FIRST, ahead of the closed-rejection test and the
+          # no-new-commit return.
+          if [ -n "$DUP_NUMBER" ]; then
+            emit_pr "$DUP_NUMBER" "$DUP_URL"
+            echo "needs-human: changeset ${CHANGESET_KEY} already proposed in open PR #${DUP_NUMBER} — not opening a duplicate"
+            exit 0
+          fi
+
+          # A CLOSED-but-never-MERGED PR carrying this marker, with NO open PR
+          # still carrying it, is the human REJECTION the alert explicitly invites
+          # ("or close to reject"). Respect it: re-proposing the same decision
+          # every morning is the spam that made following the instruction a
+          # punishment. A genuinely different drift hashes to a different
+          # changeset key, so only this decision is suppressed.
+          #
+          # PRECEDENCE, and the ORDER is load-bearing. Tested AFTER the changeset
+          # dedup above: `--search "<key> in:body"` is state-BLIND, so one changeset
+          # routinely matches SEVERAL PRs, and closing the spam DUPLICATE is the most
+          # natural response to duplicate-PR spam there is — which leaves a [CLOSED,
+          # OPEN] pair for one changeset. Tested the other way round, that closure
+          # reads as "a human rejected this changeset" and suppresses a decision
+          # still PENDING in the open PR.
+          #
+          # Tested BEFORE the no-new-commit return further down, too: that gate says
+          # nothing about OPEN-vs-CLOSED precedence, and behind it a re-fire whose
+          # note is already in the repo would publish no `rejected` at all — so the
+          # suppression notice could not fire and the needs-human alert would red the
+          # job with its contentless body every morning instead.
+          #
+          # `.state == "CLOSED"` and NEVER "MERGED": gh reports a merged PR as
+          # MERGED, so a decision a human ACCEPTED never reads as one they rejected,
+          # and a merged PR matches neither this selector nor the pending-proposal
+          # one above.
+          #
+          # And the suppression is NOT silent. `rejected`/`rejected_url` are read by
+          # the "SUPPRESSED (human-rejected) changeset" notification below, which
+          # names the closing PR and the way back out. It is the RE-PROPOSAL that is
+          # suppressed, never the telling — a changeset silently suppressed for ever
+          # is a state a human has no way to discover they are in.
+          REJECTED_PR="$(printf '%s' "$ALL_PRS" | jq -c --arg m "$MARKER" \
+            'map(select(((.body // "") | contains($m)) and .state == "CLOSED")) | .[0] // empty')"
+          if [ -n "$REJECTED_PR" ]; then
+            REJECTED="$(printf '%s' "$REJECTED_PR" | jq -r '.number')"
+            REJECTED_URL="$(printf '%s' "$REJECTED_PR" | jq -r '.url')"
+            {
+              echo "rejected=${REJECTED}"
+              echo "rejected_url=${REJECTED_URL}"
+            } >> "$GITHUB_OUTPUT"
+            echo "needs-human: changeset ${CHANGESET_KEY} was REJECTED by a human (closed PR #${REJECTED}) — not re-proposing it"
+            # TOLD ONCE, NOT TOLD EVERY MORNING — see the identical block on the
+            # ok-applied path above for why the ack lives in the closed PR's body,
+            # why `rejected` is still published on every run, and why the ack is only
+            # READ here (the write is a receipt and follows the delivery).
+            ACK_MARKER="drift-suppression-reported: ${CHANGESET_KEY}"
+            if printf '%s' "$REJECTED_PR" | jq -e --arg a "<!-- ${ACK_MARKER} -->" \
+              '(.body // "") | contains($a)' >/dev/null; then
+              echo "rejected_ack=true" >> "$GITHUB_OUTPUT"
+              echo "needs-human: this suppression was already reported (PR #${REJECTED} carries the ack marker) — not re-posting it"
+            fi
+            # Emit it like every other early return, so the rejected PR is
+            # still nameable (and the "every exit names a PR" invariant holds).
+            emit_pr "$REJECTED" "$REJECTED_URL"
+            exit 0
+          fi
+
+          # Re-fire of an already-persisted note: no new commit -> nothing to push.
+          # LAST of the three changeset-keyed decisions on purpose. Both decisions
+          # above have declined by the time this is reached (no OPEN PR pending, no
+          # CLOSED PR rejecting), so DUP_NUMBER is empty here and the emit is a
+          # no-op. It stays because the invariant is "every early return hands the
+          # alert whatever PR it has", not because this path has one to hand over.
+          if [ "$HEAD_SHA" = "$BASE_SHA" ]; then
+            emit_pr "$DUP_NUMBER" "$DUP_URL"
+            echo "needs-human: no new commit (note already persisted in the repo) — nothing to push"
+            exit 0
+          fi
+
+          # ---- THE ONE BODY WRITER ------------------------------------------------
+          # Used to OPEN the rolling PR and to REWRITE it in place, so both carry
+          # exactly this run's markers and notes.
+          PR_BODY_FILE="${RUNNER_TEMP}/drift-needs-human-pr-body.md"
+          PR_TITLE="chore(drift-sync): needs-human model-family decision ($(date +%Y-%m-%d))"
+          write_nh_body() {
+            {
+              echo "## Needs a human decision (drift-sync)"
+              echo ""
+              echo "The deterministic, zero-LLM drift-sync found a model-family change it must"
+              echo "NOT auto-apply (a genuinely new/unclassified family, or a registry"
+              echo "structural mismatch). It wrote the note file(s) below and opened this PR so"
+              echo "the decision is REACHABLE in the repo."
+              echo ""
+              echo "This is the ONE open needs-human PR. A later run whose family set differs"
+              echo "rewrites this PR's branch and this body in place instead of opening another."
+              echo "A commit by anyone but the drift bot on this branch stops those rewrites."
+              echo ""
+              echo "> **Not auto-merged — a human decides, and applies it by hand.**"
+              echo "> For a *new-family* note, DO NOT expect merging this PR to apply anything:"
+              echo "> \`includeFamilies\` is checksum-pinned, and adding a family moves that pin,"
+              echo "> which reds the freeze test gate-2 re-runs. drift-sync cannot re-pin — the"
+              echo "> gate-1 allowlist permits only \`model-registry.ts\` and \`drift-proposals/\`."
+              echo "> So a follow-up run would report \`gate-failed\`, not \`ok-applied\`."
+              echo ">"
+              echo "> The procedure that actually works, in ONE commit: add the family to"
+              echo "> \`includeFamilies\` (or \`excludeFamilies\` to reject), re-pin BOTH checksums,"
+              echo "> resolve the note file(s) below, and update the offline \`/models\` wave."
+              echo "> Then close this PR. Prior examples: 72f85f8, 936b59c."
+              echo ""
+              echo "### Note file(s) in this PR"
+              echo ""
+              for note in "${NOTES[@]:-}"; do
+                [ -n "$note" ] || continue
+                echo "- \`${note}\`"
+              done
+              echo ""
+              # Emitted from the SINGLE MARKERS array built at the top of this step
+              # (the PRIMARY changeset marker plus one per note), so the set written
+              # here is by construction the set the marker self-heal re-asserts and
+              # the set the guards above match.
+              for m in "${MARKERS[@]}"; do
+                echo "<!-- ${m} -->"
+              done
+              echo ""
+              echo "### drift-sync outcome"
+              echo ""
+              echo '```'
+              cat "${RUNNER_TEMP}/drift-sync.log" 2>/dev/null || echo "(see drift-sync-log artifact)"
+              echo '```'
+            } > "$1"
+          }
+
+          # ---- THE ROLLING PR: UPDATE IT, DO NOT OPEN A SIBLING --------------------
+          # Reached only after DUP (no open PR carries this key), REJECTED (no human
+          # closed this key) and the no-new-commit return have all declined, so this
+          # run's set is un-proposed. If the bot's rolling PR is open, this run's
+          # commit goes onto ITS branch and its body is rewritten. Read from UNMERGED:
+          # the listing audited complete above, which holds every OPEN PR. The OLDEST
+          # open rolling PR opened by DRIFT_BOT_LOGIN is the one.
+          if [ -z "${DRIFT_BOT_LOGIN:-}" ]; then
+            echo "::error::DRIFT_BOT_LOGIN is not set, so this run cannot tell the drift bot's rolling PR from a human's — refusing to either rewrite one or open a sibling beside it."
+            exit 1
+          fi
+          ROLLING_ERR="${RUNNER_TEMP}/drift-rolling-select.err"
+          if ! ROLLING="$(printf '%s' "$UNMERGED" | jq -c '
+              [ .[]
+                | select(.state == "OPEN"
+                         and ((.headRefName // "") | test("^drift-needs-human/rolling-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$"))
+                         and (((.author.login // "") | ascii_downcase) == ($ENV.DRIFT_BOT_LOGIN | ascii_downcase))) ]
+              | sort_by(.number) | .[0] // empty' 2>"$ROLLING_ERR")"; then
+            echo "::error::selecting the open rolling needs-human PR FAILED, so this run cannot tell whether to update it instead of opening another — refusing to risk a duplicate: $(cat "$ROLLING_ERR" 2>/dev/null)"
+            exit 1
+          fi
+          if [ -n "$ROLLING" ]; then
+            R_NUMBER="$(printf '%s' "$ROLLING" | jq -r '.number')"
+            R_URL="$(printf '%s' "$ROLLING" | jq -r '.url')"
+            R_BRANCH="$(printf '%s' "$ROLLING" | jq -r '.headRefName')"
+            # THE GUARD, read LIVE: still OPEN, opened by the drift bot, on its rolling
+            # branch, and EVERY commit on it made by the bot's own git identity (the
+            # gitcfg step's). A commit by anyone else means a human is working on it,
+            # and force-pushing would destroy that work. Anything this run cannot read
+            # fails CLOSED: neither a force-push nor a sibling.
+            BOT_EMAIL="$(git config user.email || true)"
+            if [ -z "$BOT_EMAIL" ]; then
+              echo "::error::no git user.email is configured, so the drift bot's commits on PR #${R_NUMBER} cannot be told from a human's — refusing to rewrite it or open a sibling."
+              exit 1
+            fi
+            if ! R_VIEW="$(gh pr view "$R_NUMBER" --json number,state,author,headRefName,headRefOid,commits 2>&1)"; then
+              echo "::error::open rolling PR #${R_NUMBER} could not be read (${R_VIEW}), so this run neither force-pushes over it nor opens a sibling beside it — refusing."
+              exit 1
+            fi
+            if ! R_VERDICT="$(printf '%s' "$R_VIEW" | jq -r --arg e "$BOT_EMAIL" --arg b "$R_BRANCH" '
+                if ((.commits | type) != "array") or ((.commits | length) == 0)
+                   or ((.headRefOid // "") == "")
+                then "unknown:it came back with no commit list or no head commit"
+                elif .state != "OPEN" then "refuse:it is \(.state), not OPEN"
+                elif ((.author.login // "") | ascii_downcase) != ($ENV.DRIFT_BOT_LOGIN | ascii_downcase)
+                then "refuse:it was opened by \(.author.login // "nobody"), not by the drift bot"
+                elif (.headRefName // "") != $b then "refuse:its branch is now \(.headRefName // "")"
+                elif any(.commits[]; ((.authors // []) | length) == 0
+                                     or any((.authors // [])[]; (.email // "") != $e))
+                then "refuse:it carries a commit NOT made by the drift bot, so a human is working on it"
+                else "ok" end' 2>&1)"; then
+              echo "::error::open rolling PR #${R_NUMBER} came back unusable (${R_VERDICT}) — refusing to rewrite it or open a sibling."
+              exit 1
+            fi
+            case "$R_VERDICT" in
+              ok) ;;
+              refuse:*)
+                # No sibling either: that is the duplicate this exists to prevent. The
+                # decision waits until a human merges or closes that PR, so the alert
+                # names it: resolving it is the action that unblocks this changeset.
+                echo "::warning::open needs-human PR #${R_NUMBER} is not the bot's to rewrite: ${R_VERDICT#refuse:}. So changeset ${CHANGESET_KEY} is NOT proposed this run — that PR is left alone and no sibling is opened. Merge or close #${R_NUMBER} and the next run proposes it."
+                emit_pr "$R_NUMBER" "$R_URL"
+                exit 0
+                ;;
+              *)
+                echo "::error::open rolling PR #${R_NUMBER} cannot be proven safe to rewrite (${R_VERDICT#unknown:}) — refusing to rewrite it or open a sibling."
+                exit 1
+                ;;
+            esac
+            R_HEAD="$(printf '%s' "$R_VIEW" | jq -r '.headRefOid')"
+            write_nh_body "$PR_BODY_FILE"
+            # Leased to the head the guard inspected: a push that landed after the
+            # check is rejected instead of overwritten.
+            git push --force-with-lease="refs/heads/${R_BRANCH}:${R_HEAD}" \
+              origin "HEAD:refs/heads/${R_BRANCH}"
+            echo "Pushed ${HEAD_SHA} onto rolling needs-human PR #${R_NUMBER}'s branch ${R_BRANCH}"
+            if ! EDIT_ERR="$(gh pr edit "$R_NUMBER" --title "$PR_TITLE" --body-file "$PR_BODY_FILE" 2>&1)"; then
+              echo "::error::pushed changeset ${CHANGESET_KEY} onto PR #${R_NUMBER}, but rewriting its body FAILED, so its markers still name the OLD changeset (the next run rewrites it again): ${EDIT_ERR}"
+              exit 1
+            fi
+            echo "needs-human: updated rolling PR #${R_NUMBER} IN PLACE to changeset ${CHANGESET_KEY} — not opening a sibling"
+            emit_pr "$R_NUMBER" "$R_URL"
+            exit 0
+          fi
+
+          # A PER-NOTE OVERLAP IS REPORTED. IT DOES NOT DECIDE THE RUN.
+          #
+          # This loop used to `exit 0` the whole step on the FIRST note that some
+          # open PR already proposed, and that lost work. The mixed run is the case:
+          # drift-sync mechanically applied a registry edit AND deferred a different
+          # family to a human. If the deferred note is already proposed by a PR from
+          # an EARLIER run — whose outcome set was different, so it hashes to a
+          # different changeset key and the primary guard legitimately does not fire
+          # — this loop matched that note and abandoned the run. The registry edit
+          # was committed locally, never pushed, proposed to nobody, and re-detected
+          # and re-abandoned identically every morning. A note-set that merely GREW
+          # since the last run (notes {B} then {B,C}) loses C the same way.
+          #
+          # A stand-down here can never be right, which is why the remedy is to
+          # remove it rather than narrow it: control only reaches this point after
+          # the primary changeset guard has declined, so by construction NO open PR
+          # carries this run's changeset key, so this run's content is un-proposed.
+          #
+          # Reporting it still earns its place: two open PRs carrying one note looks
+          # exactly like the duplicate-PR spam this workflow exists to prevent, and
+          # a human reading the second PR deserves to know why it exists. The
+          # `emit_pr` also goes — this run is about to open its OWN PR, and naming
+          # someone else's would make the alert cite a PR that does not carry the
+          # decision. NOTES / NOTE_MARKERS are computed at the top of this step; the
+          # marker self-heal needs them and must run before every guard here.
+          for i in "${!NOTES[@]}"; do
+            note="${NOTES[$i]}"
+            [ -n "$note" ] || continue
+            DUP="$(printf '%s' "$OPEN_PRS" | jq -c --arg m "${NOTE_MARKERS[$i]}" \
+              'map(select((.body // "") | contains($m))) | .[0] // empty')"
+            if [ -n "$DUP" ]; then
+              echo "::warning::note ${note} is ALSO proposed by open PR #$(printf '%s' "$DUP" | jq -r '.number'), but THIS run's changeset ${CHANGESET_KEY} is not proposed anywhere — so it still gets its own PR rather than being dropped. Both PRs carry that note's marker; merging or closing either leaves the other intact."
+            fi
+          done
+
+          # No rolling PR is open: open it. Distinct from the ok-applied fix/drift-*
+          # branch, unique per run (a closed rolling PR is never reused, so reopening
+          # it stays a way out of a suppression), and with NO changeset key in it,
+          # because later runs rewrite its content.
+          BRANCH="drift-needs-human/rolling-$(date +%Y-%m-%d)-${RUN_ID}"
+          git checkout -B "$BRANCH"
+          git push -u origin "$BRANCH"
+          echo "Pushed needs-human branch ${BRANCH} at ${HEAD_SHA}"
+
+          write_nh_body "$PR_BODY_FILE"
+
+          gh pr create \
+            --title "$PR_TITLE" \
+            --assignee jpr5 \
+            --body-file "$PR_BODY_FILE"
+
+          PR_URL=""
+          PR_NUMBER=""
+          LOOKUP_ERR=""
+          for attempt in $(seq 1 6); do
+            # See the ok-applied loop above: a hard API failure must not be
+            # reported as "not indexed yet".
+            if MATCH="$(gh pr list --state open --limit 200 --json url,number,headRefOid \
+              --jq ".[] | select(.headRefOid == \"$HEAD_SHA\") | {url, number}" 2>&1)"; then
+              LOOKUP_ERR=""
+            else
+              LOOKUP_ERR="$MATCH"
+              MATCH=""
+            fi
+            if [ -n "$MATCH" ]; then
+              PR_URL="$(printf '%s' "$MATCH" | jq -r '.url')"
+              PR_NUMBER="$(printf '%s' "$MATCH" | jq -r '.number')"
+              break
+            fi
+            echo "needs-human PR for head SHA not resolved yet (attempt $attempt/6)${LOOKUP_ERR:+ — gh error: ${LOOKUP_ERR}}, waiting 10s..."
+            sleep 10
+          done
+          if [ -z "$PR_URL" ]; then
+            if [ -n "$LOOKUP_ERR" ]; then
+              echo "::error::Could not look up the needs-human PR for pushed SHA $HEAD_SHA — gh kept failing: ${LOOKUP_ERR}"
+            else
+              echo "::error::No open needs-human PR found whose head matches pushed SHA $HEAD_SHA"
+            fi
+            exit 1
+          fi
+          echo "Opened needs-human PR #$PR_NUMBER: $PR_URL"
+          emit_pr "$PR_NUMBER" "$PR_URL"
+
+      # NO AUTO-MERGE FOR THE DRIFT-SYNC PATH. The sync opens a PR and STOPS: a
+      # HUMAN reviews CI + the committed diff and merges. drift-sync-check is an
+      # AUTO-FILTER, NOT a provable merge gate — its clean re-collect is not
+      # independent of the edit it is checking — so human review is the merge gate.
+
+      # A SUPPRESSION MUST NEVER BE SILENT.
+      #
+      # Both PR-open paths decline to re-raise a changeset whose proposal a human
+      # CLOSED, and both suppress it for good: the closure is permanent and the
+      # needs-human alert is additionally gated on `rejected == ''`. Enacted with
+      # `exit 0` alone, such a run is byte-identical to a quiet day — the encoding
+      # collision the rest of this workflow exists to break. And the suppression is
+      # now SELF-REPAIRING: the marker self-heal above reaches closed PRs, so
+      # deleting the marker from the closed PR's body does not un-suppress the
+      # changeset, it just gets the marker written back on the next run. That makes
+      # naming the real way out mandatory rather than merely helpful — the one
+      # route a human would reach for first is the one route that no longer works.
+      #
+      # So the re-PROPOSAL is suppressed and the TELLING is not: this names the
+      # closing PR and the two ways back out. It does NOT fail the job — a respected
+      # rejection is not a fault — so it deliberately has no `exit 1`.
+      - name: Notify Slack on a SUPPRESSED (human-rejected) changeset
+        id: alert_rejected
+        # `always()`, and it is load-bearing twice: a respected rejection is neither
+        # a failure nor a success, so keyed on `failure()` this notice would vanish
+        # on the GREEN run that is its normal shape, and with no status function at
+        # all the implicit `success()` would drop it whenever a later step fails.
+        # `rejected_ack` is the one-shot: the suppression is reported on the first
+        # run after the closure, not on all four hundred after it.
+        if: >-
+          always() &&
+          ((steps.pr.outputs.rejected != '' &&
+            steps.pr.outputs.rejected_ack != 'true') ||
+           (steps.needs_human_pr.outputs.rejected != '' &&
+            steps.needs_human_pr.outputs.rejected_ack != 'true'))
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PR_REJECTED: ${{ steps.pr.outputs.rejected }}
+          PR_REJECTED_URL: ${{ steps.pr.outputs.rejected_url }}
+          NH_REJECTED: ${{ steps.needs_human_pr.outputs.rejected }}
+          NH_REJECTED_URL: ${{ steps.needs_human_pr.outputs.rejected_url }}
+        run: |
+          set -euo pipefail
+          # A REAL newline — see the cancellation alert above for why a
+          # double-quoted "\n" renders literally in Slack instead.
+          NL=$'\n'
+          if [ -n "${PR_REJECTED:-}" ]; then
+            WHAT="a mechanical model-family sync"
+            CLOSED_PR="${PR_REJECTED}"
+            CLOSED_URL="${PR_REJECTED_URL:-}"
+          else
+            WHAT="a needs-human model-family decision"
+            CLOSED_PR="${NH_REJECTED}"
+            CLOSED_URL="${NH_REJECTED_URL:-}"
+          fi
+          echo "::warning::drift-sync re-detected a changeset whose proposal was CLOSED (PR #${CLOSED_PR}) — suppressing the re-proposal, NOT the notification"
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::SLACK_WEBHOOK not set — cannot report the suppressed changeset"
+            exit 1
+          fi
+          MSG="🤐 *Drift sync — changeset SUPPRESSED as human-rejected* — ${WHAT} was re-detected today and NOT re-proposed, because closed PR #${CLOSED_PR} carries its changeset marker. The registry stays drifted until someone acts.${NL}Closed PR: ${CLOSED_URL:-(no url captured)}${NL}To un-suppress: REOPEN that PR (it becomes the pending proposal again), or delete the \`<!-- drift-changeset: … -->\` marker from its body.${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY: `&&`-chained, so this exists only when the
+          # POST returned 0 — see the catch-all's comment below.
+            echo "posted=true" >> "$GITHUB_OUTPUT"
+
+      # THE RECEIPT FOLLOWS THE DELIVERY.
+      #
+      # `rejected_ack` means "a human has already been told", and the only thing
+      # that makes that true is the POST above returning 2xx. So the marker is
+      # written HERE, after the notice and gated on its `posted` — the same positive
+      # proof the catch-all stands down for — and can therefore only exist because
+      # the telling was delivered. Recorded any earlier, it claims a telling that has
+      # not happened yet: a failed POST then leaves every later run reading
+      # `rejected_ack=true`, standing the notice down and exiting GREEN and silent,
+      # with the suppression permanently un-narrated. Not a chance window either —
+      # the likeliest way for this alerting to break is the webhook being rotated,
+      # which fails that POST with CERTAINTY, and kills the catch-all's POST the same
+      # day, leaving only a red cron job behind: the one signal this workflow
+      # refuses to rely on.
+      #
+      # FAIL OPEN ON EVERY PATH, so this step can silence nothing itself: an
+      # unrecordable ack costs one repeated ping tomorrow, so every giving-up path
+      # warns and exits 0. It posts nothing, so it is deliberately NOT in the
+      # catch-all's stand-down set.
+      - name: Record the suppression ack (the notice was DELIVERED)
+        id: rejected_ack
+        if: >-
+          always() &&
+          steps.alert_rejected.outputs.posted == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHANGESET_KEY: ${{ steps.sync.outputs.changeset_key }}
+          PR_REJECTED: ${{ steps.pr.outputs.rejected }}
+          NH_REJECTED: ${{ steps.needs_human_pr.outputs.rejected }}
+          # The same login the self-healer's `bot_author` reads in the persist step
+          # above; a test holds the two values equal.
+          DRIFT_BOT_LOGIN: app/copilotkit-bot
+        run: |
+          # No `-e`: a run whose telling was DELIVERED must not go red because the
+          # receipt could not be filed. Every failure below is handled explicitly
+          # and ends `exit 0`.
+          set -uo pipefail
+          # The same precedence the notice above uses to choose which closure it
+          # named, so the receipt lands on the PR the human was told about.
+          CLOSED_PR="${PR_REJECTED:-}"
+          [ -n "$CLOSED_PR" ] || CLOSED_PR="${NH_REJECTED:-}"
+          if [ -z "$CLOSED_PR" ] || [ -z "${CHANGESET_KEY:-}" ]; then
+            echo "::warning::the suppression notice was delivered, but the closing PR (#${CLOSED_PR:-none}) or the changeset key (${CHANGESET_KEY:-none}) is missing here, so no ack can be recorded — the notice reports the suppression again next run"
+            exit 0
+          fi
+          # Read the closed PR live rather than reusing the persist step's copy: the
+          # branch and author the scoping below needs are not in that payload, and it
+          # came from the index-backed `--search` listing that lags a body edit by
+          # minutes — so rewriting the body from it could silently revert a human's
+          # recent edit.
+          if ! PR_JSON="$(gh pr view "$CLOSED_PR" --json body,headRefName,author 2>&1)"; then
+            echo "::warning::could not read PR #${CLOSED_PR} to record the suppression ack (${PR_JSON}) — the notice reports the suppression again next run"
+            exit 0
+          fi
+          # SCOPED like the marker self-healer, because this is a WRITE into a body a
+          # human may own: rejection detection is body-keyed and state-blind, so ANY
+          # PR whose body quotes or inherits the changeset marker is a candidate,
+          # including a human's. Bot author AND a drift branch, the same conjunction
+          # `bot_managed` uses. Its other arm (branch ends in a changeset key) is
+          # deliberately not reproduced: for a WRITE the fail-open direction is to
+          # decline any PR this workflow cannot prove it opened, and declining costs
+          # only a repeated ping.
+          BRANCH="$(printf '%s' "$PR_JSON" | jq -r '.headRefName // ""')"
+          AUTHOR="$(printf '%s' "$PR_JSON" | jq -r '(.author.login // "") | ascii_downcase')"
+          BOT_LOGIN="$(jq -rn '($ENV.DRIFT_BOT_LOGIN // "") | ascii_downcase')"
+          DRIFT_BRANCH=no
+          case "$BRANCH" in fix/drift-*|drift-needs-human/*) DRIFT_BRANCH=yes ;; esac
+          if [ "$DRIFT_BRANCH" != yes ] || [ -z "$BOT_LOGIN" ] || [ "$AUTHOR" != "$BOT_LOGIN" ]; then
+            echo "::warning::PR #${CLOSED_PR} is not a PR this workflow opened (branch '${BRANCH}', author '${AUTHOR}'), so its body is not machine state to append to — no ack recorded, and the notice reports the suppression again next run"
+            exit 0
+          fi
+          ACK_MARKER="drift-suppression-reported: ${CHANGESET_KEY}"
+          # An intact ack is left BYTE-IDENTICAL — no edit, no API write, no
+          # appending ratchet. Reachable whenever the persist step's `--search`
+          # copy of the body was the stale one.
+          if printf '%s' "$PR_JSON" | jq -e --arg a "<!-- ${ACK_MARKER} -->" \
+            '(.body // "") | contains($a)' >/dev/null 2>&1; then
+            echo "PR #${CLOSED_PR} already carries the suppression ack — nothing to record"
+            exit 0
+          fi
+          ACK_FILE="${RUNNER_TEMP}/drift-suppression-ack-${CLOSED_PR}.md"
+          # APPEND-ONLY: the existing body, human prose and changeset marker alike,
+          # is copied through verbatim and only the ack line is added after it.
+          {
+            printf '%s\n\n' "$(printf '%s' "$PR_JSON" | jq -r '.body // ""')"
+            printf '<!-- %s -->\n' "${ACK_MARKER}"
+          } > "$ACK_FILE"
+          if ! ACK_ERR="$(gh pr edit "$CLOSED_PR" --body-file "$ACK_FILE" 2>&1)"; then
+            echo "::warning::could not record the suppression ack on PR #${CLOSED_PR} (${ACK_ERR}) — the notice reports the suppression again next run and tries again"
+            exit 0
+          fi
+          echo "recorded the suppression ack on PR #${CLOSED_PR} — the delivered notice is not re-posted"
+
+      # Alert: the sync found a genuinely-new family, or could not locate the
+      # registry array it had to edit — the two irreducible human decisions. A
+      # DEPRECATION is deliberately not one of them: the provider's own listing
+      # already reports it, so drift-sync records it mechanically and this alert
+      # never fires for one. The note was persisted by
+      # the step above (a distinct PR was opened, or the note was already in the repo
+      # / already proposed in an open PR — no PR spam). This alert fires the job RED
+      # so a human sees it in CI status too.
+      #
+      # It requires the persist step to have actually SUCCEEDED, not merely to have
+      # avoided failing. That step is gated `… && success()`, so ANY earlier failure
+      # — most plausibly one of the two `always()` artifact uploads — leaves it
+      # 'skipped'; admitting that state fires this PRODUCT-DECISION alert on a pure
+      # TOOLING fault, telling a human to go review a note that was never persisted.
+      # The gate-failure alert below owns that window instead.
+      - name: Alert on needs-human decision
+        id: alert_needs_human
+        if: >-
+          always() &&
+          steps.sync.outputs.reason == 'needs-human' &&
+          steps.needs_human_pr.outcome == 'success' &&
+          steps.needs_human_pr.outputs.rejected == ''
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          PR_URL: ${{ steps.needs_human_pr.outputs.url }}
+          PR_NUMBER: ${{ steps.needs_human_pr.outputs.number }}
+        run: |
+          set -euo pipefail
+          # A REAL newline — see the cancellation alert above for why a
+          # double-quoted "\n" renders literally in Slack instead.
+          NL=$'\n'
+          echo "::error::drift-sync found a genuinely-new model family, or a registry structural mismatch it must not repair itself — needs a human decision (see the needs-human PR / drift-proposals/*.md)"
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::SLACK_WEBHOOK not set — cannot send needs-human alert"
+            exit 1
+          fi
+          # The persist step emits url=/number= on EVERY path it takes — the PR it
+          # just opened, or the still-open PR that already proposes this decision. So
+          # reaching the fallback below means NO open PR carries the decision (the
+          # persist step was skipped, or the PR was merged/closed), NOT "it is
+          # already proposed somewhere".
+          if [ -n "${PR_URL:-}" ]; then
+            WHERE="Review the note in PR #${PR_NUMBER:-?}, set \`Decision: include\` (or close to reject), and merge: ${PR_URL}"
+          else
+            WHERE="No open PR carries this decision (the note may not have been persisted, or its PR was merged/closed). See the drift-sync-log artifact and \`drift-proposals/\`."
+          fi
+          MSG="🧭 *Drift sync — needs a human decision* — a new/unclassified model family, or a registry structural mismatch, was found. ${WHERE}${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          # Bounded: `--max-time` so a hung POST cannot burn the job's (or a
+          # cancellation's) whole budget, and a small bounded `--retry` so a single
+          # Slack 429/5xx/TLS timeout does not lose the day's only alert. `-f` is
+          # load-bearing — without it an HTTP 404 from a rotated webhook exits 0
+          # and the drop is invisible.
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY: `&&`-chained, so this exists only when the
+          # POST returned 0 — see the catch-all's comment below.
+            echo "posted=true" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      # Alert: TOOLING FAULTS, as opposed to the needs-human product decision above.
+      # Its message names the step that failed. Three of its arms are pure reason
+      # lookups — `gate-failed` (drift-sync's own internal gate reverted the edit
+      # before commit), `sync-crashed`, `provider-unchecked` — and two are shaped:
+      #
+      # The ok-applied arm is deliberately WIDE — `failure()`, not narrowly
+      # `steps.assert.outcome == 'failure'` — because the defense-in-depth Assert
+      # step can SUCCEED and a LATER step still fail the job (Push branch + create
+      # PR can fail for ANY reason — a rejected push, a `gh pr create` error, an
+      # exhausted head-SHA PR-match poll, or, as on 2026-08-07, an E2BIG inside a
+      # jq call, which is why the alert below quotes evidence instead of guessing
+      # from a list like this one). Narrower, that window leaves reason ==
+      # 'ok-applied' (non-empty, so the early-infra catch-all below stays silent) and
+      # assert == 'success' (so this alert stays silent too): a silent failure on an
+      # unattended daily cron.
+      #
+      # The needs-human arm covers the persist step not SUCCEEDING — it FAILED, or it
+      # was SKIPPED because an earlier step failed and it is gated on `success()`.
+      # Both mean the note was not persisted. Keyed on `!= 'success'` against the
+      # product alert's `== 'success'`, so the two partition that domain: neither
+      # window falls through, and they can never double-fire.
+      - name: Alert on drift-sync-check gate failure
+        id: alert_gate
+        if: >-
+          always() &&
+          (steps.sync.outputs.reason == 'gate-failed' ||
+           steps.sync.outputs.reason == 'sync-crashed' ||
+           steps.sync.outputs.reason == 'provider-unchecked' ||
+           (steps.sync.outputs.reason == 'ok-applied' && failure()) ||
+           (steps.sync.outputs.reason == 'needs-human' && steps.needs_human_pr.outcome != 'success'))
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SYNC_REASON: ${{ steps.sync.outputs.reason }}
+          SYNC_EXIT_CODE: ${{ steps.sync.outputs.exit_code }}
+          ASSERT_OUTCOME: ${{ steps.assert.outcome }}
+          GIT_PUSH_CFG_OUTCOME: ${{ steps.gitcfg_push.outcome }}
+          PR_OUTCOME: ${{ steps.pr.outcome }}
+          NEEDS_HUMAN_PR_OUTCOME: ${{ steps.needs_human_pr.outcome }}
+        run: |
+          set -euo pipefail
+          # A REAL newline — see the cancellation alert above for why a
+          # double-quoted "\n" renders literally in Slack instead.
+          NL=$'\n'
+          # ---- QUOTE THE FAILURE, DO NOT ENUMERATE GUESSES ----------------------
+          # This alert used to name a failing step and then append a hand-written
+          # list of the causes someone imagined for it. On 2026-08-06 and
+          # 2026-08-07 (runs 31079603526 / 31154443828) it said "push rejected, gh
+          # pr create error, or PR-match polling exhausted" on two consecutive
+          # mornings while the persist step had actually died with
+          # `/usr/bin/jq: Argument list too long` and exit 126 — an E2BIG in a
+          # marker-self-heal `jq --argjson`, which is none of the three. Naming a
+          # plausible cause is WORSE than naming none: it sends triage at the push
+          # credential and the PR-match poll, and the real defect survives for as
+          # many mornings as it takes someone to open the raw log.
+          #
+          # Both PR steps now record their real exit code and stderr under
+          # RUNNER_TEMP. Report THOSE. A missing record is itself reported as
+          # missing — never smoothed over with a guess.
+          DRIFT_STATUS_DIR="${RUNNER_TEMP}/drift-step-status"
+          step_evidence() {
+            local rc_f="${DRIFT_STATUS_DIR}/$1.rc" err_f="${DRIFT_STATUS_DIR}/$1.err" rc last
+            if [ ! -r "$rc_f" ]; then
+              printf ' — NO exit code was recorded, so it died before its own status prologue ran (a runner-level fault, not a fault in the step body)'
+              return 0
+            fi
+            rc="$(cat "$rc_f")"
+            # An empty stderr makes grep exit 1, and `pipefail` propagates that.
+            # It does NOT currently kill the alert — bash suppresses errexit for a
+            # function body running inside a command substitution, which is the
+            # only way this is called — so `|| true` is belt-and-braces against a
+            # future direct call, not a load-bearing guard, and no test below
+            # claims otherwise. What IS load-bearing is the `${last:-…}` default:
+            # without it an empty stderr renders as nothing at all, and the alert
+            # is contentless again on exactly the runs it exists to report.
+            #
+            # Bounded to 300 chars so one enormous stderr line cannot bloat the
+            # Slack payload (or push `jq -n --arg text` back towards the argv cap
+            # this incident was about).
+            last="$( { grep -v '^[[:space:]]*$' "$err_f" 2>/dev/null || true; } | tail -n 1 | cut -c1-300 )"
+            printf ' — exited %s; last stderr: %s' "$rc" "${last:-(the step wrote nothing to stderr)}"
+          }
+          if [ "${SYNC_REASON}" = "sync-crashed" ]; then
+            FAILING_STEP="Run deterministic drift sync (drift-sync.ts exited ${SYNC_EXIT_CODE:-?} and the run is UNCLASSIFIABLE — it printed no usable reason= line, or it reported a clean one and then died anyway; see the drift-sync-log artifact)"
+          elif [ "${SYNC_REASON}" = "provider-unchecked" ]; then
+            FAILING_STEP="Run deterministic drift sync (a provider was never actually CHECKED, so 'no churn' meant 'could not look' — an unusable API key to rotate, or a live /models listing too short to trust. The '[skipped] <provider>: …' lines of the drift-sync-log artifact name which)"
+          elif [ "${SYNC_REASON}" = "gate-failed" ]; then
+            FAILING_STEP="Run deterministic drift sync (drift-sync.ts's own internal drift-sync-check gate reverted the mechanical edit before commit)"
+          # The needs-human arms test the RUN SHAPE as well as the persist step's
+          # outcome. On an ok-applied run that step is gated
+          # `reason == 'needs-human' && success()`, so the runner always evaluates and
+          # skips it and `NEEDS_HUMAN_PR_OUTCOME` is ALWAYS 'skipped'. Keyed on the
+          # outcome alone, these arms would therefore claim "the needs-human note was
+          # NOT persisted" on EVERY ok-applied failure — a refused assert, a rejected
+          # push, a `gh pr create` error, an artifact upload — sending a human hunting
+          # for a file that run never produced, and leaving the arms below dead
+          # (reachable only with the persist step at 'success', which this alert never
+          # fires in).
+          elif [ "${SYNC_REASON}" = "needs-human" ] && [ "${NEEDS_HUMAN_PR_OUTCOME}" = "failure" ]; then
+            FAILING_STEP="Persist needs-human note + open PR$(step_evidence needs_human_pr) — the needs-human note may not have been persisted"
+          elif [ "${SYNC_REASON}" = "needs-human" ] && [ "${NEEDS_HUMAN_PR_OUTCOME}" = "skipped" ]; then
+            FAILING_STEP="Persist needs-human note + open PR was SKIPPED because an EARLIER step failed (it is gated on success()) — the needs-human note was NOT persisted, so the decision is not reachable in the repo"
+          elif [ "${ASSERT_OUTCOME}" = "failure" ]; then
+            FAILING_STEP="Assert drift-sync-check (defense-in-depth)"
+          elif [ "${GIT_PUSH_CFG_OUTCOME}" = "failure" ]; then
+            FAILING_STEP="Configure git for push (the push credential could not be injected, so neither PR path could push)"
+          elif [ "${PR_OUTCOME}" = "failure" ]; then
+            FAILING_STEP="Push branch + create PR$(step_evidence pr)"
+          else
+            # Never contentless: the steps with no `id:` (both artifact uploads)
+            # cannot be named, so report the state this alert actually observed
+            # instead of asserting a step that did not fail.
+            FAILING_STEP="an unidentified step after drift-sync reported reason='${SYNC_REASON}' (observed outcomes: assert=${ASSERT_OUTCOME:-none}, gitcfg_push=${GIT_PUSH_CFG_OUTCOME:-none}, pr=${PR_OUTCOME:-none}, needs_human_pr=${NEEDS_HUMAN_PR_OUTCOME:-none} — most plausibly one of the artifact uploads, which have no id to name)"
+          fi
+          echo "::error::drift-sync-check gate failure window — failing step: ${FAILING_STEP} — this is a tooling fault, not a product decision"
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::SLACK_WEBHOOK not set — cannot send gate-failure alert"
+            exit 1
+          fi
+          MSG="🔒❌ *Drift sync — gate refused* — failing step: ${FAILING_STEP}. This needs engineering triage, not a product decision.${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          # Bounded + `-f`, for the reasons given on the needs-human alert above.
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY: `&&`-chained, so this exists only when the
+          # POST returned 0 — see the catch-all's comment below.
+            echo "posted=true" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      # Slack notification on success. Never claims the change auto-merged —
+      # see the NO AUTO-MERGE comment above.
+      - name: Notify Slack on sync success
+        id: notify_success
+        if: success() && steps.pr.outputs.url != ''
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+          DEDUPED: ${{ steps.pr.outputs.deduped }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          # A REAL newline — see the cancellation alert above for why a
+          # double-quoted "\n" renders literally in Slack instead.
+          NL=$'\n'
+          # exit 1, like every other alert in this job: a missing webhook means the
+          # notification was DROPPED, and swallowing that with exit 0 leaves the job
+          # green while nobody was told a PR is waiting.
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::SLACK_WEBHOOK not set — cannot send sync-success alert"
+            exit 1
+          fi
+          # The dedup path names its PR too, so this distinguishes "just opened" from
+          # "still sitting there unmerged" rather than claiming a PR was opened when
+          # none was.
+          if [ "${DEDUPED:-}" = "true" ]; then
+            MSG="⏳ *Drift-sync PR still open — needs human review + merge*${NL}The same data-only model-family sync was re-detected today because its PR is still unmerged. No duplicate was opened.${NL}PR: ${PR_URL}${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          else
+            MSG="✅ *Drift-sync PR opened — needs human review + merge*${NL}A data-only, zero-LLM model-family sync passed drift-sync-check; a human must review CI + the diff and merge.${NL}PR: ${PR_URL}${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          fi
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          # Bounded + `-f`, for the reasons given on the needs-human alert above.
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY: `&&`-chained, so this exists only when the
+          # POST returned 0 — see the catch-all's comment below.
+            echo "posted=true" >> "$GITHUB_OUTPUT"
+
+      # End-of-job CATCH-ALL for any job failure the specific alerts above did NOT
+      # cover — canonically the EARLY-infra window (checkout / mint-app-token /
+      # pnpm install / clone ag-ui / git config / ollama provisioning) that runs
+      # BEFORE the `sync` step sets its outputs. Its condition says the thing it
+      # means, though: the job did not succeed and NO specific alert PROVABLY
+      # DELIVERED one. Keyed on the sync reason being unset instead, it would be a
+      # catch-all in NAME ONLY — on an `ok-no-churn` day, by far the most common
+      # outcome, a later step's failure leaves the reason set, no specific alert
+      # matches, and the job dies RED with ZERO Slack.
+      #
+      # IT STANDS DOWN ON `outputs.posted`, NEVER ON A STEP OUTCOME. Under
+      # `set -euo pipefail` an alert step exits non-zero on THREE distinct events,
+      # and GitHub reports all three as `outcome == 'failure'`:
+      #   1. SLACK_WEBHOOK empty -> explicit `exit 1` — NOTHING posted;
+      #   2. the `curl` itself failing (a rotated webhook answering 404, a 5xx, a
+      #      TLS timeout) -> `set -e` aborts the step — NOTHING delivered;
+      #   3. the curl succeeding, then the intended `exit 1` — delivered.
+      # Only (3) told a human anything, so an outcome-keyed stand-down lets the
+      # likeliest way for the alerting to break — the webhook being rotated, revoked
+      # or transiently unavailable — ALSO disable the backstop covering it: every
+      # red day, forever, zero Slack. So each alert writes `posted=true` only after
+      # its curl returns 0, and every other state (never selected, cut short by a
+      # cancellation, run against a dead webhook) leaves it empty and reaches here.
+      # (Outputs survive a step that then exits non-zero — the runner reads
+      # `$GITHUB_OUTPUT` regardless of exit code — which is why the write can
+      # precede the deliberate `exit 1`.)
+      #
+      # It cannot double-fire: the only thing that silences it is proof that a
+      # specific alert delivered.
+      #
+      # `failure() || cancelled()`, NOT `failure()`: a CANCELLED job — a manual
+      # cancel, or this job's own `timeout-minutes: 30` firing on stalled Ollama
+      # provisioning or a long clean re-collect — is a THIRD outcome for which
+      # `failure()` is FALSE, so `failure()` alone leaves a timed-out run with ZERO
+      # Slack. Naming `cancelled()` is also what makes the runner evaluate this step
+      # at all once the job is cancelling, rather than skipping it.
+      - name: Alert on early-infra failure (catch-all)
+        id: alert_catchall
+        if: >-
+          (failure() || cancelled()) &&
+          steps.alert_cancelled.outputs.posted != 'true' &&
+          steps.alert_needs_human.outputs.posted != 'true' &&
+          steps.alert_gate.outputs.posted != 'true'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SYNC_REASON: ${{ steps.sync.outputs.reason }}
+          # `cancelled()` is not available in `env:` (only in an `if:`), so the
+          # step reads the job's own status instead. If it ever fails to say
+          # 'cancelled' the alert still FIRES — it just falls through to the
+          # generic wording, so the worst case here is cosmetic, never silence.
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          # A REAL newline — see the cancellation alert above for why a
+          # double-quoted "\n" renders literally in Slack instead.
+          NL=$'\n'
+          # Name the window, so "catch-all" never means "unexplained": the headline
+          # distinguishes the three cases this step covers rather than always blaming
+          # setup. In particular a CANCELLED job did not "fail" anywhere — saying it
+          # did would send a human hunting for a broken step that does not exist — so
+          # name the cancellation (whose overwhelmingly likely cause on an unattended
+          # cron is this job's own `timeout-minutes: 30`) and where it landed.
+          if [ "${JOB_STATUS:-}" = "cancelled" ]; then
+            HEADLINE="CANCELLED / TIMED OUT"
+            VERB="was cancelled"
+            if [ -z "${SYNC_REASON:-}" ]; then
+              WHERE="during INFRA/SETUP or drift-sync itself, BEFORE any reason was reported — most plausibly the job's own 30-minute timeout-minutes firing (or a manual cancel)"
+            else
+              WHERE="AFTER drift-sync reported reason='${SYNC_REASON}' — most plausibly the job's own 30-minute timeout-minutes firing (or a manual cancel)"
+            fi
+          elif [ -z "${SYNC_REASON:-}" ]; then
+            HEADLINE="INFRA/SETUP failure"
+            VERB="failed"
+            WHERE="during INFRA/SETUP (checkout / token mint / pnpm install / ag-ui clone / git config / ollama provisioning) BEFORE drift-sync ran"
+          else
+            HEADLINE="uncovered failure"
+            VERB="failed"
+            WHERE="AFTER drift-sync reported reason='${SYNC_REASON}', in a step no specific alert covers (e.g. an artifact upload)"
+          fi
+          if [ -z "${SLACK_WEBHOOK:-}" ]; then
+            echo "::error::Drift-sync job ${VERB} ${WHERE} AND SLACK_WEBHOOK is not set — no alert could be sent. See run https://github.com/${REPO}/actions/runs/${RUN_ID}"
+            exit 1
+          fi
+          MSG="🧱❌ *Drift-sync job — ${HEADLINE}* — the job ${VERB} ${WHERE}; this is not a sync-gate failure. Manual intervention needed.${NL}Run: https://github.com/${REPO}/actions/runs/${RUN_ID}"
+          PAYLOAD="$(jq -n --arg text "$MSG" '{text: $text}')"
+          # Bounded + `-f`, for the reasons given on the needs-human alert above.
+          curl -fsS --show-error --retry 2 --retry-delay 3 --retry-max-time 60 --max-time 15 \
+            -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" &&
+          # POSITIVE PROOF OF DELIVERY, for symmetry with the alerts above: this step
+          # is the last backstop, so nothing reads it today — but a step added after
+          # it must be able to tell "the catch-all ran" from "the catch-all
+          # delivered", which is the whole distinction this mechanism keeps.
+          #
+          # `&&`, NOT a following line — in every alert. On its own line the echo is
+          # unreached only because `set -e` aborts the step first, so dropping `-e`
+          # from an alert would publish `posted=true` with nothing delivered, which is
+          # byte-identical to a real alert and stands this backstop down. Hung off the
+          # POST's own exit status, the proof cannot outlive a shell option. A dropped
+          # POST still ends the step non-zero either way — the failing list is the
+          # last command here, and where an explicit `exit 1` follows it, that runs —
+          # so a drop is never a green day.
+            echo "posted=true" >> "$GITHUB_OUTPUT"

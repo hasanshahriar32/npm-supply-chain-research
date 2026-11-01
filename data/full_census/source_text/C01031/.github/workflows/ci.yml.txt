@@ -1,0 +1,50 @@
+name: CI
+
+on:
+    pull_request:
+        branches:
+            - main
+            - v*.x
+    push:
+        branches:
+            - main
+            - v*.x
+    merge_group: {}
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                    fetch-depth: 0
+                    persist-credentials: false
+
+            - uses: better-auth/shared-workflows/.github/actions/setup-pnpm@08e5520e7a829b03bee1152913682b67d2ba44b1
+
+            - name: Build
+              run: pnpm build
+            
+            - name: Lint
+              run: pnpm lint
+
+            - name: Lint dependencies
+              run: pnpm lint:dependencies
+
+            - name: Lint package
+              run: pnpm lint:packages
+
+            - name: Lint types
+              run: pnpm lint:types
+
+            - name: Lint spell
+              run: pnpm lint:spell
+            
+            - name: Test
+              run: pnpm coverage
+
+            - name: Typecheck
+              run: pnpm typecheck

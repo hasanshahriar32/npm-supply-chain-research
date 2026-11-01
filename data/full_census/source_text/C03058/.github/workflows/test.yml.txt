@@ -1,0 +1,158 @@
+name: Test
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  testBrowser:
+    name: 'Test: Browsers'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-${{ env.cache-name }}-
+            ${{ runner.os }}-modules-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Run browser tests
+        run: npm run test:browser
+
+  testNode:
+    name: 'Test: Node.js ${{ matrix.node-version }}'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22.x', '24.x', '26.x']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Cache node modules
+        id: cache-node-modules
+        uses: actions/cache@v6
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: '**/node_modules'
+          key: ${{ runner.os }}-modules-${{ env.cache-name }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-modules-${{ env.cache-name }}--node-${{ matrix.node-version }}-
+            ${{ runner.os }}-modules-${{ env.cache-name }}
+            ${{ runner.os }}-modules-
+            ${{ runner.os }}-
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: Run tests
+        run: npm test
+
+  testTypes:
+    name: 'Test: Types'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm ci
+      - name: Check type compatibility
+        run: npm run test:types
+
+  testDeno:
+    name: 'Test: Deno'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install dependencies
+        run: deno install
+      - name: Run tests
+        run: npm run test:deno
+
+  testBun:
+    name: 'Test: Bun'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+      - name: Run tests
+        run: npm run test:bun
+
+  testHappyDom:
+    name: 'Test: happy-dom'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm run test:happy-dom
+
+  # Every environment gates now. Where a runtime deviates from the others, the deviation is pinned
+  # in `test/client.test.ts` with `test.fails` rather than excluded from CI, so that the suite goes
+  # red again once the runtime is fixed and the workaround can come out. See CONTRIBUTING.md.
+  testWorkerd:
+    name: 'Test: workerd'
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm run test:workerd
+
+  testIos:
+    name: 'Test: iOS Simulator'
+    timeout-minutes: 20
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: npm ci
+      - name: List available simulators
+        run: xcrun simctl list devices available
+      # Separate from the test step on purpose: a cold boot takes longer than Vitest's
+      # `browser.connectTimeout`, which is already running while the provider boots.
+      - name: Boot simulator
+        run: npm run test:ios:boot
+      - name: Run tests
+        run: npm run test:ios

@@ -1,0 +1,85 @@
+{
+  "name": "nwsapi",
+  "version": "2.2.28",
+  "description": "Fast CSS Selectors API Engine",
+  "keywords": [
+    "css",
+    "css3",
+    "css4",
+    "matcher",
+    "selector"
+  ],
+  "homepage": "https://javascript.nwbox.com/nwsapi/",
+  "bugs": {
+    "url": "https://github.com/dperini/nwsapi/issues"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Diego Perini",
+    "email": "diego.perini@gmail.com",
+    "web": "https://www.iport.it/"
+  },
+  "maintainers": [
+    {
+      "name": "Diego Perini",
+      "email": "diego.perini@gmail.com",
+      "web": "https://www.iport.it/"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dperini/nwsapi.git"
+  },
+  "main": "./src/nwsapi",
+  "scripts": {
+    "preinstall": "node scripts/package-manager.mjs",
+    "clean": "node scripts/clean.mts",
+    "dev": "node scripts/develop/run.mts",
+    "docs": "node scripts/develop/docs.mts",
+    "lint": "eslint ./src/nwsapi.js",
+    "npm:approve": "node scripts/publish/npm/approve.mjs",
+    "npm:auth": "node scripts/publish/npm/auth.mjs",
+    "npm:dry-run": "node scripts/publish/npm/stage.mjs --dry-run",
+    "npm:finalize": "node scripts/publish/npm/finalize.mjs",
+    "npm:publish": "node scripts/publish/npm/publish.mjs",
+    "npm:reject": "node scripts/publish/npm/reject.mjs",
+    "npm:stage": "node scripts/publish/npm/stage.mjs",
+    "npm:staged": "node scripts/publish/npm/staged.mjs",
+    "npm:verify": "node scripts/publish/npm/verify.mjs",
+    "prepare": "node scripts/setup.mjs",
+    "prepublishOnly": "node scripts/publish/block-publish.cjs",
+    "publish:setup": "node scripts/publish/setup.mjs",
+    "setup": "node scripts/setup.mjs",
+    "setup:editor": "node scripts/setup/editor.mts",
+    "setup:check": "node scripts/develop/doctor.mts",
+    "review": "node scripts/develop/review.mts",
+    "test": "node --test test/repo/integration/*.test.mjs test/repo/integration/fastpaths/*.test.mjs test/repo/integration/setup/*.test.mjs test/repo/release/*.test.mjs",
+    "wpt:serve": "node test/wpt/wpt-launcher.mjs serve",
+    "wpt:setup": "node test/wpt/wpt-launcher.mjs setup",
+    "wpt:verify": "node test/wpt/wpt-launcher.mjs verify",
+    "wpt:test": "node test/wpt/wpt-test.mjs",
+    "setup:full": "node scripts/setup.mjs --full",
+    "test:onboarding": "node scripts/test/onboarding/run.mts journey"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@maschwenk/tsrs": "0.8.0-ts7.1.0-dev.20260929",
+    "@opentui/core": "0.5.17",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "acorn": "8.15.0",
+    "eslint": "10.12.0",
+    "globals": "17.13.0",
+    "jsdom": "26.1.0",
+    "playwright": "1.63.0",
+    "std-env": "4.3.0"
+  },
+  "engines": {
+    "npm": ">=12.2.0"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://javascript.nwbox.com/nwsapi/MIT-LICENSE"
+    }
+  ]
+}

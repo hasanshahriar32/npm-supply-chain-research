@@ -1,0 +1,35 @@
+name: CI
+
+on: [push, pull_request]
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.platform }}-${{ matrix.node }}
+      cancel-in-progress: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - '22'
+          - '24'
+        platform:
+          - ubuntu-latest
+          - windows-latest
+
+    name: '${{matrix.platform}} / Node.js ${{ matrix.node }}'
+    runs-on: ${{matrix.platform}}
+
+    steps:
+    - name: Checkout Commit
+      uses: actions/checkout@v4
+    - name: Install pnpm
+      uses: pnpm/setup@v2
+    # - name: Audit
+      # run: pnpm audit
+    - name: run tests
+      run: pnpm test

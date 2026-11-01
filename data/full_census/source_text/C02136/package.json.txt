@@ -1,0 +1,67 @@
+{
+  "name": "errx",
+  "type": "module",
+  "version": "0.2.2",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0",
+      "onFail": "download"
+    },
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.15.0",
+      "onFail": "download"
+    }
+  },
+  "description": "Zero dependency library to capture and parse stack traces in Node, Bun and Deno",
+  "license": "MIT",
+  "repository": "danielroe/errx",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "vitest dev",
+    "lint": "eslint .",
+    "prepare": "simple-git-hooks",
+    "prepack": "pnpm build",
+    "prepublishOnly": "pnpm lint && pnpm test",
+    "test": "pnpm test:unit && pnpm test:types",
+    "test:unit": "vitest",
+    "test:types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "9.5.1",
+    "@types/node": "26.6.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "eslint": "10.13.0",
+    "nano-staged": "1.0.2",
+    "pkg-pr-new": "0.0.92",
+    "simple-git-hooks": "2.14.0",
+    "tsdown": "0.23.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm nano-staged"
+  },
+  "nano-staged": {
+    "*.{js,ts,mjs,cjs,json,.*rc}": [
+      "pnpm eslint --fix"
+    ]
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.mjs",
+      "./package.json": "./package.json"
+    }
+  }
+}

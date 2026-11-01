@@ -1,0 +1,67 @@
+{
+  "name": "eslint-plugin-chai-friendly",
+  "version": "1.2.1",
+  "description": "This plugin makes 'no-unused-expressions' rule friendly towards chai expect statements.",
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "chai",
+    "lint"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ihordiachenko/eslint-plugin-chai-friendly.git"
+  },
+  "homepage": "https://github.com/ihordiachenko/eslint-plugin-chai-friendly#readme",
+  "bugs": {
+    "url": "https://github.com/ihordiachenko/eslint-plugin-chai-friendly/issues"
+  },
+  "author": "Ihor Diachenko",
+  "contributors": [
+    "Brett Zamir"
+  ],
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.js"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "test": "npm run test:unit && npm run integration-test:all",
+    "test:types": "npx tsc -p tests/types/tsconfig.json",
+    "test:unit": "nyc mocha tests/ --recursive",
+    "integration-test": "npx eslint examples/test.js --no-ignore",
+    "integration-test:ts": "npx eslint --config examples/eslint.config.js examples/test-ts-specific.ts --no-ignore",
+    "integration-test:all": "npx eslint --config examples/eslint.config.js examples/test.js examples/test-ts-specific.ts --no-ignore"
+  },
+  "peerDependencies": {
+    "eslint": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/eslint-parser": "^7.25.1",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
+    "chai": "^5.1.1",
+    "eslint": "^9.39.4",
+    "mocha": "^11.7.5",
+    "nyc": "^18.0.0",
+    "typescript": "^5.8.3"
+  },
+  "overrides": {
+    "flatted": "3.4.2",
+    "serialize-javascript": "7.0.5",
+    "brace-expansion": "5.0.5",
+    "@istanbuljs/load-nyc-config": {
+      "js-yaml": "3.14.2"
+    },
+    "mocha": {
+      "diff": "8.0.3",
+      "js-yaml": "4.1.1"
+    }
+  },
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "license": "MIT"
+}

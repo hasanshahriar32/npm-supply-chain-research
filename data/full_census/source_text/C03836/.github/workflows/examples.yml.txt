@@ -1,0 +1,124 @@
+name: Examples
+
+on:
+  workflow_call:
+    inputs:
+      publishedPackages:
+        type: string
+        description: >
+          A JSON array to present the published packages. The format is `[{"name": "@xx/xx", "version": "1.2.0"}, {"name": "@xx/xy", "version": "0.8.9"}]`
+    secrets:
+      token:
+        required: true
+        description: The GitHub token for commiting and opening PRs
+
+concurrency:
+  group: examples-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  head-commit:
+    name: Inspect head commit
+    runs-on: ubuntu-latest
+    outputs:
+      message: ${{ steps.commit.outputs.message }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{github.event.pull_request.head.sha || github.sha}}
+      - name: Inspect
+        id: commit
+        run: echo "message=$(git show -s --format=%s)" >> "$GITHUB_OUTPUT"
+
+  convert:
+    needs: [head-commit]
+    if: "${{needs.head-commit.outputs.message != 'docs(examples): converted from e2es'}}"
+    strategy:
+      matrix:
+        e2e:
+          - extra-fields
+          - federation-example
+          - federation-mixed
+          - file-upload
+          - apq-subgraphs
+          - federation-subscriptions-passthrough
+          - hmac-auth-https
+          - interface-additional-resolvers
+          - json-schema-subscriptions
+          - openapi-additional-resolvers
+          - openapi-arg-rename
+          - openapi-javascript-wiki
+          - openapi-subscriptions
+          - programmatic-batching
+          - subscriptions-with-transforms
+          - type-merging-batching
+          - operation-field-permissions
+          - launchdarkly-override
+          - typed-sdk
+          # TODO: support containers before enabling (we use nats image in e2e)
+          # - event-driven-federated-subscriptions
+    name: Convert ${{matrix.e2e}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Convert
+        run: yarn workspace @internal/examples run start --e2e=${{matrix.e2e}} --clean=true --publishedPackages='${{inputs.publishedPackages}}'
+      - name: Upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4
+        with:
+          name: example-${{matrix.e2e}}
+          # include all files and folders starting with a dot (.)
+          include-hidden-files: true
+          # > If multiple paths are provided as input, the least common ancestor of all the search paths will be used as the root directory of the artifact.
+          # https://github.com/actions/upload-artifact#upload-using-multiple-paths-and-exclusions
+          #
+          # Because of this, we include the root README.md to maintain the paths during artifact downloads
+          path: |
+            README.md
+            examples/${{matrix.e2e}}
+            !examples/${{matrix.e2e}}/node_modules
+
+  commit:
+    needs: [convert]
+    name: Commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          token: ${{secrets.token}}
+      - name: Download
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4
+        with:
+          pattern: example-*
+          merge-multiple: true
+      - name: Diff
+        run: git diff --pretty
+      - name: Commit
+        if: github.ref != 'refs/heads/main'
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7.2.0
+        with:
+          file_pattern: examples/
+          commit_message: 'docs(examples): converted from e2es'
+          commit_user_name: theguild-bot
+          commit_user_email: bot@the-guild.dev
+          commit_author: theguild-bot <bot@the-guild.dev> # dont use the actor as an author
+      - name: PR
+        if: github.ref == 'refs/heads/main'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v7
+        with:
+          token: ${{secrets.token}}
+          add-paths: examples/
+          base: ${{github.head_ref || github.ref_name}}
+          branch: examples/update
+          commit-message: 'docs(examples): converted from e2es'
+          title: Update Examples
+          body: The examples converted from E2E tests have changed in ${{github.event.pull_request.head.sha || github.sha}}.
+          committer: theguild-bot <bot@the-guild.dev>
+          author: theguild-bot <bot@the-guild.dev> # dont use the actor as an author

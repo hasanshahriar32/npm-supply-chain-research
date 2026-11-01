@@ -1,0 +1,135 @@
+{
+  "name": "prettier-plugin-solidity",
+  "version": "2.4.1",
+  "description": "A Prettier Plugin for automatically formatting your Solidity code.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "browser": "./dist/standalone.js",
+  "unpkg": "./dist/standalone.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./standalone": "./dist/standalone.js"
+  },
+  "scripts": {
+    "build": "webpack --env production",
+    "build:dev": "webpack --env development",
+    "build:test": "webpack --config webpack.test.config.js",
+    "eslint": "eslint 'src/**' 'tests/**'",
+    "lint": "npm run eslint && npm run prettier -- --list-different && npm run knip && npx tsc",
+    "lint:fix": "npm run eslint -- --fix && npm run prettier -- --write",
+    "prepublishOnly": "npm run build && npx tsc -p tsconfig.build.json",
+    "prettier": "prettier './*.{ts,js,cjs,json,md,yml}' '{src,tests}/**/*.{ts,js,cjs}'",
+    "test": "jest",
+    "test:all": "cross-env FULL_TEST=1 c8 jest",
+    "test:standalone": "cross-env TEST_STANDALONE=1 FULL_TEST=1 jest",
+    "pretest:browser": "playwright install chromium firefox webkit",
+    "test:browser": "cross-env TEST_STANDALONE_BROWSER=1 FULL_TEST=1 jest",
+    "knip": "knip"
+  },
+  "files": [
+    "src",
+    "dist/**/*",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/prettier-solidity/prettier-plugin-solidity.git"
+  },
+  "keywords": [
+    "ethereum",
+    "plugin",
+    "prettier",
+    "slang",
+    "solidity"
+  ],
+  "author": {
+    "email": "mattia.richetto@gmail.com",
+    "name": "Mattia Richetto"
+  },
+  "contributors": [
+    {
+      "email": "jack@nottheoilrig.com",
+      "name": "Jack Bates"
+    },
+    {
+      "email": "federico.bond@gmail.com",
+      "name": "Federico Bond"
+    },
+    {
+      "email": "git@twopointzero.us",
+      "name": "Jed Fox"
+    },
+    {
+      "email": "hi@mudit.blog",
+      "name": "Mudit Gupta"
+    },
+    {
+      "email": "victorio.franco@gmail.com",
+      "name": "Franco Victorio"
+    },
+    {
+      "email": "klahott@gmail.com",
+      "name": "Klaus Hott Vidal"
+    },
+    {
+      "email": "soham@zemse.in",
+      "name": "Soham Zemse"
+    }
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/prettier-solidity/prettier-plugin-solidity/issues"
+  },
+  "homepage": "https://github.com/prettier-solidity/prettier-plugin-solidity#readme",
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@babel/code-frame": "^8.0.6",
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.6",
+    "@types/semver": "^7.8.0",
+    "c8": "^12.0.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import-x": "^4.17.1",
+    "globals": "^17.13.0",
+    "index-to-position": "^1.2.0",
+    "jest": "^30.5.2",
+    "jest-light-runner": "^0.8.2",
+    "jest-snapshot-serializer-ansi": "^2.2.1",
+    "jest-snapshot-serializer-raw": "^2.0.0",
+    "jest-watch-typeahead": "^3.0.1",
+    "knip": "^6.43.0",
+    "playwright": "^1.64.1",
+    "prettier": "^3.9.10",
+    "solc": "^0.8.38",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "webpack": "^5.112.2",
+    "webpack-cli": "^7.2.3"
+  },
+  "dependencies": {
+    "@nomicfoundation/slang": "1.3.9",
+    "@solidity-parser/parser": "^0.20.2",
+    "semver": "^7.8.5"
+  },
+  "peerDependencies": {
+    "prettier": ">=3.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

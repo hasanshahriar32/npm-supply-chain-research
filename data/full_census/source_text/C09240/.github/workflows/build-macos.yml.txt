@@ -1,0 +1,56 @@
+name: Build for macos
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-build-macos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+
+    runs-on: ${{ matrix.runner }}
+
+    permissions:
+      id-token: write # Mints OIDC token to request Sigstore signing certificate
+      attestations: write # Persists attestation
+      artifact-metadata: write # Creates artifact storage record
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {persist-credentials: false}
+
+      - uses: $/.github/util/initialize
+        with: {github-token: "${{ github.token }}"}
+
+      - name: Build
+        run: dart run grinder "pkg-standalone-macos-$ARCH"
+        env: {ARCH: "${{ matrix.arch }}"}
+
+      - name: Generate artifact attestation
+        if: github.ref_type == 'tag'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: build/*.tar.gz
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: build-macos-${{ matrix.arch }}
+          path: build/*.tar.gz
+          if-no-files-found: error
+          compression-level: 0

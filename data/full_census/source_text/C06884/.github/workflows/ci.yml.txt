@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js v16
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
+      - name: yarn install, build, and test
+        run: |
+          yarn --frozen-lockfile
+          yarn typecheck
+          yarn build
+          yarn test --ci --coverage
+          yarn lint
+          bash <(curl -s https://codecov.io/bash) -t ${{ secrets.CODECOV_TOKEN }}
+        env:
+          CI: true

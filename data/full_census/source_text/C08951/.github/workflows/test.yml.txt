@@ -1,0 +1,38 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+    if: contains(github.event.commits[0].message, '[skip ci]') == false
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - uses: bahmutov/npm-install@v1
+
+      - name: Generate Files
+        run: npm run build
+
+      - name: Typecheck Files
+        run: npm run check
+
+      - name: Run type-level tests
+        run: npm test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: include
+          path: include

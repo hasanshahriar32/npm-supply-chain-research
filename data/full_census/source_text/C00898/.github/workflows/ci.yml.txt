@@ -1,0 +1,170 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  tests1:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests 🧪
+        run: npm test
+
+      - name: Run demo 1 📊
+        run: npm run demo
+
+      - name: Run demo 2 📊
+        run: npm run demo2
+
+      - name: Run demo 3 📊
+        run: npm run demo3
+
+      - name: Run demo 4 📊
+        run: npm run demo4
+
+      - name: Run demo 5 📊
+        run: npm run demo5
+
+      - name: Run demo 6 📊
+        run: npm run demo6
+
+      - name: Run demo 7 📊
+        run: npm run demo7
+
+  tests2:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run demo 11 📊
+        run: npm run demo11
+
+      - name: Run demo 12 📊
+        run: npm run demo12
+
+      - name: Run demo 9 📊
+        run: npm run demo9
+
+      - name: Run demo cross env 📊
+        run: npm run demo-cross-env
+
+      - name: Run demo commands 📊
+        run: npm run demo-commands
+
+      - name: Run demo multiple 📊
+        run: npm run demo-multiple
+
+      - name: Run demo expect 403 code 📊
+        run: npm run demo-expect-403
+
+      - name: Run demo expected 403 code 📊
+        run: npm run demo-expected-403
+
+  tests-node-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+        node:
+          - 22
+          - 24
+          - 26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run json-server test
+        run: npm run demo-json-server
+
+      - name: Run ::1 host example
+        run: npm run demo-ip6
+
+      - name: Run explicit 0.0.0.0 host example
+        run: npm run demo-zero-explicit
+
+      - name: Run 0.0.0.0 host with 127.0.0.1 url
+        run: npm run demo-zero-127
+
+      - name: Run 0.0.0.0 host example
+        run: npm run demo-zero
+
+  release:
+    needs: ['tests1', 'tests2', 'tests-node-matrix']
+    # only release from the master branch
+    # in parent repository, not in a fork
+    if: (github.ref == 'refs/heads/master') &&
+      (github.repository == 'bahmutov/start-server-and-test')
+    runs-on: ubuntu-latest
+    permissions:
+      # allow the release step to comment on
+      # issues, pull requests, and write to the repo
+      contents: write
+      issues: write
+      pull-requests: write
+      # Required for OIDC to let npm registry know
+      # that this workflow is trusted
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Semantic Release 🚀
+        # https://github.com/cycjimmy/semantic-release-action
+        uses: cycjimmy/semantic-release-action@d9bf53a078bd2f86aaffaec796dbb3d28f1b6f34 # v8.1.3
+        with:
+          # https://github.com/semantic-release/semantic-release
+          semantic_version: 25.0.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

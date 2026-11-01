@@ -1,0 +1,105 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+  # Required to dispatch release-action.yml after the release is created.
+  actions: write
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: 🦋 Changesets Release
+    runs-on: ubuntu-latest
+    outputs:
+      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
+      published: ${{ steps.changesets.outputs.published }}
+    steps:
+      - name: ⬇️ Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: 📦 Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.0"
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: 🔧 Upgrade npm for OIDC support
+        run: npm install -g npm@latest
+
+      - name: 📥 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🚀 Create Release Pull Request or Publish to NPM
+        uses: changesets/action@v1
+        id: changesets
+        with:
+          publish: bun run changeset:release
+          version: bun run changeset:version
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: 📦 Create Aggregated GitHub Release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          VERSION=$(jq -r '.version' packages/core/package.json)
+          PACKAGES='${{ steps.changesets.outputs.publishedPackages }}'
+
+          # Format package list as markdown
+          PACKAGE_LIST=$(echo "$PACKAGES" | jq -r '.[] | "- `\(.name)@\(.version)`"')
+
+          # Lead with this version's own CHANGELOG entry so breaking changes are
+          # visible on the releases page instead of only in the package files.
+          # awk prints the body between this version's heading and the next one.
+          NOTES=$(awk -v ver="## ${VERSION}" '
+            $0 == ver { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' packages/core/CHANGELOG.md)
+
+          : > /tmp/release-notes.md
+          if [ -n "$(echo "$NOTES" | tr -d '[:space:]')" ]; then
+            echo "$NOTES" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+            echo "---" >> /tmp/release-notes.md
+            echo "" >> /tmp/release-notes.md
+          fi
+
+          echo "## Published Packages" >> /tmp/release-notes.md
+          echo "" >> /tmp/release-notes.md
+          echo "$PACKAGE_LIST" >> /tmp/release-notes.md
+          echo "" >> /tmp/release-notes.md
+          echo "See individual package CHANGELOGs for details." >> /tmp/release-notes.md
+
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes-file /tmp/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Releases created with GITHUB_TOKEN do not emit `release: published`,
+      # so release-action.yml would never run on its own. workflow_dispatch is
+      # exempt from that recursion guard, so trigger it explicitly to publish
+      # the action's version and major tags.
+      - name: 🏷️ Trigger action tag release
+        if: steps.changesets.outputs.published == 'true'
+        run: |
+          VERSION=$(jq -r '.version' packages/core/package.json)
+          gh workflow run release-action.yml -f tag="v${VERSION}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,36 @@
+name: Update check
+
+on:
+    schedule:
+        - cron: '0 0 * * *'
+    workflow_dispatch:
+
+jobs:
+    update-check:
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: write
+            pull-requests: write
+
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: latest
+
+            - name: Install dependencies
+              run: npm install
+
+            - name: Run update list
+              run: npm run update-list
+
+            - name: Create Pull Request
+              uses: peter-evans/create-pull-request@v8
+              with:
+                  title: Update TLDs
+                  commit-message: 'fix: 🤖 Update TLDs'
+                  branch: fix/auto-update-tlds
+                  body: Automated update of TLDs
+                  labels: bug
+                  draft: true

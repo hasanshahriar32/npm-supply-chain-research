@@ -1,0 +1,75 @@
+{
+  "name": "mm",
+  "version": "4.0.2",
+  "description": "mock mate, mock http request, fs access and so on.",
+  "homepage": "http://github.com/node-modules/mm",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/node-modules/mm.git"
+  },
+  "keywords": [
+    "mm",
+    "muk",
+    "mock",
+    "test"
+  ],
+  "author": "fengmk2 <fengmk2@gmail.com> (https://github.com/fengmk2)",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 18.19.0"
+  },
+  "dependencies": {
+    "@cnpmjs/muk-prop": "^1.1.0",
+    "is-type-of": "^2.2.0",
+    "thenify": "^3.3.1"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.17.1",
+    "@eggjs/bin": "7",
+    "@eggjs/tsconfig": "1",
+    "@types/mocha": "10",
+    "@types/node": "22",
+    "eslint": "8",
+    "eslint-config-egg": "14",
+    "pedding": "^2.0.1",
+    "should": "^13.2.3",
+    "tshy": "3",
+    "tshy-after": "1",
+    "typescript": "5"
+  },
+  "scripts": {
+    "lint": "eslint --cache src test --ext .ts",
+    "pretest": "npm run lint -- --fix && npm run prepublishOnly",
+    "test": "egg-bin test",
+    "preci": "npm run lint && npm run prepublishOnly && attw --pack",
+    "ci": "egg-bin cov",
+    "prepublishOnly": "tshy && tshy-after"
+  },
+  "type": "module",
+  "tshy": {
+    "exports": {
+      ".": "./src/index.ts",
+      "./package.json": "./package.json"
+    }
+  },
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "./dist/commonjs/index.d.ts",
+  "main": "./dist/commonjs/index.js",
+  "module": "./dist/esm/index.js"
+}

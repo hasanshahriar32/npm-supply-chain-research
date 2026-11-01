@@ -1,0 +1,38 @@
+name: 'Support requests'
+
+on:
+  issues:
+    types: [labeled, unlabeled, reopened]
+
+jobs:
+  support:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/support-requests@v5
+        with:
+          github-token: ${{ github.token }}
+          support-label: 'repro-required'
+          issue-comment: >
+            :wave: @{issue-author}, sorry you're having an issue. As the issue template explains, it's required that you provide a runnable example that reproduces your issue (read the [issue template](https://github.com/react-native-google-signin/google-signin/blob/master/.github/ISSUE_TEMPLATE/custom.yaml)).
+
+            The reason is that the maintainer does not have time to try reproduce bugs himself. Try to minimize the superfluous code and focus only on reproducing the bug.
+
+            If you create a new issue with this in mind, the maintainer will do his best to review it!
+          close-issue: true
+          lock-issue: true
+      - uses: dessant/support-requests@v5
+        with:
+          github-token: ${{ github.token }}
+          support-label: 'developer-error'
+          issue-comment: >
+            :wave: @{issue-author}, sorry you're encountering the `DEVELOPER_ERROR`. Don't worry - this is a common issue! Follow [these troubleshooting instructions](https://react-native-google-signin.github.io/docs/troubleshooting#developer_error) to resolve it.
+          close-issue: true
+          lock-issue: true
+      - uses: dessant/support-requests@v5
+        with:
+          github-token: ${{ github.token }}
+          support-label: 'question'
+          issue-comment: >
+            :wave: @{issue-author}, please post your question to [discussions](https://github.com/react-native-google-signin/google-signin/discussions) instead.
+          close-issue: true
+          lock-issue: true

@@ -1,0 +1,62 @@
+# Runs the test suite (jest, tsc, eslint) across supported Node versions
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: yarn
+    # --ignore-engines: eslint 10 declares Node >= 20.19 and yarn 1 enforces
+    # engines at install time, which would fail this job on older Nodes -
+    # but eslint never runs here (it has its own strict job below); this
+    # job exists to prove jest + tsc work on every supported runtime
+    - run: yarn install --frozen-lockfile --ignore-engines
+    - run: yarn test:unit && yarn tsc
+      env:
+        CI: true
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24.x
+        cache: yarn
+    - run: yarn install --frozen-lockfile
+    - run: yarn lint
+
+  integration:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: bash integration/run.sh
+      env:
+        CI: true

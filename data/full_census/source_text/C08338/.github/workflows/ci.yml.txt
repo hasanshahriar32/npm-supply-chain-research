@@ -1,0 +1,487 @@
+name: ci
+
+on:
+  push:
+    branches: [main, slate]
+  pull_request:
+  schedule:
+    # SR2-5: the noisy-neighbor campaign runs NIGHTLY (03:17 UTC), not
+    # as a one-time recorded receipt. Locked thresholds live in the
+    # script; a regression fails this workflow.
+    - cron: "17 3 * * *"
+
+concurrency:
+  # A newer push to the same PR supersedes the run in progress; a push
+  # to a branch or a scheduled run is its own group and runs to
+  # completion (each commit on slate keeps its own verdict).
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+# The token reads the repository and nothing else: no job writes
+# through it (no release, comment, artifact, package or OIDC step).
+# scripts/quality/test_workflow_permissions.py holds every workflow to it.
+permissions:
+  contents: read
+
+# Product-surface spec appendix §7: the required CI topology. The
+# dual-surface equivalence corpus, DST scenarios, and product
+# conformance run inside `cargo test --release` (dst::dst_tests);
+# request-cost budgets are asserted by the postings/planner tests in
+# the same suite. The upstream Durable Streams server suite runs as
+# its own job against a fresh namespace.
+
+jobs:
+  # R24: fixed review-commit ratchets and explicit extracted-owner boundaries.
+  # The historical WP-00 report remains diagnostic, never an acceptance signal.
+  architecture-report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # On a push the source ratchet's base is the event's previous revision:
+    # origin/<branch> is the pushed commit itself, so without it the ratchet
+    # compared HEAD with HEAD (scripts/quality/common.py now refuses that).
+    env:
+      QUALITY_EVENT_NAME: ${{ github.event_name }}
+      QUALITY_BEFORE_SHA: ${{ github.event.before }}
+      QUALITY_BASE_REF: origin/${{ github.base_ref || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Mechanism provenance compares immutable ancestor source, not only HEAD.
+          fetch-depth: 0
+      - name: Fetch exact previous push revision when unreachable
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: git cat-file -e "$QUALITY_BEFORE_SHA^{commit}" 2>/dev/null || git fetch --no-tags origin "$QUALITY_BEFORE_SHA"
+      - uses: ./.github/actions/rust-toolchain
+      - name: Build pinned Rust syntax scanner
+        run: cargo build --locked -p streams-quality-syntax
+      - name: Scanner self-test
+        run: python3 scripts/architecture-report.py --self-test
+      - name: Architecture budgets and owner boundaries (hard gate)
+        run: |
+          python3 scripts/architecture-gate.py --self-test
+          python3 scripts/architecture-gate.py --check
+      - name: Scenario-map validation (hard gate, PR 3.2)
+        run: |
+          python3 scripts/scenario-map-report.py --self-test
+          python3 scripts/scenario-map-report.py --check
+      - name: DST obligation inventory
+        run: |
+          python3 scripts/test-inventory.py --self-test
+          python3 scripts/test-inventory.py --check
+      - name: Mechanism claims and unresolved scenario dispositions
+        run: |
+          python3 scripts/review-evidence.py --self-test
+          python3 scripts/review-evidence.py --check
+          python3 scripts/verify-rc-evidence.py --self-test --repo .
+      - name: Evidence provenance from fresh full and shallow checkouts
+        run: python3 scripts/review-evidence-checkout.py
+  # Job: rust build + full suite (product conformance, dual-surface
+  # equivalence corpus, DST safety/liveness, request-cost budgets).
+  rust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Check
+        run: cargo check --all-targets
+      # SR-6: the two multitenancy gates run as NAMED steps so a
+      # failure is legible at a glance. The audit is the fingerprint
+      # inventory (identity-neutral categories, baseline-diffed); the
+      # syn lint is the zero-unmarked-residual security gate and also
+      # runs inside the full suite — here it prints the reviewed
+      # exemption-marker inventory into the CI log for certification.
+      - name: Legacy-engine symbols stay deleted (round 11.8)
+        run: |
+          if grep -rnE 'sse_hub_response|sse_lineage_response|join_direct_or_promote|DirectGuard|livehub|SSE_LIVE_HUB|SSE_HUB_PROMOTE_AT|STREAMS_SSE_ENGINE|sse_engine_livefeed|LEGACY_SSE_DISPATCHES' src/ sdk/src 2>/dev/null; then
+            echo 'FAIL: a deleted legacy-engine symbol resurfaced'; exit 1
+          fi
+      - name: Multitenancy audit (bare, never piped)
+        run: bash scripts/multitenancy-audit.sh
+      # One release build of every test target the steps below run, so the
+      # runner compiles them in parallel; the lint step used to build the lib
+      # test harness alone (about 5 min) and the suite the rest after it
+      # (about 7 min). Both steps reuse these artifacts: same flags.
+      - name: Build the release test targets
+        run: cargo test --release --no-run
+      - name: Multitenancy identity lint (exemption inventory)
+        run: scripts/test-leg.sh target/legs/mt-lint.log --exact mt_lint::multitenancy_identity_lint -- --release --lib multitenancy_identity_lint -- --nocapture
+      - name: Test (product conformance + dual-surface + DST + cost budgets)
+        run: |
+          # pipefail: Cargo's own exit status must fail this step even
+          # when a test binary aborts WITHOUT printing its summary line
+          # (segfault/kill) after earlier binaries printed green ones —
+          # the summary greps below cannot see an absent line (round-9
+          # review certification hardening).
+          set -o pipefail
+          # F-G: a lib test binary still alive after 15 minutes is hung
+          # (the whole suite takes ~3); dump every thread's stack and
+          # kill it so the step fails with the stuck frames, not at the
+          # job deadline. The hash keeps pgrep off the watcher itself.
+          scripts/quality/hang_dump.sh 'target/release/deps/streams_slate-[0-9a-f]{16}' 900 &
+          watcher=$!
+          cargo test --release -- --skip post_split_throughput_scales 2>&1 | tee /tmp/suite.log
+          kill "$watcher" 2>/dev/null || true
+          grep -E "^test result" /tmp/suite.log
+          if grep -E "^test result" /tmp/suite.log | grep -qv " 0 failed"; then
+            echo "suite has failures"; exit 1
+          fi
+          # ...and the suite must have RUN: every inventoried test but
+          # the one capacity leg below (a filter that matches nothing
+          # still exits 0).
+          python3 scripts/quality/tests_ran.py /tmp/suite.log --inventory docs/refactor/test-inventory.json --skipped 1
+      # The capacity-mechanism gate runs ALONE — its measurement owns
+      # the runner (the test's own precondition): inside the parallel
+      # suite, contention lands one-sidedly on the post-split phase and
+      # understates the ratio (observed 1.73-1.80 in-suite vs the 1.8x
+      # gate, with healthy single-segment baselines).
+      - name: Capacity mechanism gate (owns the runner)
+        run: scripts/test-leg.sh target/legs/capacity.log --exact dst::dst_tests::topology_scaling::post_split_throughput_scales -- --release --lib post_split_throughput_scales -- --exact dst::dst_tests::topology_scaling::post_split_throughput_scales
+  # Job: the LiveFeed engine's focused legs (unit + HTTP) on every
+  # push — fast signal for the engine's own files ahead of the full
+  # suite (livefeed IS the one engine since round 11.8).
+  livefeed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: LiveFeed unit legs (feed + registry lifecycle/budget)
+        run: 'scripts/test-leg.sh target/legs/sse.log --min 30 -- --release --lib sse::'
+      - name: LiveFeed HTTP legs (wire equivalence, fanout, framing)
+        run: scripts/test-leg.sh target/legs/livefeed.log --min 40 -- --release --lib livefeed_
+
+  # Job: the REAL enforce-mode noisy-neighbor campaign (SR2-5),
+  # nightly. Reduced herd for the 4-core runner (24 noisy, 100 idle)
+  # with the SAME locked thresholds; the contract-scale 48/200 run is
+  # part of RC promotion (scripts/promote-rc.sh).
+  noisy-campaign:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Noisy-neighbor campaign (locked thresholds)
+        run: NOISY=24 IDLE=100 WINDOW_SECS=20 node scripts/mt-noisy-campaign.mjs
+
+  # Job: the platform end-to-end battery (docs/CONTROL-PLANE-
+  # INTEGRATION.md §15) — the TS emulator mints real credentials,
+  # tokens and feed files; a REAL streams-slate consumes them under
+  # the full release posture (workload identity, no static token);
+  # the SDK exchanges through tokenProvider. Phase-A scenarios.
+  platform-e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build SDK dist
+        run: cd sdk && npm ci && npm run build
+      - name: Platform end-to-end battery
+        run: node scripts/platform-e2e.mjs
+      # The battery again with two fault injections refused by the emulator:
+      # it must fail exactly the checks that prove a fault was applied.
+      - name: Platform end-to-end negative control
+        run: node scripts/platform-e2e-negative.mjs
+
+  # Job: the REAL three-process LiveFeed fleet certification (round
+  # 11.4). Three streams-slate processes over one shared s3lite store,
+  # real TCP listeners, real fleet heartbeats + overrides steering,
+  # enforce-mode auth from the platform emulator, rotating workload
+  # JWTs, a REAL scaler split — taken on streams-1 booted outside fleet
+  # mode, which then stops while all three boot in fleet mode over the
+  # same storage (a server in fleet mode splits no stream: the split
+  # gate, edge change #119) — then the battery: cross-instance
+  # replays, typed reroutes, ownership movement under established and
+  # parked sessions, a SIGSTOP'd (blackholed) remote owner, workload
+  # rotation, revocation, and residual accounting. Produces
+  # target/livefeed-cert-manifest.json.
+  livefeed-fleet-cert:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fleet certification battery
+        run: bash bench/fleet/livefeed-cert.sh
+      - name: Manifest
+        run: cat target/livefeed-cert-manifest.json
+
+  # Job: the shared-cell certification smoke at CONTRACT scale
+  # (docs/MULTITENANCY.md §18 Stage 8 / SR-6). The suite's default run
+  # exercises the same test at 128 projects; this job runs the
+  # 1,000-project posture (48 noisy, shared workspaces, same-name
+  # streams, suspension/revocation cutoffs, reconciliation, journaled
+  # denials) on every push so the at-scale posture cannot rot.
+  mt-cert-1000:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - name: Certification smoke at 1,000 projects
+        run: MT_CERT_PROJECTS=1000 scripts/test-leg.sh target/legs/mt-cert.log --exact dst::dst_tests::security_audit::shared_cell_certification_smoke -- --release --lib shared_cell_certification_smoke -- --nocapture
+      # Layer A of the shared-cells plan at 1,000 projects (owner decision
+      # 2026-10-08, Q3(c)): every shared_cell_ leg but A6, then A6 alone,
+      # which fails only beside the scale module (the history partitions'
+      # 300 s manifest poll under a full L0; NEXT-WORK section 14.7).
+      - name: Shared-cell Layer A at 1,000 projects, A6 aside
+        run: MT_CERT_PROJECTS=1000 scripts/test-leg.sh target/legs/layer-a.log --min 17 -- --release --lib dst::dst_tests::shared_cell_ -- --skip per_project_state_is_bounded_and_released
+      - name: Shared-cell Layer A's A6 alone at 1,000 projects
+        run: MT_CERT_PROJECTS=1000 scripts/test-leg.sh target/legs/layer-a6.log --exact dst::dst_tests::shared_cell_lifecycle::per_project_state_is_bounded_and_released -- --release --lib per_project_state_is_bounded_and_released
+
+  # Job: the SDK ships as an npm package, so CI validates the PACKAGE,
+  # not the source tree: build, pack, install the tarball into a clean
+  # project, and run the end-to-end smoke through the package specifier
+  # on Node 22, the current Node LTS (24), the oldest supported runtime
+  # (engines: >=18), Bun and Deno: the runtimes sdk/README.md names
+  # (scripts/quality/test_sdk_runtimes.py holds the two lists equal).
+  sdk-package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Typecheck + build + pack
+        run: |
+          cd sdk
+          npm ci
+          npx tsc --noEmit -p tsconfig.json
+          npm run build
+          npm test
+          # npm >=10 does not create the destination directory; without
+          # it, pack dies with ENOENT on the tarball path.
+          mkdir -p /tmp/pkg
+          npm pack --pack-destination /tmp/pkg
+      - name: Install the tarball into a clean project
+        run: |
+          mkdir -p /tmp/consumer && cd /tmp/consumer
+          npm init -y >/dev/null
+          npm install /tmp/pkg/prisma-streams-*.tgz
+          node -e "require('node:assert').ok(require('node:fs').existsSync('node_modules/@prisma/streams/dist/index.js'))"
+      - name: Build server
+        run: cargo build --release --bin s3lite --bin streams-slate
+      - name: Smoke through the package (Node 22)
+        run: |
+          ./target/release/s3lite --listen 127.0.0.1:9500 --latency-ms 2 &
+          sleep 1
+          ./target/release/streams-slate --listen 127.0.0.1:8090 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket sdk22-$RANDOM \
+            --max-unflushed-bytes 67108864 &
+          sleep 2
+          cd /tmp/consumer
+          STREAMS_SDK=@prisma/streams node "$GITHUB_WORKSPACE"/sdk/smoke.mjs http://127.0.0.1:8090
+      # The current Node LTS (owner question X1 (c), 2026-10-12).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Smoke through the package (Node 24, the current LTS)
+        run: |
+          ./target/release/streams-slate --listen 127.0.0.1:8094 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket sdk24-$RANDOM \
+            --max-unflushed-bytes 67108864 &
+          sleep 2
+          cd /tmp/consumer
+          STREAMS_SDK=@prisma/streams node "$GITHUB_WORKSPACE"/sdk/smoke.mjs http://127.0.0.1:8094
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Credential-wait cancellation (Node 18)
+        run: node --test sdk/scripts/credential-cancellation.test.mjs
+      - name: Smoke through the package (Node 18, the engines floor)
+        run: |
+          ./target/release/streams-slate --listen 127.0.0.1:8091 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket sdk18-$RANDOM \
+            --max-unflushed-bytes 67108864 &
+          sleep 2
+          cd /tmp/consumer
+          STREAMS_SDK=@prisma/streams node "$GITHUB_WORKSPACE"/sdk/smoke.mjs http://127.0.0.1:8091
+      # The SDK claims Bun and Deno too, so gate them rather than assert
+      # them. Both run the same package through the same smoke. Bun is
+      # pinned to 1.4.3 by the owner's round-3 call 14 of 2026-10-13: this
+      # job installs the Composer apps' bun.lock files frozen, which a Bun
+      # that would rewrite them refuses, and it is the Bun the SDK's Bun
+      # smoke gates. Moving it is a commit that re-verifies both lockfiles
+      # (scripts/quality/test_workflow_bun.py).
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.3
+      - name: Credential-wait cancellation (Bun)
+        run: bun test sdk/scripts/credential-cancellation.test.mjs
+      # The interim issuer's, the shared cell's Composer app's and the cell
+      # watch's suites join by the owner's answer X1 (a) of 2026-10-12.
+      # ./deploy/composer and ./deploy/issuer run here without the Composer
+      # apps' packages, so their bundled entries' tests skip; the two steps
+      # after cell-admin's end to end run them. Layer B's harness
+      # (./bench/k2cost) joins by the owner's round-3 call 13 of 2026-10-13
+      # (AGENTS.md section 1 (3)): its tests pin the verdict's `load` and
+      # `harness` legs and the probes leg's first-contact bar, which no gate
+      # ran before. Its end-to-end test is opt-in (TENANTS_E2E_BIN_DIR): it
+      # skips here and runs on the release binaries after the Composer
+      # entries' end to end. The Compute lifecycle checklist's SIGTERM probe
+      # (./bench/lifecycle/sigterm-probe, whose tests import only bun:test
+      # and node:*, so it needs no install) joins by the owner's round-6
+      # call 8 of 2026-10-15 (AGENTS.md section 1 (3)), with the checklist's
+      # Python tests two steps on.
+      - name: Deploy wrapper, its feed poller, campaign staging, cell-admin, the interim issuer, the cell's Composer app, the cell watch, Layer B's harness and the lifecycle checklist's SIGTERM probe (Bun)
+        run: bun test ./deploy/supervise.test.ts ./deploy/feeds.test.ts ./deploy/stage-app.test.ts ./deploy/cell-admin ./deploy/issuer ./deploy/composer ./deploy/cell-watch ./bench/k2cost ./bench/lifecycle/sigterm-probe
+      - name: Layer B's harness, its verdict and rig (Python)
+        run: python3 -m unittest discover -s bench/k2cost -p 'test_*.py'
+      # The Compute lifecycle checklist's tests (the owner's round-6 call 8
+      # of 2026-10-15, AGENTS.md section 1 (3)): its legs on fake platforms,
+      # its verdicts, the example plan against the deploy tools' flags, the
+      # real SIGTERM probe (Bun) and sdk-probe.mjs on this job's sdk/dist.
+      # LIFECYCLE_REQUIRE_PROBES=1 fails a probe test that would skip for a
+      # missing bun, node or sdk/dist. The SDK probe runs on the Node set up
+      # last, 18 (the engines floor); scripts/quality/test_layer_b_ci.py
+      # holds this step after that setup, setup-bun and the SDK's build.
+      - name: The lifecycle checklist's legs, verdicts and probes, the SDK probe on Node 18 (Python)
+        run: LIFECYCLE_REQUIRE_PROBES=1 python3 -m unittest discover -s bench/lifecycle -p 'test_*.py'
+      # cell-admin's end-to-end test boots the release streams-slate over
+      # s3lite (free ports) on the shared-cell profile, admits, serves and
+      # offboards two projects (owner decision 2026-10-08, Q3(b)).
+      - name: cell-admin end to end on the release binaries (Bun)
+        run: CELL_ADMIN_E2E_BIN_DIR=target/release bun test ./deploy/cell-admin/e2e.test.ts
+      # The cell's and the issuer's Composer entries, bundled as a release
+      # cuts them, by the owner's round-3 call 14 of 2026-10-13 (AGENTS.md
+      # section 1 (3)). Both apps' packages install frozen and uncached: the
+      # Actions cache is at its 10 GB line, and each app's 1.2 GB of packages
+      # would evict rust-cache's entries. The cell's end-to-end test bundles
+      # its entry, serves its refusals, and boots the release streams-slate
+      # through it over s3lite (free ports); COMPOSER_E2E_REQUIRE_BOOT=1
+      # fails a good boot that cannot run rather than skipping it. The
+      # issuer's four opt-in tests bundle its entry and boot it on the fake
+      # S3. scripts/quality/test_composer_ci.py holds the job to these steps.
+      - name: Install the cell's and the issuer's Composer apps (Bun, frozen, uncached)
+        run: |
+          (cd deploy/composer && bun install --frozen-lockfile)
+          (cd deploy/composer-issuer && bun install --frozen-lockfile)
+      - name: The cell's Composer entry on the release binaries, and the issuer's bundled entry (Bun)
+        run: |
+          CELL_ADMIN_E2E_BIN_DIR=target/release COMPOSER_E2E_REQUIRE_BOOT=1 bun test ./deploy/composer/streams/entry.e2e.test.ts
+          ISSUER_COMPOSER_E2E=1 bun test ./deploy/issuer/composer.test.ts
+      # Layer B's tiny manifest end to end (bench/k2cost/tenants.e2e.test.ts):
+      # the release streams-slate on the shared-cell profile over s3lite
+      # (free ports), every class admitted through cell-admin, the free-tier
+      # twins held to zero refusals and the hostile legs to typed refusals,
+      # about two to four minutes (the owner's round-3 call 13 of
+      # 2026-10-13, AGENTS.md section 1 (3)). Green only on a server where
+      # every served create weighs 11 (#143 as amended by the owner's call 2
+      # of 2026-10-15).
+      - name: Layer B's tiny manifest end to end on the release binaries (Bun)
+        run: TENANTS_E2E_BIN_DIR=target/release bun test ./bench/k2cost/tenants.e2e.test.ts
+      - name: Smoke through the package (Bun)
+        run: |
+          ./target/release/streams-slate --listen 127.0.0.1:8092 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket sdkbun-$RANDOM \
+            --max-unflushed-bytes 67108864 &
+          sleep 2
+          cd /tmp/consumer
+          STREAMS_SDK=@prisma/streams bun "$GITHUB_WORKSPACE"/sdk/smoke.mjs http://127.0.0.1:8092
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Credential-wait cancellation (Deno)
+        run: deno test -A sdk/scripts/credential-cancellation.test.mjs
+      - name: Smoke through the package (Deno)
+        run: |
+          ./target/release/streams-slate --listen 127.0.0.1:8093 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket sdkdeno-$RANDOM \
+            --max-unflushed-bytes 67108864 &
+          sleep 2
+          cd /tmp/consumer
+          STREAMS_SDK=@prisma/streams deno run -A --node-modules-dir \
+            "$GITHUB_WORKSPACE"/sdk/smoke.mjs http://127.0.0.1:8093
+
+  # Job: the pinned upstream Durable Streams server conformance suite,
+  # UNMODIFIED, against a fresh namespace (spec appendix §7). The
+  # version here must match src/protocol_pin.rs.
+  durable-streams-server-conformance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build server
+        run: cargo build --release --bin s3lite --bin streams-slate --bin streams-keys
+      - name: Run pinned suite (fresh namespace)
+        run: |
+          ./target/release/s3lite --listen 127.0.0.1:9500 --latency-ms 2 &
+          sleep 1
+          KEY=$(./target/release/streams-keys generate)
+          # Group commit is the default; --wal-flush-gap-ms 2 lowers the
+          # pump's gap from 100 ms to 2 ms. The suite runs ~240 sequential
+          # appends inside vitest's 5 s budget; its timing under the pump
+          # has not been recorded yet (CONFORMANCE.md, rig requirement 3).
+          ./target/release/streams-slate --listen 127.0.0.1:8090 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket conf-$RANDOM \
+            --max-unflushed-bytes 67108864 \
+            --flush-interval-ms 1 --wal-flush-gap-ms 2 \
+            --conformance-default-key="$KEY" &
+          sleep 2
+          # The runner lives in conformance/ with a committed lock and an
+          # exact expected outcome. It does NOT use the package's npx
+          # CLI, whose include glob misses its own runner and exits 0
+          # having run nothing.
+          cd conformance
+          npm ci
+          CONFORMANCE_TEST_URL=http://127.0.0.1:8090 npm test
+
+  # Job: the product field corpus (scripts/field-gate.mjs) — the same
+  # 20 checks the cloud campaign runs, against a local server with
+  # aggressive split thresholds so a real scaler split fires inside CI.
+  # Negative auth, raw create replay, product seal replay, fork replay,
+  # a real automatic split, and raw/product default-key isolation.
+  product-field-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/rust-toolchain
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build server
+        run: cargo build --release --bin s3lite --bin streams-slate
+      - name: Run the field gate (auth enabled, deterministic split)
+        run: |
+          ./target/release/s3lite --listen 127.0.0.1:9500 --latency-ms 2 &
+          sleep 1
+          # Low, deterministic scaler thresholds: one hot evaluation
+          # over a 10 s window splits, so the "load drove a real split"
+          # check fires within the gate's own load phase instead of
+          # racing production cadence.
+          SCALE_EVAL_SECS=5 SCALE_RATE_WINDOW_SECS=10 \
+          SCALE_HOT_PCT=1 SCALE_HOT_EVALS=1 SCALE_COOLDOWN_SECS=5 \
+          ./target/release/streams-slate --listen 127.0.0.1:8092 \
+            --s3-endpoint http://127.0.0.1:9500 --bucket fg-$RANDOM \
+            --max-unflushed-bytes 67108864 \
+            --flush-interval-ms 1 --wal-flush-gap-ms 2 \
+            --auth-token ci-gate-token &
+          sleep 2
+          STREAMS_TOKEN=ci-gate-token node scripts/field-gate.mjs http://127.0.0.1:8092

@@ -1,0 +1,37 @@
+name: Release packages
+on:
+  push:
+    branches:
+      - main
+      - next
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/setup@v2.1.0 # Immutable
+        with:
+          runtime: node
+      - name: Create release PR or publish packages
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: node --run changeset:version
+          publish: node --run changeset:publish
+          commit: Version Packages (${{ github.ref_name }})
+          title: Version Packages (${{ github.ref_name }})
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_ACCESS: public
+          NPM_CONFIG_PROVENANCE: true

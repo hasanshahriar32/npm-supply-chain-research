@@ -1,0 +1,230 @@
+name: CI
+on:
+    push:
+        branches:
+            # default semantic-release branches
+            - +([0-9])?(.{+([0-9]),x}).x
+            - main
+            - next
+            - next-major
+            - beta
+            - alpha
+    pull_request:
+    schedule:
+        - cron: 0 0 * * 0
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: write # to be able to publish a GitHub release
+    id-token: write # to enable use of OIDC for npm provenance
+    issues: write # to be able to comment on released issues
+    pull-requests: write # to be able to comment on released pull requests
+
+jobs:
+    lint:
+        name: ⬣ Lint
+        runs-on: ubuntu-latest
+        steps:
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v7
+
+            - name: ⎔ Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+
+            - name: 📥 Install dependencies
+              run: npm install
+
+            - name: ▶️ Run lint script
+              run: npm run lint
+
+    test:
+        name:
+            🧪 Test (Node@${{ matrix.node }} - ESLint@${{ matrix.eslint }} - ${{
+            matrix.os }})
+        strategy:
+            fail-fast: false
+            matrix:
+                eslint: [9, 10]
+                node: [20, 22, 24]
+                os: [ubuntu-latest]
+                include:
+                    # On other platforms
+                    - os: windows-latest
+                      eslint: 10
+                      node: 24
+                    - os: macos-latest
+                      eslint: 10
+                      node: 24
+                    # On old Node versions & ESLint v9
+                    - eslint: 9
+                      node: 18
+                      os: ubuntu-latest
+                    # On old Node versions & ESLint v8
+                    - eslint: 8
+                      node: 18.0.0
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 16
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 16.0.0
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 14
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 14.17.0
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 12
+                      os: ubuntu-latest
+                    - eslint: 8
+                      node: 12.22.0
+                      os: ubuntu-latest
+                    # On old ESLint versions
+                    - eslint: 8
+                      node: 24
+                      os: ubuntu-latest
+                    - eslint: 7
+                      node: 24
+                      os: ubuntu-latest
+                    - eslint: 6
+                      node: 24
+                      os: ubuntu-latest
+                    # On the minimum supported ESLint/Node.js version
+                    - eslint: 6.0.0
+                      node: 12.22.0
+                      os: ubuntu-latest
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v7
+
+            - name: ⎔ Setup Node v${{ matrix.node }}
+              uses: actions/setup-node@v7
+              with:
+                  node-version: ${{ matrix.node }}
+
+            - name: 📥 Install dependencies
+              run: npm install --legacy-peer-deps
+
+            - name: 📥 Install ESLint v${{ matrix.eslint }}
+              run: npm install --save-dev eslint@${{ matrix.eslint }} --force
+
+            - name: ▶️ Run test script
+              run: npm run test
+
+            - name: ⬆️ Upload coverage report
+              uses: codecov/codecov-action@v7
+
+    are-the-types-wrong:
+        name: 🤔 Are the types wrong?
+        runs-on: ubuntu-latest
+        steps:
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v7
+
+            - name: ⎔ Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+
+            - name: 📥 Install dependencies
+              run: npm install --legacy-peer-deps
+
+            - name: ▶️ Run check-exports script
+              run: npm run check-exports -- --format=table
+
+            - name: ▶️ Run test:types script
+              run: npm run test:types
+
+    type-tests:
+        name: 🧪 Type tests with ESLint ${{ matrix.eslint }} and TypeScript ${{ matrix.ts }}
+        runs-on: ubuntu-latest
+
+        strategy:
+            fail-fast: false
+
+            matrix:
+                eslint: [8, 9, 10]
+                ts: ["5.0", "5.9"]
+
+        steps:
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v7
+
+            - name: ⎔ Setup Node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+
+            - name: 📥 Install dependencies
+              run: npm install
+
+            - name: Pack the package
+              id: pack
+              run: npm install "$(npm pack | tail -n1)"
+
+            - name: 📥 Uninstall @types/eslint
+              if: matrix.eslint != 8
+              run: npm uninstall @types/eslint
+
+            - name: 📥 Install ESLint version ${{ matrix.eslint }}
+              run: npm install --save-dev eslint@${{ matrix.eslint }}
+
+            - name: 📥 Install TypeScript version ${{ matrix.ts }}
+              run: npm install --save-dev typescript@${{ matrix.ts }} -f
+
+            - name: ▶️ Run test:types script
+              run: npm run test:types
+
+            - name: 📝 List version of ESLint
+              run: npm why eslint @types/eslint
+
+    release:
+        name: 🚀 Release
+        needs: [are-the-types-wrong, lint, test, type-tests]
+        runs-on: ubuntu-latest
+        if:
+            github.repository == 'eslint-community/eslint-plugin-eslint-comments' &&
+            contains('refs/heads/main,refs/heads/next,refs/heads/beta,refs/heads/alpha',
+            github.ref) && github.event_name == 'push'
+        steps:
+            - name: ⬇️ Checkout repo
+              uses: actions/checkout@v7
+
+            - name: ⎔ Setup node
+              uses: actions/setup-node@v7
+              with:
+                  node-version: lts/*
+
+            # npm 11.5.1 or later is required so update to latest to be sure
+            - name: Update npm
+              run: npm install -g npm@latest
+
+            - name: 📥 Install dependencies
+              run: npm install --legacy-peer-deps
+
+            - name: 🚀 Release
+              uses: cycjimmy/semantic-release-action@v6
+              with:
+                  # semantic-release@v25 is required for trusted publishing.
+                  # https://github.com/semantic-release/semantic-release/releases/tag/v25.0.1
+                  semantic_version: 25
+                  branches: |
+                      [
+                        '+([0-9])?(.{+([0-9]),x}).x',
+                        'main',
+                        'next',
+                        'next-major',
+                        {name: 'beta', prerelease: true},
+                        {name: 'alpha', prerelease: true}
+                      ]
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  NPM_CONFIG_PROVENANCE: true

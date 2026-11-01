@@ -1,0 +1,74 @@
+{
+  "name": "@oclif/plugin-search",
+  "version": "2.0.9",
+  "description": "A command for searching commands",
+  "author": "Salesforce",
+  "bugs": "https://github.com/oclif/plugin-search/issues",
+  "dependencies": {
+    "@oclif/core": "^5.1.9",
+    "ansi-escapes": "^7.3.0",
+    "inquirer-autocomplete-standalone": "^0.8.1"
+  },
+  "devDependencies": {
+    "@commitlint/config-conventional": "^19",
+    "@eslint/compat": "^1.4.1",
+    "@oclif/plugin-help": "^7.0.5",
+    "@oclif/plugin-plugins": "^7.0.8",
+    "@oclif/prettier-config": "^0.2.2",
+    "@types/chai": "^5.2.3",
+    "@types/inquirer": "^8.2.13",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18",
+    "chai": "^6.3.0",
+    "commitlint": "^19",
+    "eslint": "^10.13.0",
+    "eslint-config-oclif": "^7.1.10",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^15",
+    "mocha": "^12.0.3",
+    "oclif": "^4.23.29",
+    "prettier": "^3.9.10",
+    "shx": "^0.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "exports": "./dist/index.js",
+  "files": [
+    "/dist",
+    "/oclif.manifest.json"
+  ],
+  "homepage": "https://github.com/oclif/plugin-search",
+  "keywords": [
+    "oclif"
+  ],
+  "license": "MIT",
+  "oclif": {
+    "commands": "./dist/commands",
+    "devPlugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-plugins"
+    ],
+    "topicSeparator": " ",
+    "flexibleTaxonomy": true
+  },
+  "repository": "oclif/plugin-search",
+  "scripts": {
+    "build": "shx rm -rf lib && tsc",
+    "clean": "shx rm -f oclif.manifest.json",
+    "compile": "tsc",
+    "lint": "eslint",
+    "postpack": "yarn run clean",
+    "posttest": "yarn lint",
+    "prepack": "yarn build && oclif manifest && oclif readme",
+    "prepare": "husky && yarn build",
+    "pretest": "yarn build --noEmit && tsc -p test --noEmit",
+    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
+    "version": "oclif readme && git add README.md"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts"
+}

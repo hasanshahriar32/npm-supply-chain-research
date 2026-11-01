@@ -1,0 +1,55 @@
+name: Benchmark SSIM
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-ssim:
+    name: SSIM Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v5
+        with:
+          lfs: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".node-version"
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # The checkout holds the committed results; drop them so a failed run
+      # cannot upload a stale copy.
+      - name: Remove committed benchmark results
+        run: rm -f benchmarks/results/ssim.json benchmarks/results/hitchhikers-ssim.json
+
+      - name: Run Benchmark (ssim vs ssim.js fast)
+        run: pnpm benchmark ssim --skip-md
+
+      - name: Run Benchmark (hitchhikers-ssim vs ssim.js weber)
+        if: always()
+        run: pnpm benchmark hitchhikers-ssim --skip-md
+
+      - name: Upload benchmark artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-ssim
+          path: |
+            benchmarks/results/ssim.json
+            benchmarks/results/hitchhikers-ssim.json
+          if-no-files-found: warn

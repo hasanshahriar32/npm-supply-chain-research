@@ -1,0 +1,94 @@
+name: End-to-End Tests
+permissions:
+  contents: read # allow checkout
+  pull-requests: write # allow commenting later if desired
+
+  # note: should we have env datasets declared like in monorepoe2e.yml?
+
+on:
+  # run on PRs, even drafts
+  pull_request:
+  # run on main branch when it changes
+  push:
+    branches: [main]
+
+# Cancel in-progress runs from the same PR/branch
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  playwright-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    # Browser matrix to parallelise executions.
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    # Shared env required by the SDK E2E helpers. Configure these in the repo → Settings → Secrets / Variables
+    env:
+      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+      TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+      # Flag baked into the bundle at `sanity build` time so the app selects the
+      # e2e configs (the local webServer env in playwright.config.ts isn't used in CI).
+      SANITY_APP_E2E_MODE: 'true'
+      SANITY_APP_E2E_PROJECT_ID: ${{ secrets.SDK_E2E_PROJECT_ID }}
+      SANITY_APP_E2E_ORGANIZATION_ID: ${{ secrets.SDK_E2E_ORGANIZATION_ID }}
+      SANITY_APP_E2E_DATASET_0: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}', github.event.number, matrix.browser, github.run_id) || format('main-{0}-{1}', matrix.browser, github.run_id) }}
+      SANITY_APP_E2E_DATASET_1: ${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-secondary-{2}', github.event.number, matrix.browser, github.run_id) || format('main-{0}-secondary-{1}', matrix.browser, github.run_id) }}
+      SANITY_APP_E2E_MEDIA_LIBRARY_ID: ${{ secrets.SDK_E2E_MEDIA_LIBRARY_ID }}
+      SDK_E2E_MEDIA_LIBRARY_TOKEN: ${{ secrets.SDK_E2E_MEDIA_LIBRARY_TOKEN }}
+      SANITY_APP_E2E_CANVAS_ID: ${{ secrets.SDK_E2E_CANVAS_ID }}
+      SDK_E2E_CANVAS_TOKEN: ${{ secrets.SDK_E2E_CANVAS_TOKEN }}
+      SDK_E2E_SESSION_TOKEN: ${{ secrets.SDK_E2E_SESSION_TOKEN }}
+      SDK_E2E_USER_ID: ${{ secrets.SDK_E2E_USER_ID }}
+      SDK_E2E_USER_PASSWORD: ${{ secrets.SDK_E2E_USER_PASSWORD }}
+      RECAPTCHA_E2E_STAGING_KEY: ${{ secrets.RECAPTCHA_E2E_STAGING_KEY }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: 🔧 Setup Environment
+        uses: ./.github/actions/setup
+        with:
+          node-version: 22
+
+      - name: 🎭 Setup Playwright
+        id: playwright
+        uses: ./.github/actions/setup-playwright
+        background: true
+        with:
+          app: '@sanity/kitchensink-react'
+          browser: ${{ matrix.browser }}
+
+      # Kitchensink must be built per browser because Vite bakes browser-specific
+      # dataset names (SANITY_APP_E2E_DATASET_0/1) into the bundle at compile time.
+      - name: 🚀 Build & start preview server
+        run: |
+          pnpm build --filter=@sanity/kitchensink-react
+          cd apps/kitchensink-react && pnpm run preview --port 3333 &
+          timeout 60 bash -c 'until curl -f -s http://localhost:3333 > /dev/null; do echo "Waiting for server..."; sleep 2; done'
+          echo "Server is ready!"
+
+      - name: ⏳ Wait for Playwright
+        wait: playwright
+
+      - name: 🧪 Run E2E tests
+        run: pnpm test:e2e -- --project ${{ matrix.browser }}
+
+      - name: 📤 Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          path: apps/kitchensink-react/e2e/test-report
+          retention-days: 30
+
+      - name: 🧹 Cleanup E2E datasets
+        if: always()
+        run: pnpm cleanup:e2e

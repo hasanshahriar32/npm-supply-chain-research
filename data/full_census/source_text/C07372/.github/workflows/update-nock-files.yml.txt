@@ -1,0 +1,134 @@
+name: Update Nock file
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_id:
+        description: PR ID
+        type: number
+        required: true
+      head_sha:
+        description: Commit SHA of the head of the PR branch (only required for PRs from forks)
+        type: string
+        required: false
+      merge_base:
+        description: Merge base branch (any conflicts will be forced resolved)
+        type: boolean
+        required: false
+
+env:
+  YARN_ENABLE_GLOBAL_CACHE: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-update-nock-files:
+    permissions:
+      contents: write
+      pull-requests: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get PR info
+        id: pr_info
+        run: |
+          {
+            echo 'DATA<<""EOF""'
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/$GITHUB_REPOSITORY/pulls/$PR_ID" \
+              --jq '{ repo: .head.repo.full_name, clone_url: .head.repo.clone_url, head_sha: .head.sha, head_ref: .head.ref, base_ref: .base.ref }'
+            echo '""EOF""'
+          } >> "$GITHUB_OUTPUT"
+        env:
+          PR_ID: ${{ inputs.pr_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate HEAD SHA
+        if: ${{ fromJson(steps.pr_info.outputs.DATA).repo != github.repository || inputs.head_sha }}
+        run: |
+          set -x
+          [ "$EXPECTED" = "$ACTUAL" ]
+        env:
+          ACTUAL: ${{ fromJson(steps.pr_info.outputs.DATA).head_sha }}
+          EXPECTED: ${{ inputs.head_sha }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ fromJson(steps.pr_info.outputs.DATA).head_sha }}
+          fetch-depth: ${{ !inputs.merge_base && 1 || 0 }}
+
+      - name: Setup git author
+        run: |
+          git config --local user.email "github-bot@iojs.org"
+          git config --local user.name "Node.js GitHub Bot"
+
+      - name: Merge base branch
+        if: ${{ inputs.merge_base }}
+        run: |
+          git merge "origin/$BASE_BRANCH" --no-ff --no-verify --no-edit -X ours
+          git checkout HEAD^ -- tests/nocks.db
+          git commit --amend --no-verify --no-edit
+        env:
+          BASE_BRANCH: ${{ fromJson(steps.pr_info.outputs.DATA).base_ref }}
+
+      - name: Install Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: lts/*
+        env:
+          SKIP_YARN_COREPACK_CHECK: 1
+
+      - name: Get the Yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(corepack yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ${{steps.yarn-cache-dir-path.outputs.dir}}
+          key: ${{runner.os}}-yarn-${{hashFiles('**/yarn.lock')}}
+          restore-keys: |
+            ${{runner.os}}-yarn-
+
+      - run: corepack yarn install --immutable
+      - run: corepack yarn build # We need the stubs to run the tests
+
+      - name: Remove old Nock files to avoid conflicts
+        run: rm tests/nocks.db
+
+      - run: corepack yarn test
+        env:
+          NOCK_ENV: record
+
+      - name: Check if anything has changed
+        id: contains-changes
+        run: |
+          sqlite3 tests/nocks.db .dump > /tmp/after.sql
+          cp tests/nocks.db tests/nocks.db.new
+          git checkout HEAD -- tests/nocks.db
+          sqlite3 tests/nocks.db .dump > /tmp/before.sql
+          echo "result=$(git --no-pager diff --quiet --no-index /tmp/before.sql /tmp/after.sql || echo "yes")" >> "$GITHUB_OUTPUT"
+          mv tests/nocks.db.new tests/nocks.db
+        shell: bash
+
+      - name: Commit changes
+        if: ${{ steps.contains-changes.outputs.result == 'yes' }}
+        run: |
+          git add tests/nocks.db
+          git commit -m "update Nock files"
+
+      - name: Push changes
+        if: ${{ steps.contains-changes.outputs.result == 'yes' || inputs.merge_base }}
+        run: git push "$REMOTE" "HEAD:refs/heads/$REMOTE_REF"
+        env:
+          REMOTE: ${{ fromJson(steps.pr_info.outputs.DATA).clone_url }}
+          REMOTE_REF: ${{ fromJson(steps.pr_info.outputs.DATA).head_ref }}
+
+      - name: Upload `tests/nocks.db` in case of failure
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        if: ${{ failure() && steps.contains-changes.outputs.result == 'yes' }}
+        with:
+          name: nock
+          path: |
+            tests/nocks.db

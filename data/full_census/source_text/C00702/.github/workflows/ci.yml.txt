@@ -1,0 +1,42 @@
+name: Code CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build and test code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node and restore cached dependencies
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+
+      - name: Install packages
+        run: pnpm install --frozen-lockfile
+
+      # Build first to avoid broken monorepo dependencies
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint-ci
+
+      - name: Test
+        run: pnpm test
+
+      - name: Publish to Codecov
+        uses: codecov/codecov-action@v6.0.0
+        with:
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

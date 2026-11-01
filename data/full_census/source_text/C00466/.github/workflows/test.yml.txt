@@ -1,0 +1,88 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+          cache-dependency-path: ./package.json
+      - name: Install dependencies
+        run: |
+          npm install
+      - name: ESLint
+        run: |
+          npm run eslint
+
+  compatibility:
+    runs-on: ubuntu-latest
+
+    name: testing node@${{ matrix.node-version }}, valkey@${{ matrix.valkey-version }}
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x]
+        valkey-version: [8]
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_USER: root
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.0.0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3.8.1
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: ./package.json
+
+      - name: Start Redis
+        uses: supercharge/redis-github-action@1.7.0
+        with:
+          redis-version: 7
+
+      - uses: shogo82148/actions-setup-redis@v1
+        with:
+          distribution: "valkey"
+          redis-version: ${{ matrix.valkey-version }}
+          redis-port: 8080
+
+      - name: Start DynamoDB local
+        uses: rrainn/dynamodb-action@v3.0.0
+
+      - run: npm install
+      - run: npm run test

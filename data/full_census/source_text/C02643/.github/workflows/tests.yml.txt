@@ -1,0 +1,186 @@
+name: tests
+
+# The `Release` workflow runs after this one succeeds on master; keep the
+# workflow name in sync with its `workflow_run` trigger.
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+# A newer push to the same PR or branch supersedes a running one.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check:scripts
+      - run: npm run check:tooling
+      - run: npm run lint
+      - run: npm run check:contracts
+      - run: npm run check:storybook-hosts
+      - run: npm test
+      - run: npm run check:data-package
+
+  # Peer floor is >=16.8 by API inventory (scripts/checkReactApiFloor.ts);
+  # this fails the build if src ever adopts a newer React API.
+  api-floor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npm run check:react-floor
+
+  visual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Includes the real-consumer integrations in stories/consumers/
+      # (playwright/consumer-integrations.spec.ts).
+      - run: npm run test:visual
+      # Actual/diff images let environment drift be adjudicated from the CI
+      # image itself.
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: visual-evidence
+          path: test-results/
+          retention-days: 14
+
+  # Packaging gates: the build (including the entries build with its
+  # fail-hard declaration emit), the type-compatibility fixtures (v4
+  # usage, v5 contract, exports-map resolution), the size budgets for
+  # every entry and for the published package, and the packed-consumer checks (publint + attw).
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check:compat
+      - run: npm run size
+      - run: npm run check:pack-size
+      - run: npm run check:package
+      - run: npm run check:react16
+      - run: npm run check:node18
+
+  # llms.txt is generated from committed docs; fail if it drifts.
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npm run check:docs
+      - run: npm run docs:llms
+      - run: git diff --exit-code -- llms.txt llms-full.txt website/public/llms.txt website/public/llms-full.txt
+      # The website gallery, README screenshots and gallery are generated
+      # from stories/recipes; fail if a recipe changed without `npm run designs`.
+      - run: npm run recipes
+      - run: npm run registry
+      - run: npm run designs
+      - run: git diff --exit-code -- website/src/components/designs website/src/styles/designs website/public/recipes website/public/designs website/public/r stories/recipes docs/designs README.md
+
+  browser-behavior:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright test --config playwright.behavior.config.ts
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: browser-behavior-evidence
+          path: test-results/
+
+  # The packed tarball installed into a fresh Vite app, a CommonJS bundle
+  # and a shadcn/ui app (the real `shadcn add` of website/public/r), served under a strict CSP (scripts/e2e-consumer). `npm ci` runs
+  # `prepare`, which builds. Every run uploads the recordings, so a PR can
+  # link its e2e evidence.
+  e2e-consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: e2e-consumer-recordings
+          path: |
+            test-results/e2e
+            test-results/e2e-report
+          retention-days: 30
+
+  website-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
+            example/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: website
+      - run: npm run build
+        working-directory: website
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config playwright.website.config.ts
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: website-browser-evidence
+          path: test-results/website
+      - uses: actions/upload-artifact@v6
+        with:
+          name: website-candidate
+          path: website/out
+      # The example app consumes the same local package; it must keep
+      # type-checking and building against every usage path.
+      - run: npm ci
+        working-directory: example
+      - run: npm run build
+        working-directory: example

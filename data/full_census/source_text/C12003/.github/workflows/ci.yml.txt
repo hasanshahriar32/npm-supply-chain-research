@@ -1,0 +1,50 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  should-skip:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      should-skip-job: ${{steps.skip-check.outputs.should_skip}}
+    steps:
+      - id: skip-check
+        uses: fkirc/skip-duplicate-actions@v5.3.2
+        with:
+          github_token: ${{github.token}}
+
+  ci:
+    needs: should-skip
+    if: ${{needs.should-skip.outputs.should-skip-job != 'true' || github.ref == 'refs/heads/main'}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{matrix.os}}
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v6
+
+    - name: read node version from .nvmrc
+      run: echo "NVMRC=$(cat .nvmrc)" >> $GITHUB_OUTPUT
+      shell: bash
+      id: nvm
+
+    - name: setup node
+      uses: actions/setup-node@v6
+      with:
+        node-version: '${{steps.nvm.outputs.NVMRC}}'
+        cache: npm
+
+    # turn off the default setup-node problem watchers...
+    - run: echo "::remove-matcher owner=eslint-compact::"
+    - run: echo "::remove-matcher owner=eslint-stylish::"
+    - run: echo "::remove-matcher owner=tsc::"
+
+    - name: npm install
+      run: npm i --prefer-offline --no-audit
+
+    - name: run npm test
+      run: npm run test

@@ -1,0 +1,58 @@
+name: Nightly Parity
+
+on:
+  schedule:
+    - cron: '23 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: actions/setup-node@v6
+        id: node
+        with:
+          node-version: '^26.12.1'
+          check-latest: true
+      # Corepack is no longer bundled with Node.js 25 and later.
+      - name: Install Corepack
+        run: |
+          npm install --global corepack@0.36.0
+          corepack enable
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(corepack yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      # Parity cache hits skip execution; isolate results by the resolved Node version.
+      - uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            .yarn
+            .cache
+          key: ${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-nightly-parity-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-nightly-parity-
+            ${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-yarn-
+      - name: Install Dependencies
+        run: |
+          corepack yarn install --immutable
+      - name: Refresh live upstream snapshots
+        run: |
+          corepack yarn refresh:upstream-surface
+      - name: Verify upstream snapshot drift
+        run: |
+          git diff --exit-code -- test/parity/fixtures/upstream-surface
+      - name: Upstream surface inventory
+        run: |
+          corepack yarn test:upstream-surface
+      - name: Run full parity suite
+        run: |
+          corepack yarn test:parity

@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  merge_group:
+  push:
+    branches:
+      - 'main'
+      - 'stencil/v4-dev'
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build_core:
+    name: Build
+    uses: ./.github/workflows/build.yml
+
+  lint_and_format:
+    name: Lint and Format
+    uses: ./.github/workflows/lint-and-format.yml
+
+  type_tests:
+    name: Type Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-types.yml
+
+  analysis_tests:
+    name: Analysis Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-analysis.yml
+
+  docs_build_tests:
+    name: Docs Build Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-docs-build.yml
+
+  bundler_tests:
+    name: Bundler Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-bundlers.yml
+
+  copytask_tests:
+    name: Copy Task Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-copytask.yml
+
+  component_starter_tests:
+    name: Component Starter Smoke Test
+    needs: [build_core]
+    uses: ./.github/workflows/test-component-starter.yml
+
+  e2e_tests:
+    name: E2E Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-e2e.yml
+
+  unit_tests:
+    name: Unit Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-unit.yml
+
+  wdio_tests:
+    name: WebdriverIO Tests
+    needs: [build_core]
+    uses: ./.github/workflows/test-wdio.yml
+
+  # Only run on push (post-merge baseline tracking) or on a PR explicitly opted
+  # in via the "Build Performance"/"Runtime Performance" labels - most PRs don't
+  # touch perf-sensitive code, and CodSpeed minutes are limited. These run as
+  # normal jobs of this workflow: an unlabeled PR just shows them as skipped (a
+  # terminal state), so nothing here ever blocks re-running another job in this
+  # same run.
+  perf_build_benchmark:
+    name: Perf Benchmark - Build
+    needs: [build_core]
+    uses: ./.github/workflows/test-perf-build.yml
+    permissions:
+      contents: read
+      id-token: write
+
+  perf_runtime_benchmark:
+    name: Perf Benchmark - Runtime
+    needs: [build_core]
+    uses: ./.github/workflows/test-perf-runtime.yml
+    permissions:
+      contents: read

@@ -1,0 +1,41 @@
+{
+  "name": "get-port-please",
+  "version": "3.2.0",
+  "description": "Get an available TCP port to listen",
+  "repository": "unjs/get-port-please",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "unbuild",
+    "dev": "vitest",
+    "lint": "eslint . && prettier -c src test",
+    "lint:fix": "eslint --fix . && prettier -w src test",
+    "prepack": "unbuild",
+    "release": "pnpm test && pnpm build && changelogen --release --push && pnpm publish",
+    "test": "pnpm lint && vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "changelogen": "^0.6.2",
+    "eslint": "^9.34.0",
+    "eslint-config-unjs": "^0.5.0",
+    "jiti": "^2.5.1",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2",
+    "unbuild": "^3.6.1",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.15.1"
+}

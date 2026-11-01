@@ -1,0 +1,36 @@
+name: release-changesets
+
+on:
+   push:
+      branches:
+         - main
+
+permissions:
+   contents: write
+   id-token: write
+   pull-requests: write
+
+jobs:
+   release:
+      runs-on: ubuntu-latest
+      environment: npm
+      if: github.repository == 'steveukx/git-js'
+      steps:
+         - uses: actions/checkout@v7
+           with:
+              fetch-depth: 0
+
+         - uses: pnpm/setup@v2
+           with:
+              runtime: node@24
+              cache: true
+
+         - run: pnpm build
+
+         - uses: changesets/action@v1
+           with:
+              publish: pnpm changeset publish
+           env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+              NPM_CONFIG_PROVENANCE: true

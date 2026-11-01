@@ -1,0 +1,31 @@
+name: "[C] Release"
+
+on:
+  push:
+    tags:
+      - c-v*
+
+jobs:
+  c-release:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Extract Version
+        run: echo "version=${GITHUB_REF#refs/tags/c-v}" >> $GITHUB_ENV
+
+      - name: Build
+        run: cargo build -p css-inline-c --release
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          make_latest: false
+          draft: true
+          name: "[C] Release ${{ env.version }}"
+          files: |
+            target/release/libcss_inline.so
+            crates/css-inline-c/css_inline.h

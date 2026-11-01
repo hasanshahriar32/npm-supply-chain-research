@@ -1,0 +1,38 @@
+name: Issue Labeled
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  reply-labeled:
+    if: github.repository == 'vitejs/vite-plugin-react'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # to check out the repo for local actions
+      issues: write # to comment on issues
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          ref: main
+
+      - name: contribution welcome
+        if: github.event.label.name == 'contribution welcome' || github.event.label.name == 'help wanted'
+        uses: ./.github/actions/issues-helper
+        with:
+          actions: create-comment
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Hello @${{ github.event.issue.user.login }}. We like your proposal/feedback and would appreciate a contribution via a Pull Request by you or another community member. We thank you in advance for your contribution and are looking forward to reviewing it!
+
+      - name: need reproduction
+        if: github.event.label.name == 'need reproduction'
+        uses: ./.github/actions/issues-helper
+        with:
+          actions: create-comment
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Hello @${{ github.event.issue.user.login }}. Please provide a [minimal reproduction](https://stackoverflow.com/help/minimal-reproducible-example) using a GitHub repository or [StackBlitz](https://vite.new). Issues marked with `need reproduction` will be closed if they have no activity within 3 days.

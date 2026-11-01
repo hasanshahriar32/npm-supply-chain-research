@@ -1,0 +1,22 @@
+name: WebKit (Safari)
+
+on: [push, pull_request]
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - run: bin/osx/setup-rabbit.sh
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install webkit
+      - run: npx playwright test --project=webkit

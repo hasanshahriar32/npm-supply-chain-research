@@ -1,0 +1,44 @@
+name: test
+
+# On every pull request, but only on push to main
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-node:
+    runs-on: ubuntu-22.04
+    permissions:
+      checks: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Enable Corepack (yarn 4)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Check formatting
+        run: yarn format:check
+
+      - name: Check for circular dependencies and print porting order
+        run: |
+          python3 analyze_imports.py modules
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Run tests
+        run: |
+          yarn test

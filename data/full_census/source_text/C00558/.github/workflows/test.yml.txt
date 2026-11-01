@@ -1,0 +1,131 @@
+name: Unit and Integration Tests for Apache Cassandra NodeJS Driver
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch: # allow manual trigger from Actions page
+permissions:
+  contents: read
+  actions: read
+  checks: write
+jobs:
+  eslint:
+    name: Run eslint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+      - run: npm install -g eslint@4
+      - run: npm run eslint
+
+  typescript:
+    name: TypeScript generation and compilation tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        NODE_VERSION: ["20", "22", "24"]
+        TSC_VERSION: ["4.9", "5.9", "6.0"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.NODE_VERSION }}
+          cache: "npm"
+
+      - run: npm ci
+
+      - run: npm install typescript@${{ matrix.TSC_VERSION }} --no-save
+
+      - run: |
+          pushd test/unit/typescript/
+          npx tsc
+          node -e "require('./api-generation-test').generate()" > generated.ts
+          npx tsc --noEmit
+
+  bun-unit-tests:
+    name: Unit tests on Bun
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-bun
+      - run: bun install
+      - run: bunx mocha test/unit --recursive -R spec -t 5000
+
+  deno-unit-tests:
+    name: Unit tests on Deno
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-deno
+      # --allow-scripts runs lifecycle scripts so the kerberos prebuild is fetched.
+      - run: deno install --allow-scripts=npm:kerberos
+      - run: deno run -A --unstable-detect-cjs npm:mocha@10.8.2 test/unit --recursive -R spec -t 5000
+
+  unit-integration-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        NODE_VERSION: ["20", "22", "24"]
+        SERVER_VERSION: ["3.11", "4.0", "4.1", "5.0"] # Cassandra minor versions
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up CCM
+        uses: ./.github/actions/setup-ccm
+        with:
+          server-version: ${{ matrix.SERVER_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Run tests
+        run: |
+          npm ci
+          npm install --no-save mocha-multi-reporters mocha-junit-reporter
+          echo '{
+            "reporterEnabled": "spec, mocha-junit-reporter",
+            "mochaJunitReporterReporterOptions": {
+              "mochaFile": "test-results/results.xml"
+            }
+          }' > config.json
+
+          npx mocha test/unit test/integration/short --recursive --exit --reporter mocha-multi-reporters \
+            --reporter-options configFile=config.json
+
+      - name: Upload Test Results
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: Test Results (Node.js ${{ matrix.NODE_VERSION }}, Cassandra ${{ matrix.SERVER_VERSION }})
+          path: test-results/**/*
+
+  publish-test-results:
+    name: "Publish Tests Results"
+    needs: unit-integration-tests
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+
+    if: (!cancelled())
+
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: artifacts/**/*.xml

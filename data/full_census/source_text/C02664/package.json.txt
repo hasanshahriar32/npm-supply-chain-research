@@ -1,0 +1,83 @@
+{
+  "name": "editorconfig",
+  "version": "3.0.2",
+  "description": "EditorConfig File Locator and Interpreter for Node.js",
+  "keywords": [
+    "editorconfig",
+    "core"
+  ],
+  "main": "./lib/index.js",
+  "files": [
+    "lib/*",
+    "bin/*"
+  ],
+  "contributors": [
+    "Hong Xu (topbug.net)",
+    "Jed Mao (https://github.com/jedmao/)",
+    "Trey Hunner (http://treyhunner.com)",
+    "Joe Hildebrand (https://github.com/hildjj/)",
+    "SunsetTechuila (https://github.com/SunsetTechuila/)",
+    "Rex Lorenzo (https://github.com/rlorenzo/)",
+    "Gareth Jones (https://github.com/G-Rath)"
+  ],
+  "directories": {
+    "bin": "./bin",
+    "lib": "./lib"
+  },
+  "scripts": {
+    "clean": "rimraf docs coverage lib CMakeCache.txt CMakeFiles/ Testing/ cmake_install.cmake CTestTestfile.cmake Makefile",
+    "docs": "typedoc",
+    "prebuild": "npm run clean",
+    "build": "cmake . && tsc",
+    "pretest": "npm run build && npm run lint",
+    "test": "npm run test:all",
+    "test:all": "mocha && ctest . --preset Test",
+    "precoverage": "npm run build -- --inlineSourceMap",
+    "coverage": "c8 npm run test:all",
+    "postcoverage": "tsc",
+    "ci": "npm run docs && npm run coverage -- -- -VV --output-on-failure",
+    "lint": "eslint .",
+    "pub": "npm run docs && npm run test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/editorconfig/editorconfig-core-js.git"
+  },
+  "bugs": "https://github.com/editorconfig/editorconfig-core-js/issues",
+  "author": "EditorConfig Team",
+  "license": "MIT",
+  "dependencies": {
+    "@one-ini/wasm": "0.2.1",
+    "commander": "^14.0.3",
+    "minimatch": "~10.2.4",
+    "semver": "^7.7.4"
+  },
+  "devDependencies": {
+    "@cto.af/eslint-config": "6.2.4",
+    "@types/chai": "4.3.20",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.3.2",
+    "@types/semver": "^7.7.1",
+    "@typescript-eslint/eslint-plugin": "8.56.1",
+    "@typescript-eslint/parser": "8.56.1",
+    "c8": "11.0.0",
+    "chai": "4.5.0",
+    "eslint": "10.0.2",
+    "eslint-plugin-jsdoc": "62.7.1",
+    "mocha": "^11.7.5",
+    "rimraf": "^6.1.3",
+    "typedoc": "0.28.17",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.56.1"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "pnpm": {
+    "overrides": {
+      "mocha@11.7.5>diff": "8.0.3",
+      "c8@11.0.0>yargs": "18.0.0"
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

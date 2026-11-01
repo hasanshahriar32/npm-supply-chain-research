@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*'
+  pull_request: {}
+  schedule:
+    - cron: '0 3 * * *' # daily, at 3am
+
+env:
+  VOLTA_FEATURE_PNPM: 1
+
+jobs:
+  docs:
+    name: API docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+      - uses: volta-cli/action@d253558a6e356722728a10e9a469190de21a83ef # v4
+      - uses: actions/cache@2f8e54208210a422b2efd51efaa6bd6d7ca8920f # v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - run: pnpm install
+      - run: pnpm run docs
+
+      # ensure there are no changes compared to the current API.md
+      - run: git diff --exit-code
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+      - uses: volta-cli/action@d253558a6e356722728a10e9a469190de21a83ef # v4
+      - uses: actions/cache@2f8e54208210a422b2efd51efaa6bd6d7ca8920f # v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm test:coverage
+      - run: pnpm test:ember
+
+  compatibility:
+    name: "Tests (Ember.js, ember-try: ${{ matrix.ember-try-scenario }}, Embroider: ${{ matrix.embroider }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      matrix:
+        embroider: ["true", "false"]
+        ember-try-scenario:
+          - ember-lts-3.28
+          - ember-lts-4.12
+
+    steps:
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
+      - uses: volta-cli/action@d253558a6e356722728a10e9a469190de21a83ef # v4
+      - uses: actions/cache@2f8e54208210a422b2efd51efaa6bd6d7ca8920f # v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - run: pnpm install
+      - run: pnpm build
+      - run: pnpm --filter test-app try:one ${{ matrix.ember-try-scenario}} --skip-cleanup 
+        env:
+          USE_EMBROIDER: "${{ matrix.embroider }}"

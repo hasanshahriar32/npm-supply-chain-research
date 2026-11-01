@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - format
+          - lint
+          - spell
+          - type
+    name: Check ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - name: Install
+        run: yarn install --immutable
+      - name: Check
+        run: yarn check:${{ matrix.check }}
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - graphql: 17
+          - graphql: 16
+    name: Test GraphQL v${{ matrix.graphql }}
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: yarn
+      - name: Install GraphQL 17 baseline
+        if: matrix.graphql == 17
+        run: yarn install --immutable
+      - name: Install GraphQL 16 compatibility baseline
+        if: matrix.graphql == 16
+        run: yarn add --dev graphql@^16
+      # we default to v17 but support v16, so we want to also make sure the types fit
+      - if: matrix.graphql == 16
+        name: Check types
+        run: yarn check:type
+      - name: Test
+        run: yarn test

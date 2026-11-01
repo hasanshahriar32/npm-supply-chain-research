@@ -1,0 +1,87 @@
+name: Regular CI
+on:
+  push:
+    branches:
+      - main
+      - next
+      - "nopr/*"
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2.1.0 # Immutable
+        with:
+          runtime: node
+      - name: Lint (prebuild)
+        run: node --run lint:prebuild
+      - name: Build
+        run: node --run build
+      - name: Lint (postbuild)
+        run: node --run lint:postbuild
+      - name: Test
+        run: node --run test
+  bench:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    needs: build
+    strategy:
+      matrix:
+        shard: ["1/2","2/2"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          registry-url: 'https://registry.npmjs.org'
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: true
+      - name: Build
+        run: node --run build:lib
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v3
+        with:
+          run: pnpm vitest bench --run --shard=${{ matrix.shard }}
+          token: ${{ secrets.CODSPEED_TOKEN }}
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }} 
+  build-website:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pages: write
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/setup@v2.1.0 # Immutable
+        with:
+          runtime: node
+      - id: repository
+        run: echo "name=${GITHUB_REPOSITORY#${GITHUB_REPOSITORY_OWNER}/}" >> $GITHUB_OUTPUT
+      - name: Build libraries
+        run: node --run build:lib
+      - name: Build website
+        run: node --run build:website
+        env:
+          WEBSITE_BASE_PATH: "/${{ steps.repository.outputs.name }}/"
+          DEPLOYED_FROM_MAIN: "1"
+      - name: Upload website artifacts
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/dist
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  update-website:
+    runs-on: ubuntu-slim
+    permissions:
+      id-token: write
+      pages: write
+    needs: build-website
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'

@@ -1,0 +1,126 @@
+name: just-nut
+on:
+  workflow_dispatch:
+    inputs:
+      channel-or-version:
+        description: Version or channel of the CLI to test against (nightly, latest-rc, 2.1.1)
+        type: string
+        required: true
+      repository:
+        description: 'The repo that will be cloned (format: owner/repo).  This contains the NUTs you want to run.  Ex: salesforcecli/plugin-user'
+        type: string
+        required: true
+      command:
+        required: false
+        type: string
+        default: yarn test:nuts
+        description: 'command to execute (ex: yarn test:nuts)'
+      os:
+        required: false
+        description: 'runs-on property, ex: ubuntu-latest, windows-latest'
+        type: string
+        default: 'ubuntu-latest'
+      jit:
+        required: false
+        description: 'install JIT plugin before running tests'
+        type: boolean
+        default: false
+      devhub-environment:
+        required: false
+        description: 'GitHub Environment whose secrets override the default TESTKIT_* credentials. Leave empty to use org-level secrets.'
+        type: string
+        default: ''
+      max-retries:
+        required: false
+        description: 'Maximum number of retry attempts for the NUT command (default: 3)'
+        type: number
+        default: 3
+  workflow_call:
+    inputs:
+      channel-or-version:
+        description: Version or channel of the CLI to test against (nightly, latest-rc, 2.1.1)
+        type: string
+        required: true
+      repository:
+        description: 'The repo that will be cloned (format: owner/repo).  This contains the NUTs you want to run.  Ex: salesforcecli/plugin-user'
+        type: string
+        required: true
+      command:
+        required: false
+        type: string
+        default: yarn test:nuts
+        description: 'command to execute (ex: yarn test:nuts)'
+      os:
+        required: false
+        description: 'runs-on property, ex: ubuntu-latest, windows-latest'
+        type: string
+        default: 'ubuntu-latest'
+      jit:
+        required: false
+        description: 'install JIT plugin before running tests'
+        type: boolean
+        default: false
+      devhub-environment:
+        required: false
+        description: 'GitHub Environment whose secrets override the default TESTKIT_* credentials. Leave empty to use org-level secrets.'
+        type: string
+        default: ''
+      max-retries:
+        required: false
+        description: 'Maximum number of retry attempts for the NUT command (default: 3)'
+        type: number
+        default: 3
+
+jobs:
+  just-nut:
+    name: ${{inputs.repository}}
+    runs-on: ${{inputs.os}}
+    environment: ${{ inputs.devhub-environment || '' }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+      TESTKIT_EXECUTABLE_PATH: sf
+      TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL}}
+      TESTKIT_HUB_USERNAME: ${{ secrets.TESTKIT_HUB_USERNAME}}
+      TESTKIT_JWT_CLIENT_ID: ${{ secrets.TESTKIT_JWT_CLIENT_ID}}
+      TESTKIT_JWT_KEY: ${{ secrets.TESTKIT_JWT_KEY}}
+      TESTKIT_HUB_INSTANCE: ${{ secrets.TESTKIT_HUB_INSTANCE}}
+      ONEGP_TESTKIT_AUTH_URL: ${{ secrets.ONEGP_TESTKIT_AUTH_URL }}
+      TESTKIT_SETUP_RETRIES: 2
+      SF_DISABLE_TELEMETRY: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+          path: .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+          # cache: yarn
+      - name: Install CLI
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          command: npm install -g @salesforce/cli@${{ inputs.channel-or-version }} --omit=dev
+
+      - uses: salesforcecli/github-workflows/.github/actions/yarnInstallWithRetries@main
+
+      # We set SF_DATA_DIR to ensure JIT plugins are only installed once
+      # Otherwise each TestSession reinstalls the JIT plugin in its custom HOME dir
+      - name: Set SF_DATA_DIR for JIT
+        if: ${{ inputs.jit }}
+        run: echo "SF_DATA_DIR=${{ runner.temp }}/sf-data-dir" >> "$GITHUB_ENV"
+
+      - name: Install JIT plugin
+        if: ${{ inputs.jit }}
+        # The --jit flag ensures we get the JIT plugin version set in the sf package.json
+        run: |
+          sf plugins install $(jq -r '.name' package.json) --jit
+
+      - name: Run NUT (with retries)
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: ${{ inputs.max-retries }}
+          retry_wait_seconds: 1800
+          command: ${{ inputs.command }}

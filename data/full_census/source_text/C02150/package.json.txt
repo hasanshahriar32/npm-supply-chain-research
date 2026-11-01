@@ -1,0 +1,97 @@
+{
+  "name": "https-localhost",
+  "version": "4.7.2",
+  "description": "HTTPS server running on localhost",
+  "keywords": [
+    "SSL",
+    "https",
+    "https-server",
+    "localhost",
+    "trusted-certificate"
+  ],
+  "homepage": "https://daquinoaldo.github.io/https-localhost",
+  "bugs": {
+    "url": "https://github.com/daquinoaldo/https-localhost/issues"
+  },
+  "license": "MIT",
+  "author": "Aldo D'Aquino",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daquinoaldo/https-localhost.git"
+  },
+  "bin": {
+    "serve": "dist/esm/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./certs": {
+      "types": "./src/certs.ts",
+      "import": "./src/certs.ts",
+      "default": "./src/certs.ts"
+    }
+  },
+  "publishConfig": {
+    "main": "dist/cjs/index.js",
+    "module": "dist/esm/index.js",
+    "types": "dist/esm/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/esm/index.d.ts",
+        "import": "./dist/esm/index.js",
+        "require": "./dist/cjs/index.js",
+        "default": "./dist/esm/index.js"
+      },
+      "./certs": {
+        "types": "./dist/esm/certs.d.ts",
+        "import": "./dist/esm/certs.js",
+        "require": "./dist/cjs/certs.js",
+        "default": "./dist/esm/certs.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc --project tsconfig.build.esm.json && tsc --project tsconfig.build.cjs.json && echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "fix": "oxfmt && oxlint --fix && knip && tsc --noEmit",
+    "lint": "oxfmt --check && oxlint && knip && tsc --noEmit",
+    "test": "node --test-concurrency=1 --test test/*.test.ts",
+    "prepack": "pnpm build",
+    "preuninstall": "node dist/esm/certs-cli.js -u",
+    "start": "node src/cli.ts"
+  },
+  "dependencies": {
+    "mrmime": "^2.0.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "knip": "^6.34.0",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
+    "oxlint-tsgolint": "^7.0.2001",
+    "typescript": "^7.0.2"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^12.0.0"
+    },
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0 || ^26.0.0"
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.3.4"
+}

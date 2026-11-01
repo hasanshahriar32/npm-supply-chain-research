@@ -1,0 +1,85 @@
+name: Memtest
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_NO_WARNINGS: 1
+  K6_VERSION: v0.56.0
+
+jobs:
+  memtest:
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - name: auto-type-merging
+            hive-router-runtime: 0
+          - name: federation-example
+            hive-router-runtime: 0
+          - name: federation-example
+            hive-router-runtime: 1
+          - name: federation-mixed
+            hive-router-runtime: 0
+          - name: federation-subscriptions-passthrough
+            hive-router-runtime: 0
+          - name: opentelemetry
+            hive-router-runtime: 0
+          - name: programmatic-batching
+            hive-router-runtime: 0
+          - name: logger
+            hive-router-runtime: 0
+        e2e_runner:
+          - node
+          # - bun TODO: get memory snaps and heap sampling for bun. is it even necessary?
+    name: ${{matrix.e2e_runner}} / ${{matrix.test.name}} ${{ matrix.test.hive-router-runtime && 'with hive router runtime' || '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Install k6
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          cd "$HOME/.local/bin"
+          curl https://github.com/grafana/k6/releases/download/${{ env.K6_VERSION }}/k6-${{ env.K6_VERSION }}-linux-amd64.tar.gz -L | tar xvz --strip-components 1
+          echo "$PWD" >> $GITHUB_PATH
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          # TODO: should we test more node versions? we usually always recommend upgrading to
+          #       latest when people suspect leaks - latest is always the most stable
+          node-version-file: .node-version
+      - if: runner.os == 'Linux'
+        name: Hash Docker Images
+        id: hash-docker-images
+        run: | # get all "image: '" occurrences in the e2e tests and hash them
+          echo "result=$(grep -r -h "image: '" e2e | shasum | base64)" >> "$GITHUB_OUTPUT"
+      - if: runner.os == 'Linux'
+        name: Cache Docker Images
+        uses: ScribeMD/docker-cache@e1be5d7e63cc5f0c6400d8cb86d3d899a7fd71e2 # 0.5.0 + https://github.com/ScribeMD/docker-cache/pull/838
+        continue-on-error: true
+        with:
+          key: docker-images-${{ runner.os }}-${{ steps.hash-docker-images.outputs.result }}
+      - name: Test
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 60
+          max_attempts: 5
+          command: yarn test:mem ${{matrix.test.name}}
+        env:
+          HIVE_ROUTER_RUNTIME: ${{matrix.test.hive-router-runtime}}
+          E2E_GATEWAY_RUNNER: ${{matrix.e2e_runner}}
+      - name: Upload heap snapshots
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ${{matrix.test.name}}-heap-snapshots
+          path: |
+            e2e/${{matrix.test.name}}/*.heapsnapshot
+            packages/logger/tests/*.heapsnapshot

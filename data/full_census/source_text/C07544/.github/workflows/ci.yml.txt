@@ -1,0 +1,166 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+      - 3.x
+  pull_request:
+    branches:
+      - main
+      - 3.x
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions: {}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          cache: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔠 Lint project
+        run: pnpm lint
+
+      - name: ✂️ Knip project
+        run: pnpm test:knip
+
+      - name: 📝 Check command docs are in sync
+        run: pnpm test:docs
+
+      # - name: ⚙️ Check package engines
+      #   run: pnpm test:engines
+
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@24.22.1
+          cache: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - parallel:
+          - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+            with:
+              bun-version: latest
+
+          - uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb # v2
+            with:
+              # 2.7.5+ regress dev server / ws tests; 2.7.13 rewrites node:http (denoland/deno#33208)
+              deno-version: 2.7.4
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 💪 Test types
+        run: pnpm test:types
+
+      - name: 🧪 Test built `nuxi`
+        run: pnpm test:dist
+
+      - name: 👷‍♂️ Prepare playground
+        run: pnpm nuxt prepare playground
+
+      - name: 🧪 Test (unit)
+        run: pnpm test:unit
+
+      - name: 🧪 Test the dev UI against Nuxt nightly
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm --filter nuxt-cli-playground-nightly test
+
+      - if: matrix.os != 'windows-latest'
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
+
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    if: github.repository_owner == 'nuxt' && github.event_name != 'merge_group'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@latest
+          cache: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 📦 release pkg.pr.new
+        run: pnpm pkg-pr-new publish --compact --template './playground' ./packages/create-nuxt ./packages/nuxi ./packages/nuxt-cli
+
+  pack-nightly:
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'nuxt' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      files: ${{ steps.pack.outputs.files }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@latest
+          cache: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🛠 Build project
+        run: pnpm build
+
+      - name: 📦 Pack nightly
+        id: pack
+        uses: danielroe/uppt/pack@6ec27140623aa835e362f866d8ab0018ab057f4d # v0.6.11
+        with:
+          checkout: false
+          install: false
+          nightly: true
+          packages: |
+            packages/create-nuxt
+            packages/nuxi
+            packages/nuxt-cli
+
+  nightly:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.pack-nightly.outputs.files != ''
+    needs: pack-nightly
+    runs-on: ubuntu-latest
+    concurrency:
+      group: nightly-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      id-token: write
+    environment: nightly
+    steps:
+      - uses: danielroe/uppt/publish@6ec27140623aa835e362f866d8ab0018ab057f4d # v0.6.11
+        with:
+          nightly: true
+          files: ${{ needs.pack-nightly.outputs.files }}

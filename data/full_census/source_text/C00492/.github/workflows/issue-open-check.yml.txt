@@ -1,0 +1,30 @@
+name: Issue Open Check
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  check-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check issue title
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node <<'NODE'
+          const { readFileSync } = require('node:fs');
+          const { execFileSync } = require('node:child_process');
+          const event = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+          const title = ['🐛[BUG]', '👑 [需求]', '🧐[问题]']
+            .reduce((value, prefix) => value.replace(prefix, ''), event.issue.title)
+            .trim();
+          if (title) process.exit(0);
+          const endpoint = `repos/${process.env.GITHUB_REPOSITORY}/issues/${event.issue.number}`;
+          const body = '当前 Issue 未检测到标题，请规范填写，谢谢！\n\nThe title of the current issue is not detected, please fill in according to the specifications, thank you!\n';
+          execFileSync('gh', ['api', '--method', 'POST', `${endpoint}/comments`, '--raw-field', `body=${body}`], { stdio: 'inherit' });
+          execFileSync('gh', ['api', '--method', 'PATCH', endpoint, '--raw-field', 'state=closed'], { stdio: 'inherit' });
+          NODE

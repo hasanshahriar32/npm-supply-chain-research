@@ -1,0 +1,157 @@
+name: Release
+on:
+  # Run manually from UI
+  workflow_dispatch:
+    inputs:
+      skip_version_bump:
+        description: Skip version bump
+        type: boolean
+      skip_tag_and_release:
+        description: Skip tag-and-release
+        type: boolean
+
+env:
+  TZ: "America/New_York"
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    environment: Production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN }} # for sync-repos pull/push later on
+          fetch-depth: 0 # fetches ALL history. needed for sync-repos operations
+
+      # for sync-repos pull/push later on
+      - name: Setup Git User
+        run: |
+          git config --global user.name "${{ github.triggering_actor }}" && \
+          git config --global user.email "${{ github.triggering_actor }}@users.noreply.github.com"
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v2.4.1
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24.15.0
+          cache: 'pnpm'
+
+          # Mutates .npmrc to allow for NPM publishing
+          # Will expect the NODE_AUTH_TOKEN environment variable (see below)
+          registry-url: 'https://registry.npmjs.org'
+
+      # - name: Setup Turbo Cache
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: node_modules/.cache/turbo
+      #     key: turbo-${{ github.job }}-${{ github.ref_name }}-${{ github.sha }}
+      #     restore-keys: turbo-${{ github.job }}-${{ github.ref_name }}-
+
+      - name: Install Dependencies
+        run: |
+          echo "Checking for uncommitted changes BEFORE..."
+          git status --short
+          git diff --stat
+
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar-tests/*' \
+            install
+
+          pnpm run meta:hide
+
+          echo "Checking for uncommitted changes AFTER..."
+          git status --short
+          git diff --stat
+
+        # ^this hides the nested repo's pnpm meta files
+        # required to prevent package scripts from getting confused
+        # when was this supposed to be called anyway?
+
+      - name: Lint
+        # DISABLED!
+        if: false
+        run: |
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar-tests/*' \
+            run lint
+
+      - name: Bump Versions
+        if: success() && !inputs.skip_version_bump
+        run: pnpm run version-bump
+
+      - name: Sync Versions
+        if: success() && !inputs.skip_version_bump
+        run: |
+          pnpm run version-sync
+          git diff --cached --quiet || \
+            git commit -m 'sync versions'
+
+      - name: Build
+        run: |
+          pnpm \
+            --filter '!./examples/**' \
+            --filter '!@fullcalendar-tests/*' \
+            run build && \
+          pnpm run archive
+
+      # execute only connector-package tests, as "smoke" tests. they're fast
+      # FYI, @fullcalendar/vue3 uses playwright, which we don't have set up yet
+      # FYI, @fullcalendar/angular uses headless Chrome, which might be hard to set up?
+      - name: Test
+        run: |
+          pnpm \
+            --filter '@fullcalendar/react' \
+            run test
+
+      # Must happen before tag-and-release. Would prefer to do it after as a
+      # `continue-on-error:true` optional task, in case pushing back to main fails,
+      # but the tag-and-release script expects everything to be ready.
+      #
+      # Also, do as few pushes as possible, because each triggers CI.
+      #
+      # Also, RELEASE_GITHUB_TOKEN must have permissions to push to protected branches.
+      #
+      - name: Sync Repos
+        run: |
+          echo "Checking for uncommitted changes before pull..."
+          git status --short
+          git diff --stat
+
+          echo "Pulling latest and rebasing version-bump commit atop..."
+          git pull --rebase
+
+          echo "Updating subrepo configs..."
+          pnpm run meta:update
+          git diff --cached --quiet || \
+            git commit -m 'meta:update'
+
+          echo "Checking Git status (for sync-repos debugging)..."
+          git status
+
+          echo "Syncing subrepos with latest commits..."
+          echo "(Will record new state of subrepos on HEAD and push...)"
+          pnpm run sync-repos
+
+      - name: Tag & Create GitHub Releases
+        if: success() && !inputs.skip_tag_and_release
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_GITHUB_TOKEN }} # for GitHub CLI
+        run: pnpm run tag-and-release
+
+      # NOTE: NPM_TOKEN needs write access to all @fullcalendar/* packages
+      # AND fullcalendar/fullcalendar-scheduler
+      #
+      - name: Publish to NPM
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm run publish

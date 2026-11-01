@@ -1,0 +1,45 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    timeout-minutes: 25
+    name: OverlayScrollbars Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Run Unit Tests
+        run: npm run ci:test
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run e2e Tests
+        run: xvfb-run npm run ci:e2e  
+      - name: Upload Unit Tests Coverage
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unit
+          files: "packages/**/.coverage/unit/coverage*.json"
+      - name: Upload e2e Tests Coverage
+        uses: codecov/codecov-action@v6
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: e2e
+          files: "packages/**/.coverage/e2e/coverage*.json"
+

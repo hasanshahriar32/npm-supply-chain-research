@@ -1,0 +1,46 @@
+name: Helm Chart
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Build and maybe publish Helm Chart to OCI registry"
+        required: false
+        default: false
+        type: boolean
+
+# Read-only by default; a job that needs more asks for it.
+permissions:
+  contents: read
+
+jobs:
+  build-chart:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: charts/growthbook
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+      - name: Rebuild helm dependencies
+        run: helm dependency build
+      - name: Lint helm chart
+        run: helm lint --strict --with-subcharts .
+      - name: Package helm chart
+        run: helm package .
+      - name: Login to OCI registry
+        if: ${{ startsWith(github.ref, 'refs/tags/') || inputs.publish }}
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push helm chart to OCI registry
+        if: ${{ startsWith(github.ref, 'refs/tags/') || inputs.publish }}
+        run: |
+          for chart in *.tgz; do
+              helm push "$chart" oci://ghcr.io/growthbook/charts
+          done

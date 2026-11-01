@@ -1,0 +1,880 @@
+name: ci
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - master
+  schedule: [cron: "40 1 * * *"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "17"
+
+jobs:
+  commitsar:
+    name: Verify commit messages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: aevea/commitsar@v1.0.3
+
+  pre-commit:
+    name: Pre-commit checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: astral-sh/setup-uv@v7
+
+      - run: SKIP=fmt,cargo-check,clippy uvx prek run --all-files
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Cache NPM dependencies
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: npm-cache-lint-node@16-${{ hashFiles('yarn.lock') }}
+
+      - name: "Install dependencies"
+        run: yarn install --immutable --registry https://registry.npmjs.org --network-timeout 300000
+        working-directory: ./crates/css-inline-js
+
+      - name: ESLint
+        run: yarn lint
+        working-directory: ./crates/css-inline-js
+
+  test-stable:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+
+    name: Test (stable) on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.11
+          cache: "pip"
+          cache-dependency-path: "**/requirements-*.txt"
+
+      - name: Start background server
+        # Redirect the output, otherwise the Windows runner waits on the inherited handles
+        run: python ./crates/css-inline/tests/server.py > /dev/null 2>&1 &
+        shell: bash
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The Python and Ruby bindings are cdylibs without Rust tests whose test harnesses do not link the
+      # interpreter; `test-python` and `test-ruby` cover them. The PHP binding needs PHP and libclang; `test-php` covers it
+      - run: cargo test --workspace --no-fail-fast --exclude css-inline-python --exclude css-inline-php --exclude css-inline-ruby
+
+  fmt:
+    name: Rustfmt
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      # `rb-sys` regenerates its Ruby bindings when this changes; otherwise cached ones are reused
+      RUBY_VERSION: "3.2"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      # magnus builds against the installed Ruby; the runner's system Ruby is older than the gem supports
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+
+      # The PHP binding needs PHP and libclang
+      - name: Rust
+        run: cargo clippy --workspace --all-targets --exclude css-inline-php -- -D warnings
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.85"
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Pinned: newer releases may require a newer rustc than MSRV
+      - run: |
+          cargo generate-lockfile
+          cargo update -p yoke-derive --precise 0.8.4
+
+      - run: cargo build -p css-inline
+
+  test-javascript:
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: macos-15
+            target: x86_64-apple-darwin
+            build: |
+              yarn build
+              strip -x *.node
+          - host: macos-15
+            target: aarch64-apple-darwin
+            build: |
+              sudo rm -Rf /Library/Developer/CommandLineTools/SDKs/*;
+              export CC=$(xcrun -f clang);
+              export CXX=$(xcrun -f clang++);
+              SYSROOT=$(xcrun --sdk macosx --show-sdk-path);
+              export CFLAGS="-isysroot $SYSROOT -isystem $SYSROOT";
+              yarn build --target aarch64-apple-darwin
+              strip -x *.node
+          - host: windows-2022
+            build: yarn build
+            target: x86_64-pc-windows-msvc
+          - host: windows-2022
+            build: yarn build --target aarch64-pc-windows-msvc
+            target: aarch64-pc-windows-msvc
+          - host: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian
+            build: |-
+              set -e &&
+              npm install -g n && n 22 &&
+              rustup toolchain install stable &&
+              rustup default stable &&
+              yarn build --target x86_64-unknown-linux-gnu &&
+              strip *.node
+          - host: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            build: |-
+              set -e &&
+              wget -qO- https://unofficial-builds.nodejs.org/download/release/v22.16.0/node-v22.16.0-linux-x64-musl.tar.gz | tar -xz -C /usr/local --strip-components=1 &&
+              rustup toolchain install stable &&
+              rustup default stable &&
+              yarn build && strip *.node
+          - host: ubuntu-22.04
+            target: aarch64-unknown-linux-gnu
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
+            build: |-
+              set -e &&
+              npm install -g n && n 22 &&
+              rustup toolchain install stable &&
+              rustup default stable &&
+              rustup target add aarch64-unknown-linux-gnu &&
+              yarn build --target aarch64-unknown-linux-gnu &&
+              aarch64-unknown-linux-gnu-strip *.node
+          - host: ubuntu-22.04
+            target: armv7-unknown-linux-gnueabihf
+            setup: |
+              sudo apt-get update
+              sudo apt-get install gcc-arm-linux-gnueabihf -y
+            build: |
+              yarn build --target armv7-unknown-linux-gnueabihf
+              arm-linux-gnueabihf-strip *.node
+          - host: ubuntu-22.04
+            target: aarch64-unknown-linux-musl
+            docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine
+            build: |-
+              set -e &&
+              wget -qO- https://unofficial-builds.nodejs.org/download/release/v22.16.0/node-v22.16.0-linux-x64-musl.tar.gz | tar -xz -C /usr/local --strip-components=1 &&
+              rustup toolchain install stable &&
+              rustup default stable &&
+              rustup target add aarch64-unknown-linux-musl &&
+              yarn build --target aarch64-unknown-linux-musl &&
+              /aarch64-linux-musl-cross/bin/aarch64-linux-musl-strip *.node
+          - host: ubuntu-22.04
+            target: aarch64-linux-android
+            build: |
+              yarn build --target aarch64-linux-android
+              ${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip *.node
+          - host: ubuntu-22.04
+            target: armv7-linux-androideabi
+            build: |
+              yarn build --target armv7-linux-androideabi
+              ${ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip *.node
+        node:
+          - "20"
+          - "22"
+
+    name: NodeJS ${{ matrix.node }} on ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+    timeout-minutes: 30
+    env:
+      DEBUG: napi:*
+      APP_NAME: css-inline
+      MACOSX_DEPLOYMENT_TARGET: "10.13"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        if: ${{ !matrix.settings.docker }}
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          cache-dependency-path: crates/css-inline-js/yarn.lock
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.11
+          cache: "pip"
+          cache-dependency-path: "**/requirements-*.txt"
+
+      - name: Start background server
+        run: python ./crates/css-inline/tests/server.py &
+        shell: bash
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        if: ${{ !matrix.settings.docker }}
+        with:
+          toolchain: stable
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            .cargo-cache
+            target/
+          key: ${{ matrix.settings.target }}-cargo-${{ matrix.settings.host }}
+
+      - uses: goto-bus-stop/setup-zig@v2
+        if: ${{ matrix.settings.target == 'armv7-unknown-linux-gnueabihf' }}
+        with:
+          version: 0.11.0
+
+      - name: Setup toolchain
+        run: ${{ matrix.settings.setup }}
+        if: ${{ matrix.settings.setup }}
+        shell: bash
+
+      - name: Config yarn (x86_64-unknown-linux-musl)
+        if: matrix.settings.target == 'x86_64-unknown-linux-musl'
+        run: yarn config set supportedArchitectures.libc "musl"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (aarch64-unknown-linux-gnu)
+        if: matrix.settings.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "glibc"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (aarch64-unknown-linux-musl)
+        if: matrix.settings.target == 'aarch64-unknown-linux-musl'
+        run: |
+          yarn config set supportedArchitectures.cpu "arm64"
+          yarn config set supportedArchitectures.libc "musl"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (armv7-unknown-linux-gnueabihf)
+        if: matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
+        run: yarn config set supportedArchitectures.cpu "arm"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (aarch64-linux-android)
+        if: matrix.settings.target == 'aarch64-linux-android'
+        run: yarn config set supportedArchitectures.cpu "arm64"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (aarch64-pc-windows-msvc)
+        if: matrix.settings.target == 'aarch64-pc-windows-msvc'
+        run: yarn config set supportedArchitectures.cpu "arm64"
+        working-directory: crates/css-inline-js
+
+      - name: Config yarn (armv7-linux-androideabi)
+        if: matrix.settings.target == 'armv7-linux-androideabi'
+        run: yarn config set supportedArchitectures.cpu "arm"
+        working-directory: crates/css-inline-js
+
+      - name: Install dependencies
+        run: yarn install
+        working-directory: crates/css-inline-js
+
+      - name: Build in docker
+        uses: addnab/docker-run-action@v3
+        if: ${{ matrix.settings.docker }}
+        with:
+          image: ${{ matrix.settings.docker }}
+          options: "--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build/crates/css-inline-js"
+          run: ${{ matrix.settings.build }}
+
+      - name: Build
+        run: ${{ matrix.settings.build }}
+        if: ${{ !matrix.settings.docker }}
+        shell: bash
+        working-directory: crates/css-inline-js
+
+      - name: Set up QEMU (aarch64)
+        uses: docker/setup-qemu-action@v4
+        if: ${{ contains(fromJson('["aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl"]'), matrix.settings.target) }}
+        with:
+          platforms: arm64
+
+      - name: Set up QEMU (armv7-unknown-linux-gnueabihf)
+        uses: docker/setup-qemu-action@v4
+        if: matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
+        with:
+          platforms: arm
+
+      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        if: ${{ contains(fromJson('["aarch64-unknown-linux-gnu", "aarch64-unknown-linux-musl", "armv7-unknown-linux-gnueabihf"]'), matrix.settings.target) }}
+
+      - name: Test (x86_64-apple-darwin & x86_64-pc-windows-msvc)
+        if: ${{ contains(fromJson('["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]'), matrix.settings.target) }}
+        run: yarn test
+        working-directory: crates/css-inline-js
+
+      - name: Test (x86_64-unknown-linux-gnu)
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        run: docker run --rm --network host -v $(pwd):/build -w /build/crates/css-inline-js node:${{ matrix.node }}-slim yarn test
+
+      - name: Test (x86_64-unknown-linux-musl)
+        if: matrix.settings.target == 'x86_64-unknown-linux-musl'
+        run: docker run --rm --network host -v $(pwd):/build -w /build/crates/css-inline-js node:${{ matrix.node }}-alpine yarn test
+
+      - name: Test (aarch64-unknown-linux-gnu)
+        if: matrix.settings.target == 'aarch64-unknown-linux-gnu'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: node:${{ matrix.node }}-slim
+          options: "--platform linux/arm64 --network host -v ${{ github.workspace }}:/build -w /build/crates/css-inline-js"
+          run: |
+            set -e
+            yarn test
+
+      - name: Test in docker (aarch64-unknown-linux-musl)
+        if: matrix.settings.target == 'aarch64-unknown-linux-musl'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: node:${{ matrix.node }}-alpine
+          options: "--platform linux/arm64 --network host -v ${{ github.workspace }}:/build -w /build/crates/css-inline-js"
+          run: |
+            set -e
+            yarn test
+
+      - name: Test in docker (armv7-unknown-linux-gnueabihf)
+        if: matrix.settings.target == 'armv7-unknown-linux-gnueabihf'
+        uses: addnab/docker-run-action@v3
+        with:
+          image: node:${{ matrix.node }}-bookworm-slim
+          options: "--platform linux/arm/v7 --network host -v ${{ github.workspace }}:/build -w /build/crates/css-inline-js"
+          run: |
+            set -e
+            yarn test
+
+  test-java:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+
+    name: Java 17 on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build native library
+        # Build with `--release` as Gradle config expects `target/release`
+        run: cargo build --release -p css-inline-java
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.4.0
+
+      - name: Run tests
+        working-directory: crates/css-inline-java
+        run: gradle clean test
+
+  test-python:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "pypy-3.11"]
+        exclude:
+          - os: macos-15
+            python-version: "3.10"
+
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    # Fat LTO with a single codegen unit is for published wheels
+    env:
+      CARGO_PROFILE_RELEASE_LTO: "false"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Add x86_64 target for PyPy on macOS
+        if: matrix.os == 'macos-15' && matrix.python-version == 'pypy-3.11'
+        run: rustup target add x86_64-apple-darwin
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+          cache: "pip"
+          cache-dependency-path: "**/requirements-*.txt"
+
+      - name: Start background server
+        run: python ./crates/css-inline/tests/server.py &
+        shell: bash
+
+      - run: python -m pip install -r requirements/dev.txt
+        working-directory: ./crates/css-inline-python
+
+      - name: Run ${{ matrix.python }} tox job
+        run: tox -e py
+        working-directory: ./crates/css-inline-python
+
+  build-pyodide:
+    name: Build PyOdide wheel
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - build: "cp313-*"
+            toolchain: nightly-2025-02-01
+            artifact: cp313
+          - build: "cp314-*"
+            toolchain: 1.93.0
+            artifact: cp314
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: wasm32-unknown-emscripten
+          components: rust-src
+      # Pinned: newer releases may require a newer rustc than the pinned toolchain
+      - run: |
+          cargo generate-lockfile
+          cargo update -p yoke-derive --precise 0.8.4
+        working-directory: ./crates/css-inline-python
+      - uses: pypa/cibuildwheel@v4.3.4
+        with:
+          package-dir: ./crates/css-inline-python
+        env:
+          CIBW_PLATFORM: pyodide
+          CIBW_BUILD: ${{ matrix.build }}
+          CIBW_ENABLE: pyodide-eol
+
+  test-php:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        php-version: ["8.2", "8.3", "8.4"]
+        clang: ["20"]
+    name: PHP ${{ matrix.php-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup LLVM & Clang
+        uses: KyleMayes/install-llvm-action@v2
+        if: matrix.os == 'ubuntu-24.04'
+        with:
+          version: ${{ matrix.clang }}
+          directory: ${{ runner.temp }}/llvm-${{ matrix.clang }}
+      - name: Configure Clang
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          echo "LIBCLANG_PATH=${{ runner.temp }}/llvm-${{ matrix.clang }}/lib" >> $GITHUB_ENV
+          echo "LLVM_CONFIG_PATH=${{ runner.temp }}/llvm-${{ matrix.clang }}/bin/llvm-config" >> $GITHUB_ENV
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: mbstring
+          coverage: none
+        env:
+          debug: true
+      - name: Build PHP extension
+        run: |
+          export PHP_CONFIG=$(which php-config)
+          cargo build --release
+          EXT_DIR=$(php -r "echo ini_get('extension_dir');")
+          if [[ "${{ matrix.os }}" == "macos-15" ]]; then
+            BUILT_LIB=$(find ../../target/release -name "libcss_inline_php.dylib" -o -name "css_inline_php.dylib" | head -1)
+            if [[ -z "$BUILT_LIB" ]]; then
+              BUILT_LIB=$(find ../../target/release -name "*.dylib" | head -1)
+            fi
+            sudo cp "$BUILT_LIB" "$EXT_DIR/css_inline.so"
+          else
+            BUILT_LIB=$(find ../../target/release -maxdepth 1 -name "libcss_inline_php.so")
+            sudo cp "$BUILT_LIB" "$EXT_DIR/css_inline.so"
+          fi
+        working-directory: ./crates/css-inline-php
+        shell: bash
+      - name: Enable and verify extension
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-15" ]]; then
+            PHP_INI_DIR=$(php -i | grep "Scan this dir for additional .ini files" | cut -d' ' -f9 | tr -d ' ')
+            echo "extension=css_inline" | sudo tee "$PHP_INI_DIR/99-css_inline.ini"
+          else
+            echo "extension=css_inline" | sudo tee /etc/php/${{ matrix.php-version }}/cli/conf.d/99-css_inline.ini
+          fi
+        shell: bash
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+        working-directory: ./crates/css-inline-php
+      - name: Lint PHP code
+        run: composer lint
+        working-directory: ./crates/css-inline-php
+      - name: Run tests
+        run: composer test
+        working-directory: ./crates/css-inline-php
+
+  test-ruby:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+        ruby-version: ["3.2", "3.3", "3.4", "4.0"]
+
+    name: Ruby ${{ matrix.ruby-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      BUNDLE_WITHOUT: ${{ matrix.os == 'windows-2022' && 'bench' || '' }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Ruby & Rust
+        uses: oxidize-rb/actions/setup-ruby-and-rust@v1.5.0
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+          cargo-cache: true
+          cache-version: v2-${{ matrix.ruby-version }}
+          working-directory: ./crates/css-inline-ruby
+
+      - name: Setup LLVM & Clang
+        id: clang
+        uses: KyleMayes/install-llvm-action@v2
+        if: matrix.os == 'windows-2022'
+        with:
+          version: 18
+          directory: ${{ runner.temp }}/llvm-18
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.11
+          cache: "pip"
+          cache-dependency-path: "**/requirements-*.txt"
+
+      - name: Start background server
+        run: python ./crates/css-inline/tests/server.py &
+        shell: bash
+
+      - run: bundle exec rake test
+        working-directory: ./crates/css-inline-ruby
+
+  test-ruby-gem-install:
+    name: Ruby Gem Build & Install Test
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15, windows-2022]
+        ruby-version: ["3.2", "3.3", "3.4", "4.0"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Ruby & Rust
+        uses: oxidize-rb/actions/setup-ruby-and-rust@v1.5.0
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: false
+          cargo-cache: true
+          cache-version: v1-${{ matrix.ruby-version }}
+          working-directory: ./crates/css-inline-ruby
+
+      - name: Setup LLVM & Clang
+        id: clang
+        uses: KyleMayes/install-llvm-action@v2
+        if: matrix.os == 'windows-2022'
+        with:
+          version: 18
+          directory: ${{ runner.temp }}/llvm-18
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+
+      - name: Build gem
+        run: |
+          gem build css_inline.gemspec
+        working-directory: ./crates/css-inline-ruby
+
+      - name: Install rb_sys
+        run: gem install rb_sys -v '~> 0.9.116' --no-document
+        working-directory: ./crates/css-inline-ruby
+
+      - name: Install gem from built file
+        run: |
+          GEM_FILE=$(ls css_inline-*.gem | head -1)
+          echo "Installing gem: $GEM_FILE"
+          gem install "./$GEM_FILE" --local --no-document
+        working-directory: ./crates/css-inline-ruby
+        shell: bash
+
+      - name: Test gem installation
+        run: |
+          ruby -e "
+            require 'css_inline'
+
+            html = '<html><head><style>h1 { color: red; }</style></head><body><h1>Test</h1></body></html>'
+            result = CSSInline.inline(html)
+          "
+
+      - name: Test gem in clean environment
+        run: |
+          ruby -e "require 'css_inline'; puts 'SUCCESS: Gem accessible from clean environment'"
+        env:
+          BUNDLE_GEMFILE: ""
+
+  test-ruby-gem-install-musl:
+    name: Ruby Gem Build & Install Test (Alpine/musl)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      # ECR Public rate-limits anonymous pulls per source IP, and shared
+      # GitHub-runner IPs intermittently hit `toomanyrequests`. Retry the pull
+      # with backoff so the run step below works from the local cache.
+      - name: Pull Ruby Alpine image
+        run: |
+          image=public.ecr.aws/docker/library/ruby:3.3-alpine3.19
+          for attempt in 1 2 3 4 5; do
+            if docker pull "$image"; then
+              exit 0
+            fi
+            delay=$((attempt * 15))
+            echo "::warning::docker pull failed (attempt $attempt/5), retrying in ${delay}s"
+            sleep "$delay"
+          done
+          echo "::error::docker pull failed after 5 attempts"
+          exit 1
+
+      - name: Test gem install on Alpine/musl
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            public.ecr.aws/docker/library/ruby:3.3-alpine3.19 \
+            sh -c '
+              set -e
+              apk add --no-cache alpine-sdk curl gcompat clang clang-dev llvm-dev
+              curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.85.0
+              source ~/.cargo/env
+              gem update --system
+              cd crates/css-inline-ruby
+              gem install rb_sys -v "~> 0.9" --no-document
+              gem build css_inline.gemspec
+              gem install css_inline-*.gem --local --no-document
+              ruby -e "require \"css_inline\"; puts CSSInline.inline(\"<style>h1{color:red}</style><h1>test</h1>\")"
+            '
+
+  test-wasm:
+    name: WASM module tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: crates/css-inline-js/yarn.lock
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # From the crate directory, so `cargo metadata` picks up its `.cargo/config.toml`
+          workspaces: crates/css-inline-js -> ../../target
+          cache-all-crates: "true"
+
+      - name: Install wasm-pack
+        run: cargo install --locked wasm-pack
+
+      - name: Install dependencies
+        run: yarn install
+        working-directory: ./crates/css-inline-js
+
+      - name: Build Wasm
+        run: yarn build:wasm
+        working-directory: ./crates/css-inline-js
+
+      - name: Start background server
+        run: python ./crates/css-inline/tests/server.py > /dev/null 2>&1 &
+
+      - name: Test Wasm
+        run: yarn test:wasm
+        working-directory: ./crates/css-inline-js
+
+  test-c:
+    name: C bindings tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: cargo build -p css-inline-c
+
+      - name: Run tests
+        run: |
+          gcc -c -I. tests/main.c
+          gcc main.o ../../target/debug/libcss_inline.so -o out
+          ./out
+        working-directory: ./crates/css-inline-c
+        env:
+          LD_LIBRARY_PATH: ../../target/debug
+
+  features:
+    name: Check features
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+
+      - uses: taiki-e/install-action@cargo-hack
+
+      - run: cargo hack check --feature-powerset --lib -p css-inline
+
+  coverage:
+    name: Code coverage
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-all-crates: "true"
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - uses: taiki-e/install-action@cargo-hack
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.11
+          cache: "pip"
+          cache-dependency-path: "**/requirements-*.txt"
+
+      - name: Start background server
+        run: python ./crates/css-inline/tests/server.py &
+        shell: bash
+
+      - name: Run tests
+        run: cargo hack llvm-cov --no-report --feature-powerset -p css-inline
+
+      - name: Generate coverage reports
+        run: cargo llvm-cov report --lcov --output-path lcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage
+          files: lcov.info
+          fail_ci_if_error: true
+
+  fuzz:
+    name: Fuzz
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+          cache-all-crates: "true"
+
+      - run: cargo install cargo-fuzz
+
+      - run: cargo fuzz run inline -- -max_total_time=60

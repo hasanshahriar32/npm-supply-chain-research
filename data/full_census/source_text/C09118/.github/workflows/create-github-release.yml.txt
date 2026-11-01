@@ -1,0 +1,94 @@
+name: create-github-release
+
+on:
+  pull_request:
+    branches:
+      - main
+      - release-base/**
+    types:
+      - closed
+
+jobs:
+  # This job determines the channel that will be released.
+  validate-channel:
+    # All release PRs must have the 'release' branch prefix
+    # They must start with the string 'Release PR for'.
+    # Must also be merged=true (this ignores PRs that are closed without merging)
+    if: startsWith(github.head_ref, 'release') && startsWith(github.event.pull_request.title, 'Release PR for') && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.found-channel.outputs.channel }}
+    steps:
+      - name: Get release channel from PR title
+        id: release-channel
+        uses: kaisugi/action-regex-match@45cc5bacf016a4c0d2c3c9d0f8b7c2f1b79687b8
+        with:
+          text: ${{ github.event.pull_request.title }}
+          # https://regex101.com/r/66VrAs/1
+          regex: 'as ([a-z-]+)$'
+
+      # Exit the build if no channel is found
+      - name: Confirm regex channel match
+        if: ${{ !steps.release-channel.outputs.group1 }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Release channel was not found in PR title. Exiting')
+
+      - name: Prevent legacy channel
+        if: ${{ steps.release-channel.outputs.group1 == 'legacy' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Do not publish to the "legacy" channel! It is still bundled with "sfdx@v7", which is permanetly archived.')
+
+      # Checkout needed to validate prerelease version in package.json
+      - name: Check out the repo
+        if: ${{ !contains(fromJSON('["latest", "latest-rc", "nightly"]'), steps.release-channel.outputs.group1) }}
+        uses: actions/checkout@v4
+
+      - name: Get prerelease from package.json
+        id: check-prerelease
+        if: ${{ !contains(fromJSON('["latest", "latest-rc", "nightly"]'), steps.release-channel.outputs.group1) }}
+        uses: salesforcecli/github-workflows/.github/actions/getPreReleaseTag@main
+
+      # Package.json version must contain "alpha" tag: example 1.2.3-beta.0 (beta)
+      # Package.json "alpha" tag must match PR title channel
+      - name: Validate prerelease tag
+        if: ${{ !contains(fromJSON('["latest", "latest-rc", "nightly"]'), steps.release-channel.outputs.group1) && (!steps.check-prerelease.outputs.tag || steps.check-prerelease.outputs.tag != steps.release-channel.outputs.group1) }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('Prerelease requires a dist tag name in your package.json like beta in 1.1.1-beta.0')
+
+      # Echo and set the matched channel
+      - name: Set channel output
+        id: found-channel
+        run: |
+          echo "Found channel: ${{ steps.release-channel.outputs.group1 }}"
+          echo "::notice title=Channel::Channel found in PR title: ${{ steps.release-channel.outputs.group1 }}"
+          echo "channel=${{ steps.release-channel.outputs.group1 }}" >> "$GITHUB_OUTPUT"
+
+  create-tag-and-release-in-github:
+    needs: [validate-channel]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: salesforcecli/github-workflows/.github/actions/get-json-property@main
+        id: packageVersion
+        with:
+          path: 'package.json'
+          prop_path: 'version'
+      - name: Create Github Release
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
+        with:
+          name: ${{ steps.packageVersion.outputs.prop }}
+          tag: ${{ steps.packageVersion.outputs.prop }}
+          commit: ${{ github.ref_name }}
+          # This channel value is read from the Github Release body to determine the channel. Be cautious editing
+          body: |
+            !! Release as ${{ needs.validate-channel.outputs.channel }} !!
+          prerelease: ${{ !contains(fromJSON('["latest", "latest-rc", "nightly"]'), needs.validate-channel.outputs.channel) }}
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+          skipIfReleaseExists: true

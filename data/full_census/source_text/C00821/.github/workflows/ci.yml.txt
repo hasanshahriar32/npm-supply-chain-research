@@ -1,0 +1,279 @@
+name: CI
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'docs'
+
+env:
+  BUILDER_VERSION: latest
+  BUILDER_SOURCE: releases
+  BUILDER_HOST: https://d19elf31gohf1l.cloudfront.net
+  PACKAGE_NAME: aws-crt-nodejs
+  LINUX_BASE_IMAGE: ubuntu-18-x64
+  RUN: ${{ github.run_id }}-${{ github.run_number }}
+  CRT_CI_ROLE: ${{ secrets.CRT_CI_ROLE_ARN }}
+  AWS_DEFAULT_REGION: us-east-1
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+
+jobs:
+  linux-compat:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - al2012-x64
+          - al2-x64
+          - manylinux2014-aarch64
+          - manylinux2014-x64
+          - fedora-latest-x64
+          - opensuse-latest-x64
+          - rhel-latest-x64
+          - raspbian-latest-armv7
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        docker run --privileged --rm tonistiigi/binfmt --install all
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+
+  musl-linux:
+    runs-on: ubuntu-24.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - alpine-latest-x64
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${{ matrix.image }} build -p ${{ env.PACKAGE_NAME }}
+
+  linux-musl-armv8:
+    runs-on: codebuild-aws-crt-nodejs-arm64-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Checkout Sources
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+    # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-alpine-3.16-arm64 build -p ${{ env.PACKAGE_NAME }}
+
+  linux-compiler-compat:
+    runs-on: ubuntu-24.04 # latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [
+          clang-6,
+          clang-8,
+          clang-9,
+          clang-10,
+          clang-11,
+          clang-15,
+          clang-latest,
+          gcc-4.8,
+          gcc-5,
+          gcc-6,
+          gcc-7,
+          gcc-8,
+          gcc-11
+        ]
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    # We can't use the `uses: docker://image` version yet, GitHub lacks authentication for actions -> packages
+    - name: Build ${{ env.PACKAGE_NAME }}
+      run: |
+        aws s3 cp s3://aws-crt-test-stuff/ci/${{ env.BUILDER_VERSION }}/linux-container-ci.sh ./linux-container-ci.sh && chmod a+x ./linux-container-ci.sh
+        ./linux-container-ci.sh ${{ env.BUILDER_VERSION }} aws-crt-${LINUX_BASE_IMAGE} build -p ${{ env.PACKAGE_NAME }} --compiler=${{ matrix.compiler }}
+
+  windows:
+    runs-on: windows-2025 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }} --spec=downstream
+
+  windows-vc17-x86:
+    runs-on: windows-2025 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder.pyz')"
+        python builder.pyz build -p ${{ env.PACKAGE_NAME }} --target=windows-x86 --spec=downstream --cmake-extra=-Tv143 --cmake-extra=-Ax86
+    # cross-compile win32 for x86
+    - name: Cross-compile win32
+      run: |
+        cd aws-crt-nodejs
+        node ./scripts/build --target-arch ia32 -DAWS_WARNINGS_ARE_ERRORS=ON
+
+  macos:
+    runs-on: macos-14 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }} --spec=downstream
+    - name: Check backward compatibility for Macos
+      run: |
+        cd aws-crt-nodejs
+        python3 codebuild/macos_compatibility_check.py arm64
+
+  macos-x64:
+    runs-on: macos-14-large # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }} --spec=downstream
+    # check that OSX can build arm64 binaries from an x64 machine (which happens during release)
+    - name: Cross-compile arm64
+      run: |
+        cd aws-crt-nodejs
+        node ./scripts/build --target-arch arm64 -DAWS_WARNINGS_ARE_ERRORS=ON
+        test `lipo dist/bin/darwin-arm64-cruntime/aws-crt-nodejs.node -archs` = "arm64"
+        test `lipo dist/bin/darwin-x64-cruntime/aws-crt-nodejs.node -archs` = "x86_64"
+    - name: Check backward compatibility for Macos
+      run: |
+        cd aws-crt-nodejs
+        python3 codebuild/macos_compatibility_check.py arm64
+        python3 codebuild/macos_compatibility_check.py x64
+
+  macos-s2n:
+    runs-on: macos-14 # latest
+    env:
+      AWS_CRT_USE_NON_FIPS_TLS_13: 1
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }} --spec=downstream
+    - name: Check backward compatibility for Macos
+      run: |
+        cd aws-crt-nodejs
+        python3 codebuild/macos_compatibility_check.py arm64
+
+  macos-x64-s2n:
+    runs-on: macos-14-large # latest
+    env:
+      AWS_CRT_USE_NON_FIPS_TLS_13: 1
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Build ${{ env.PACKAGE_NAME }} + consumers
+      run: |
+        python3 -c "from urllib.request import urlretrieve; urlretrieve('${{ env.BUILDER_HOST }}/${{ env.BUILDER_SOURCE }}/${{ env.BUILDER_VERSION }}/builder.pyz?run=${{ env.RUN }}', 'builder')"
+        chmod a+x builder
+        ./builder build -p ${{ env.PACKAGE_NAME }} --spec=downstream
+    # check that OSX can build arm64 binaries from an x64 machine (which happens during release)
+    - name: Cross-compile arm64
+      run: |
+        cd aws-crt-nodejs
+        node ./scripts/build --target-arch arm64 -DAWS_WARNINGS_ARE_ERRORS=ON
+        test `lipo dist/bin/darwin-arm64-cruntime/aws-crt-nodejs.node -archs` = "arm64"
+        test `lipo dist/bin/darwin-x64-cruntime/aws-crt-nodejs.node -archs` = "x86_64"
+    - name: Check backward compatibility for Macos
+      run: |
+        cd aws-crt-nodejs
+        python3 codebuild/macos_compatibility_check.py arm64
+        python3 codebuild/macos_compatibility_check.py x64
+
+  # check that docs can still build
+  check-docs:
+    runs-on: ubuntu-24.04 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: Check docs
+      run: |
+        npm ci
+        ./make-docs.sh
+
+  check-submodules:
+    runs-on: ubuntu-24.04 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - name: Checkout Source
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Check Submodules
+      # note: using "@main" because "@${{env.BUILDER_VERSION}}" doesn't work
+      # https://github.com/actions/runner/issues/480
+      uses: awslabs/aws-crt-builder/.github/actions/check-submodules@main
+
+  check-lockfile-version:
+    runs-on: ubuntu-24.04 # latest
+    steps:
+    - uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.CRT_CI_ROLE }}
+        aws-region: ${{ env.AWS_DEFAULT_REGION }}
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check for edits to package-lock.json
+      run: |
+        test `jq -r '.lockfileVersion' package-lock.json` = 1

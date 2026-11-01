@@ -1,0 +1,82 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  Linting:
+    name: Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v6
+      - name: Add problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/eslint.json"
+      - name: Use Node.js v24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+      - name: Install Dependencies
+        run: yarn --immutable
+      - name: Run ESLint
+        run: yarn lint --fix=false
+
+  Building:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v6
+      - name: Add problem matcher
+        run: echo "::add-matcher::.github/problemMatchers/tsc.json"
+      - name: Use Node.js v24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+      - name: Install Dependencies
+        run: yarn --immutable
+      - name: Build Code
+        run: yarn build
+      - name: Run TypeCheck
+        run: yarn typecheck
+      - name: Upload Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  Testing:
+    name: Test
+    needs: Building
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22, 24, 26]
+      fail-fast: false
+    env:
+      YARN_IGNORE_NODE: 1
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v6
+      - name: Use Node.js v{{ matrix.node }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+          registry-url: https://registry.npmjs.org/
+      - name: Install Dependencies
+        run: yarn --immutable
+      - name: Download Build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Test Code
+        run: yarn vitest run

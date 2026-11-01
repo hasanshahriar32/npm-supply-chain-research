@@ -1,0 +1,24 @@
+on:
+  pull_request:
+name: presubmit
+jobs:
+  units:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ^6.24.1
+      - run: node --version
+      - run: npm install
+      - run: npm run test
+        name: Run unit tests
+        env:
+          BUILD_TYPE: presubmit
+          TEST_TYPE: units

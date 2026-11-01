@@ -1,0 +1,198 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  NODE_VERSION: 18.16.1
+
+jobs:
+  lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fetch code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Install Rust toolchain with wasm32-unknown-unknown, clippy and rustfmt
+      run: |
+        rustup toolchain install $(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml) \
+          --target wasm32-unknown-unknown \
+          --component clippy \
+          --component rustfmt
+
+    - name: Install Node.js@${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - name: Run lint
+      run: |
+        make lint
+
+  test:
+    name: Test in Node.js / browser (electron)
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fetch code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Install Rust toolchain with wasm32-unknown-unknown
+      run: rustup toolchain install $(sed -n 's/^channel = "\(.*\)"/\1/p' rust-toolchain.toml) --target wasm32-unknown-unknown
+
+    - name: Install Node.js@${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - uses: actions/cache@v4
+      id: binaryen-cache
+      with:
+        path: binaryen-version_114
+        key: binaryen-version_114
+
+    - name: Install wasm-opt (binaryen)
+      if: steps.binaryen-cache.outputs.cache-hit != 'true'
+      run: |
+        wget https://github.com/WebAssembly/binaryen/releases/download/version_114/binaryen-version_114-x86_64-linux.tar.gz
+        tar zxvf binaryen-version_114-x86_64-linux.tar.gz binaryen-version_114/bin/wasm-opt binaryen-version_114/bin/wasm2js
+
+    - name: Build wasm
+      run: export PATH=$PATH:./binaryen-version_114/bin/ && make build-wasm
+
+    - name: Build JS
+      run: make build-js
+
+    - name: Build ASM.JS
+      run: |
+        export PATH=$PATH:./binaryen-version_114/bin/ && make build-asmjs
+        sed -i 's/DELETE ME TO RUN//g' tests/index.js
+
+    - name: Run Node.js tests and coverage
+      run: |
+        make test-node-raw-ci
+        make test-node-coverage-raw
+
+    - name: Run browser (electron) tests
+      env:
+        DISPLAY: :99.0
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        make test-browser-build-raw
+        make test-browser-raw-ci
+
+    - name: Upload wasm
+      uses: actions/upload-artifact@v4
+      with:
+        name: wasm
+        path: lib/secp256k1.wasm
+
+  package:
+    name: Create package
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fetch code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Install Node.js@${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - name: Build JS
+      run: make build-js
+
+    - name: Download compiled wasm
+      uses: actions/download-artifact@v4
+      with:
+        name: wasm
+        path: lib
+
+    - name: Create package
+      run: npm pack
+
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: package
+        path: tiny-secp256k1-*
+
+    - uses: actions/cache@v4
+      id: binaryen-cache
+      with:
+        path: binaryen-version_114
+        key: binaryen-version_114
+
+    - name: Create ASM.js package
+      run: |
+        export PATH=$PATH:./binaryen-version_114/bin/ && make build-asmjs
+        cd tiny-secp256k1-asmjs
+        npm pack
+
+    - name: Upload ASM.js package
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-asmjs
+        path: tiny-secp256k1-asmjs/bitcoin-js-tiny-secp256k1-asmjs-*
+
+  benchmark:
+    name: Benchmark
+    needs: [test]
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+    - name: Fetch code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Install Node.js@${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install Node.js dependencies
+      run: npm ci
+
+    - name: Build JS
+      run: make build-js
+
+    - name: Download compiled wasm
+      uses: actions/download-artifact@v4
+      with:
+        name: wasm
+        path: lib
+
+    - uses: actions/cache@v4
+      id: binaryen-cache
+      with:
+        path: binaryen-version_114
+        key: binaryen-version_114
+
+    - name: Build ASM.JS
+      run: export PATH=$PATH:./binaryen-version_114/bin/ && make build-asmjs
+
+    - name: Install benchmark dependencies
+      run: cd benches && npm ci
+
+    - name: Run benchmark
+      run: cd benches && npm start

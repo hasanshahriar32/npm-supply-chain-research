@@ -1,0 +1,44 @@
+{
+  "name": "vercel-storage",
+  "version": "0.0.1",
+  "description": "The monorepo for everything Storage at Vercel",
+  "homepage": "https://vercel.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vercel/storage.git"
+  },
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "turbo build",
+    "integration-test": "turbo integration-test --output-logs=new-only",
+    "check": "turbo check",
+    "prepare": "husky",
+    "check:fix": "biome check --write .",
+    "publint": "turbo publint",
+    "release": "pnpm build && changeset publish",
+    "run-integration": "pnpm -F vercel-storage-integration-test-suite dev",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "version-packages": "changeset version && pnpm i --no-frozen-lockfile && git add ."
+  },
+  "lint-staged": {
+    "*.{js,ts,cjs,mjs,d.cts,d.mts,jsx,tsx,json,jsonc}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.6",
+    "@changesets/cli": "3.0.0",
+    "husky": "9.1.7",
+    "jest": "30.3.0",
+    "lint-staged": "16.4.0",
+    "publint": "0.3.18",
+    "ts-jest": "29.4.9",
+    "turbo": "2.9.6",
+    "typescript": "5.9.3"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22.11"
+  }
+}

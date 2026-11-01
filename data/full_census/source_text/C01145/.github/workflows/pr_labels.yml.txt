@@ -1,0 +1,29 @@
+name: Add labels to PR
+
+# Declare default permissions as read-only
+permissions: read-all
+
+on:
+    pull_request:
+        types:
+            - opened
+            - reopened
+            - synchronize
+
+jobs:
+    pr-labels:
+        # Only run on local PRs, not forks
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write # needed to add labels to PRs
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
+
+            - run: ./scripts/add_labels_to_pr.sh
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                GH_REPO: ${{ github.repository }}
+                PR_NUMBER: ${{ github.event.pull_request.number }}

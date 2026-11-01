@@ -1,0 +1,39 @@
+name: Update data
+
+on:
+  workflow_dispatch:
+  schedule:
+    # “At 00:00 on Sunday.” https://crontab.guru/#0_0_*_*_0
+    - cron: '0 0 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    if: github.event_name != 'schedule' || github.repository == 'ikatyang-collab/linguist-languages'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: |
+          yarn update-data --save-version-file
+          cat LINGUIST_VERSION
+      - run: |
+          echo "CURRENT_DATE=$(date +'%Y-%m-%d')" >> "$GITHUB_ENV"
+          echo "LINGUIST_VERSION=$(cat LINGUIST_VERSION)" >> "$GITHUB_ENV"
+      - uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: |
+            Update Linguist to v${{env.LINGUIST_VERSION }}
+
+            https://github.com/github-linguist/linguist/releases/tag/v${{env.LINGUIST_VERSION }}
+          title: Update Linguist to v${{env.LINGUIST_VERSION }}
+          body: |
+            Update Linguist to [v${{env.LINGUIST_VERSION }}](https://github.com/github-linguist/linguist/releases/tag/v${{env.LINGUIST_VERSION }})
+          branch: automated-update-${{ env.CURRENT_DATE }}
+          branch-suffix: timestamp

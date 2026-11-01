@@ -1,0 +1,45 @@
+name: Continuous monitoring of distribution channels
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0/10 * * * *'
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  smoke-tests:
+    name: Run smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AWS XRay SDK Node Repository @ default branch latest
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 #v2.7.0
+        
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a #v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_INTEG_TEST_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Setup Node
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e #v1.4.6
+        with:
+          node-version: '16.x'
+
+      - name: Run smoke test
+        id: distribution-availability
+        run: |
+          cd smoke_test
+          npm install
+          npm run test-smoke
+      
+      - name: Publish metric on X-Ray Node SDK distribution availability
+        if: ${{ always() }}
+        run: |
+          if [[ "${{ steps.distribution-availability.outcome }}" == "failure" ]]; then
+            aws cloudwatch put-metric-data --metric-name XRayNodeSDKDistributionUnavailability --dimensions failure=rate --namespace MonitorSDK --value 1 --timestamp $(date +%s)
+          else
+            aws cloudwatch put-metric-data --metric-name XRayNodeSDKDistributionUnavailability --dimensions failure=rate --namespace MonitorSDK --value 0 --timestamp $(date +%s)
+          fi

@@ -1,0 +1,67 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+
+name: Node.js Package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build the application
+        run: npm run build
+
+      - name: Test the application
+        run: npm test
+
+      - name: Build the package
+        run: |
+          npm pack dist/
+          mv zxing-library-*.tgz package.tgz
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pack-artifact
+          path: ./package.tgz
+          overwrite: true
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pack-artifact
+          path: ./pack-artifact
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      - run: npm publish ./pack-artifact/package.tgz

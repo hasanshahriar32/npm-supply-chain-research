@@ -1,0 +1,80 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x, 26.x]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: install dependencies
+        run: yarn install
+      - name: Prepare Integration
+        run: ./integration/pbjs.sh
+      - name: Codegen
+        run: yarn proto2ts
+      # This will fail if any git-tracked file have changed
+      - name: Diff Output
+        run: |
+          git add .
+          git status && git diff --cached --exit-code
+      - name: test
+        run: yarn test
+        env:
+          CI: true
+      - name: test esmodule interop
+        working-directory: ./integration/simple-esmodule-interop
+        run: |
+          yarn install
+          yarn tsc
+          yarn jest
+        env:
+          CI: true
+
+  release:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      id-token: write # Required for OIDC
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # Keep this persist-credentials so that ADMIN_TOKEN below works & we can git push
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Install
+        run: yarn install
+      - name: Build
+        run: yarn build
+      - name: Release
+        id: release
+        run: yarn semantic-release
+        # Use ADMIN_TOKEN so we're allowed to git push the changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    outputs:
+      release_version: ${{ steps.release.outputs.release_version }}

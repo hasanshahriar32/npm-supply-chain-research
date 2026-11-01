@@ -1,0 +1,18 @@
+name: downloads
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1'
+
+permissions: {}
+
+jobs:
+  downloads:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: $/.github/actions/setup
+      - name: Download Stats
+        run: node scripts/npm-stats.ts

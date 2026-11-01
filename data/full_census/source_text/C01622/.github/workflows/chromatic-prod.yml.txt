@@ -1,0 +1,35 @@
+name: Chromatic
+
+on:
+  workflow_call:
+    secrets:
+      CHROMATIC_PROJECT_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - uses: chromaui/action@latest
+        with:
+          exitOnceUploaded: true
+          onlyChanged: true
+          traceChanged: true
+          diagnostics: true
+          debug: true
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chromatic-build-artifacts-${{ github.run_id }}
+          path: |
+            chromatic-diagnostics.json
+            **/build-storybook.log

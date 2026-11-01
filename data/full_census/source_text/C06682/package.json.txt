@@ -1,0 +1,102 @@
+{
+  "name": "@microsoft/dynamicproto-js",
+  "description": "Microsoft Dynamic Proto Utility",
+  "version": "2.0.5",
+  "keywords": [
+    "javascript",
+    "dynamic prototype",
+    "microsoft",
+    "typescript",
+    "inheritence",
+    "minification",
+    "application insights"
+  ],
+  "main": "./lib/dist/es5/node/dynamicproto-js.js",
+  "module": "./lib/dist-es5/DynamicProto.js",
+  "types": "./lib/types/DynamicProto.d.ts",
+  "directories": {
+    "doc": "lib/docs"
+  },
+  "scripts": {
+    "build": "npm run build:rollup-plugin && grunt dynamicproto && npm run build:bundle && npm run build:rollup-bundle && npm run docs",
+    "build:rollup-plugin": "cd rollup && npx tsc -p tsconfig.json",
+    "build:bundle": "cd lib && rollup -c rollup.config.js --bundleConfigAsCjs",
+    "build:rollup-bundle": "cd rollup && rollup -c rollup.config.js --bundleConfigAsCjs && cd .. && node -e \"require('fs').cpSync('rollup/package.json','lib/tools/rollup/package.json')\"",
+    "test": "grunt dynamicprototest",
+    "rollup": "grunt rollup",
+    "lint": "grunt lint",
+    "docs": "typedoc",
+    "fullClean": "git clean -xdf && npm install",
+    "fullCleanBuild": "npm run fullClean && npm run build",
+    "npm_pack": "copyfiles README.md LICENSE lib && cd lib && npm pack",
+    "npm_publish": "cd lib && node ../tools/release-tools/npm_publish.js .",
+    "npm-package": "node ./tools/release-tools/npm_package.js",
+    "serve": "grunt serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/microsoft/DynamicProto-JS.git"
+  },
+  "author": "Microsoft Application Insights Team",
+  "sideEffects": false,
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/microsoft/DynamicProto-JS/issues"
+  },
+  "homepage": "https://github.com/microsoft/DynamicProto-JS#readme",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^22.23.4 || ^24.22.1 || ^26.12.1",
+      "onFail": "error"
+    }
+  },
+  "overrides": {
+    "minimatch": "~3.1.2",
+    "brace-expansion": "^1.1.18",
+    "js-yaml": "^4.3.1",
+    "grunt": {
+      "js-yaml": "^3.15.1"
+    },
+    "linkify-it": "^5.0.2",
+    "markdown-it": "^14.3.0",
+    "morgan": "^1.11.0",
+    "ws": "^7.5.13",
+    "@types/node": "20.14.2"
+  },
+  "dependencies": {
+    "@nevware21/ts-utils": ">= 0.14.0 < 2.x"
+  },
+  "devDependencies": {
+    "@nevware21/grunt-eslint-ts": "^0.5.2",
+    "@nevware21/grunt-ts-plugin": "^0.5.2",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-replace": "^5.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.14.1",
+    "archiver": "^5.3.0",
+    "connect": "^3.7.0",
+    "copyfiles": "^2.4.1",
+    "eslint": "^8.56.0",
+    "eslint-formatter-codeframe": "^7.32.1",
+    "eslint-plugin-security": "^1.7.1",
+    "grunt": "^1.6.1",
+    "grunt-cli": "^1.5.0",
+    "grunt-contrib-connect": "^5.0.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-qunit": "^4.0.0",
+    "grunt-contrib-uglify": "^5.2.1",
+    "grunt-run": "^0.8.1",
+    "rollup": "^3.20.0",
+    "rollup-plugin-cleanup": "^3.2.1",
+    "typedoc": "^0.26.6",
+    "typescript": "^4.9.5",
+    "@microsoft/applicationinsights-rollup-es3": "^1.0.1",
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "rollup-plugin-copy": "^3.4.0",
+    "rollup-plugin-minify-es": "^1.1.1",
+    "uglify-js": "^3.13.7",
+    "magic-string": "^0.25.5",
+    "@types/glob": "^7.1.3"
+  }
+}

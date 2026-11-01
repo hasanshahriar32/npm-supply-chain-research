@@ -1,0 +1,30 @@
+name: Renovate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'renovate.json'
+      - '.github/workflows/renovate.yml'
+
+  pull_request:
+    paths:
+      - 'renovate.json'
+      - '.github/workflows/renovate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ${{ github.repository_owner == 'grafana' && 'ubuntu-x64-small' || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Validate Renovate Config
+        uses: grafana/shared-workflows/actions/validate-renovate-config@5bbb526b1728ca57fbe1750c4c27ab6ab06171c2 # validate-renovate-config/v1.0.0

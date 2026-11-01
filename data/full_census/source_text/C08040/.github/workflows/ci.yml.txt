@@ -1,0 +1,196 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - v1
+      - master
+  pull_request:
+    branches:
+      - v1
+      - master
+
+permissions:
+  contents: read
+
+# Cancel in progress workflows
+# in the scenario where we already had a run going for that PR/branch/tag but then triggered a new run
+concurrency:
+  group: "${{ github.workflow }} ✨ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --include=dev
+
+      - name: Run lint
+        run: npm run lint
+
+  performance:
+    name: Run performance test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run performance test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:performance 2>&1 | tee perf.txt
+
+      - name: Performance summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Performance (${{ matrix.os }} · $(node -v))"
+            echo ''
+            echo '```'
+            node -e "process.stdout.write(require('fs').readFileSync('perf.txt','utf8').replace(/\x1b\[[0-9;]*[A-Za-z]/g,''))"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Run tests
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        node-version: ["22.0.0", 22, 23, 24, 25, 26]
+        exclude:
+          # Skip: setup-node ships a broken bundled npm for the exact 22.0.0 build on Windows
+          # ("Cannot find module 'C:\npm\prefix\node_modules\npm\bin\npm-cli.js'")
+          - os: windows-2022
+            node-version: "22.0.0"
+          # Skip: node-gyp build of the "iconv" devDependency fails on Windows with Node 26,
+          # which is built with thin-LTO and leaks clang/lld flags (-flto=thin, opt:lldltojobs)
+          # into the MSVC link step (LNK1117). Upstream node-gyp/Node toolchain issue.
+          - os: windows-2022
+            node-version: 26
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Npm version fixes
+        if: ${{matrix.npm-version != ''}}
+        run: npm install -g ${{ matrix.npm-version }}
+
+      - name: Configure npm loglevel
+        run: |
+          npm config set loglevel error
+        shell: bash
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Output Node and NPM versions
+        run: |
+          echo "Node.js version: $(node -v)"
+          echo "NPM version: $(npm -v)"
+
+      - name: Run tests
+        shell: bash
+        run: npm run test:ci
+
+      - name: Run typescript tests
+        run: npm run test:typescript
+
+      - name: WPT encoding conformance report
+        shell: bash
+        continue-on-error: true
+        run: node test/wpt/report.js >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload code coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-node-${{ matrix.node-version }}-${{ matrix.os }}
+          path: ./coverage/lcov.info
+          retention-days: 1
+                
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install lcov
+        shell: bash
+        run: sudo apt-get -y install lcov
+
+      - name: Collect coverage reports
+        uses: actions/download-artifact@v8
+        with:
+          path: ./coverage
+          pattern: coverage-node-*
+
+      - name: Merge coverage reports
+        shell: bash
+        run: find ./coverage -name lcov.info -exec printf '-a %q\n' {} \; | xargs lcov -o ./lcov.info
+
+      - name: Upload coverage report
+        uses: coverallsapp/github-action@v2
+        with:
+          file: ./lcov.info
+
+  test_webpack:
+    name: Run tests webpack
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["22", "*"]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Webpack test
+        shell: bash
+        run: |
+          npm run test:webpack

@@ -1,0 +1,113 @@
+{
+  "name": "@vvo/tzdb",
+  "version": "0.0.0-development",
+  "description": "Always up to date list of IANA time zones for time zone pickers, with major cities, current offsets, DST abbreviations and the country of any time zone",
+  "keywords": [
+    "abbreviations",
+    "countries",
+    "country",
+    "country from timezone",
+    "dst",
+    "geonames",
+    "iana",
+    "time zone",
+    "time zone list",
+    "time zones",
+    "timezone",
+    "timezone dropdown",
+    "timezone list",
+    "timezone picker",
+    "timezone select",
+    "timezones",
+    "tz database",
+    "tzdb",
+    "utc offset"
+  ],
+  "license": "MIT",
+  "author": "Vincent Voyer <vincent@codeagain.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vvo/tzdb.git"
+  },
+  "files": [
+    "dist/",
+    "abbreviations.json",
+    "raw-time-zones.json",
+    "time-zones-names.json"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./abbreviations.json": "./abbreviations.json",
+    "./raw-time-zones.json": "./raw-time-zones.json",
+    "./time-zones-names.json": "./time-zones-names.json",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "format": "oxfmt",
+    "generate": "node scripts/generate.ts",
+    "lint": "oxfmt --check && oxlint --type-aware && tsc",
+    "prepublishOnly": "npm run build",
+    "test": "tsdown && node --test \"test/**/*.test.ts\" && publint && attw --pack . && size-limit"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@size-limit/preset-small-lib": "14.2.0",
+    "@types/node": "26.6.5",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
+    "oxlint-tsgolint": "7.0.2004",
+    "publint": "0.3.25",
+    "semantic-release": "25.0.9",
+    "size-limit": "14.2.0",
+    "tsdown": "0.23.1",
+    "typescript": "7.0.2"
+  },
+  "release": {
+    "branches": [
+      "main",
+      "next"
+    ]
+  },
+  "size-limit": [
+    {
+      "name": "getTimeZones",
+      "path": "dist/index.js",
+      "import": "{ getTimeZones }",
+      "limit": "17 kB",
+      "gzip": true
+    },
+    {
+      "name": "getCountryCode",
+      "path": "dist/index.js",
+      "import": "{ getCountryCode }",
+      "limit": "4.5 kB",
+      "gzip": true
+    },
+    {
+      "name": "timeZonesNames",
+      "path": "dist/index.js",
+      "import": "{ timeZonesNames }",
+      "limit": "3 kB",
+      "gzip": true
+    }
+  ],
+  "packageManager": "pnpm@12.11.2"
+}

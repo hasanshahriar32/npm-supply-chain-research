@@ -1,0 +1,110 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+      # Install only pnpm, not the repo's full toolchain — Node comes from
+      # actions/setup-node. See mise.toml [tools] comment for why.
+      - name: Setup mise
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          install: false
+          add_shims_to_path: false
+          # zizmor's cache-poisoning audit flags a restorable cache in a job
+          # that publishes artifacts built at runtime, which is also why the
+          # setup-node steps here set package-manager-cache: false.
+          cache: false
+      - name: Install pnpm
+        env:
+          MISE_AUTO_INSTALL: 'false'
+        run: |
+          mise install --locked github:pnpm/pnpm
+          pnpm_bin=$(mise which pnpm)
+          [ -x "$pnpm_bin" ] || { echo "mise which pnpm produced no usable path" >&2; exit 1; }
+          dirname "$pnpm_bin" >> "$GITHUB_PATH"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm run lint
+      - run: pnpm run build
+      - run: pnpm run build:docs
+
+  publish:
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # npm Trusted Publishing needs npm >= 11.5.1 and Node >= 22.14.0.
+          # Node 24 bundles a new enough npm; Node 22 does not, which is why
+          # `npm install -g npm@latest` is gone (zizmor adhoc-packages). The
+          # bundled version moves each 24.x, so it is asserted before publish.
+          node-version: 24
+          package-manager-cache: false
+          # Writes the .npmrc that OIDC publishing needs.
+          registry-url: 'https://registry.npmjs.org'
+      # Install only pnpm, not the repo's full toolchain — Node comes from
+      # actions/setup-node. See mise.toml [tools] comment for why.
+      - name: Setup mise
+        uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          install: false
+          add_shims_to_path: false
+          # Same reason as the build job above.
+          cache: false
+      - name: Install pnpm
+        env:
+          MISE_AUTO_INSTALL: 'false'
+        run: |
+          mise install --locked github:pnpm/pnpm
+          pnpm_bin=$(mise which pnpm)
+          [ -x "$pnpm_bin" ] || { echo "mise which pnpm produced no usable path" >&2; exit 1; }
+          dirname "$pnpm_bin" >> "$GITHUB_PATH"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      # Assert rather than trust the npm that setup-node's `node-version` pin
+      # bundled: a Node downgrade would otherwise only surface during a real
+      # release. Sits immediately before the publish so nothing can change PATH.
+      - name: Verify npm supports trusted publishing
+        run: |
+          npm_version=$(npm --version)
+          echo "npm $npm_version (need >= 11.5.1 for OIDC trusted publishing)"
+          printf '11.5.1\n%s\n' "$npm_version" | sort -V -C
+      # Publishing deliberately stays on the npm CLI; adopting pnpm's own OIDC
+      # support is a separate follow-up issue. npm publish is safe in a
+      # pnpm-installed tree: it packs only `files: ["dist"]`, reads no lockfile.
+      - run: npm publish --provenance
+      - run: pnpm run build:docs
+      - name: Deploy docs to gh-pages
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs

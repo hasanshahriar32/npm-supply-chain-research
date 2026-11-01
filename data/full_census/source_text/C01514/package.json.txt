@@ -1,0 +1,61 @@
+{
+  "name": "get-func-name",
+  "description": "Utility for getting a function's name for node and the browser",
+  "keywords": [
+    "get-func-name",
+    "chai util"
+  ],
+  "license": "MIT",
+  "author": "Jake Luer <jake@alogicalparadox.com> (http://alogicalparadox.com)",
+  "contributors": [
+    "Keith Cirkel (https://github.com/keithamus)",
+    "Lucas Fernandes da Costa (https://github.com/lucasfcosta)",
+    "Grant Snodgrass (https://github.com/meeber)",
+    "Lucas Vieira (https://github.com/vieiralucas)",
+    "Aleksey Shvayka (https://github.com/shvaikalesh)"
+  ],
+  "files": [
+    "index.js"
+  ],
+  "type": "module",
+  "main": "./index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/chaijs/get-func-name.git"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
+    "pretest": "npm run lint",
+    "test": "npm run test:node && npm run test:browser",
+    "test:browser": "karma start karma.conf.cjs --singleRun=true",
+    "test:node": "c8 mocha"
+  },
+  "config": {
+    "ghooks": {
+      "commit-msg": "validate-commit-msg"
+    }
+  },
+  "overrides": {
+    "c8": {
+      "yargs": "^18.0.0"
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "c8": "^11.0.0",
+    "eslint": "^10.1.0",
+    "ghooks": "^2.0.4",
+    "globals": "^17.4.0",
+    "karma": "^6.4.4",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-mocha": "^2.0.1",
+    "mocha": "^12.0.0",
+    "semantic-release": "^25.0.3",
+    "validate-commit-msg": "^2.3.1"
+  },
+  "engines": {
+    "node": ">= 12"
+  },
+  "version": "3.0.0"
+}

@@ -1,0 +1,37 @@
+{
+  "name": "regjsgen",
+  "version": "0.8.0",
+  "description": "Generate regular expressions from regjsparser’s AST.",
+  "homepage": "https://github.com/bnjmnt4n/regjsgen",
+  "main": "regjsgen.js",
+  "keywords": [
+    "ast",
+    "generate",
+    "regex",
+    "regexp",
+    "regular expressions"
+  ],
+  "license": "MIT",
+  "author": {
+    "name": "Benjamin Tan",
+    "url": "https://ofcr.se/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bnjmnt4n/regjsgen.git"
+  },
+  "bugs": "https://github.com/bnjmnt4n/regjsgen/issues",
+  "files": [
+    "LICENSE-MIT.txt",
+    "regjsgen.js"
+  ],
+  "scripts": {
+    "test": "node tests/tests.js && node tests/error-tests.js && node tests/export-tests.js",
+    "coverage": "nyc --reporter=lcov --reporter=text-summary npm run test",
+    "update-fixtures": "node tests/update-fixtures.js"
+  },
+  "devDependencies": {
+    "nyc": "^18.0.0",
+    "regjsparser": "^0.12.0"
+  }
+}

@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - '0.6'
+      - '0.8.x'
+      - v*
+  pull_request:
+  schedule:
+    - cron: '23 8 * * 4' # Thursdays 08:23 UTC
+  workflow_dispatch:
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: package.json
+      - run: npm i
+      - run: npm run lint
+
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node: [22, 24, 26]
+        include:
+          - os: macos-latest
+            node: 22
+          - os: windows-latest
+            node: 22
+      fail-fast: true
+
+    runs-on: ${{ matrix.os }}
+    env:
+      # Four Ubuntu Node versions would otherwise download the same zip at once
+      # and 504. Electron is a native binary, so once per OS is enough.
+      INTEGRATION_SKIP: ${{ matrix.node != 22 && 'electron' || '' }}
+
+    steps:
+      - uses: browser-actions/setup-firefox@v1.7.2
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: package.json
+      - uses: actions/cache@v6
+        if: matrix.node == 22
+        with:
+          path: |
+            ~/.cache/electron
+            ~/Library/Caches/electron
+            ~/AppData/Local/electron/Cache
+          key: electron-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('examples/electron/package.json') }}
+          restore-keys: |
+            electron-${{ runner.os }}-${{ runner.arch }}-
+      - run: firefox --version
+      - run: npm i
+      - uses: nick-invision/retry@v4.0.0
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_on: error
+          command: npm test
+      - run: sudo apt-get install -y libgtk2.0-0
+        if: runner.os == 'Linux'
+      - name: npm run integration
+        uses: GabrielBB/xvfb-action@v1.7
+        env:
+          ELECTRON_LOG_DIR: ${{ runner.os == 'macOS' && format('{0}/electron-logs', runner.temp) || '' }}
+        with:
+          run: npm run integration
+      # The Electron example sometimes hangs at startup on macOS runners
+      # without printing anything. Show what the system was doing.
+      - name: macOS diagnostics
+        if: failure() && runner.os == 'macOS'
+        run: |
+          sw_vers
+          for f in "$RUNNER_TEMP"/electron-logs/*.log; do
+            [ -f "$f" ] || continue
+            echo "== $f"
+            # Skip the histogram dump Chromium writes on exit.
+            grep -a '^\[' "$f" | tail -n 300
+          done
+          /usr/bin/log show --last 15m --style compact --predicate 'process == "syspolicyd" OR process == "XProtectPluginService" OR process == "amfid" OR process == "tccd" OR process == "nehelper" OR process BEGINSWITH "Electron"' | tail -n 800
+      - name: Upload Electron logs
+        if: failure() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v7
+        with:
+          name: electron-logs-macos
+          path: ${{ runner.temp }}/electron-logs
+          if-no-files-found: ignore
+
+  safari-smoke:
+    name: safari-ci-smoke
+    runs-on: macos-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: package.json
+      - run: npm i
+      - run: npm run ci:safari-smoke
+
+  browser-tests:
+    name: browser-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # One Sauce Labs run at a time. queue: max lets runs from other PRs wait
+    # instead of cancelling each other's pending browser-tests job.
+    concurrency:
+      group: sauce
+      queue: max
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: package.json
+      - run: npm i
+      - run: npm run browser-tests
+        env:
+          SAUCE_USERNAME: testem-ci
+          SAUCE_ACCESS_KEY: 1f00979e-0252-4d69-98ff-f6c85d1a746b

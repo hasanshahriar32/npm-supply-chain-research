@@ -1,0 +1,32 @@
+name: Node.js Builds
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node-version: 20.x
+          - node-version: 22.x
+            status: "LTS"
+          - node-version: 24.x
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Build
+      run: |
+        npm install
+        npm run build
+    - name: Package
+      run: npm pack
+    - name: Test
+      run: npm run nyc-ci
+    - name: Coveralls
+      uses: coverallsapp/github-action@master
+      if: ${{ matrix.status == 'LTS' }}
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}

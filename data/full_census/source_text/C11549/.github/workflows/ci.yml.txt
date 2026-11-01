@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        type: choice
+        description: Select npm publish tag
+        required: true
+        default: beta
+        options:
+          - latest
+          - beta
+  release:
+    types:
+      - published
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Update npm for stage support
+        run: npm install -g npm@latest
+      - run: npm ci
+     # - run: npm run build
+      #- run: npm version prerelease --no-git-tag-version --preid ${{ github.ref_name }}-${{ github.sha }} (using self-versioned package.json from now on)
+      #### PUBLISH TO NPM ####
+      - if: ${{ github.event.inputs.tag }}
+        name: publish to given npm tag
+        run: npm stage publish --tag ${{ github.event.inputs.tag }}
+      - if: ${{ !github.event.inputs.tag }}
+        name: publish latest if no input tag is given
+        run: npm stage publish
+      #### PUBLISH TO GITHUB NPM ####
+      - uses: JS-DevTools/npm-publish@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          registry: https://npm.pkg.github.com
+          access: public
+          tag: beta

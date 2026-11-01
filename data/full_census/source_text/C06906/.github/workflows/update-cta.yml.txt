@@ -1,0 +1,59 @@
+name: Update greeting CTA
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - config/cta.conf.js
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Run the script without updating the CTA
+        type: boolean
+        required: false
+        default: false
+      environment:
+        description: The environment to run the script in
+        type: environment
+        required: true
+        default: Production
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  dry-run:
+    name: Update greeting CTA
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'Production'}}
+    env:
+      npm_config_loglevel: verbose
+      npm_config_foreground_scripts: "true"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@ececac1a45f3b08a01d2dd070d28d111c5fe6722  # v4.1.0
+        with:
+          role-to-assume: arn:aws:iam::119629040606:role/s3-access.cdn-origin-compass
+          aws-region: us-east-1
+      - name: Sts GetCallerIdentity
+        run: |
+          aws sts get-caller-identity
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          check-latest: true
+          node-version: 24.x
+      - name: Install Dependencies and Compile
+        run: |
+          npm ci
+          npm run compile
+
+      - name: Update greeting CTA
+        env:
+          DOWNLOAD_CENTER_AWS_KEY: "${{ env.AWS_ACCESS_KEY_ID }}"
+          DOWNLOAD_CENTER_AWS_SECRET: "${{ env.AWS_SECRET_KEY }}"
+          DOWNLOAD_CENTER_AWS_SESSION_TOKEN: "${{ env.AWS_SESSION_TOKEN }}"
+        run: |
+          npm run update-cta ${{ github.event.inputs.dry-run && '-- --dry-run' || '' }}

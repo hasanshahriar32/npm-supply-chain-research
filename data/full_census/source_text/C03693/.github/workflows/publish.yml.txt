@@ -1,0 +1,29 @@
+name: Publish Package
+
+on:
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
+jobs:
+  publish:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.head_ref, 'release-please'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: gjtorikian/actions/setup-languages@main
+        with:
+          node: true
+
+      - run: npm run build --if-present
+
+      - run: npm publish --provenance --access public

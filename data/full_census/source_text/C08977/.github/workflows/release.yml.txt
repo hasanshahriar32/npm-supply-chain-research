@@ -1,0 +1,113 @@
+name: Release Packages
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  # Jobs requiring OIDC (e.g., npm publish) must request `id-token: write` at the job level.
+  contents: read
+  pages: write
+
+jobs:
+  publish:
+    # let's ignore release commits, otherwise it'll try to run twice
+    if: |
+      !startsWith(github.event.head_commit.message , 'chore(release):') &&
+      !startsWith(github.event.head_commit.message , 'chore(repo):')
+
+    permissions:
+      # Required for `versioner` to push release commits/tags and for npm OIDC publish.
+      contents: write
+      id-token: write
+
+    runs-on: ubuntu-latest
+
+    name: release
+
+    steps:
+      - name: Checkout Commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Update Master
+        run: |
+          set -euo pipefail
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          # Avoid implicit merges; update the remote-tracking ref explicitly
+          git fetch --no-tags --force origin "+refs/heads/${DEFAULT_BRANCH}:refs/remotes/origin/${DEFAULT_BRANCH}"
+          git checkout "${DEFAULT_BRANCH}"
+          git fetch --tags
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: ESLint Cache
+        uses: actions/cache@v3
+        with:
+          path: ./.eslintcache
+          key: ${{ runner.os }}-eslintcache-${{ hashFiles('./eslintcache') }}
+          restore-keys: |
+            ${{ runner.os }}-eslintcache-
+
+      - name: Sanity Check
+        run: |
+          echo git `git version`;
+          echo branch `git branch --show-current`;
+          echo node `node -v`;
+          echo pnpm `pnpm -v`
+          echo `moon --version`
+
+      - name: Set Git Config
+        run: |
+          git config pull.rebase false
+          git config --global user.email "release-workflow@rollup.dev"
+          git config --global user.name "Release Workflow"
+          git remote set-url origin https://github.com/${{ github.repository }}
+
+      - name: pnpm install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Packages
+        run: pnpm --recursive build
+
+      - name: Lint Monorepo
+        run: pnpm lint
+
+      - name: Run Tests
+        run: pnpm --filter [HEAD^] test
+
+      - name: OIDC Preflight
+        shell: bash
+        run: |
+          if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+            echo "Missing GitHub Actions OIDC env vars (ACTIONS_ID_TOKEN_REQUEST_URL/TOKEN)." >&2
+            echo "Ensure the job requests permissions: id-token: write." >&2
+            exit 1
+          fi
+
+          echo "OIDC env vars detected."
+
+      - name: Release and Publish Packages
+        run: pnpm --filter [HEAD^] --workspace-concurrency=1 release
+
+      - name: Push Release and Cleanup
+        run: |
+          set -euo pipefail
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+          pnpm lint:docs
+          git add . && git commit --amend --no-edit
+          git pull origin "${DEFAULT_BRANCH}" --no-edit
+          git rebase
+          git push origin HEAD:"${DEFAULT_BRANCH}"
+          git push origin HEAD:"${DEFAULT_BRANCH}" --tags

@@ -1,0 +1,64 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    name: Build and test
+    steps:
+      # https://github.com/actions/checkout
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: bahmutov/npm-install@v1
+      - name: Check dependencies
+        run: npm run prod-deps
+      - name: Unit tests
+        run: npm t
+      - name: Demo 1
+        run: npm run demo1
+      - name: Demo 2 with file mask
+        run: npm run demo-mask
+      - name: Demo 3 saves deps.json file
+        run: npm run demo-save
+      - name: Demo 3 prints timing
+        run: npm run demo-time
+      # - name: Check dependencies
+      #   run: npm audit --report --omit dev
+      - name: TS import
+        run: npm run deps
+        working-directory: test-ts-aliases
+
+  release:
+    needs: [test]
+    runs-on: ubuntu-24.04
+    permissions:
+      # allow the release step to comment on
+      # issues, pull requests, and write to the repo
+      contents: write
+      issues: write
+      pull-requests: write
+      # Required for OIDC to let NPM registry know
+      # that this workflow is trusted
+      id-token: write
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Install only the semantic release 📦
+        run: npm install semantic-release
+
+      - name: Semantic Release 🚀
+        # https://github.com/cycjimmy/semantic-release-action
+        uses: cycjimmy/semantic-release-action@v6
+        with:
+          branch: main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

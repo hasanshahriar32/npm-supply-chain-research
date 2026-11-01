@@ -1,0 +1,48 @@
+name: GHPages
+
+on:
+  workflow_dispatch: null
+  push:
+    branches: [main]
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      # npm 10's Arborist crashes on tsdown's nested optional peer dependencies.
+      # npm 11.10.1+ includes the upstream fix: https://github.com/npm/cli/pull/8981
+      - name: Use npm 11.18.0
+        run: npm install --global npm@11.18.0
+      - name: Install Packages
+        run: npm install
+      - name: Build
+        run: |+
+          npm run docs:build
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./docs/.vitepress/dist/eslint-plugin-toml
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

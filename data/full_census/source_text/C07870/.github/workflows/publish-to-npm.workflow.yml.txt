@@ -1,0 +1,39 @@
+name: Publish to NPM
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write # Required for OIDC publish
+
+concurrency:
+  cancel-in-progress: true
+  group: publish-${{ github.ref }}
+
+jobs:
+  publish_to_npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: yarn
+
+      - name: Configure git
+        run: |
+          git config --local user.name 'github-action[bot]'
+          git config --local user.email 'github-action[bot]@github.com'
+
+      - run: yarn
+      - run: yarn build:release
+      - run: yarn test
+      # Yarn 4.10+ automatically uses OIDC when running in GitHub Actions
+      - run: yarn monoweave
+        env:
+          # Needed to create a release
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

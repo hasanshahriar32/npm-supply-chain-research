@@ -1,0 +1,27 @@
+name: Build
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  test-node:
+    name: Test on Node.js
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout the project
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Use Node.js 24.x (LTS)
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 24.x
+        cache: 'npm'
+    - run: npm ci
+    - name: Lint Codebase
+      run: npm run lint
+    - name: Run Node.js Tests
+      run: npm run test
+    - name: Check Bundle Size
+      run: npm run size

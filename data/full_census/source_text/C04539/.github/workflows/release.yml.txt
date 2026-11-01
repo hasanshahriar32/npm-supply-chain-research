@@ -1,0 +1,166 @@
+name: Release
+
+# Trigger by `git tag` push (via `pnpm release`) or manual workflow_dispatch for recovery.
+on:
+  push:
+    branches-ignore:
+      - '**'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - npm-publish
+          - release-notes
+      tag:
+        description: Existing tag to release (e.g. v2.1.3, v2.2.0-alpha.1)
+        type: string
+        required: true
+      dist_tag:
+        description: 'Override npm dist-tag (e.g. latest, next). Empty = auto-detect.'
+        type: string
+        required: false
+        default: ''
+
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+permissions: {}
+
+jobs:
+  npm-publish:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+        (inputs.job == 'all' || inputs.job == 'npm-publish'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC trusted publisher auth + provenance
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Determine dist-tag
+        id: dist
+        env:
+          INPUT_DIST_TAG: ${{ inputs.dist_tag }}
+        run: |
+          if [[ -n "$INPUT_DIST_TAG" ]]; then
+            echo "tag=$INPUT_DIST_TAG" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ "$TAG" =~ -[a-z] ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish packages to npm
+        env:
+          DIST_TAG: ${{ steps.dist.outputs.tag }}
+          NPM_CONFIG_PROVENANCE: true
+        run: |
+          set -e
+          for PKG in packages/*; do
+            [[ -d "$PKG" ]] || continue
+            PRIVATE=$(node scripts/private.ts "$PKG")
+            if [[ "$PRIVATE" == "true" ]]; then
+              echo "⏭️  Skipping $PKG (private package)"
+              continue
+            fi
+            echo "⚡ Publishing $PKG with tag $DIST_TAG"
+            (cd "$PKG" && pnpm publish --access public --no-git-checks --tag "$DIST_TAG")
+          done
+
+  release-notes:
+    needs: [npm-publish]
+    if: >-
+      always() && (
+        (github.event_name == 'push' &&
+          needs.npm-publish.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.job == 'release-notes') ||
+        (github.event_name == 'workflow_dispatch' && inputs.job == 'all' &&
+          needs.npm-publish.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # GitHub Release creation + CHANGELOG push
+    steps:
+      - name: Checkout main
+        # zizmor: ignore[artipacked] needs persisted credentials so that
+        # stefanzweifel/git-auto-commit-action can push the changelog commit.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Setup node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Determine release flags
+        id: rel
+        run: |
+          if [[ "$TAG" =~ -[a-z] ]]; then
+            echo "flags=--prerelease" >> "$GITHUB_OUTPUT"
+          else
+            echo "flags=--latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release (skip if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_FLAGS: ${{ steps.rel.outputs.flags }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists, skipping creation"
+          else
+            # shellcheck disable=SC2086
+            gh release create "$TAG" --generate-notes $RELEASE_FLAGS
+          fi
+
+      - name: Generate changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec gh-changelogen --repo=intlify/srvmid --tag="$TAG"
+
+      - name: Commit changelog
+        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c # v7.2.1
+        with:
+          branch: main
+          file_pattern: CHANGELOG.md
+          commit_message: 'chore: generate changelog'

@@ -1,0 +1,73 @@
+{
+  "name": "egg-path-matching",
+  "version": "2.1.0",
+  "engine": {
+    "node": ">= 18.19.0"
+  },
+  "description": "match or ignore url path",
+  "scripts": {
+    "lint": "eslint src test",
+    "test": "npm run lint -- --fix && npm run test-local",
+    "test-local": "egg-bin test",
+    "ci": "npm run lint && egg-bin cov && npm run prepublishOnly",
+    "prepublishOnly": "tshy && tshy-after"
+  },
+  "keywords": [
+    "url",
+    "match",
+    "ignore"
+  ],
+  "author": {
+    "name": "dead-horse",
+    "email": "dead_horse@qq.com",
+    "url": "http://deadhorse.me"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:eggjs/egg-path-matching"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "path-to-regexp": "^6.3.0"
+  },
+  "devDependencies": {
+    "@eggjs/tsconfig": "1",
+    "@types/mocha": "10",
+    "@types/node": "20",
+    "egg-bin": "6",
+    "eslint": "8",
+    "eslint-config-egg": "13",
+    "path-to-regexp-v8": "npm:path-to-regexp@^8.3.0",
+    "tshy": "1",
+    "tshy-after": "1",
+    "typescript": "5"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "type": "module",
+  "tshy": {
+    "exports": {
+      "./package.json": "./package.json",
+      ".": "./src/index.ts"
+    }
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "import": {
+        "source": "./src/index.ts",
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "source": "./src/index.ts",
+        "types": "./dist/commonjs/index.d.ts",
+        "default": "./dist/commonjs/index.js"
+      }
+    }
+  },
+  "main": "./dist/commonjs/index.js",
+  "types": "./dist/commonjs/index.d.ts"
+}

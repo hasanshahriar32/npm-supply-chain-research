@@ -1,0 +1,50 @@
+name: 'Publish wiki'
+
+on:
+  workflow_run:
+    branches: [main]
+    workflows: [CI]
+    types:
+      - completed
+
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish-wiki:
+    name: 'Publish Wiki'
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+        - name: 'Checkout repo'
+          uses: actions/checkout@v7
+
+        - name: 'Download build artifacts'
+          uses: actions/download-artifact@v8
+          with:
+            name: build-artifact
+            path: dist
+            run-id: ${{ github.event.workflow_run.id }}
+            github-token: ${{ github.token }}
+
+        - name: 'Setup Nodejs'
+          uses: actions/setup-node@v7
+          with:
+            node-version: 26
+            package-manager-cache: false # no cache in a privileged (wiki push) job
+
+        - name: 'Install Packages'
+          run: npm ci
+
+        - name: 'Produce Wiki'
+          run: npx typedoc
+
+        - name: 'Publish Wiki'
+          uses: Andrew-Chen-Wang/github-wiki-action@v5
+          with:
+            preprocess: false # v5 default (true) renames README.md->Home.md and rewrites links; keep v4 behaviour

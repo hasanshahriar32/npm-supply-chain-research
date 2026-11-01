@@ -1,0 +1,43 @@
+{
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "description": "All the types you need for your <head>",
+  "author": {
+    "name": "Harlan Wilton",
+    "email": "harlan@harlanzw.com",
+    "url": "https://harlanzw.com/"
+  },
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/harlan-zw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/harlan-zw/zhead"
+  },
+  "scripts": {
+    "build": "pnpm run -r build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "pnpm run -r typecheck",
+    "test": "vitest",
+    "test:attw": "pnpm -r --parallel --filter './packages/**' run test:attw",
+    "release": "pnpm build && bumpp --output=CHANGELOG.md packages/*/package.json"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "catalog:",
+    "@arethetypeswrong/cli": "catalog:",
+    "@types/node": "catalog:",
+    "bumpp": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-harlanzw": "catalog:",
+    "lint-staged": "catalog:",
+    "obuild": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "lint-staged": {
+    "*.{js,ts,mjs,cjs,vue}": [
+      "pnpm exec eslint --fix"
+    ]
+  }
+}

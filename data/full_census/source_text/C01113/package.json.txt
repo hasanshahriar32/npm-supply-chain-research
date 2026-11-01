@@ -1,0 +1,71 @@
+{
+  "name": "free-style",
+  "version": "5.0.1",
+  "description": "Make CSS easier and more maintainable by using JavaScript",
+  "keywords": [
+    "inline",
+    "css",
+    "style",
+    "js",
+    "hash",
+    "server"
+  ],
+  "homepage": "https://github.com/blakeembrey/free-style",
+  "bugs": {
+    "url": "https://github.com/blakeembrey/free-style/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/blakeembrey/free-style.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Blake Embrey",
+    "email": "hello@blakeembrey.com",
+    "url": "http://blakeembrey.me"
+  },
+  "type": "module",
+  "exports": "./dist/index.js",
+  "main": "./dist/index.js",
+  "typings": "dist/index.d.ts",
+  "files": [
+    "dist/",
+    "LICENSE"
+  ],
+  "scripts": {
+    "bench:hash": "tsx benchmarks/hash.ts",
+    "bench:perf": "tsx benchmarks/perf.ts",
+    "build": "ts-scripts build",
+    "format": "ts-scripts format",
+    "prepare": "ts-scripts install",
+    "prepublishOnly": "npm run build",
+    "size": "size-limit",
+    "specs": "ts-scripts specs",
+    "test": "ts-scripts test && npm run size"
+  },
+  "devDependencies": {
+    "@borderless/ts-scripts": "^0.15.0",
+    "@size-limit/preset-small-lib": "^11.0.2",
+    "@types/node": "^20.11.5",
+    "@vitest/coverage-v8": "^1.2.1",
+    "just-css-properties": "^1.0.0",
+    "size-limit": "^11.0.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "size-limit": [
+    {
+      "path": "dist/index.js",
+      "limit": "1.5 kB"
+    }
+  ],
+  "ts-scripts": {
+    "project": [
+      "tsconfig.build.json"
+    ]
+  }
+}

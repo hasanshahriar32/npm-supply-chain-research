@@ -1,0 +1,38 @@
+on:
+  push:
+    branches:
+      - main
+
+name: Test with Coveralls
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v7
+
+    - uses: pnpm/action-setup@v6
+
+    - name: Use Node.js 22.x
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22.x
+        cache: pnpm
+
+    - name: pnpm install, pnpm test:coverage
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm test:coverage
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@8d6379e14d29928660c4ba802d8e85393440b329 # v2.3.8
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        files: coverage/lcov.info
+        format: lcov

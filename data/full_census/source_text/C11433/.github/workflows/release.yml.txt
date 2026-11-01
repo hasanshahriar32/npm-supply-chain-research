@@ -1,0 +1,56 @@
+name: Publish Release (npm)
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - name: Install Dependencies
+        run: pnpm i --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Test
+        run: pnpm test
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: pnpm
+      - run: npm install -g npm@~11.10.0 # Work-around for https://github.com/npm/cli/issues/9151#issuecomment-4131466208
+      - run: npm install -g npm@latest
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm version ${TAG_NAME} --git-tag-version=false
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+      - run: pnpm dlx clean-publish --without-publish --temp-dir package
+      - run: npm stage publish --provenance --access public --tag next
+        working-directory: package
+        if: 'github.event.release.prerelease'
+      - run: npm stage publish --provenance --access public
+        working-directory: package
+        if: '!github.event.release.prerelease'

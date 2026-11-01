@@ -1,0 +1,185 @@
+name: Nightly - React Native Checks
+on:
+  # Runs every night at 6 AM UTC.
+  # Note: RN nightlies are published between ~03:30 and ~04:50 UTC, and the individual
+  # `@react-native/*` packages land minutes apart. Resolving inside that window picks up a
+  # partially published nightly (e.g. `babel-preset` bumped, `codegen` not yet on the registry),
+  # which fails as "No candidates found". Keep this comfortably after the publish window.
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+# Set minimal permissions by default
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !contains(github.ref, 'main')}}
+
+jobs:
+  lint:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Lint → RN ${{ matrix.rn-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-version: [latest, next, nightly]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.rn-version == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.rn-version == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.rn-version == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+
+      - name: Lint
+        run: yarn lint
+
+  typecheck:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Typecheck → RN ${{ matrix.rn-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-version: [latest, next, nightly]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.rn-version == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.rn-version == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.rn-version == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+
+      - name: Typecheck
+        run: yarn typecheck
+
+      - name: Typecheck React 19.2-only tests
+        uses: ./.github/actions/typecheck-react-19_2-if-supported
+
+  test:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Test → RN ${{ matrix.rn-lane }} x TR ${{ matrix.test-renderer-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-lane:
+          [
+            '0.88',
+            '0.87',
+            '0.86',
+            '0.85',
+            '0.84',
+            '0.83',
+            '0.82',
+            '0.81',
+            '0.80',
+            '0.79',
+            '0.78',
+            latest,
+            next,
+            nightly,
+          ]
+        test-renderer-version: ['~1.0', '~1.1', '~1.2', '~1.3']
+        include:
+          - rn-lane: '0.88'
+            setup-kind: stable
+            react-version: '19.3.0'
+            react-native-version: '~0.88.0-rc.1'
+          - rn-lane: '0.87'
+            setup-kind: stable
+            react-version: '19.2.3'
+            react-native-version: '~0.87.1'
+          - rn-lane: '0.86'
+            setup-kind: stable
+            react-version: '19.2.3'
+            react-native-version: '~0.86.3'
+          - rn-lane: '0.85'
+            setup-kind: stable
+            react-version: '19.2.3'
+            react-native-version: '~0.85.0'
+          - rn-lane: '0.84'
+            setup-kind: stable
+            react-version: '19.2.3'
+            react-native-version: '~0.84.1'
+          - rn-lane: '0.83'
+            setup-kind: stable
+            react-version: '19.2.0'
+            react-native-version: '~0.83.4'
+          - rn-lane: '0.82'
+            setup-kind: stable
+            react-version: '19.1.1'
+            react-native-version: '~0.82.1'
+          - rn-lane: '0.81'
+            setup-kind: stable
+            react-version: '19.1.4'
+            react-native-version: '~0.81.6'
+          - rn-lane: '0.80'
+            setup-kind: stable
+            react-version: '19.1.0'
+            react-native-version: '~0.80.3'
+          - rn-lane: '0.79'
+            setup-kind: stable
+            react-version: '19.0.0'
+            react-native-version: '~0.79.7'
+          - rn-lane: '0.78'
+            setup-kind: stable
+            react-version: '19.0.0'
+            react-native-version: '~0.78.3'
+          - rn-lane: latest
+            setup-kind: latest
+          - rn-lane: next
+            setup-kind: next
+          - rn-lane: nightly
+            setup-kind: nightly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js and deps (stable)
+        if: matrix.setup-kind == 'stable'
+        uses: ./.github/actions/setup-deps
+        with:
+          react-version: ${{ matrix.react-version }}
+          react-native-version: ${{ matrix.react-native-version }}
+          test-renderer-version: ${{ matrix.test-renderer-version }}
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.setup-kind == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+        with:
+          test-renderer-version: ${{ matrix.test-renderer-version }}
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.setup-kind == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+        with:
+          test-renderer-version: ${{ matrix.test-renderer-version }}
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.setup-kind == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+        with:
+          test-renderer-version: ${{ matrix.test-renderer-version }}
+
+      - name: Test
+        run: yarn test:ci

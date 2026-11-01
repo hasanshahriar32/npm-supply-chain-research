@@ -1,0 +1,348 @@
+name: Integration Builds
+
+# Reusable workflow that runs the build-test jobs for every non-JS integration.
+# Path-gated by the caller via per-scope `*_changed` inputs. Called from both
+# pr.yml (PR validation) and main.yml (pre-publish checks). Each job consumes
+# the pre-built `scalar-js` artifact produced by the orchestrator's build job.
+
+on:
+  workflow_call:
+    inputs:
+      dotnet_changed:
+        type: string
+        required: true
+      java_changed:
+        type: string
+        required: true
+      fastapi_changed:
+        type: string
+        required: true
+      django_ninja_changed:
+        type: string
+        required: true
+      rust_changed:
+        type: string
+        required: true
+      docker_changed:
+        type: string
+        required: true
+    # 'true' only when the matching build-test ran to completion successfully.
+    # A skipped (path-gated off) or failed job leaves the output empty, so the
+    # matching publish job in publish-integrations.yml stays gated off — this is
+    # how a publish waits on its build-test across the workflow boundary.
+    outputs:
+      docker_build_passed:
+        value: ${{ jobs.docker-build.outputs.passed }}
+      dotnet_build_passed:
+        value: ${{ jobs.dotnet-build-test.outputs.passed }}
+      fastapi_build_passed:
+        value: ${{ jobs.fastapi-build-test.outputs.passed }}
+      django_ninja_build_passed:
+        value: ${{ jobs.django-ninja-build-test.outputs.passed }}
+      rust_build_passed:
+        value: ${{ jobs.rust-build-test.outputs.passed }}
+      java_build_passed:
+        value: ${{ jobs.java-build-test.outputs.passed }}
+
+permissions:
+  contents: read
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  docker-build:
+    if: inputs.docker_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Download scalar.js artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: scalar-js
+          path: integrations/docker/assets
+
+      - name: Compress static assets
+        working-directory: integrations/docker/assets
+        run: gzip --keep --verbose --force scalar.js
+
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@ab5c1da94f53f5cd75c1038092aa276dddfccbba # v1
+        with:
+          platforms: linux/amd64
+
+      - name: Build Docker image
+        uses: useblacksmith/build-push-action@fb9e3e6a9299c78462bfadd0d93352c316adc9b8 # v2
+        with:
+          context: integrations/docker
+          file: integrations/docker/Dockerfile
+          load: true
+          tags: scalarapi/api-reference:latest
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  dotnet-build-test:
+    if: inputs.dotnet_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Download scalar.js artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: scalar-js
+          path: temp-assets
+
+      - name: Copy scalar.js to aspnetcore, aspire, azure-functions and aws-lambda
+        run: |
+          cp temp-assets/scalar.js integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets/
+          cp temp-assets/scalar.js integrations/dotnet/aspire/src/Scalar.Aspire.Service/wwwroot/
+          cp temp-assets/scalar.js integrations/dotnet/azure-functions/src/Scalar.Azure.Functions/StaticAssets/
+          cp temp-assets/scalar.js integrations/dotnet/aws-lambda/src/Scalar.Aws.Lambda/StaticAssets/
+
+      # scalar.js and favicon.svg are byte-identical across aspnetcore, azure-functions and
+      # aws-lambda, so compress each of them once and copy the .gz alongside the uncompressed
+      # copy in every package instead of re-running gzip on the same bytes three times.
+      - name: Compress shared static assets once (scalar.js, favicon.svg)
+        run: |
+          gzip --keep --verbose --force temp-assets/scalar.js
+          gzip --keep --verbose --force integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets/favicon.svg
+          cp temp-assets/scalar.js.gz integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets/
+          cp temp-assets/scalar.js.gz integrations/dotnet/azure-functions/src/Scalar.Azure.Functions/StaticAssets/
+          cp temp-assets/scalar.js.gz integrations/dotnet/aws-lambda/src/Scalar.Aws.Lambda/StaticAssets/
+          cp integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets/favicon.svg.gz integrations/dotnet/azure-functions/src/Scalar.Azure.Functions/StaticAssets/
+          cp integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets/favicon.svg.gz integrations/dotnet/aws-lambda/src/Scalar.Aws.Lambda/StaticAssets/
+
+      - name: Compress helper asset (aspnetcore)
+        working-directory: integrations/dotnet/aspnetcore/src/Scalar.AspNetCore/StaticAssets
+        run: gzip --keep --verbose --force scalar.aspnetcore.js
+
+      - name: Compress helper asset (azure-functions)
+        working-directory: integrations/dotnet/azure-functions/src/Scalar.Azure.Functions/StaticAssets
+        run: gzip --keep --verbose --force scalar.azure.functions.js
+
+      - name: Compress helper asset (aws-lambda)
+        working-directory: integrations/dotnet/aws-lambda/src/Scalar.Aws.Lambda/StaticAssets
+        run: gzip --keep --verbose --force scalar.aws.lambda.js
+
+      - name: Cache NuGet packages
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: ${{ github.repository }}-nuget-${{ hashFiles('integrations/dotnet/**/*.csproj', 'integrations/dotnet/**/Directory.Packages.props') }}
+          path: ${{ env.NUGET_PACKAGES }}
+
+      - name: Setup .NET
+        uses: fast-actions/setup-dotnet@a71ae3c1c05fa3c6fae4065438844513d41d893e # v1
+        with:
+          sdk-version: 10.x.x
+          aspnetcore-version: |
+            9.x.x
+            8.x.x
+
+      - name: Restore dependencies
+        working-directory: integrations/dotnet
+        run: dotnet restore
+
+      - name: Build solution
+        working-directory: integrations/dotnet
+        run: dotnet build -c Release --no-restore
+
+      - name: Test solution
+        working-directory: integrations/dotnet
+        run: dotnet test -c Release --no-build
+
+      # Build the Aspire service Docker image the same way the release job does.
+      # The host restore/build above always sees Directory.Packages.props, so it
+      # can't catch a Dockerfile that fails to copy build inputs into its context
+      # (e.g. the NU1015 restore break when Central Package Management landed).
+      # Building it here on every dotnet change makes that class of error visible
+      # in PR CI instead of only at publish time. amd64-only keeps it fast; the
+      # restore errors we care about are platform-independent, and no push.
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@ab5c1da94f53f5cd75c1038092aa276dddfccbba # v1
+        with:
+          platforms: linux/amd64
+
+      - name: Build Aspire Docker image
+        uses: useblacksmith/build-push-action@fb9e3e6a9299c78462bfadd0d93352c316adc9b8 # v2
+        with:
+          context: integrations/dotnet
+          file: integrations/dotnet/aspire/src/Scalar.Aspire.Service/Dockerfile
+          load: true
+          tags: scalarapi/aspire-api-reference:latest
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  fastapi-build-test:
+    if: inputs.fastapi_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        working-directory: integrations/fastapi
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build Python package
+        working-directory: integrations/fastapi
+        run: python -m build
+
+      - name: Run tests
+        working-directory: integrations/fastapi
+        run: python run_tests.py
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  django-ninja-build-test:
+    if: inputs.django_ninja_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install build dependencies
+        working-directory: integrations/django-ninja
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build Python package
+        working-directory: integrations/django-ninja
+        run: python -m build
+
+      - name: Run tests
+        working-directory: integrations/django-ninja
+        run: python run_tests.py
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  rust-build-test:
+    if: inputs.rust_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Download scalar.js artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: scalar-js
+          path: integrations/rust/ui
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check Rust code formatting
+        working-directory: integrations/rust
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        working-directory: integrations/rust
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        working-directory: integrations/rust
+        run: cargo test
+
+      - name: Run tests with all features
+        working-directory: integrations/rust
+        run: cargo test --features axum,actix-web,warp
+
+      - name: Build examples
+        working-directory: integrations/rust
+        run: |
+          cargo build --example axum --features axum
+          cargo build --example actix --features actix-web
+          cargo build --example warp --features warp
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"
+
+  java-build-test:
+    if: inputs.java_changed == 'true'
+    runs-on: blacksmith-2vcpu-ubuntu-2204
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    outputs:
+      passed: ${{ steps.passed.outputs.passed }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Download scalar.js artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: scalar-js
+          path: integrations/java/scalar-core/src/main/resources/META-INF/resources/webjars/scalar
+      - name: Setup Java
+        uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+          cache-dependency-path: 'integrations/java/**/pom.xml'
+      - name: Run Maven tests
+        working-directory: integrations/java
+        run: mvn clean test
+
+      - name: Mark build-test passed
+        id: passed
+        run: echo "passed=true" >> "$GITHUB_OUTPUT"

@@ -1,0 +1,72 @@
+{
+  "name": "@weaviate",
+  "version": "3.15.2",
+  "description": "JS/TS client for Weaviate",
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "pnpm --filter @weaviate/test run test",
+    "lint": "eslint --ext .ts,.js .",
+    "lint:fix": "npm run lint -- --fix",
+    "lint:staged": "npm run format:check && npm run lint -- --cache",
+    "format": "prettier --write --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
+    "format:check": "prettier --check --no-error-on-unmatched-pattern '**/*.{ts,js}' '!dist/**'",
+    "format:dist": "prettier --write --no-error-on-unmatched-pattern '**/dist/**/*.{ts,js}'",
+    "refresh-schema": "./tools/refresh_schema.sh",
+    "refresh-protos": "./tools/refresh_protos.sh",
+    "docs": "typedoc --plugin typedoc-plugin-extras --favicon public/favicon.ico --out docs/ ./packages/core/src ./packages/node/src ./packages/web/src",
+    "install:core": "pnpm install --filter @weaviate/core --no-frozen-lockfile",
+    "install:node": "pnpm install --filter @weaviate/node --no-frozen-lockfile",
+    "install:web": "pnpm install --filter @weaviate/web --no-frozen-lockfile",
+    "install:test": "pnpm install --filter @weaviate/test --no-frozen-lockfile",
+    "build:core": "pnpm --filter @weaviate/core... run build",
+    "build:node": "pnpm --filter @weaviate/node... run build",
+    "build:web": "pnpm --filter @weaviate/web... run build",
+    "check:web": "pnpm --filter @weaviate/web... run check",
+    "build": "npm run build:core && npm run build:node && npm run build:web && npm run check:web",
+    "generate:version": "node ./scripts/gen-version.mjs",
+    "ci:checks": "npm run install:core && npm run build:core && npm run install:node && npm run install:web",
+    "ci:test": "npm run ci:checks && npm run build:core && npm run build:node && npm run build:web && npm run install:test",
+    "ci:publish": "npm run ci:checks",
+    "release:check": "node ./scripts/check-release.mjs",
+    "release:pack": "mkdir -p stage/tarballs && pnpm --dir packages/core pack --pack-destination ../../stage/tarballs && pnpm --dir packages/node pack --pack-destination ../../stage/tarballs && pnpm --dir packages/web pack --pack-destination ../../stage/tarballs",
+    "release:publish:dry-run": "set -eu; for package in weaviate-core weaviate-node weaviate-web; do npm publish \"./stage/tarballs/$package-$RELEASE_VERSION.tgz\" --tag latest --dry-run; done",
+    "release:publish": "set -eu; for package in weaviate-core weaviate-node weaviate-web; do npm publish \"./stage/tarballs/$package-$RELEASE_VERSION.tgz\" --tag latest; done"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weaviate/typescript-client.git"
+  },
+  "keywords": [
+    "weaviate"
+  ],
+  "author": "Weaviate",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/weaviate/typescript-client/issues"
+  },
+  "homepage": "https://github.com/weaviate/typescript-client#readme",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^8.10.2",
+    "eslint-plugin-prettier": "^4.2.5",
+    "grpc-tools": "^1.13.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.3.0",
+    "openapi-typescript": "^5.4.2",
+    "prettier": "^2.8.8",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "ts-proto": "^1.181.2",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-extras": "^4.0.1",
+    "typescript": "^5.9.3"
+  }
+}

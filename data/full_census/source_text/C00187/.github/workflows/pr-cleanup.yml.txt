@@ -1,0 +1,119 @@
+name: Cleanup caches on PR close
+on:
+    pull_request:
+        types:
+            - closed
+
+env:
+    # Disable git's post-fetch background gc/maintenance for every git invocation
+    # (injected via git's GIT_CONFIG_* protocol). Otherwise it rewrites .git/shallow
+    # concurrently with the next chained `git fetch --depth 1`, intermittently failing
+    # job setup with "fatal: shallow file has changed since we read it".
+    GIT_CONFIG_COUNT: 2
+    GIT_CONFIG_KEY_0: gc.auto
+    GIT_CONFIG_VALUE_0: '0'
+    GIT_CONFIG_KEY_1: maintenance.auto
+    GIT_CONFIG_VALUE_1: 'false'
+
+permissions:
+    contents: read
+
+jobs:
+    cleanup:
+        runs-on: ubuntu-24.04
+        env:
+            SNAPSHOT_BRANCH: 'gha/snapshots-${{ github.head_ref }}'
+        permissions:
+            contents: write
+        steps:
+            - name: Check out code
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+            - name: Cleanup
+              run: |
+                  gh extension install actions/gh-actions-cache
+
+                  echo "SNAPSHOT_BRANCH: ${{env.SNAPSHOT_BRANCH}}"
+                  REPO=${{ github.repository }}
+                  BRANCH="refs/pull/${{ github.event.pull_request.number }}/merge"
+
+                  echo "Fetching list of cache keys"
+                  cacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH -L 100 | cut -f 1 )
+
+                  ## Setting this to not fail the workflow while deleting cache keys.
+                  set +e
+                  echo "Deleting caches..."
+                  for cacheKey in $cacheKeysForPR
+                  do
+                      echo "Deleting cache... $cacheKey"
+                      gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm
+                  done
+                  echo "Done"
+
+                  echo "Cleaning up any auto-generated branches."
+                  if (git ls-remote --exit-code --heads origin ${{env.SNAPSHOT_BRANCH}} >/dev/null) ; then
+                      git push -d origin ${{env.SNAPSHOT_BRANCH}}
+                  fi
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    gh_pages_cleanup:
+        runs-on: ubuntu-24.04
+        name: Remove PR preview from gh-pages
+        # Same-repo PRs only (fork PRs can't hold the write token) — see pr-review.yml.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        permissions:
+            contents: write
+        # Per-PR lock: stops this close-time cleanup from running concurrently with
+        # the same PR's gh-pages publisher in ci.yml (`pr_preview`), narrowing the
+        # window in which a late publish could re-create the pr-<N>/ this job removes.
+        # Cross-PR pushes are resolved by the retry loop in pr-preview-cleanup, not
+        # this lock. Keep this group string byte-identical to the one in ci.yml.
+        concurrency:
+            group: pr-preview-gh-pages-${{ github.event.pull_request.number }}
+            cancel-in-progress: false
+        env:
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+        steps:
+            # Needed for the local shared action below; the action clones gh-pages itself.
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 1
+
+            - name: Remove PR preview from gh-pages
+              uses: ./external/ag-shared/github/actions/pr-preview-cleanup
+              with:
+                  pr_number: ${{ env.PR_NUMBER }}
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+
+    # Separate job, not another step in gh_pages_cleanup: it removes the same pr-<N>/ prefix but on a
+    # different branch, so it races a different publisher (`snapshot_review` in ci.yml) and therefore
+    # needs that publisher's lock rather than the gh-pages one. Two jobs also mean a failure to reach
+    # one branch does not leave the other uncleaned.
+    snapshot_review_cleanup:
+        runs-on: ubuntu-24.04
+        name: Remove snapshot reports from snapshot-review
+        # Same-repo PRs only (fork PRs can't hold the write token) — see pr-review.yml.
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        permissions:
+            contents: write
+        # Keep this group string byte-identical to the one on `snapshot_review` in ci.yml.
+        concurrency:
+            group: snapshot-review-branch-${{ github.event.pull_request.number }}
+            cancel-in-progress: false
+        env:
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+        steps:
+            # Needed for the local shared action below; the action clones the branch itself.
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 1
+
+            - name: Remove snapshot reports from snapshot-review
+              uses: ./external/ag-shared/github/actions/pr-preview-cleanup
+              with:
+                  pr_number: ${{ env.PR_NUMBER }}
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  publish_branch: snapshot-review

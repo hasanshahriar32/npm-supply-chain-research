@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+# Serialize release runs on the same ref but never cancel an
+# in-progress release: a cancelled `changesets/action` may leave tags
+# pushed without their matching GitHub release, or vice versa.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Default to no permissions at the workflow level so any new job added
+# in the future has to opt in explicitly. The `release` job below
+# enumerates the writes it actually needs.
+permissions: {}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # Keep the grants on the job (not the workflow) so they cannot leak
+    # into any future sibling job.
+    permissions:
+      contents: write # `changesets/action` pushes release tags
+      pull-requests: write # `changesets/action` creates/updates the release PR
+    steps:
+      - name: Checkout Repo
+        # zizmor: ignore[artipacked]
+        # `changesets/action` (below) and the `git config` step rely on the
+        # persisted `RELEASE_TOKEN` to push tags and the release PR back to
+        # this repository, so credential persistence is intentional here.
+        # This workflow runs only on `push: master`, never on PR-triggered
+        # untrusted code, and uploads no artifacts that could leak `.git/`.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+        # without this, setup-node errors on mismatched yarn versions
+      - run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: yarn
+
+      - name: Install Dependencies
+        run: yarn
+
+      - name: Set up Git user
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+
+      - name: Process Changesets
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        # This action will create/update Changesets' Release PR *or* create a
+        # GitHub Release and tags if its Release PR was just merged
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          publish: yarn changeset tag
+          createGithubReleases: true

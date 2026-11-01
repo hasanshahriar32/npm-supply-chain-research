@@ -1,0 +1,109 @@
+name: PR
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'media/**'
+      - '**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NX_CLOUD_ACCESS_TOKEN: ${{ secrets.NX_CLOUD_ACCESS_TOKEN }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Tools
+        uses: TanStack/config/.github/setup@466151b2d479656b38942cd84a0a3dce29d48de3
+      - name: Get base and head commits for `nx affected`
+        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: main
+      - name: Run Checks
+        run: pnpm run test:pr
+  e2e:
+    name: Example E2E
+    runs-on: ubuntu-latest
+    # Run two example projects at a time to limit browser resource usage.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Tools
+        uses: TanStack/config/.github/setup@466151b2d479656b38942cd84a0a3dce29d48de3
+      - name: Get base and head commits for `nx affected`
+        uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: main
+      - name: Install Chromium
+        run: pnpm run test:e2e:install --with-deps
+      - name: Test affected examples
+        run: pnpm run test:e2e:affected --output-style=stream
+      - name: Upload failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: example-e2e-failures
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+  preview:
+    name: Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Setup Tools
+        uses: TanStack/config/.github/setup@466151b2d479656b38942cd84a0a3dce29d48de3
+      - name: Build Packages
+        run: pnpm run build:all
+      - name: Publish Previews
+        run: pnpx pkg-pr-new publish --pnpm './packages/*' --template './examples/*/*'
+
+  provenance:
+    name: Provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check Provenance
+        uses: danielroe/provenance-action@fcc45fd5a5b818c477432b32c838dcd0c79cd2dd # v0.2.0
+        with:
+          fail-on-downgrade: true
+  version-preview:
+    permissions:
+      contents: read
+      pull-requests: write
+    name: Version Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Tools
+        uses: TanStack/config/.github/setup@466151b2d479656b38942cd84a0a3dce29d48de3
+      - name: Changeset Preview
+        uses: TanStack/config/.github/changeset-preview@466151b2d479656b38942cd84a0a3dce29d48de3

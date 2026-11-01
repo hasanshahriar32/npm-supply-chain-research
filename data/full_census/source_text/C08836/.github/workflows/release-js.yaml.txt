@@ -1,0 +1,66 @@
+name: Publish Package to npmjs
+on:
+  release:
+    types: [created]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+      - name: Build platform binaries
+        run: |
+          LDFLAGS="-s -w -X github.com/reteps/dockerfmt/cmd.Version=${GITHUB_REF_NAME}"
+          build() {
+            pkg=$1; goos=$2; goarch=$3
+            echo "building $pkg ($goos/$goarch)"
+            GOOS=$goos GOARCH=$goarch CGO_ENABLED=0 \
+              go build -ldflags "$LDFLAGS" -o "js/npm/${pkg}/bin/dockerfmt" .
+          }
+          build linux-x64    linux   amd64
+          build linux-arm64  linux   arm64
+          build darwin-x64   darwin  amd64
+          build darwin-arm64 darwin  arm64
+      # Reproducible install from the committed lockfile. This must run BEFORE
+      # set-version.mjs: the committed package.json has no optionalDependencies
+      # (set-version injects them below), so the lock is satisfiable and floating
+      # deps can't sneak in. Bumping the version afterwards doesn't matter — we
+      # never install again.
+      - name: Install JS deps
+        working-directory: js
+        run: npm ci
+      # Pin the main package, every sub-package, and inject the optionalDependencies
+      # at the release version so they publish in lockstep.
+      - name: Pin versions
+        run: node js/scripts/set-version.mjs "${GITHUB_REF_NAME#v}"
+      - name: Build JS library bindings
+        working-directory: js
+        run: npm run build-js
+      # Skip any version already on the registry so a re-run after a partial
+      # failure only publishes what's missing (npm rejects republishing an
+      # existing version). Platform packages publish first so the main package's
+      # optionalDependencies resolve immediately on install.
+      - name: Publish to npm
+        run: |
+          publish_if_missing() {
+            dir=$1
+            name=$(npm pkg get name --prefix "$dir" | tr -d '"')
+            version=$(npm pkg get version --prefix "$dir" | tr -d '"')
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version already published, skipping"
+            else
+              npm publish --provenance --access public "$dir"
+            fi
+          }
+          for dir in js/npm/*/; do
+            publish_if_missing "$dir"
+          done
+          publish_if_missing ./js

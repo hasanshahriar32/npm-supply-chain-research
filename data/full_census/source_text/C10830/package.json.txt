@@ -1,0 +1,26 @@
+{
+  "name": "stylelint-less-monorepo",
+  "private": true,
+  "scripts": {
+    "format": "oxfmt",
+    "fallow": "fallow dead-code",
+    "prepare": "husky",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "^24.10.4",
+    "fallow": "^3.33.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.73.0",
+    "typescript": "^7.0.2"
+  },
+  "lint-staged": {
+    "*.{js,json,md,mjs,ts,yml}": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "engines": {
+    "node": ">=21"
+  }
+}

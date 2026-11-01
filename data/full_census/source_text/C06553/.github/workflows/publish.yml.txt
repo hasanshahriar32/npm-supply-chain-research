@@ -1,0 +1,33 @@
+name: publish to npm
+on:
+  release:
+    types: [published]
+
+env:
+  HUSKY: 0
+
+jobs:
+  publish-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check release validity
+        run: sh .github/scripts/check-release.sh
+      - name: Check tag format
+        run: sh .github/scripts/check-tag-format.sh "${{ github.event.release.prerelease }}"
+
+      - uses: ./.github/actions/set-up-node
+        with:
+          registry-url: https://registry.npmjs.org/
+
+      - name: Build meilisearch-js
+        run: pnpm build
+      - name: Publish with latest tag
+        if: github.event.release.prerelease == false
+        run: pnpm publish --no-git-checks --provenance --access public
+      - name: Publish with beta tag
+        if: github.event.release.prerelease
+        run: pnpm publish --no-git-checks --provenance --access public --tag beta

@@ -1,0 +1,64 @@
+name: CI
+
+# Runs build and test on:
+#   every push that has a change in a file not in the docs or examples folder
+#   every pull request with main branch as the base that has a change in a file not in the docs or examples folder
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!examples/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!examples/**'
+
+jobs:
+  check_and_build:
+    name: Check and build codebase
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'yarn'
+          node-version: 18
+
+      - name: Installation
+        run: yarn --prefer-offline --frozen-lockfile --non-interactive
+
+      - name: Check Code
+        run: yarn check:ci
+
+      - name: Build Core
+        run: yarn build
+
+      - name: Check size
+        run: yarn size
+
+  code_coverage:
+    name: Check code coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: 'yarn'
+          node-version: 18
+
+      - name: Installation
+        run: yarn --prefer-offline --frozen-lockfile --non-interactive
+
+      - name: Build Code Coverage
+        run: yarn test:cover
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

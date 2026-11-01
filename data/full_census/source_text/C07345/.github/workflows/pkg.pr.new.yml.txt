@@ -1,0 +1,30 @@
+name: Publish Any Commit
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    concurrency:
+      group: pkg-pr-new-${{ github.workflow }}-#${{ github.event.pull_request.number || github.head_ref || github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # main
+        with:
+          node-version: 26
+          cache: true
+          sfw: true
+
+      - name: Build
+        run: vp run build
+
+      - run: vp dlx pkg-pr-new publish

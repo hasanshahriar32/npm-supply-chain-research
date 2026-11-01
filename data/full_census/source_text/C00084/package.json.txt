@@ -1,0 +1,115 @@
+{
+  "name": "penpal",
+  "version": "8.0.1",
+  "description": "Penpal simplifies communication with iframes, workers, and windows by using promise-based methods on top of postMessage.",
+  "author": "Aaron Hardy <aaron@aaronhardy.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Aaronius/penpal/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aaronius/penpal.git"
+  },
+  "keywords": [
+    "postMessage",
+    "communication",
+    "promise",
+    "iframe",
+    "iframes",
+    "worker",
+    "workers",
+    "web-worker",
+    "web-workers",
+    "shared-worker",
+    "shared-workers",
+    "service-worker",
+    "service-workers",
+    "port",
+    "message-port",
+    "message-channel",
+    "window",
+    "windows"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "unpkg": "./dist/penpal.min.js",
+  "jsdelivr": "./dist/penpal.min.js",
+  "types": "./dist/penpal.d.ts",
+  "exports": {
+    "import": {
+      "types": "./dist/penpal.d.ts",
+      "default": "./dist/penpal.mjs"
+    },
+    "require": {
+      "types": "./dist/penpal.d.cts",
+      "default": "./dist/penpal.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown --format esm --format cjs --format iife && tsdown --format iife --minify --no-clean",
+    "build:analysis": "node scripts/filesize.js dist/penpal.min.js",
+    "examples:build": "npm run build && tsdown --config examples/tsdown.config.ts",
+    "examples:dev": "npm run examples:build && node scripts/serveExamples.js",
+    "examples:serve": "node scripts/serveExamples.js",
+    "lint": "oxlint --fix --max-warnings=0",
+    "lint:check": "oxlint --max-warnings=0",
+    "format": "oxfmt --write \"**/*.{json,ts,js,cjs,md,html}\"",
+    "format:check": "oxfmt --check \"**/*.{json,ts,js,cjs,md,html}\"",
+    "test": "npm-run-all test:unit test:chromium",
+    "test:watch": "npm run test:watch:chromium",
+    "prepublishOnly": "npm-run-all format:check lint:check test test:examples test:types build",
+    "prepare": "husky",
+    "test:watch:chromium": "cross-env BROWSER=chromium vitest --config vitest.browser.config.ts --browser",
+    "test:chromium:browser": "cross-env BROWSER=chromium vitest run --config vitest.browser.config.ts --browser",
+    "test:firefox:browser": "cross-env BROWSER=firefox vitest run --config vitest.browser.config.ts --browser",
+    "test:edge:browser": "cross-env BROWSER=edge vitest run --config vitest.browser.config.ts --browser",
+    "test:webkit:browser": "cross-env BROWSER=webkit vitest run --config vitest.browser.config.ts --browser",
+    "test:file": "node scripts/testFileProtocol.js",
+    "test:file:chromium": "cross-env BROWSER=chromium npm run test:file",
+    "test:file:firefox": "cross-env BROWSER=firefox npm run test:file",
+    "test:file:edge": "cross-env BROWSER=edge npm run test:file",
+    "test:file:webkit": "cross-env BROWSER=webkit npm run test:file",
+    "test:chromium": "npm-run-all test:chromium:browser test:file:chromium",
+    "test:firefox": "npm-run-all test:firefox:browser test:file:firefox",
+    "test:edge": "npm-run-all test:edge:browser test:file:edge",
+    "test:examples": "npm run examples:build && node scripts/testExamples.js",
+    "test:webkit": "npm-run-all test:webkit:browser test:file:webkit",
+    "test:all-browsers": "npm-run-all test:chromium test:firefox test:edge test:webkit",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:types": "npm-run-all test:types:source test:types:package test:types:examples",
+    "test:types:examples": "tsc --noEmit -p examples/tsconfig.json",
+    "test:types:source": "tsc --noEmit -p tsconfig.typesTest.json",
+    "test:types:package": "npm run build && tsc --noEmit -p tsconfig.workerTypesTest.json"
+  },
+  "lint-staged": {
+    "**/*.{js,cjs,mjs,ts,cts,mts}": [
+      "oxlint --fix --max-warnings=0"
+    ],
+    "**/*.{json,ts,js,cjs,md,html}": [
+      "oxfmt --write"
+    ]
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "devDependencies": {
+    "@vitest/browser": "^4.1.10",
+    "@vitest/browser-playwright": "^4.1.10",
+    "cross-env": "^10.1.0",
+    "filesize": "^11.0.22",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "npm-run-all2": "^8.0.4",
+    "oxfmt": "0.63.0",
+    "oxlint": "1.78.0",
+    "oxlint-tsgolint": "7.0.2001",
+    "playwright": "^1.62.1",
+    "sirv": "^3.0.2",
+    "terser": "^5.49.2",
+    "tsdown": "0.22.14",
+    "typescript": "7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

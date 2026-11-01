@@ -1,0 +1,68 @@
+name: Release X-Ray Node SDK to Github and NPM
+permissions:
+  contents: write
+  id-token: write
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to tag the release with, e.g., 1.2.0, 1.2.1-alpha.1
+        required: true
+
+jobs:
+  publish_xray_node_sdk:
+    name: Test and publish X-Ray Node SDK to NPM registry and Github
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 #v2.7.0
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@f1f314fca9dfce2769ece7d933488f076716723e #v1.4.6
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install -g npm@11.7.0
+
+      - name: Cache NPM modules
+        uses: actions/cache@6f8efc29b200d32929f49075959781ed54ec270c #v3.5.0
+        with:
+          path: |
+            node_modules
+            package-lock.json
+            packages/*/node_modules
+            packages/*/package-lock.json
+          key: release-ubuntu-latest-${{ hashFiles('package.json', 'packages/*/package.json') }}-06142023
+
+      - name: Bootstrap
+        run: |
+          npm ci
+          npx lerna bootstrap --no-ci --hoist
+
+      - name: Build
+        run: |
+          npx lerna run compile
+        shell: bash
+
+      - name: Execute tests with Lerna
+        run: |
+          npx lerna run test
+        shell: bash
+
+      - name: Publish package to npm
+        run: npx lerna publish from-package --yes --exact --no-verify-access
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e #v1.1.4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: 'aws-xray-sdk-node@${{ github.event.inputs.version }}'
+          release_name: 'Release ${{ github.event.inputs.version }}'
+          body: 'Please see [CHANGELOG](https://github.com/aws/aws-xray-sdk-node/blob/master/CHANGELOG.md) for details.'
+          draft: true
+          prerelease: false

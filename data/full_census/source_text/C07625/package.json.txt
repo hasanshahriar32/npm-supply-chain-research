@@ -1,0 +1,119 @@
+{
+  "name": "@octokit/openapi-webhooks",
+  "private": true,
+  "version": "0.0.0-development",
+  "description": "GitHub's official Webhooks OpenAPI spec with Octokit extensions",
+  "main": "index.js",
+  "files": [],
+  "type": "module",
+  "scripts": {
+    "download": "node scripts/download.js",
+    "build": "node scripts/build.js",
+    "test": "node scripts/test.js",
+    "generate-types": "node scripts/generate-types.js && node scripts/generate-transition-types.js",
+    "update-package": "node scripts/update-package.js",
+    "lint": "prettier --check '*.{md,json}' 'scripts/**/*.{js,json}' 'packages/**/*.{ts,md,json,d.ts}'",
+    "lint:fix": "prettier --write '*.{md,json}' 'scripts/**/*.{js,json}' 'packages/**/*.{ts,md,json,d.ts}'"
+  },
+  "repository": "github:octokit/openapi-webhooks",
+  "keywords": [
+    "github",
+    "openapi",
+    "octokit"
+  ],
+  "author": "Wolfy1339 <webmaster@wolfy1339.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@octokit/core": "^7.0.0",
+    "github-enterprise-server-versions": "^3.0.0",
+    "openapi-typescript": "^6.2.1",
+    "prettier": "~3.9.0",
+    "semantic-release-plugin-update-version-in-files": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ],
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      [
+        "semantic-release-plugin-update-version-in-files",
+        {
+          "files": [
+            "packages/openapi-webhooks/generated/*",
+            "packages/openapi-webhooks-types-transition/package.json"
+          ]
+        }
+      ],
+      [
+        "@semantic-release/github",
+        {
+          "assets": "packages/openapi-webhooks/generated/*.json"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghec"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghes-3.18"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghes-3.19"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghes-3.20"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghes-3.21"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-ghes-3.22"
+        }
+      ],
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "packages/openapi-webhooks-types-transition"
+        }
+      ]
+    ]
+  },
+  "renovate": {
+    "extends": [
+      "github>octokit/.github"
+    ]
+  }
+}

@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        id: pnpm-setup
+        with:
+          version: 9.4.0
+          run_install: false
+
+      - name: Install Dependencies
+        id: pnpm-install
+        run: pnpm install --frozen-lockfile
+
+      - name: Create Release PR or Publish Packages
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          version: pnpm version-packages
+          commit: 'chore: update package versions'
+          title: 'chore: update package versions'
+          # Push via the GitHub API so commits and tags are signed by GitHub and
+          # satisfy the "Require signed commits" rule on `changeset-release/main`.
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}

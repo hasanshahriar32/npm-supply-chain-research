@@ -1,0 +1,42 @@
+{
+  "name": "craco",
+  "private": true,
+  "license": "Apache-2.0",
+  "keywords": [
+    "react",
+    "create-react-app",
+    "cra"
+  ],
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test:unit": "jest --config test/unit/jest.config.js",
+    "test:integration": "NODE_ENV=production jest --config test/integration/jest.config.js --runInBand",
+    "lint": "npm run lint:ts && npm run lint:es",
+    "lint:ts": "tsc --noEmit",
+    "lint:es": "eslint --ext .ts",
+    "tslint": "tsc --noEmit",
+    "bootstrap": "lerna bootstrap",
+    "build": "lerna exec npm run build",
+    "build:types": "npm run build -w @craco/types",
+    "build:craco": "npm run build -w @craco/craco",
+    "publish": "lerna publish --no-private",
+    "publish:alpha": "lerna publish --dist-tag alpha --no-private",
+    "pack": "lerna exec npm pack",
+    "refresh": "npm run build && npm run bootstrap",
+    "refresh:types": "npm run build:types && npm run bootstrap"
+  },
+  "prettier": "@dilanx/config/prettier",
+  "devDependencies": {
+    "@dilanx/config": "^1.1.0",
+    "@typescript-eslint/eslint-plugin": "^5.38.1",
+    "@typescript-eslint/parser": "^5.38.1",
+    "eslint": "^8.24.0",
+    "jest": "^29.5.0",
+    "jest-playwright-preset": "^3.0.1",
+    "lerna": "^6.5.1",
+    "playwright": "^1.33.0",
+    "prettier": "2.7.1"
+  }
+}

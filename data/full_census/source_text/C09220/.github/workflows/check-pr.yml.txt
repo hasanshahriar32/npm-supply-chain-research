@@ -1,0 +1,40 @@
+name: check pr
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions: {}
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: $/.github/actions/setup
+        with:
+          sparse-checkout: |
+            .github/PULL_REQUEST_TEMPLATE.md
+            .github/actions
+            .changeset
+            pnpm-workspace.yaml
+            pnpm-lock.yaml
+            package.json
+            **/package.json
+          sparse-checkout-cone-mode: false
+          skip-build: 'true'
+      - name: Collect changed files
+        id: changed-files
+        uses: step-security/changed-files@2e07db73e5ccdb319b9a6c7766bd46d39d304bad # v47.0.5
+        with:
+          files: |
+            .changeset/**
+            !.changeset/config.json
+      - uses: ./.github/actions/check-pr # zizmor: ignore[self-repository]
+        with:
+          changed-files: ${{ steps.changed-files.outputs.added_files }} ${{ steps.changed-files.outputs.modified_files }}

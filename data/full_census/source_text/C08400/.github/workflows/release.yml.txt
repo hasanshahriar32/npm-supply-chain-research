@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '.changeset/**'
+      - '.github/workflows/release.yml'
+      - 'pnpm-lock.yaml'
+
+permissions: {}
+
+jobs:
+  release:
+    # prevents this action from running on forks
+    if: github.repository == 'publint/publint'
+    name: Release
+    permissions:
+      pull-requests: write # to create pull request (changesets/action)
+      contents: write # to create release (changesets/action)
+      id-token: write # for trusted publishing (changesets/action)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false # prevent cache poisoning
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Create release PR or publish to npm
+        uses: changesets/action@22ccf9aa43179fe9e27dc62e575971d28cce197c # v2.0.0
+        with:
+          commit-message: Release packages
+          pr-title: Release packages
+          publish-script: pnpm changeset publish

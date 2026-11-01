@@ -1,0 +1,16 @@
+name: docs-build
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  merge_group: ~
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  build:
+    uses: elastic/docs-actions/.github/workflows/docs-build.yml@e1608f9d7c62bc4c59ab21fc691809351b1a31aa # v1
+    with:
+      enable-vale-linting: true

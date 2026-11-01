@@ -1,0 +1,68 @@
+# Opens a version bump PR (versions + changelogs). Merge it, then run the `release` workflow
+# and publish a GitHub Release tagged `v<version>`.
+name: version-bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionType:
+        type: choice
+        description: 'Version type to bump'
+        options:
+        - latest
+        - next
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  version-bump:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'yarn'
+          scope: '@lingui'
+
+      - name: Install dependencies if needed
+        run: yarn install
+
+      - name: Build packages
+        run: yarn release:build
+
+      - name: Unit Testing
+        run: yarn test:ci
+
+      - name: Linting & Types
+        run: yarn lint:all
+
+      - name: Versioning packages
+        run: yarn version:${{ inputs.versionType }}
+
+      - name: Read new version
+        id: version
+        run: echo "version=$(node -p "require('./lerna.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          author: 'Lingui Bot <linguibot@gmail.com>'
+          committer: 'Lingui Bot <linguibot@gmail.com>'
+          branch: chore/version-${{ steps.version.outputs.version }}
+          delete-branch: true
+          commit-message: "chore(release): published v${{ steps.version.outputs.version }} [skip ci]"
+          title: "chore(release): published v${{ steps.version.outputs.version }} [skip ci]"
+          body: |
+            Bumps all packages to `${{ steps.version.outputs.version }}` (${{ inputs.versionType }}) and updates the changelogs.
+
+            After merging, run the `release` workflow (`${{ inputs.versionType }}`) and publish a GitHub Release with tag `v${{ steps.version.outputs.version }}`.

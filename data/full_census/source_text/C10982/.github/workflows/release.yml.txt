@@ -1,0 +1,93 @@
+name: Release monorepo packages
+on:
+  workflow_dispatch:
+    branches:
+      - main
+
+env:
+  CPU_CORES: 2
+  LERNA_CONCURRENCY: 4
+  LERNA_TEST_CONCURRENCY: 2
+  HUSKY: 0
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SWAGGER_BOT_GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      - name: Install monorepo dependencies
+        run: npm ci --engine-strict=false
+      - name: Build monorepo
+        run: npm run build
+      - name: Check TypeScript types
+        run: npm run typescript:check-types
+      - name: Execute tests in monorepo
+        run: npm run test
+      - name: Version bump & GitHub release
+        run: |
+          git config user.email "swagger-bot@smartbear.com"
+          git config user.name "swagger-bot"
+          npx lerna version --no-private --yes --force-publish
+        env:
+          GH_TOKEN: ${{ secrets.SWAGGER_BOT_GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish monorepo npm packages
+        # Provenance signing can fail with TLOG_CREATE_ENTRY_ERROR (409). When Rekor takes longer
+        # than sigstore's default 5s timeout to respond, sigstore sends the same entry again and
+        # Rekor rejects it as a duplicate. Each package raises the timeout in its publishConfig.
+        # Retrying the whole step is safe because `from-package` skips versions already on npm.
+        run: |
+          for attempt in 1 2 3 4 5; do
+            npx lerna publish from-package --no-private --yes --concurrency 1 && exit 0
+            echo "::warning::lerna publish attempt ${attempt} failed"
+            # lerna leaves a temporary gitHead in package.json files when publishing aborts
+            git checkout -- package.json 'packages/*/package.json'
+            sleep 30
+          done
+          # Last resort: publish the remaining packages without provenance
+          echo "::warning::Publishing remaining packages without provenance"
+          sed -i 's/"provenance": true/"provenance": false/' packages/*/package.json
+          git commit -am "chore: disable provenance for fallback publish"
+          npx lerna publish from-package --no-private --yes --concurrency 1
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  sync-lockfile:
+    name: Sync lockfile
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SWAGGER_BOT_GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+      - name: Sync lockfile
+        run: |
+          git config user.email "swagger-bot@smartbear.com"
+          git config user.name "swagger-bot"
+          git pull --rebase origin main
+          npm install
+          git add package-lock.json
+          git diff --cached --quiet || git commit -m "chore: sync lockfile"
+          git push origin main

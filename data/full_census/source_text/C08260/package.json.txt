@@ -1,0 +1,49 @@
+{
+  "name": "posthtml-render",
+  "version": "3.0.0",
+  "description": "Renders PostHTML Tree to HTML/XML",
+  "license": "MIT",
+  "repository": "posthtml/posthtml-render",
+  "author": "Ivan Voischev <voischev.ivan@ya.ru>",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=12"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p test/types/tsconfig.json",
+    "typecheck:minimum": "npm exec --yes --package=typescript@4.3.5 -- tsc --noEmit -p test/types/tsconfig.minimum.json",
+    "test": "npm run build && npm run test:coverage",
+    "test:unit": "node --test test/core.test.cjs",
+    "test:coverage": "c8 node --test test/core.test.cjs",
+    "test:package": "node test/package.cjs",
+    "test:packed": "node test/packed.cjs",
+    "check": "npm run build && npm run lint && npm run typecheck && npm run typecheck:minimum && npm run test:coverage && npm run test:package",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run check"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "posthtml",
+    "render",
+    "html",
+    "xml"
+  ],
+  "dependencies": {
+    "is-json": "^2.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "c8": "^12.0.0",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "posthtml-parser": "^0.9.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  },
+  "types": "dist/index.d.ts"
+}

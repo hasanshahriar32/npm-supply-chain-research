@@ -1,0 +1,60 @@
+{
+  "name": "json-schema-merge-allof",
+  "version": "0.8.1",
+  "description": "Simplify your schema by combining allOf into the root schema, safely.",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "scripts": {
+    "lint": "npm run prettier:check && npm run eslint",
+    "lint:fix": "npm run eslint:fix && npm run prettier:fix",
+    "eslint": "eslint src test",
+    "eslint:fix": "npm run eslint -- --fix",
+    "prettier:cli": "prettier src test",
+    "prettier:check": "npm run prettier:cli -- --check",
+    "prettier:fix": "npm run prettier:cli -- --write",
+    "pretest": "npm run eslint",
+    "test": "vitest run test -c test/vitest.config.js",
+    "develop": "vitest watch test -c test/vitest.develop.config.js"
+  },
+  "directories": {
+    "lib": "src",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mokkabonna/json-schema-merge-allof.git"
+  },
+  "keywords": [
+    "json",
+    "schema",
+    "jsonschema"
+  ],
+  "author": "Martin Hansen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mokkabonna/json-schema-merge-allof/issues"
+  },
+  "homepage": "https://github.com/mokkabonna/json-schema-merge-allof#readme",
+  "devDependencies": {
+    "@istanbuljs/schema": "^0.1.3",
+    "@vitest/coverage-v8": "^1.1.1",
+    "ajv": "^8.12.0",
+    "c8": "^9.0.0",
+    "chai": "^5.0.0",
+    "coveralls": "^3.1.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-node": "^11.1.0",
+    "json-schema-ref-parser": "^9.0.9",
+    "json-stringify-safe": "^5.0.1",
+    "prettier": "^3.1.1",
+    "sinon": "^17.0.1",
+    "vitest": "^1.1.1"
+  },
+  "dependencies": {
+    "compute-lcm": "^1.1.2",
+    "json-schema-compare": "^0.2.2",
+    "lodash": "^4.17.20"
+  }
+}

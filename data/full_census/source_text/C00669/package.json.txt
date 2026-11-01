@@ -1,0 +1,145 @@
+{
+  "name": "graphql-tools-monorepo",
+  "description": "Useful tools to create and manipulate GraphQL schemas.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ardatan/graphql-tools.git"
+  },
+  "homepage": "https://github.com/ardatan/graphql-tools#readme",
+  "bugs": {
+    "url": "https://github.com/ardatan/graphql-tools/issues"
+  },
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/loaders/*",
+    "packages/executors/*",
+    "website"
+  ],
+  "packageManager": "npm@12.0.1",
+  "keywords": [
+    "GraphQL",
+    "Apollo",
+    "JavaScript",
+    "TypeScript",
+    "Mock",
+    "Schema",
+    "Schema Language",
+    "Tools"
+  ],
+  "scripts": {
+    "build": "bob build",
+    "build:api-docs": "tsx scripts/build-api-docs.mts",
+    "ci:lint": "eslint \"**/*.ts\" --output-file eslint_report.json --format json",
+    "clean-dist": "rimraf \"packages/**/dist\" && rimraf \".bob\"",
+    "lint": "eslint \"**/*.ts\"",
+    "postbuild": "tsx scripts/postbuild.ts",
+    "postinstall": "patch-package && husky install && node scripts/fix-astrojs-typings.js && node scripts/fix-yoga-lru-cache-typings.js && node scripts/shim-typescript7-api.cjs",
+    "prerelease": "npm run build",
+    "prettier": "prettier --cache --ignore-path .gitignore --ignore-path .prettierignore --write --list-different .",
+    "prettier:check": "prettier --cache --ignore-path .gitignore --ignore-path .prettierignore --check .",
+    "release": "npx changeset publish",
+    "test": "jest --no-watchman",
+    "test:bench": "vitest bench --run --reporter=verbose",
+    "test:bench:ci": "node scripts/bench-ci.mjs",
+    "test:bun": "bun test",
+    "test:leaks": "cross-env \"LEAK_TEST=1\" jest --no-watchman --detectOpenHandles --detectLeaks --runInBand --forceExit",
+    "test:template-lifecycle": "node --expose-gc --test scripts/test-babel-template-retention.mjs",
+    "ts:check": "tsc --noEmit",
+    "version": "npx changeset version"
+  },
+  "dependencies": {
+    "@graphql-tools/batch-execute": "^10.2.0"
+  },
+  "optionalDependencies": {
+    "bun": "1.4.4"
+  },
+  "devDependencies": {
+    "@apollo/client": "4.3.5",
+    "@apollo/subgraph": "^2.15.1",
+    "@babel/core": "8.0.10",
+    "@babel/plugin-transform-class-properties": "8.0.1",
+    "@babel/plugin-transform-class-static-block": "8.0.5",
+    "@babel/plugin-transform-explicit-resource-management": "8.0.5",
+    "@babel/plugin-transform-private-methods": "8.0.1",
+    "@babel/preset-env": "8.0.7",
+    "@babel/preset-typescript": "8.0.7",
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.3",
+    "@envelop/core": "6.0.0",
+    "@eslint/compat": "2.1.1",
+    "@eslint/eslintrc": "3.3.7",
+    "@eslint/js": "10.0.1",
+    "@graphql-tools/delegate": "12.3.0",
+    "@n1ru4l/in-memory-live-query-store": "0.11.0",
+    "@theguild/prettier-config": "3.0.1",
+    "@theguild/remark-mermaid": "0.3.0",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.6.5",
+    "@typescript-eslint/eslint-plugin": "8.72.1",
+    "@typescript-eslint/parser": "8.72.1",
+    "@typescript/typescript6": "6.0.2",
+    "@urql/core": "6.0.3",
+    "babel-jest": "30.4.1",
+    "bob-the-bundler": "7.0.1",
+    "concurrently": "10.0.6",
+    "cookie": "2.0.1",
+    "cross-env": "10.1.0",
+    "eslint": "10.8.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-config-standard": "17.1.0",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-n": "18.5.0",
+    "eslint-plugin-promise": "7.3.0",
+    "globals": "17.13.0",
+    "graphql": "17.0.2",
+    "graphql-yoga": "6.0.1",
+    "husky": "9.1.7",
+    "jest": "30.4.2",
+    "lint-staged": "17.6.0",
+    "lru-cache": "11.5.3",
+    "patch-package": "8.0.1",
+    "prettier": "3.9.10",
+    "prettier-plugin-tailwindcss": "0.8.1",
+    "react": "19.2.6",
+    "react-dom": "19.3.1",
+    "rimraf": "6.1.3",
+    "ts-jest": "29.4.15",
+    "tsx": "4.23.15",
+    "typedoc": "0.28.20",
+    "typedoc-plugin-markdown": "^4.11.0",
+    "typedoc-plugin-rename-defaults": "0.7.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
+    "vitest": "5.0.5",
+    "wonka": "6.3.6"
+  },
+  "overrides": {
+    "@graphql-tools/delegate": "12.3.0",
+    "@xmldom/xmldom": "0.9.12",
+    "cookie": "2.0.1",
+    "esbuild": "0.28.1",
+    "estree-util-value-to-estree": "3.5.0",
+    "extract-zip": {
+      "yauzl": "3.3.0"
+    },
+    "graphql": "17.0.2",
+    "katex": "0.18.2",
+    "miniflare": {
+      "undici": "8.12.2"
+    },
+    "postcss": "8.5.23",
+    "postcss-selector-parser": "7.1.6",
+    "react": "19.2.6",
+    "react-dom": "19.3.1",
+    "tmp": "0.2.7"
+  },
+  "lint-staged": {
+    "packages/**/src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ],
+    "**/*.{ts,tsx,graphql,yml,md,mdx,json,js}": [
+      "prettier --write"
+    ]
+  }
+}

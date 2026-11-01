@@ -1,0 +1,86 @@
+name: Changesets
+on:
+  push:
+    branches: [main, v1]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # The beta job's version push starts another v1 run before publishing finishes, so cancellation would stop its own release.
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
+
+jobs:
+  verify:
+    name: Verify
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/verify.yml
+    secrets: inherit
+
+  changesets:
+    name: Changesets
+    needs: verify
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: PR or publish
+        uses: wevm/actions/vendor/changesets/action/ox@8963daf30237417f873c8e2f17e3bf9415e3a7b9 # upstream v1.5.3
+        with:
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
+          createGithubReleases: ${{ github.ref == 'refs/heads/main' }}
+          publish: pnpm changeset:publish
+          version: pnpm changeset:version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  beta:
+    name: Publish beta
+    if: >-
+      github.repository == 'wevm/ox' &&
+      github.ref == 'refs/heads/v1' &&
+      github.event.head_commit.message != 'chore: version beta packages'
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          fetch-depth: 0
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Version and publish beta
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          pnpm exec changeset version
+          pnpm version:update
+          if ! git diff --quiet -- .changeset package.json src/CHANGELOG.md src/version.ts; then
+            git add .changeset package.json src/CHANGELOG.md src/version.ts
+            git commit --no-verify -m "chore: version beta packages"
+            git push
+          fi
+          pnpm changeset:publish

@@ -1,0 +1,77 @@
+{
+  "name": "libsql",
+  "version": "0.6.0-pre.43",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tursodatabase/libsql-js"
+  },
+  "description": "A better-sqlite3 compatible API for libSQL that supports Bun, Deno, and Node",
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64",
+    "wasm32",
+    "arm"
+  ],
+  "main": "compat.js",
+  "types": "compat.d.ts",
+  "exports": {
+    ".": {
+      "default": "./compat.js",
+      "types": "./compat.d.ts"
+    },
+    "./promise": {
+      "default": "./promise.js",
+      "types": "./promise.d.ts"
+    }
+  },
+  "files": [
+    "auth.d.ts",
+    "auth.js",
+    "compat.d.ts",
+    "compat.js",
+    "index.d.ts",
+    "index.js",
+    "promise.d.ts",
+    "promise.js",
+    "sqlite-error.d.ts",
+    "sqlite-error.js"
+  ],
+  "napi": {
+    "name": "libsql",
+    "triples": {
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "x86_64-unknown-linux-musl"
+      ]
+    }
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "ava": "^6.0.1",
+    "typescript": "^5.9.2"
+  },
+  "ava": {
+    "timeout": "3m"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "npm exec tsc && napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "npm exec tsc && napi prepublish -t npm",
+    "test": "cd integration-tests && npm i && npm run test",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

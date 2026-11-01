@@ -1,0 +1,272 @@
+name: Publish
+
+on:
+  # When Release Pull Request is merged
+  pull_request:
+    branches:
+      - master
+    types: [closed]
+
+env:
+  DOCKER_BASE_NAME: ghcr.io/${{ github.repository }}
+  DOCKER_HUB_BASE_NAME: secretlint/secretlint
+
+jobs:
+  publish:
+    if: |
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'Type: Release')
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write  # Required for OIDC
+    outputs:
+      exists_tag: ${{ steps.tag_check.outputs.exists_tag }}
+      version: ${{ env.CURRENT_VERSION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+      - name: Git Identity
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/$GITHUB_REPOSITORY
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install
+        run: pnpm install
+      # Define ${CURRENT_VERSION}
+      - name: Set Current Version
+        run: |
+          CURRENT_VERSION=$(node -p 'require("./package.json").version')
+          echo "CURRENT_VERSION=${CURRENT_VERSION}" >> $GITHUB_ENV
+      - name: Tag Check
+        id: tag_check
+        run: |
+          GET_API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/git/ref/tags/v${CURRENT_VERSION}"
+          http_status_code=$(curl -LI $GET_API_URL -o /dev/null -w '%{http_code}\n' -s \
+            -H "Authorization: token ${GITHUB_TOKEN}")
+          if [ "$http_status_code" -ne "404" ] ; then
+            echo "exists_tag=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists_tag=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish with OIDC
+        if: steps.tag_check.outputs.exists_tag == 'false'
+        run: |
+          pnpm -r publish --no-git-checks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+      - name: Create Git Tag
+        if: steps.tag_check.outputs.exists_tag == 'false'
+        uses: pkgdeps/git-tag-action@a5a161774bace8b4e1969dd850c67a7421f1b710 # v3.0.1
+        with:
+          version: ${{ env.CURRENT_VERSION }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_repo: ${{ github.repository }}
+          git_commit_sha: ${{ github.sha }}
+          git_tag_prefix: "v"
+
+  publish-binary:
+    needs: [publish]
+    if: needs.publish.outputs.exists_tag == 'false'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+      - name: Install
+        run: pnpm install
+      - name: Build Source Code
+        run: pnpm run build
+      # build the binary
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: "./publish/binary-compiler/.bun-version"
+          no-cache: true
+      - name: Build binary
+        run: bun run build-binary
+        working-directory: ./publish/binary-compiler
+      - name: Upload binary artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binary-dist
+          path: ./publish/binary-compiler/dist/**
+
+  publish-docker:
+    needs: [publish]
+    if: needs.publish.outputs.exists_tag == 'false'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Prepare environment
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          echo "PLATFORM_PAIR=${PLATFORM//\//-}" >> $GITHUB_ENV
+          echo "SECRETLINT_VERSION=${VERSION}" >> $GITHUB_ENV
+      # `pnpm publish` can return before the npm registry serves the new version,
+      # so wait until every package installed by the Dockerfile is resolvable.
+      - name: Wait for npm packages to be available
+        run: |
+          packages="secretlint @secretlint/secretlint-rule-preset-recommend @secretlint/secretlint-rule-pattern @secretlint/secretlint-formatter-sarif"
+          for pkg in $packages; do
+            for i in $(seq 1 30); do
+              if npm view "${pkg}@${SECRETLINT_VERSION}" version --prefer-online > /dev/null 2>&1; then
+                echo "${pkg}@${SECRETLINT_VERSION} is available"
+                continue 2
+              fi
+              echo "Waiting for ${pkg}@${SECRETLINT_VERSION} (${i}/30)"
+              sleep 20
+            done
+            echo "::error::${pkg}@${SECRETLINT_VERSION} is not available on npm"
+            exit 1
+          done
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Login to GitHub Container Registry
+        run: echo "${GITHUB_TOKEN}" | docker login ghcr.io -u azu --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build, smoke test, and push by digest
+        working-directory: ./publish/docker
+        run: |
+          mkdir -p /tmp/digests
+          docker buildx build . \
+            --build-arg SECRETLINT_VERSION=${SECRETLINT_VERSION} \
+            --platform ${{ matrix.platform }} \
+            --output "type=docker,name=secretlint:smoke" \
+            --output "type=image,name=${DOCKER_BASE_NAME},push-by-digest=true,name-canonical=true,push=true" \
+            --metadata-file /tmp/metadata.json
+          docker run --rm secretlint:smoke --version
+          digest=$(jq -r '."containerimage.digest"' /tmp/metadata.json)
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: docker-digests-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-docker-merge:
+    needs: [publish, publish-docker]
+    if: needs.publish.outputs.exists_tag == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Prepare tags
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          echo "PKG_TAG=${DOCKER_BASE_NAME}:v${VERSION}" >> $GITHUB_ENV
+          echo "PKG_LATEST_TAG=${DOCKER_BASE_NAME}:latest" >> $GITHUB_ENV
+          echo "HUB_TAG=${DOCKER_HUB_BASE_NAME}:v${VERSION}" >> $GITHUB_ENV
+          echo "HUB_LATEST_TAG=${DOCKER_HUB_BASE_NAME}:latest" >> $GITHUB_ENV
+      - name: Download digests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: /tmp/digests
+          pattern: docker-digests-*
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Login to Registries
+        run: |
+          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u azu --password-stdin
+          echo "${DOCKER_HUB_TOKEN}" | docker login -u efcl --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create \
+            -t "${PKG_TAG}" \
+            -t "${PKG_LATEST_TAG}" \
+            -t "${HUB_TAG}" \
+            -t "${HUB_LATEST_TAG}" \
+            $(printf "${DOCKER_BASE_NAME}@sha256:%s " *)
+      - name: Verify
+        run: |
+          docker buildx imagetools inspect "${PKG_TAG}"
+          docker buildx imagetools inspect "${HUB_TAG}"
+
+  create-release:
+    needs: [publish, publish-binary]
+    if: needs.publish.outputs.exists_tag == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Download binary artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binary-dist
+          path: ./binary-dist
+      - name: Create Release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ needs.publish.outputs.version }}
+          name: ${{ github.event.pull_request.title }}
+          body: |
+            ${{ github.event.pull_request.body }}
+          draft: false
+          prerelease: false
+          files: ./binary-dist/**
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const version = process.env.VERSION;
+            const repository = process.env.GITHUB_REPOSITORY;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🎉 Release https://github.com/${repository}/releases/tag/v${version}`
+            })

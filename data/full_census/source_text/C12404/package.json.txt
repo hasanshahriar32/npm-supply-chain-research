@@ -1,0 +1,25 @@
+{
+  "name": "react-fit-monorepo",
+  "version": "1.0.0",
+  "description": "react-fit monorepo",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "test"
+  ],
+  "scripts": {
+    "build": "yarn workspace react-fit build",
+    "dev": "yarn workspace react-fit watch & yarn workspace test dev",
+    "format": "yarn workspaces foreach --all run format",
+    "lint": "yarn workspaces foreach --all run lint",
+    "postinstall": "husky",
+    "test": "yarn workspaces foreach --all run test",
+    "tsc": "yarn workspaces foreach --all run tsc",
+    "unit": "yarn workspaces foreach --all run unit"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "husky": "^9.0.0"
+  },
+  "packageManager": "yarn@4.17.1"
+}

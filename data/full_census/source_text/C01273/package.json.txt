@@ -1,0 +1,68 @@
+{
+  "name": "broccoli-funnel",
+  "version": "4.0.0",
+  "description": "Broccoli plugin that allows you to filter files selected from an input node down based on regular expressions.",
+  "keywords": [
+    "broccoli-plugin",
+    "javascript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/broccolijs/broccoli-funnel.git"
+  },
+  "type": "module",
+  "license": "MIT",
+  "author": "Robert Jackson",
+  "main": "index.js",
+  "files": [
+    "index.js"
+  ],
+  "scripts": {
+    "test": "mocha tests/",
+    "lint": "eslint .",
+    "test:debug": "mocha debug tests/",
+    "test:debugger": "mocha --inspect-brk tests/"
+  },
+  "dependencies": {
+    "array-equal": "^2.0.0",
+    "broccoli-plugin": "^6.0.0",
+    "debug": "^4.1.1",
+    "fs-tree-diff": "^2.0.1",
+    "heimdalljs": "^0.2.0",
+    "minimatch": "^10.2.5",
+    "walk-sync": "^4.0.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "broccoli-test-helper": "^2.0.0",
+    "chai": "^4.2.0",
+    "eslint": "^10.5.0",
+    "fs-extra": "^8.1.0",
+    "globals": "^17.7.0",
+    "mocha": "~6.2.1",
+    "release-plan": "^0.18.0",
+    "rimraf": "^3.0.0"
+  },
+  "packageManager": "pnpm@10.34.4+sha512.8768be55200ae3f2226b6527fcca2687e14bc4e5f12d7721a0f25da3df47915177058648db4177baf348120fa0ba2752d8d8d93f6beaf1fe64ae18da8de961af",
+  "engines": {
+    "node": "10.* || >= 12.*"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "release-it": {
+    "plugins": {
+      "release-it-lerna-changelog": {
+        "infile": "CHANGELOG.md",
+        "launchEditor": true
+      }
+    },
+    "git": {
+      "tagName": "v${version}"
+    },
+    "github": {
+      "release": true,
+      "tokenRef": "GITHUB_AUTH"
+    }
+  }
+}

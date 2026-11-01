@@ -1,0 +1,64 @@
+name: Publish web-features
+
+on:
+  push:
+    # Tags on the form v1.2.3 are for releases. Any other tags are ignored.
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  package_dir: "packages/web-features"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - run: npm ci
+      - run: npm test
+  artifacts:
+    if: github.repository == 'web-platform-dx/web-features'
+    runs-on: ubuntu-latest
+    needs: "test"
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run stats --silent -- > stats.json
+      - run: gh release upload ${{ github.ref_name }} $ARTIFACTS
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACTS: >
+            ${{ env.package_dir }}/data.json
+            data.extended.json
+            schemas/data.schema.json
+            data.proposed.json
+            schemas/data.proposed.schema.json
+            stats.json
+
+  publish:
+    if: github.repository == 'web-platform-dx/web-features'
+    runs-on: ubuntu-latest
+    needs: "test"
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+      - run: npm publish
+        working-directory: ${{ env.package_dir }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,156 @@
+name: ReactNativeSlider-CI
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'release/**'
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  install:
+    name: Install dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Cache node modules
+        id: cache-package-npm
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        env:
+          cache-name: cached-ci-npm-deps
+        with:
+          path: ./package/node_modules
+          key: ${{ hashFiles('./package/package.json') }}
+
+      - name: Install required dependencies on cache miss (npm)
+        if: steps.cache-package-npm.outputs.cache-hit != 'true'
+        run: |
+          npm install
+
+  verify-package-sources:
+    name: Lint the sources
+    runs-on: ubuntu-latest
+    needs: install
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Pull npm dependencies
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: ./package/node_modules
+          key: ${{ hashFiles('./package/package.json') }}
+
+      - name: Run ESLint on the sources
+        run: cd package && npx eslint src
+
+      - name: Run TypeScript on the sources
+        run: cd package && npx tsc --noEmit
+
+
+  test:
+    name: Run the unit tests
+    runs-on: ubuntu-latest
+    needs: install
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Pull npm dependencies
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        with:
+          path: ./package/node_modules
+          key: ${{ hashFiles('./package/package.json') }}
+
+      - name: Run unit tests
+        run: cd package && npx jest --coverage --verbose
+
+
+  verify-example-sources:
+    name: Verify example app sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint on the sources
+        run: cd example && npx eslint .
+
+      - name: Run TypeScript on the sources
+        run: cd example && npx tsc --noEmit
+
+  build-android-app-new-arch:
+    name: Build example app Android (Fabric)
+    runs-on: ubuntu-latest
+    needs: [verify-example-sources]
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Pull the npm dependencies
+        run: npm install
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Build the Android OS app
+        run: cd example/android && ./gradlew assembleDebug
+
+  build-iOS-new-arch-app:
+    name: Build example app iOS (Fabric)
+    runs-on: macos-latest
+    needs: [verify-example-sources]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        env:
+          cache-name: cached-ios-npm-deps
+        with:
+          path: example/node_modules
+          key: new-arch-${{ hashFiles('./example/package-lock.json') }}-${{ hashFiles('./package/package-lock.json') }}
+
+      - name: Install required dependencies on cache miss (npm)
+        if: steps.cache-npm.outputs.cache-hit != 'true'
+        run: |
+          npm install
+
+      - name: Cache Pods
+        id: cache-pods
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684
+        env:
+          cache-name: cached-ios-pods-deps
+        with:
+          path: example/ios/Pods
+          key: new-arch-${{ hashFiles('./example/ios/Podfile.lock') }}
+
+      - name: Use the current package sources in build
+        run: cd example && npm run refresh-package
+
+      - name: Install required dependencies on cache miss (Pods)
+        if: steps.cache-pods.outputs.cache-hit != 'true'
+        run: |
+          cd example/ios && pod install
+
+      - name: Reinstall Pods only if using cached ones
+        if: steps.cache-pods.outputs.cache-hit == 'true'
+        run: cd example/ios && pod install
+
+      - name: Build iOS - Fabric
+        run: |
+          xcodebuild -workspace example.xcworkspace -scheme example -destination "platform=iOS Simulator" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO SKIP_BUNDLING=TRUE build | xcbeautify --renderer github-actions
+        working-directory: example/ios

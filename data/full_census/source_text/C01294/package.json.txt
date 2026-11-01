@@ -1,0 +1,109 @@
+{
+  "name": "@napi-rs/nice",
+  "version": "1.1.1",
+  "description": "https://linux.die.net/man/2/nice binding for Node.js",
+  "keywords": [
+    "N-API",
+    "NAPI",
+    "Rust",
+    "napi-rs",
+    "nice",
+    "node-addon",
+    "node-addon-api"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Brooooooklyn/nice.git"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Brooooooklyn"
+  },
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "nice.js"
+  ],
+  "main": "nice.js",
+  "types": "index.d.ts",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "format": "run-p format:prettier format:rs format:toml",
+    "format:prettier": "prettier . -w",
+    "format:toml": "taplo format",
+    "format:rs": "cargo fmt",
+    "lint": "oxlint",
+    "preversion": "napi build --platform && git add .",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "ava",
+    "version": "napi version"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "3.5.1",
+    "@oxc-node/core": "^0.0.35",
+    "ava": "^6.4.1",
+    "chalk": "^5.6.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "npm-run-all2": "^8.0.4",
+    "oxfmt": "^0.23.0",
+    "oxlint": "^1.38.0",
+    "typescript": "^5.9.3"
+  },
+  "lint-staged": {
+    "*.@(js|ts|tsx)": [
+      "oxlint --fix"
+    ],
+    "*.@(js|ts|tsx|yml|yaml|md|json|toml)": [
+      "oxfmt --write"
+    ]
+  },
+  "napi": {
+    "binaryName": "nice",
+    "constEnum": false,
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "i686-pc-windows-msvc",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-linux-android",
+      "x86_64-unknown-freebsd",
+      "aarch64-unknown-linux-musl",
+      "armv7-linux-androideabi",
+      "aarch64-pc-windows-msvc",
+      "powerpc64le-unknown-linux-gnu",
+      "s390x-unknown-linux-gnu",
+      "riscv64gc-unknown-linux-gnu",
+      "aarch64-unknown-linux-ohos"
+    ]
+  },
+  "ava": {
+    "environmentVariables": {
+      "TS_NODE_PROJECT": "./tsconfig.json"
+    },
+    "extensions": {
+      "ts": "module"
+    },
+    "nodeArguments": [
+      "--import",
+      "@oxc-node/core/register"
+    ],
+    "timeout": "2m",
+    "workerThreads": false
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

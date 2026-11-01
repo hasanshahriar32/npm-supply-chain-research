@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main, alpha, beta]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: |
+      !(github.event_name == 'pull_request' && (github.head_ref == 'alpha' || github.head_ref == 'beta'))
+    outputs:
+      has-release: ${{ steps.check-release.outputs.has-release }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
+          cache: npm
+
+      - name: 📥 Install dependencies
+        run: |
+          npm i -g npm@>=11.5.1
+          npm ci
+        env:
+          PREPARE: false
+
+      - name: 🔍 Lint
+        run: npm run lint
+
+      - name: 🏗️ Build
+        run: npm run prepare
+
+      - name: 🚔 Type check
+        run: npm run type-check
+
+      - name: 🧪 Test
+        run: npm test
+        env:
+          PREPARE: false
+
+      - name: 🚔 Ensure generated code is up to date
+        run: npm run test:e2e:clean
+
+      - name: 🔍 Check if release is needed
+        id: check-release
+        run: |
+          git fetch --unshallow --tags 2>/dev/null || git fetch --tags
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+          COMMITS=$(git log ${LAST_TAG}..HEAD --format="%s%n%b")
+          if echo "$COMMITS" | grep -qE "^(feat|fix|perf)(\(|:)|BREAKING CHANGE"; then
+            echo "has-release=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-release=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish:
+    permissions:
+      id-token: write
+      contents: write
+      issues: write
+      pull-requests: write
+    environment: npm-publish
+    runs-on: ubuntu-latest
+    needs: test
+    if: needs.test.outputs.has-release == 'true' && github.event_name != 'pull_request'
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v6
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          check-latest: true
+          cache: npm
+
+      - name: 📥 Install dependencies
+        run: |
+          npm i -g npm@>=11.5.1
+          npm ci
+
+      - name: 📦 Release @oazapfts/runtime
+        run: |
+          set -e  # Exit immediately if a command exits with a non-zero status.
+
+          cd packages/runtime
+          npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Release @oazapfts/resolve
+        run: |
+          set -e  # Exit immediately if a command exits with a non-zero status.
+
+          cd packages/resolve
+          npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Release oazapfts
+
+        run: |
+          set -e  # Exit immediately if a command exits with a non-zero status.
+
+          cp README.md packages/codegen/README.md
+          cd packages/codegen
+          npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

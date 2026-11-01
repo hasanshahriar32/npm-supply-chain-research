@@ -1,0 +1,286 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_NO_WARNINGS: 1
+  CI: true
+
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 20
+          - 22
+          - 24
+          - 26
+        hive-router-runtime:
+          - 0
+          - 1
+    name: Unit / Node v${{matrix.node-version}} / ${{matrix.hive-router-runtime == 1 && 'Router' || 'Stitching'}} Runtime
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version: ${{matrix.node-version}}
+      - name: Test
+        run: yarn test
+        env:
+          HIVE_ROUTER_RUNTIME: ${{matrix.hive-router-runtime}}
+
+  unit-bun:
+    name: Unit / Bun / ${{matrix.hive-router-runtime == 1 && 'Router' || 'Stitching'}} Runtime
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        hive-router-runtime:
+          - 0
+          - 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Test with Stitching Runtime
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          HIVE_ROUTER_RUNTIME: ${{matrix.hive-router-runtime}}
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: yarn test:bun
+
+  leaks:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 20
+          - 22
+          - 24
+          - 26
+        hive-router-runtime:
+          - 0
+          - 1
+    name: Leaks / Node v${{matrix.node-version}} / ${{matrix.hive-router-runtime == 1 && 'Router' || 'Stitching'}} Runtime
+    needs: [unit] # leak tests run unit tests but check for leaks; if unit tests fail, leaks will fail too - avoid confusion by running them in series
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version: ${{matrix.node-version}}
+      - name: Test
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          HIVE_ROUTER_RUNTIME: ${{matrix.hive-router-runtime}}
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: yarn test:leaks
+
+  e2e:
+    runs-on: ${{ matrix.setup.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        setup:
+          # Node
+          - workflow-name: Node 20 on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: node
+            hive-router-runtime: 0
+            node-version: 20
+          - workflow-name: Node 22 on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: node
+            hive-router-runtime: 0
+            node-version: 22
+          - workflow-name: Node 24 on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: node
+            hive-router-runtime: 0
+            node-version: 24
+          - workflow-name: Node 26 on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: node
+            hive-router-runtime: 0
+            node-version: 26
+          - workflow-name: Node 26 on Ubuntu with Router Runtime
+            os: ubuntu-latest
+            gateway-runner: node
+            hive-router-runtime: 1
+            node-version: 26
+
+          # Node on Docker
+          - workflow-name: Node Docker on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: docker
+            hive-router-runtime: 0
+          - workflow-name: Node Docker on Ubuntu with Router Runtime
+            os: ubuntu-latest
+            gateway-runner: docker
+            hive-router-runtime: 1
+
+          # Node Binary
+          - workflow-name: Node Binary on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: bin
+            hive-router-runtime: 0
+            node-version: 25.2.0
+          - workflow-name: Node Binary on Windows
+            os: windows-latest
+            gateway-runner: bin
+            hive-router-runtime: 0
+            node-version: 25.2.0
+
+          # Should be the same with Linux
+          # - workflow-name: Node Binary on MacOS Arm64
+          #   os: macos-15 # MacOS Arm64
+          #   gateway-runner: bin
+          #   hive-router-runtime: 0
+          # - workflow-name: Node Binary on MacOS x86_64
+          #   os: macos-15-intel # MacOS x86_64
+          #   gateway-runner: bin
+          #   hive-router-runtime: 0
+
+          # Bun
+          - workflow-name: Bun on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: bun
+            hive-router-runtime: 0
+          - workflow-name: Bun on Ubuntu with Router Runtime
+            os: ubuntu-latest
+            gateway-runner: bun
+            hive-router-runtime: 1
+          - workflow-name: Bun Docker on Ubuntu
+            os: ubuntu-latest
+            gateway-runner: bun-docker
+            hive-router-runtime: 0
+
+    name: E2E / ${{matrix.setup.workflow-name}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - if: matrix.setup.gateway-runner == 'docker' || matrix.setup.gateway-runner == 'bun-docker'
+        name: Configure Docker daemon mirror
+        run: |
+          echo '{"registry-mirrors":["https://mirror.gcr.io"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl reload docker
+      - if: matrix.setup.gateway-runner == 'docker' || matrix.setup.gateway-runner == 'bun-docker'
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version # if matrix.setup.node-version is not provided, the version from the file will be used
+          node-version: ${{matrix.setup.node-version}}
+      - if: runner.os == 'Linux'
+        name: Hash Docker Images
+        id: hash-docker-images
+        run: | # get all "image: '" occurrences in the e2e tests and hash them
+          echo "result=$(grep -r -h "image: '" e2e | shasum | base64)" >> "$GITHUB_OUTPUT"
+      - if: runner.os == 'Linux'
+        name: Cache Docker Images
+        uses: ScribeMD/docker-cache@e1be5d7e63cc5f0c6400d8cb86d3d899a7fd71e2 # 0.5.0 + https://github.com/ScribeMD/docker-cache/pull/838
+        continue-on-error: true
+        with:
+          key: docker-images-${{ runner.os }}-${{ steps.hash-docker-images.outputs.result }}
+      - if: matrix.setup.gateway-runner == 'docker' || matrix.setup.gateway-runner == 'bun-docker' || matrix.setup.gateway-runner == 'bin'
+        name: Build # TODO: necessary only because rollup does not use tsconfig paths within node_modules and we have packages scattered between Mesh and Hive GW repos
+        run: yarn build
+      - if: matrix.setup.gateway-runner == 'docker' || matrix.setup.gateway-runner == 'bun-docker' || matrix.setup.gateway-runner == 'bin'
+        name: Bundle
+        env:
+          E2E_GATEWAY_RUNNER: ${{matrix.setup.gateway-runner}}
+        run: yarn workspace @graphql-hive/gateway bundle
+      - if: matrix.setup.gateway-runner == 'docker' || matrix.setup.gateway-runner == 'bun-docker'
+        name: Bake
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        with:
+          source: .
+          targets: e2e${{ matrix.setup.gateway-runner == 'bun-docker' && '_bun' || '' }}
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          # we must load so that the e2e tests can use the cached image
+          load: true
+      - if: matrix.setup.gateway-runner == 'bin'
+        name: Package binary
+        run: yarn workspace @graphql-hive/gateway tsx scripts/package-binary
+      - name: Test
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: yarn test:e2e
+        env:
+          HIVE_ROUTER_RUNTIME: ${{matrix.setup.hive-router-runtime}}
+          E2E_GATEWAY_RUNNER: ${{matrix.setup.gateway-runner}}
+          E2E_TEST_APOLLO_GRAPH_REF: ${{secrets.E2E_TEST_APOLLO_GRAPH_REF}}
+          E2E_TEST_APOLLO_KEY: ${{secrets.E2E_TEST_APOLLO_KEY}}
+
+  security:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [Node, Bun]
+    name: Security / ${{matrix.runtime}} Docker Image
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Configure Docker daemon mirror
+        run: |
+          echo '{"registry-mirrors":["https://mirror.gcr.io"]}' | sudo tee /etc/docker/daemon.json
+          sudo systemctl reload docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Set up env
+        uses: the-guild-org/shared-config/setup@v1
+        with:
+          node-version-file: .node-version
+      - name: Build
+        run: yarn build
+      - name: Bundle
+        env:
+          E2E_GATEWAY_RUNNER: ${{ matrix.runtime == 'Bun' && 'bun-docker' || 'docker' }}
+        run: yarn workspace @graphql-hive/gateway bundle
+      - name: Bake
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+        with:
+          source: .
+          # we build the e2e image because the release image cant be loaded due to annotations and platforms
+          # but the e2e image builds _from_ the release image, so it's actually the same
+          targets: e2e${{ matrix.runtime == 'Bun' && '_bun' || '' }}
+          set: |
+            *.cache-from=type=gha
+            *.cache-to=type=gha,mode=max
+          # we must load so that the created image can be scanned
+          load: true
+      - name: Scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.36.0
+        with:
+          image-ref: ghcr.io/graphql-hive/gateway:e2e${{ matrix.runtime == 'Bun' && '-bun' || '' }}
+          format: table
+          exit-code: 1
+          severity: CRITICAL,HIGH,MEDIUM # fail if the following severity vulnerabilities are found
+          ignore-unfixed: true # there really nothing we can do about unfixed cves

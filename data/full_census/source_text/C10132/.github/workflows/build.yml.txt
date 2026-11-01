@@ -1,0 +1,101 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - '**' # Prevents builds on tag
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+      SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      SAUCE_TUNNEL_NAME: sp-js-tracker-${{ github.run_id }}-${{ github.run_attempt }}
+      BROWSERSLIST_IGNORE_OLD_DATA: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+
+      - name: pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ./common/temp/pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('common/config/rush/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - name: Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Build
+        run: node common/scripts/install-run-rush.js rebuild --verbose
+
+      - name: Test
+        run: node common/scripts/install-run-rush.js test --verbose
+
+      - name: Block Concurrent Executions of E2E Tests
+        if: ${{ env.SAUCE_ACCESS_KEY != '' }}
+        uses: softprops/turnstyle@v1
+        with:
+          poll-interval-seconds: 20
+          same-branch-only: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add Host for Saucelabs Tunnel
+        if: ${{ env.SAUCE_ACCESS_KEY != '' }}
+        run: echo "127.0.0.1 snowplow-js-tracker.local" | sudo tee -a /etc/hosts
+
+      - name: Start Saucelabs Tunnel
+        if: ${{ env.SAUCE_ACCESS_KEY != '' }}
+        uses: saucelabs/sauce-connect-action@v3
+        with:
+          username: ${{ secrets.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          region: us
+          tunnelName: ${{ env.SAUCE_TUNNEL_NAME }}
+
+      - name: Run End to End Tests
+        if: ${{ env.SAUCE_ACCESS_KEY != '' }}
+        timeout-minutes: 60
+        working-directory: ./trackers/javascript-tracker
+        run: node ../../common/scripts/install-run-rushx.js test:e2e:sauce
+
+      - name: Pack
+        run: node common/scripts/install-run-rush.js publish -p --pack --include-all
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            ./common/temp/artifacts/packages/*
+
+      - name: Upload sp.js artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sp.js
+          path: trackers/javascript-tracker/dist/sp.js
+
+      - name: Upload sp.lite.js artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sp.lite.js
+          path: trackers/javascript-tracker/dist/sp.lite.js
+
+      - name: Upload plugins
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugins.umd
+          path: |
+            ./plugins/*/dist/*.umd.js
+            ./plugins/*/dist/*.umd.js.map
+            ./plugins/*/dist/*.umd.min.js
+            ./plugins/*/dist/*.umd.min.js.map

@@ -1,0 +1,23 @@
+name: Unit tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+env:
+  NODE_VERSION: 16
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: CI
+
+    steps:
+      - uses: DevExpress/testcafe-build-system/actions/prepare@main
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build --if-present
+      - run: npm test

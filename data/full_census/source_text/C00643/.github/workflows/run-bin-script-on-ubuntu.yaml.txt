@@ -1,0 +1,153 @@
+name: Test CLI on Ubuntu
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test-x86_64:
+    name: Ubuntu ${{ matrix.version }} (x86_64)
+    runs-on: ${{ matrix.runner }}
+    concurrency: ci-${{ github.ref }}-ubuntu-${{ matrix.version }}-x86_64
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            version: "24.04"
+          - runner: ubuntu-22.04
+            version: "22.04"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Display system info
+        env:
+          MATRIX_VERSION: ${{ matrix.version }}
+        run: |
+          echo "=== OS Release ==="
+          cat /etc/os-release
+          echo ""
+          echo "=== Architecture ==="
+          uname -m
+          echo ""
+          echo "=== Expected Version ==="
+          echo "$MATRIX_VERSION"
+
+      - name: Test CLI installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Testing CLI installation..."
+          node ./dist/aptos.js --install
+
+      - name: Verify CLI was installed
+        run: |
+          echo "Checking installation path..."
+          ls -la ~/.local/bin/aptos
+          echo ""
+          echo "CLI version:"
+          ~/.local/bin/aptos --version
+          echo ""
+          echo "File type:"
+          file ~/.local/bin/aptos
+
+      - name: Verify correct architecture binary
+        run: |
+          echo "Verifying binary architecture..."
+          file ~/.local/bin/aptos | grep -q "x86-64" && echo "✓ Correct x86_64 binary" || (echo "✗ Wrong architecture" && exit 1)
+
+      - name: Test CLI execution via wrapper
+        run: |
+          echo "Testing CLI version command..."
+          node ./dist/aptos.js --version
+
+      - name: Test CLI help
+        run: |
+          echo "Testing CLI help command..."
+          node ./dist/aptos.js --help
+
+      - name: Test CLI info command
+        run: |
+          echo "Testing CLI info command..."
+          node ./dist/aptos.js info
+
+      - name: Test CLI update
+        run: |
+          echo "Testing CLI update..."
+          node ./dist/aptos.js --update
+
+  test-arm64:
+    name: Ubuntu 24.04 (ARM64)
+    runs-on: ubuntu-24.04-arm
+    concurrency: ci-${{ github.ref }}-ubuntu-arm64
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-node-pnpm
+
+      - name: Build
+        run: pnpm build
+
+      - name: Display system info
+        run: |
+          echo "=== OS Release ==="
+          cat /etc/os-release
+          echo ""
+          echo "=== Architecture ==="
+          uname -m
+
+      - name: Test CLI installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Testing CLI installation..."
+          node ./dist/aptos.js --install
+
+      - name: Verify CLI was installed
+        run: |
+          echo "Checking installation path..."
+          ls -la ~/.local/bin/aptos
+          echo ""
+          echo "CLI version:"
+          ~/.local/bin/aptos --version
+          echo ""
+          echo "File type:"
+          file ~/.local/bin/aptos
+
+      - name: Verify correct architecture binary
+        run: |
+          echo "Verifying binary architecture..."
+          file ~/.local/bin/aptos | grep -q "aarch64\|ARM" && echo "✓ Correct ARM64 binary" || (echo "✗ Wrong architecture" && exit 1)
+
+      - name: Test CLI execution via wrapper
+        run: |
+          echo "Testing CLI version command..."
+          node ./dist/aptos.js --version
+
+      - name: Test CLI info command
+        run: |
+          echo "Testing CLI info command..."
+          node ./dist/aptos.js info

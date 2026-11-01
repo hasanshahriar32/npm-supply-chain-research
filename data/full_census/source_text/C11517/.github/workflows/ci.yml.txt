@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - "main"
+  push:
+    branches:
+      - "main"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+      - uses: actions/setup-node@v3
+        with:
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
+      - uses: nrwl/nx-set-shas@v3
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm nx run-many --targets=lint
+      - run: pnpm prettier --check .
+
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant
+        ports:
+          - 6333:6333
+      chroma:
+        image: chromadb/chroma
+        ports:
+          - 8000:8000
+    permissions:
+      contents: "read"
+      id-token: "write"
+      actions: "read"
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+      - uses: actions/setup-node@v3
+        with:
+          cache: "pnpm"
+          node-version-file: ".nvmrc"
+      - uses: nrwl/nx-set-shas@v3
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm nx affected --target=build --parallel=3
+      - name: Test
+        run: pnpm nx affected --target=test --parallel=3 --ci --code-coverage

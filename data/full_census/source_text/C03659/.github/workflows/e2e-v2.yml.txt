@@ -1,0 +1,364 @@
+name: End-to-End Tests V2
+
+on:
+  push:
+    branches:
+      - main
+      - release/**
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  MAESTRO_VERSION: '2.12.0'
+  IOS_DEVICE: "iPhone 17"
+  IOS_VERSION: ">=18.0"
+
+jobs:
+  ready-to-merge-gate:
+    name: Ready-to-merge gate
+    uses: ./.github/workflows/ready-to-merge-workflow.yml
+    with:
+      is-pr: ${{ github.event_name == 'pull_request' }}
+      labels: ${{ toJson(github.event.pull_request.labels) }}
+
+  diff_check:
+    needs: [ready-to-merge-gate]
+    uses: ./.github/workflows/skip-ci.yml
+  detect-changes:
+    needs: [ready-to-merge-gate]
+    uses: ./.github/workflows/detect-changes.yml
+    with:
+      caller_event_name: ${{ github.event_name }}
+      caller_ref: ${{ github.ref }}
+  auth_token_check:
+    uses: ./.github/workflows/skip-ci-noauth.yml
+    secrets:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  react-native-build:
+    name: Build RN ${{ matrix.rn-version }} ${{ matrix.rn-architecture }} ${{ matrix.engine }} ${{ matrix.platform }} ${{ matrix.build-type }} ${{ matrix.ios-use-frameworks }}
+    runs-on: ${{ matrix.runs-on }}
+    needs: [diff_check, detect-changes, auth_token_check]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' && needs.auth_token_check.outputs.skip_ci != 'true' && !startsWith(github.ref, 'refs/heads/release/') }}
+    env:
+      RN_VERSION: ${{ matrix.rn-version }}
+      RN_ENGINE: ${{ matrix.engine }}
+      USE_FRAMEWORKS: ${{ matrix.ios-use-frameworks }}
+      PRODUCTION: ${{ matrix.build-type == 'production' && '1' || '0' }}
+      RCT_NEW_ARCH_ENABLED: ${{ matrix.rn-architecture == 'new' && '1' || '0' }}
+      SENTRY_DISABLE_AUTO_UPLOAD: "false"
+    strategy:
+      fail-fast: false # keeps matrix running if one fails
+      matrix:
+        rn-version: ["0.71.19", "0.88.1"]
+        rn-architecture: ["legacy", "new"]
+        platform: ["android", "ios"]
+        build-type: ["production"]
+        ios-use-frameworks: ["no", "static", "dynamic"]
+        engine: ["hermes"]
+        include:
+          # Use Xcode 16 (macos-15) for older RN versions
+          - platform: ios
+            rn-version: "0.71.19"
+            runs-on: macos-15-xlarge
+          # Use Xcode 26 (macos-26) for newer RN versions
+          - platform: ios
+            rn-version: "0.88.1"
+            runs-on: macos-26-xlarge
+          - platform: android
+            runs-on: ubuntu-24.04
+        exclude:
+          # exclude all rn versions lower than 0.80.0 for new architecture
+          - rn-version: "0.71.19"
+            rn-architecture: "new"
+          # exlude old rn version for use frameworks builds (to minimalize the matrix)
+          - rn-version: "0.71.19"
+            platform: "ios"
+            ios-use-frameworks: "static"
+          - rn-version: "0.71.19"
+            platform: "ios"
+            ios-use-frameworks: "dynamic"
+          # use frameworks is ios only feature
+          - platform: "android"
+            ios-use-frameworks: "static"
+          - platform: "android"
+            ios-use-frameworks: "dynamic"
+          # exclude new rn architecture and dynamic frameworks
+          - rn-architecture: "new"
+            ios-use-frameworks: "dynamic"
+
+    steps:
+      - name: Check if platform is needed
+        id: platform-check
+        run: |
+          if [[ "${{ matrix.platform }}" == "ios" && "${{ needs.detect-changes.outputs.needs_ios }}" != "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping iOS — no relevant changes detected."
+          elif [[ "${{ matrix.platform }}" == "android" && "${{ needs.detect-changes.outputs.needs_android }}" != "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping Android — no relevant changes detected."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+
+      - uses: ./.github/actions/disk-cleanup
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+
+      - name: Sentry Release
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          SENTRY_RELEASE_CANDIDATE=$(echo "e2e/$REF" | perl -pe 's/\//-/g')
+          echo "SENTRY_RELEASE=$SENTRY_RELEASE_CANDIDATE" >> $GITHUB_ENV
+
+      - name: Sentry Dist
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: |
+          SENTRY_DIST_CANDIDATE=${{ matrix.rn-version }}-${{ matrix.rn-architecture }}-${{ matrix.engine }}-${{ matrix.platform }}-${{ matrix.build-type }}-${{ matrix.ios-use-frameworks }}-${GITHUB_SHA:0:8}
+          echo "SENTRY_DIST=$SENTRY_DIST_CANDIDATE" >> $GITHUB_ENV
+
+      - name: Sentry Envs
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: |
+          echo "SENTRY_RELEASE=$SENTRY_RELEASE"
+          echo "SENTRY_DIST=$SENTRY_DIST"
+
+      - run: corepack enable
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+
+      - name: Install Ninja
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Gradle cache
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Setup Global Tools
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: |
+          npm i -g yalc semver
+
+      - name: Setup Global Xcode Tools
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        run: which xcbeautify || brew install xcbeautify
+
+      - name: Install JS Dependencies
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: yarn install
+
+      - uses: ruby/setup-ruby@26e5b7d197ebf60545ee9667bcbace0be11ccaec # v1
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        with:
+          ruby-version: "3.3.0"
+
+      - name: Setup Plain RN ${{ matrix.rn-version }} App
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: ./dev-packages/e2e-tests/cli.mjs ${{ matrix.platform }} --create
+
+      - name: Build Plain RN ${{ matrix.rn-version }} App
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: ./dev-packages/e2e-tests/cli.mjs ${{ matrix.platform }} --build
+
+      - name: Upload App
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.build-type == 'production' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ matrix.rn-version }}-${{ matrix.rn-architecture }}-${{ matrix.engine }}-${{ matrix.platform }}-${{ matrix.build-type }}-${{ matrix.ios-use-frameworks }}-app-package
+          path: dev-packages/e2e-tests/RnDiffApp.ap*
+          retention-days: 1
+
+      - name: Upload logs
+        if: ${{ always() && steps.platform-check.outputs.skip != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: rn-build-logs-${{ matrix.rn-version }}-${{ matrix.rn-architecture }}-${{ matrix.engine }}-${{ matrix.platform }}-${{ matrix.build-type }}-${{ matrix.ios-use-frameworks }}
+          path: dev-packages/e2e-tests/react-native-versions/${{ matrix.rn-version }}/RnDiffApp/ios/*.log
+
+  react-native-test:
+    name:
+      Test RN ${{ matrix.rn-version }} ${{ matrix.rn-architecture }} ${{ matrix.engine }} ${{ matrix.platform }} ${{
+      matrix.build-type }} ${{ matrix.ios-use-frameworks }}
+    needs: [react-native-build, diff_check, detect-changes]
+    if: ${{ needs.diff_check.outputs.skip_ci != 'true' }}
+
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      fail-fast: false # keeps matrix running if one fails
+      matrix:
+        rn-version: ["0.88.1"]
+        rn-architecture: ["legacy", "new"]
+        platform: ["android", "ios"]
+        build-type: ["production"]
+        ios-use-frameworks: ["no"] # test only no frameworks
+        engine: ["hermes"]
+        include:
+          - platform: ios
+            runs-on: ["bitrise_pool_name:tahoe"]
+          - platform: android
+            runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check if platform is needed
+        id: platform-check
+        run: |
+          if [[ "${{ matrix.platform }}" == "ios" && "${{ needs.detect-changes.outputs.needs_ios }}" != "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping iOS — no relevant changes detected."
+          elif [[ "${{ matrix.platform }}" == "android" && "${{ needs.detect-changes.outputs.needs_android }}" != "true" ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping Android — no relevant changes detected."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+
+      - name: Install Maestro
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        uses: dniHze/maestro-test-action@bda8a93211c86d0a05b7a4597c5ad134566fbde4 # pin@v1.0.0
+        with:
+          version: ${{env.MAESTRO_VERSION}}
+
+      - uses: ./.github/actions/disk-cleanup
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+
+      - name: Setup Global Xcode Tools
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        run: which xcbeautify || brew install xcbeautify
+
+      - name: Download App Package
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.build-type == 'production' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: ${{ matrix.rn-version }}-${{ matrix.rn-architecture }}-${{ matrix.engine }}-${{ matrix.platform }}-${{ matrix.build-type }}-${{ matrix.ios-use-frameworks }}-app-package
+          path: dev-packages/e2e-tests
+
+      - name: Enable Corepack
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: corepack enable
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v6
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        with:
+          package-manager-cache: false
+          node-version: 22
+          cache: "yarn"
+          cache-dependency-path: yarn.lock
+
+      - name: Setup asdf Node.js (Bitrise)
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        run: |
+          asdf global nodejs system
+          corepack enable
+
+      - name: Install Ninja
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Gradle cache
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6
+
+      - name: Setup KVM
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        shell: bash
+        run: |
+          # check if virtualization is supported...
+          sudo apt install -y --no-install-recommends cpu-checker coreutils && echo "CPUs=$(nproc --all)" && kvm-ok
+          # allow access to KVM to run the emulator
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install JS Dependencies
+        if: ${{ steps.platform-check.outputs.skip != 'true' }}
+        run: yarn install
+
+      - name: Run tests on Android
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'android' }}
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # pin@v2.38.0
+        with:
+          api-level: 30
+          force-avd-creation: false
+          disable-animations: true
+          disable-spellchecker: true
+          target: "google_apis"
+          emulator-options: >
+            -no-window
+            -no-snapshot-save
+            -gpu swiftshader_indirect
+            -noaudio
+            -no-boot-anim
+            -camera-back none
+            -camera-front none
+            -timezone US/Pacific
+          script: ./dev-packages/e2e-tests/cli.mjs ${{ matrix.platform }} --test
+
+      - name: List available iOS simulators
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        run: xcrun simctl list devices available
+
+      - uses: futureware-tech/simulator-action@c768f52966d5f70335ec77881f9806b24a52f80e # pin@v6
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        with:
+          model: ${{ env.IOS_DEVICE }}
+          os_version: ${{ env.IOS_VERSION }}
+          wait_for_boot: true
+          erase_before_boot: false
+
+      - name: Wait for iOS simulator to be fully ready
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        run: |
+          # Wait for boot to complete at the system level
+          xcrun simctl bootstatus booted -b
+          # Launch and dismiss Settings.app to ensure SpringBoard and system services
+          # are fully initialized — this avoids Maestro connecting to a half-booted
+          # simulator.
+          xcrun simctl launch booted com.apple.Preferences
+          sleep 5
+          xcrun simctl terminate booted com.apple.Preferences
+
+      - name: Run tests on iOS
+        if: ${{ steps.platform-check.outputs.skip != 'true' && matrix.platform == 'ios' }}
+        env:
+          # Increase timeout for Maestro iOS driver startup (default is 60s, some CI runners need more time)
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: 180000
+        run: ./dev-packages/e2e-tests/cli.mjs ${{ matrix.platform }} --test
+
+      - name: Upload logs
+        if: ${{ always() && steps.platform-check.outputs.skip != 'true' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ${{ matrix.rn-version }}-${{ matrix.rn-architecture }}-${{ matrix.engine }}-${{ matrix.platform }}-${{ matrix.build-type }}-${{ matrix.ios-use-frameworks }}-logs
+          path: |
+            ./dev-packages/e2e-tests/maestro-logs

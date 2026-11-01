@@ -1,0 +1,69 @@
+{
+  "name": "@notionhq/client",
+  "version": "5.30.0",
+  "description": "A simple and easy to use client for the Notion API",
+  "engines": {
+    "node": ">=22"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "npm",
+      "version": ">=11.10.0"
+    }
+  },
+  "homepage": "https://developers.notion.com/docs/getting-started",
+  "bugs": {
+    "url": "https://github.com/makenotion/notion-sdk-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/makenotion/notion-sdk-js/"
+  },
+  "keywords": [
+    "notion",
+    "notionapi",
+    "rest",
+    "notion-api"
+  ],
+  "main": "./build/src",
+  "types": "./build/src/index.d.ts",
+  "scripts": {
+    "prepare": "husky && npm run build",
+    "prepublishOnly": "npm run checkLoggedIn && npm run lint && npm run test",
+    "build": "tsc",
+    "prettier": "prettier --write .",
+    "lint": "prettier --check . && eslint . --ext .ts,.js && cspell '**/*'",
+    "test": "jest ./test",
+    "check:compatibility": "node build/test/checkCompatibility.js",
+    "check-links": "git ls-files | grep md$ | xargs -n 1 markdown-link-check",
+    "prebuild": "npm run clean",
+    "clean": "rm -rf ./build",
+    "checkLoggedIn": "./scripts/verifyLoggedIn.sh"
+  },
+  "lint-staged": {
+    "*.{ts,js,json,md}": "prettier --write",
+    "*.{ts,js}": "eslint --fix"
+  },
+  "author": "",
+  "license": "MIT",
+  "files": [
+    "build/package.json",
+    "build/src/**"
+  ],
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/jest": "30.0.0",
+    "@typescript-eslint/eslint-plugin": "8.72.1",
+    "@typescript-eslint/parser": "8.72.1",
+    "cspell": "10.4.0",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "husky": "9.1.7",
+    "jest": "30.5.2",
+    "lint-staged": "17.6.0",
+    "markdown-link-check": "3.15.0",
+    "prettier": "3.9.10",
+    "ts-jest": "29.4.15",
+    "typescript": "6.0.3"
+  }
+}

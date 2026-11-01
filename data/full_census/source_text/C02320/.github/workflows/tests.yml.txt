@@ -1,0 +1,254 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - develop
+      - release-*
+
+jobs:
+  lint:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # `standalone` installs `@pnpm/exe`, which bundles its own Node, so pnpm 11
+      # runs on the older matrix legs it would otherwise refuse.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm run audit:engines
+
+  puppeteer:
+    strategy: &strategy_matrix
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+        include:
+          - node: 24
+            version: '24.15.0'
+    runs-on: deque-ubuntu-latest-4core
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # HACK: Force a TTY to enable browser-driver-manager to manipulate stdout.
+      - shell: 'script -q -e -c "bash {0}"'
+        run: pnpm exec browser-driver-manager install chrome@145
+        working-directory: packages/puppeteer
+      - run: pnpm --fail-if-no-match --filter @axe-core/puppeteer run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/puppeteer run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/puppeteer run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/puppeteer run coverage
+      - run: pnpm --fail-if-no-match --filter @axe-core/puppeteer run test:export
+
+  cli:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+        # HACK: Force a TTY to enable browser-driver-manager to manipulate stdout.
+      - shell: 'script -q -e -c "bash {0}"'
+        run: pnpm exec browser-driver-manager install chrome@145
+        working-directory: packages/cli
+      - run: pnpm --fail-if-no-match --filter @axe-core/cli run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/cli run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/cli run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/cli run coverage
+
+  webdriverjs:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # HACK: Force a TTY to enable browser-driver-manager to manipulate stdout.
+      - shell: 'script -q -e -c "bash {0}"'
+        run: pnpm exec browser-driver-manager install chrome@145
+        working-directory: packages/webdriverjs
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverjs run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverjs run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverjs run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverjs run coverage
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverjs run test:export
+
+  webdriverio:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      # HACK: Force a TTY to enable browser-driver-manager to manipulate stdout.
+      - shell: 'script -q -e -c "bash {0}"'
+        run: pnpm exec browser-driver-manager install chrome@145
+        working-directory: packages/webdriverio
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverio run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverio run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverio run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverio run coverage
+      - run: pnpm --fail-if-no-match --filter @axe-core/webdriverio run test:export
+
+  reporter_earl:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --fail-if-no-match --filter @axe-core/reporter-earl run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/reporter-earl run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/reporter-earl run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/reporter-earl run test
+      - run: pnpm --fail-if-no-match --filter @axe-core/reporter-earl run test:export
+
+  react:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --fail-if-no-match --filter @axe-core/react run test
+      # the tests builds the project using tsc and relies on `cache.ts` to be
+      # built and be it's own file. however we don't want that for the export
+      # test so we need to rebuild using tsup
+      - run: pnpm --fail-if-no-match --filter @axe-core/react run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/react run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/react run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/react run test:export
+
+  playwright:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 25
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright exec playwright install --with-deps
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright run build
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright run lint:package
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright run lint:types
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright run coverage
+      - run: pnpm --fail-if-no-match --filter @axe-core/playwright run test:export
+
+  wdio_globals_test:
+    strategy: *strategy_matrix
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.version || matrix.node }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --fail-if-no-match --filter wdio-tests run test
+
+  axe_core_test:
+    if: github.ref_name == 'master' || startsWith(github.ref_name, 'release')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    needs: lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --fail-if-no-match --filter axe_core_test run test

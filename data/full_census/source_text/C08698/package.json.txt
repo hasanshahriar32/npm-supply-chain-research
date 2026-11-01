@@ -1,0 +1,56 @@
+{
+  "name": "@readme/postman-to-openapi",
+  "version": "4.1.0",
+  "description": "Convert postman collection to OpenAPI spec",
+  "license": "MIT",
+  "main": "src/index.js",
+  "types": "types/index.d.ts",
+  "engines": {
+    "node": ">=14"
+  },
+  "keywords": [
+    "swagger",
+    "OpenAPI",
+    "postman",
+    "collection",
+    "convert",
+    "converter",
+    "transform",
+    "specification",
+    "yml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/readmeio/postman-to-openapi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/readmeio/postman-to-openapi/issues"
+  },
+  "homepage": "https://github.com/readmeio/postman-to-openapi#readme",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint **/*.js --fix",
+    "lint:ts": "tsc --build types",
+    "pretest": "npm run lint",
+    "prettier": "prettier --list-different --write \"./**/**.{js,ts}\"",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@readme/http-status-codes": "^7.2.0",
+    "js-yaml": "^4.1.0",
+    "jsonc-parser": "3.2.0",
+    "lodash.camelcase": "^4.3.0",
+    "marked": "^4.3.0",
+    "mustache": "^4.2.0"
+  },
+  "devDependencies": {
+    "@readme/eslint-config": "^14.8.1",
+    "@types/node": "^24.9.2",
+    "@vitest/coverage-v8": "^4.0.6",
+    "eslint": "^8.39.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.6"
+  },
+  "prettier": "@readme/eslint-config/prettier"
+}

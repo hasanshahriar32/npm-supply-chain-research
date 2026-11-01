@@ -1,0 +1,16 @@
+name: Validation Checks
+
+on:
+  workflow_call:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Validate SDK
+        uses: ./.github/actions/validate-sdk
+        with:
+          openrouter-api-key: ${{ secrets.OPENROUTER_API_KEY }}

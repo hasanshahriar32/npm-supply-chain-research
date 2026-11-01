@@ -1,0 +1,65 @@
+on:
+    push:
+        branches:
+            - main
+            - "release/*/v**"
+
+name: release-please
+
+permissions:
+    contents: read
+    id-token: write
+
+jobs:
+    release-please:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
+              id: release
+              with:
+                  token: ${{ secrets.WORKFLOW_PUSH_BOT_TOKEN }}
+                  target-branch: ${{ github.ref_name }}
+
+            # Output which releases were created
+            - name: Output release info
+              run: |
+                  echo "releases_created:" ${{ steps.release.outputs.releases_created }}
+                  echo "packages/compat--release_created:" ${{ steps.release.outputs['packages/compat--release_created'] }}
+                  echo "packages/config-array--release_created" ${{ steps.release.outputs['packages/config-array--release_created'] }}
+                  echo "packages/core--release_created" ${{ steps.release.outputs['packages/core--release_created'] }}
+                  echo "packages/migrate-config--release_created" ${{ steps.release.outputs['packages/migrate-config--release_created'] }}
+                  echo "packages/object-schema--release_created:" ${{ steps.release.outputs['packages/object-schema--release_created'] }}
+                  echo "packages/plugin-kit--release_created" ${{ steps.release.outputs['packages/plugin-kit--release_created'] }}
+
+            # Check to see if we need to do any releases and if so check out the repo
+            - uses: actions/checkout@v7
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+
+            # Node.js release
+            - uses: actions/setup-node@v7
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+              with:
+                  node-version: lts/*
+                  registry-url: "https://registry.npmjs.org"
+
+            # npm 11.5.1 or later is required so update to latest to be sure
+            - name: Update npm
+              run: npm install -g npm@latest
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+
+            - run: npm install
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+
+            # publish the packages using our custom script which also posts to social media
+            - name: Publish using new script
+              run: node scripts/publish.js
+              if: ${{ steps.release.outputs.releases_created == 'true' }}
+              env:
+                  STEPS_RELEASE_OUTPUTS: ${{ toJson(steps.release.outputs) }}
+                  GITHUB_REF_NAME: ${{ github.ref_name }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  MASTODON_ACCESS_TOKEN: ${{ secrets.MASTODON_ACCESS_TOKEN }}
+                  MASTODON_HOST: ${{ secrets.MASTODON_HOST }}
+                  BLUESKY_IDENTIFIER: ${{ vars.BLUESKY_IDENTIFIER }}
+                  BLUESKY_PASSWORD: ${{ secrets.BLUESKY_PASSWORD }}
+                  BLUESKY_HOST: ${{ vars.BLUESKY_HOST }}

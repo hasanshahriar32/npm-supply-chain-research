@@ -1,0 +1,100 @@
+name: Integration Tests
+
+on:
+  merge_group:
+  workflow_dispatch:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  test-examples:
+    name: Run example tests
+    runs-on: ubuntu-latest
+
+    env:
+      CYPRESS_USER_EMAIL: ${{secrets.CYPRESS_USER_EMAIL}}
+      CYPRESS_USER_PASSWORD: ${{secrets.CYPRESS_USER_PASSWORD}}
+      VITE_DOMAIN: ${{secrets.TEST_DOMAIN}}
+      VITE_CLIENT_ID: ${{secrets.TEST_CLIENT_ID}}
+      VITE_AUDIENCE: ${{secrets.TEST_AUDIENCE}}
+      GATSBY_DOMAIN: ${{secrets.TEST_DOMAIN}}
+      GATSBY_CLIENT_ID: ${{secrets.TEST_CLIENT_ID}}
+      GATSBY_AUDIENCE: ${{secrets.TEST_AUDIENCE}}
+      NEXT_PUBLIC_DOMAIN: ${{secrets.TEST_DOMAIN}}
+      NEXT_PUBLIC_CLIENT_ID: ${{secrets.TEST_CLIENT_ID}}
+      NEXT_PUBLIC_AUDIENCE: ${{secrets.TEST_AUDIENCE}}
+      DOMAIN: ${{secrets.TEST_DOMAIN}}
+      AUDIENCE: ${{secrets.TEST_AUDIENCE}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Cypress binary
+        run: npx cypress install
+
+      - name: Build SDK
+        run: npm run build
+
+      - name: Pack SDK
+        run: npm pack
+
+      - name: Install examples
+        run: npm run install:examples
+
+      - name: Install local SDK into Vite example
+        run: npm install --prefix=examples/vite-react-router $(ls auth0-auth0-react-*.tgz)
+
+      - name: Build Vite example (production)
+        run: npm run build --prefix=examples/vite-react-router
+
+      - name: Build Next.js example (production)
+        run: npm run build --prefix=examples/nextjs-app
+
+      - name: Build Gatsby example (production)
+        run: npm run build --prefix=examples/gatsby-app
+
+      - name: Run integration test (Vite)
+        run: npm run test:vite
+
+      - name: Run integration test (NextJS)
+        run: npm run test:nextjs
+
+      - name: Run integration test (Gatsby)
+        run: npm run test:gatsby
+
+      - name: Upload Cypress screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cypress-screenshots-${{ github.run_id }}
+          path: cypress/screenshots
+          retention-days: 30
+          compression-level: 6
+          if-no-files-found: ignore

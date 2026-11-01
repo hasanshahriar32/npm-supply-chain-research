@@ -1,0 +1,72 @@
+{
+  "name": "json2csv",
+  "version": "7.0.8",
+  "private": true,
+  "description": "Fast and highly configurable JSON to CSV converter",
+  "keywords": [
+    "json",
+    "to",
+    "csv",
+    "export",
+    "convert",
+    "parse"
+  ],
+  "homepage": "https://juanjodiaz.github.io/json2csv",
+  "bugs": {
+    "url": "https://github.com/juanjoDiaz/json2csv/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juanjodiaz/json2csv"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Juanjo Díaz",
+    "email": "juanjo.diazmo@gmail.com"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/cli",
+    "packages/formatters",
+    "packages/node",
+    "packages/plainjs",
+    "packages/test-helpers",
+    "packages/transforms",
+    "packages/whatwg",
+    "packages/test-performance"
+  ],
+  "scripts": {
+    "prepare": "husky",
+    "docs:preview": "docsify serve docs",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
+    "test:cjs": "node packages/formatters/test/CommonJS.cjs && node packages/transforms/test/CommonJS.cjs && node packages/plainjs/test/CommonJS.cjs && node packages/node/test/CommonJS.cjs && node packages/whatwg/test/CommonJS.cjs",
+    "test": "npm run test:cjs && vitest run",
+    "test-with-coverage": "vitest run --coverage",
+    "build:cdn": "node build-cdn.js",
+    "build": "npm run build -w @json2csv/formatters -w @json2csv/transforms -w @json2csv/plainjs -w @json2csv/node -w @json2csv/whatwg -w @json2csv/cli",
+    "clean": "npm run clean -w @json2csv/formatters -w @json2csv/transforms -w @json2csv/plainjs -w @json2csv/node -w @json2csv/whatwg -w @json2csv/cli",
+    "dependencies:update-internal": "npm run dependencies:update-internal -w @json2csv/cli -w @json2csv/plainjs -w @json2csv/node -w @json2csv/whatwg",
+    "changelog:update": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s && cp CHANGELOG.md docs/others/CHANGELOG.md"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
+    "@vitest/coverage-v8": "^4.0.17",
+    "conventional-changelog-cli": "^5.0.0",
+    "docsify-cli": "^5.0.0",
+    "esbuild": "^0.28.1",
+    "husky": "^9.1.7",
+    "tiny-glob": "^0.2.9",
+    "typescript": "~7.0.2",
+    "vitest": "^4.0.17"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=7.0.0"
+  },
+  "volta": {
+    "node": "20.18.0"
+  }
+}

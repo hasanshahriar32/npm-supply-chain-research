@@ -1,0 +1,345 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+
+      - name: Generate a static website
+        run: GENERATE_SOURCEMAP=false npm run build
+
+      - working-directory: core
+        run: |
+          npm run bundle
+          npm run bundle:min
+
+      - run: npm run coverage
+      - run: npm run doc
+
+      - run: cp -rp www/build ./
+      - run: cp -rp core/coverage build
+
+      - name: Create Coverage Badges
+        uses: jaywcjlove/coverage-badges-cli@main
+        with:
+          source: core/coverage/coverage-summary.json
+          output: build/coverage/badges.svg
+
+      - name: Generate Contributors Images
+        uses: jaywcjlove/github-action-contributors@main
+        with:
+          filter-author: (renovate\[bot\]|renovate-bot|dependabot\[bot\])
+          output: build/CONTRIBUTORS.svg
+          avatarSize: 42
+
+      - name: Create Tag
+        id: create_tag
+        uses: jaywcjlove/create-tag-action@main
+        with:
+          package-path: ./core/package.json
+
+      - name: get tag version
+        id: tag_version
+        uses: jaywcjlove/changelog-generator@main
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          commit_message: ${{steps.tag_version.outputs.tag}} ${{ github.event.head_commit.message }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+          force_orphan: true
+
+      - name: Generate Changelog
+        id: changelog
+        uses: jaywcjlove/changelog-generator@main
+        with:
+          head-ref: ${{steps.create_tag.outputs.version}}
+          filter-author: (renovate-bot|Renovate Bot)
+          filter: '[R|r]elease[d]\s+[v|V]\d(\.\d+){0,2}'
+
+      - name: Create Release
+        uses: jaywcjlove/create-tag-action@main
+        if: steps.create_tag.outputs.successful
+        with:
+          package-path: ./package.json
+          version: ${{steps.create_tag.outputs.version}}
+          release: true
+          prerelease: false
+          draft: false
+          body: |
+            [![Buy me a coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-048754?logo=buymeacoffee)](https://jaywcjlove.github.io/#/sponsor) [![](https://img.shields.io/badge/Open%20in-unpkg-blue)](https://uiwjs.github.io/npm-unpkg/#/pkg/@uiw/react-codemirror@${{steps.changelog.outputs.version}}/file/README.md)
+            
+            Documentation ${{ steps.changelog.outputs.tag }}: https://raw.githack.com/uiwjs/react-codemirror/${{ steps.changelog.outputs.gh-pages-short-hash }}/index.html  
+            Comparing Changes: ${{ steps.changelog.outputs.compareurl }}  
+
+            ```shell
+            npm i @uiw/react-codemirror@${{steps.create_tag.outputs.versionNumber}}
+            ```
+
+            ${{ steps.changelog.outputs.changelog }}
+
+      # https://gist.github.com/jaywcjlove/a178278521a6f72c74525d3f1d9c4bf9
+      - name: 📦 @uiw/react-codemirror publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./core/
+        continue-on-error: true
+
+      - name: 📦 react-codemirror-merge publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./merge/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-themes publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/theme/
+        continue-on-error: true
+
+
+      - name: 📦 @uiw/codemirror-theme-abcdef publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/abcdef/
+        continue-on-error: true
+  
+
+      - name: 📦 @uiw/codemirror-themes-abyss publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/abyss/
+        continue-on-error: true
+  
+
+      - name: 📦 @uiw/codemirror-themes-all publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/all/
+        continue-on-error: true
+
+
+      - name: 📦 @uiw/codemirror-theme-okaidia publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/okaidia/
+        continue-on-error: true
+
+
+      - name: 📦 @uiw/codemirror-theme-quietlight publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/quietlight/
+        continue-on-error: true
+
+
+      - name: 📦 @uiw/codemirror-theme-red publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/red/
+        continue-on-error: true
+
+
+      - name: 📦 @uiw/codemirror-theme-solarized publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/solarized/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-androidstudio publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/androidstudio/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-andromeda publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/andromeda/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-console publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/console/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-atomone publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/atomone/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-aura publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/aura/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-basic publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/basic/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-bbedit publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/bbedit/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-dracula publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/dracula/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-duotone publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/duotone/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-eclipse publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/eclipse/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-github publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/github/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-gruvbox-dark publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/gruvbox/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-kimbie publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/kimbie/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-material publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/material/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-monokai publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/monokai/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-monokai-dimmed publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/monokai-dimmed/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-noctis-lilac publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/noctis-lilac/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-nord publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/nord/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-darcula publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/darcula/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-bespin publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/bespin/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-copilot publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/copilot/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-sublime publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/sublime/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-tokyo-night publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/tokyo-night/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-tokyo-night-storm publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/tokyo-night-storm/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-tokyo-night-day publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/tokyo-night-day/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-tomorrow-night-blue publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/tomorrow-night-blue/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-vscode publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/vscode/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-white publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/white/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-theme-xcode publish to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./themes/xcode/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-basic-setup to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/basic-setup/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-classname to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/classname/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-events to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/events/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-color to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/color/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-hyper-link to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/hyper-link/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-line-numbers-relative to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/line-numbers-relative/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-langs to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/langs/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-mentions to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/mentions/
+        continue-on-error: true
+
+      - name: 📦 @uiw/codemirror-extensions-zebra-stripes to NPM
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
+        working-directory: ./extensions/zebra-stripes/
+        continue-on-error: true
+
+    outputs:
+      successful: ${{steps.create_tag.outputs.successful }}

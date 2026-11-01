@@ -1,0 +1,57 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "npm run build:lib",
+    "build:lib": "lerna exec --scope @uiw/* -- npm run build",
+    "build:doc": "lerna exec --scope website -- npm run build",
+    "doc": "lerna exec --scope website -- npm run start",
+    "start": "lerna exec --scope @uiw/* -- npm run watch",
+    "prepare": "npm run build && husky",
+    "prettier": "prettier --write '**/*.{js,jsx,tsx,ts,less,md,json}'",
+    "pretty-quick": "pretty-quick --staged",
+    "version": "lerna version --exact --force-publish --no-push --no-git-tag-version",
+    "test": "tsbb test",
+    "coverage": "tsbb test --coverage",
+    "clean": "lerna clean --yes"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "<rootDir>/core/src/**/*.{tsx,ts}",
+      "!**/*.{js,d.ts}"
+    ],
+    "coverageReporters": [
+      "lcov",
+      "json-summary"
+    ],
+    "transformIgnorePatterns": [
+      "<rootDir>/node_modules/?!(.*)"
+    ]
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.0.0",
+    "@types/react": "~18.2.0",
+    "@types/react-dom": "~18.2.0",
+    "@types/react-test-renderer": "~18.0.0",
+    "@kkt/ncc": "^1.0.15",
+    "compile-less-cli": "~1.9.0",
+    "husky": "~9.0.0",
+    "prettier": "^3.0.0",
+    "pretty-quick": "~4.0.0",
+    "lerna": "8.0.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "react-test-renderer": "~18.2.0",
+    "tsbb": "^4.5.1"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "workspaces": [
+    "examples/**",
+    "core",
+    "website"
+  ]
+}

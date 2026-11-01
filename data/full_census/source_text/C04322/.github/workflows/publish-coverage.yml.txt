@@ -1,0 +1,24 @@
+name: publish-coverage
+
+on:
+  workflow_call:
+
+jobs:
+  publish-coverage:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/cache@v6.1.0
+        with:
+          path: coverage
+          # restore cache from build-lint-test wf with key=sha-(oneof nestjs version)-(oneof nodejs version)
+          key: ${{ github.sha }}-12-24
+
+      - uses: qltysh/qlty-action/coverage@v2.4.0
+        with:
+            token: ${{ secrets.QLTY_COVERAGE_TOKEN }}
+            files: ${{github.workspace}}/coverage/lcov.info

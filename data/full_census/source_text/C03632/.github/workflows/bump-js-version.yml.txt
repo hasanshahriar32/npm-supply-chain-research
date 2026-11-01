@@ -1,0 +1,78 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Bump and Tag JS Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseType:
+        description: Release type
+        type: choice
+        default: patch
+        required: true
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+          - premajor
+          - preminor
+          - prepatch
+      preid:
+        description: Prerelease identifier
+        type: string
+        default: rc
+        required: true
+
+jobs:
+  build:
+    name: Version bump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.GENKIT_RELEASER_GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up node v20
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20.x
+          cache: 'pnpm'
+
+      - name: Setup
+        shell: bash
+        run: |
+          git config --global user.email "genkit-releaser@google.com"
+          git config --global user.name "genkit-releaser"
+
+      - name: Bump and Tag
+        run: |
+          js/scripts/bump_and_tag_js.sh ${{ inputs.releaseType }} ${INPUTS_PREID}
+        env:
+          INPUTS_PREID: ${{ inputs.preid }}
+
+      - name: Push
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GENKIT_RELEASER_GITHUB_TOKEN }}
+        run: |
+          git log --tags --decorate
+          git remote set-url --push origin https://genkit-releaser:$GITHUB_TOKEN@github.com/firebase/genkit
+          git push
+          git push --tags origin

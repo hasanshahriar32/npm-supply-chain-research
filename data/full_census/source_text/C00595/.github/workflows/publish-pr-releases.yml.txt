@@ -1,0 +1,65 @@
+name: Pull Request Prerelease
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "!**"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prerelease:
+    name: Pull Request Prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: "24.x"
+          package-manager-cache: false
+
+      - name: Check if any files in codegen/ changed
+        id: changed-files-codegen
+        uses: karpikpl/list-changed-files-action@18aa81a078f5f0f2d7f3865414fff1eba2c29a25 # 1.1.4
+        with:
+          file-filter: "codegen/**"
+
+      - name: Check if any files in scripts/codemods/ac3-to-ac4/ changed
+        id: changed-files-codemod
+        uses: karpikpl/list-changed-files-action@18aa81a078f5f0f2d7f3865414fff1eba2c29a25 # 1.1.4
+        with:
+          file-filter: "scripts/codemods/ac3-to-ac4/**"
+
+      - run: npm ci
+
+      - name: Build AC
+        run: npm run build
+
+      - name: Build Codegen
+        if: steps.changed-files-codegen.outputs.changed_files != ''
+        run: npm run build
+        working-directory: "./codegen"
+
+      - name: Build Codemod
+        if: steps.changed-files-codemod.outputs.changed_files != ''
+        run: npm run build
+        working-directory: "./scripts/codemods/ac3-to-ac4"
+
+      - name: Build and publish to pkg.pr.new
+        env:
+          PACKAGE_CODEGEN: ${{ steps.changed-files-codegen.outputs.changed_files != '' && './codegen' || '' }}
+          PACKAGE_CODEMOD: ${{ steps.changed-files-codemod.outputs.changed_files != '' && './scripts/codemods/ac3-to-ac4' || '' }}
+        # skipping --compact for a moment as there is an unreleased package
+        run: npx pkg-pr-new publish --no-template ./dist $PACKAGE_CODEGEN $PACKAGE_CODEMOD

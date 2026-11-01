@@ -1,0 +1,36 @@
+name: test-browser
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+      - name: install
+        run: |
+          npm install -g npm
+          npm install
+      - name: test
+        run: |
+          # To prevent dbus errors from Cypress, start dbus
+          export XDG_RUNTIME_DIR=/run/user/$(id -u)
+          export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+          echo $DBUS_SESSION_BUS_ADDRESS
+          dbus-daemon --session --address=$DBUS_SESSION_BUS_ADDRESS --nofork --nopidfile --syslog-only &
+
+          # Run actual tests
+          npm run pack-for-tests
+          npm run test:browser
+        env:
+          CI: "true"
+          TERM: xterm

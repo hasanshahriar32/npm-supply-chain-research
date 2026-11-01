@@ -1,0 +1,67 @@
+{
+	"name": "resolve-pkg",
+	"version": "3.0.1",
+	"description": "Resolve the path of a package regardless of it having an entry point",
+	"license": "MIT",
+	"repository": "sindresorhus/resolve-pkg",
+	"funding": "https://github.com/sponsors/sindresorhus",
+	"author": {
+		"name": "Sindre Sorhus",
+		"email": "sindresorhus@gmail.com",
+		"url": "https://sindresorhus.com"
+	},
+	"type": "module",
+	"exports": {
+		"types": "./index.d.ts",
+		"default": "./index.js"
+	},
+	"sideEffects": false,
+	"engines": {
+		"node": ">=20"
+	},
+	"scripts": {
+		"pretest": "del node_modules/@someprivate/module-test && make-dir node_modules/@someprivate/module-test && cpy 'fixtures/private-module-test/*' node_modules/@someprivate/module-test/ && del node_modules/aliased-pkg && make-dir node_modules/aliased-pkg && cpy 'fixtures/aliased-pkg/*' node_modules/aliased-pkg/ && del node_modules/esm-only-pkg && make-dir node_modules/esm-only-pkg && cpy 'fixtures/esm-only-pkg/*' node_modules/esm-only-pkg/ && del node_modules/nested-package-json-pkg && make-dir node_modules/nested-package-json-pkg/dist && cpy 'fixtures/nested-package-json-pkg/*' node_modules/nested-package-json-pkg/ && cpy 'fixtures/nested-package-json-pkg/dist/*' node_modules/nested-package-json-pkg/dist/",
+		"test": "xo && ava && tsd"
+	},
+	"files": [
+		"index.js",
+		"index.d.ts"
+	],
+	"keywords": [
+		"require",
+		"resolve",
+		"path",
+		"module",
+		"from",
+		"like",
+		"path",
+		"cwd",
+		"current",
+		"working",
+		"directory",
+		"grunt",
+		"main",
+		"entry",
+		"point"
+	],
+	"dependencies": {
+		"find-up-simple": "^1.0.1"
+	},
+	"devDependencies": {
+		"@someprivate/module-test": "file:./fixtures/private-module-test",
+		"ava": "^6.4.1",
+		"cpy-cli": "^6.0.0",
+		"del-cli": "^7.0.0",
+		"grunt-svgmin": "^7.0.0",
+		"is-safe-filename": "^0.1.1",
+		"make-dir-cli": "^4.0.0",
+		"tsd": "^0.33.0",
+		"xo": "^1.2.3"
+	},
+	"xo": {
+		"ignores": [
+			"fixtures/**",
+			"temp-investigation/**"
+		]
+	}
+}

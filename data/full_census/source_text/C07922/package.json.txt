@@ -1,0 +1,47 @@
+{
+  "name": "micro-ftch",
+  "version": "1.2.1",
+  "description": "Wrappers for built-in fetch() enabling killswitch, logging, concurrency limit and other features",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "index.ts"
+  ],
+  "devDependencies": {
+    "@paulmillr/jsbt": "0.7.2",
+    "bismar": "0.1.9",
+    "@types/node": "26.2.0",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
+  },
+  "scripts": {
+    "benchmark:size": "bismar -bsm",
+    "build": "tsc",
+    "check": "jsbt-check",
+    "format": "prettier --write index.ts",
+    "test": "node test/index.ts",
+    "test:deno": "deno --allow-env --allow-net test/index.ts"
+  },
+  "keywords": [
+    "fetch",
+    "network",
+    "killswitch",
+    "concurrent",
+    "parallel",
+    "jsonrpc",
+    "micro",
+    "replay",
+    "ftch"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paulmillr/micro-ftch.git"
+  },
+  "type": "module",
+  "main": "index.js",
+  "module": "index.js",
+  "types": "index.d.ts",
+  "sideEffects": false,
+  "author": "Paul Miller (https://paulmillr.com)",
+  "license": "MIT"
+}

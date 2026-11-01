@@ -1,0 +1,102 @@
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
+
+name: Node.js Package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v1
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build the application
+        run: yarn build
+
+      - name: Test the application
+        run: yarn test
+      
+      - name: Build the package
+        run: |
+          cp README.md ./dist
+          cp LICENSE.md ./dist
+          cp package.json ./dist
+          cd ./dist
+          npm pack
+          mv zxing-text-encoding-*.tgz package.tgz
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v1
+        with:
+          name: pack-artifact
+          path: ./dist/package.tgz
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: pack-artifact
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - run: npm publish ./pack-artifact/package.tgz --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+
+  publish-gpr:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+        
+      - name: Download build artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: pack-artifact
+      
+      - name: Install JQ for JSON handling
+        run: sudo apt-get install jq
+  
+      - name: Rename NPM package
+        run: |
+          tar -xzf ./pack-artifact/package.tgz
+          cd ./package
+          mv package.json temp.json
+          jq -r '.name |= "@zxing-js/text-encoding"' temp.json > package.json
+          rm temp.json
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://npm.pkg.github.com/
+
+      - run: npm publish ./package/ --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}

@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 24.x]
+        react-version: [18, 19]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # Add caching
+      - uses: actions/cache@v3
+        id: npm-cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ matrix.node-version }}-
+
+      # Only run npm ci if cache missed
+      - if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
+
+      # Override React versions
+      - run: npm install --no-save react@^${{ matrix.react-version }} react-dom@^${{ matrix.react-version }} react-is@^${{ matrix.react-version }}
+
+      - run: npm test

@@ -1,0 +1,53 @@
+{
+  "name": "draft-js-utils-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "lerna run build",
+    "watch": "lerna run --parallel watch",
+    "format": "prettier-eslint --write \"packages/*/src/**/*.js\"",
+    "lint": "eslint --max-warnings 0 .",
+    "typecheck": "flow",
+    "test": "yarn lint && yarn typecheck && yarn test-src",
+    "test-src": "jest"
+  },
+  "dependencies": {
+    "draft-js": "^0.11.0",
+    "immutable": "3.x.x"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.5.0",
+    "@babel/core": "^7.5.4",
+    "@babel/plugin-proposal-class-properties": "^7.5.0",
+    "@babel/preset-env": "^7.5.4",
+    "@babel/preset-flow": "^7.0.0",
+    "@babel/preset-react": "^7.0.0",
+    "babel-eslint": "^7.0.0",
+    "eslint": "^4.6.0",
+    "eslint-plugin-babel": "^4.1.2",
+    "eslint-plugin-flowtype": "^2.35.1",
+    "eslint-plugin-react": "^7.3.0",
+    "expect": "^1.20.1",
+    "flow-bin": "^0.104.0",
+    "jest": "^24.8.0",
+    "lerna": "^3.10.7",
+    "prettier-eslint-cli": "^4.3.0",
+    "react": "^15.1.0",
+    "react-dom": "^15.1.0"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "draft-js-import-element": "<rootDir>/packages/draft-js-import-element/src/main.js",
+      "draft-js-utils": "<rootDir>/packages/draft-js-utils/src/main.js",
+      "synthetic-dom": "<rootDir>/packages/synthetic-dom/src/main.js"
+    }
+  },
+  "prettier": {
+    "bracketSpacing": false,
+    "singleQuote": true,
+    "trailingComma": "all",
+    "arrowParens": "always"
+  }
+}

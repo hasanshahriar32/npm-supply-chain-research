@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*' # older version branches
+    tags:
+      - '*'
+  pull_request: {}
+  schedule:
+  - cron:  '0 6 * * 0' # weekly, on sundays
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        node: ['14', '16', '18', '19']
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node }}
+    - name: install dependencies
+      run: yarn
+    - name: test
+      run: yarn test

@@ -1,0 +1,62 @@
+name: Handle Stale PRs and Branches
+
+on:
+  schedule:
+    - cron: '1 0 * * *' # every day at 00:01
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  prs:
+    name: Clean up stale PRs
+    runs-on: arc-amd64
+
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93 # v11.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          operations-per-run: 200
+          stale-pr-message: "Hello! This PR has been open for 20 days without any activity. Therefore, it's considered as stale and is scheduled to be closed in 10 days. If you're still working on this, please remove the 'Stale' label or add a comment to keep it open. Thanks for your contribution!"
+          days-before-pr-stale: 20
+          days-before-pr-close: 10
+          stale-pr-label: 'Stale'
+          ascending: true
+
+  branches:
+    name: Clean up stale branches
+    runs-on: arc-amd64
+    permissions:
+      contents: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Run branch cleanup script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ./scripts/cleanup-old-branches.sh
+          ./scripts/cleanup-old-branches.sh \
+            --months 2 \
+            --protected-branches "^(main|develop)$"

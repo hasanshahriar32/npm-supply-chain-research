@@ -1,0 +1,44 @@
+name: Release
+on:
+  push:
+    tags:
+      - "v*.*.*"
+permissions:
+  id-token: write
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # using `v1` because of: https://github.com/actions/checkout/issues/246
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Build
+        run: yarn run ci
+
+      - name: Publish to NPM
+        run: yarn run release:publish
+
+      # Generate changelog for the current release
+      - name: Generate Changelog
+        run: |
+          CHANGELOG=$(npx conventional-changelog -p angular -r 2 | sed '/^# \[\]/d' | sed '/./,$!d')
+          echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+          echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        # workaround for https://github.com/softprops/action-gh-release/issues/628
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        with:
+          files: packages/*/*.vsix
+          fail_on_unmatched_files: true
+          body: "${{ env.CHANGELOG }}"
+

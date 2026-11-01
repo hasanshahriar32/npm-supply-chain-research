@@ -1,0 +1,78 @@
+name: Build iOS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-ios.yml'
+      - 'example/ios/**'
+      - '**/nitrogen/generated/shared/**'
+      - '**/nitrogen/generated/ios/**'
+      - 'packages/react-native-mmkv/cpp/**'
+      - 'packages/react-native-mmkv/ios/**'
+      - '**/Podfile.lock'
+      - '**/*.podspec'
+      - '**/react-native.config.js'
+      - '**/nitro.json'
+  pull_request:
+    paths:
+      - '.github/workflows/build-ios.yml'
+      - 'example/ios/**'
+      - '**/nitrogen/generated/shared/**'
+      - '**/nitrogen/generated/ios/**'
+      - 'packages/react-native-mmkv/cpp/**'
+      - 'packages/react-native-mmkv/ios/**'
+      - '**/Podfile.lock'
+      - '**/*.podspec'
+      - '**/react-native.config.js'
+      - '**/nitro.json'
+
+env:
+  USE_CCACHE: 1
+
+jobs:
+  build:
+    name: Build iOS Example App
+    runs-on: macOS-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install npm dependencies (bun)
+        run: bun install
+
+      - name: Restore ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+
+      - name: Setup Ruby (bundle)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.9
+          bundler-cache: true
+          working-directory: example
+
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s "/Applications/Xcode_26.2.app/Contents/Developer"
+
+      - name: Restore Pods cache
+        uses: actions/cache@v6
+        with:
+          path: example/ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock', '**/Gemfile.lock') }}
+      - name: Install Pods
+        working-directory: example
+        run: bun pods
+
+      - name: Build App
+        working-directory: example/ios
+        run: "set -o pipefail && xcodebuild \
+          CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ \
+          -derivedDataPath build -UseModernBuildSystem=YES \
+          -workspace MmkvExample.xcworkspace \
+          -scheme MmkvExample \
+          -sdk iphonesimulator \
+          -configuration Debug \
+          -destination 'generic/platform=iOS Simulator' \
+          build \
+          CODE_SIGNING_ALLOWED=NO"

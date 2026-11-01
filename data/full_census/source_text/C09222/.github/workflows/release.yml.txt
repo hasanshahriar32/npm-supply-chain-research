@@ -1,0 +1,70 @@
+name: release
+
+on:
+  workflow_call:
+    secrets:
+      SAP_CLOUD_SDK_BOT_CLIENT_ID:
+        required: true
+      SAP_CLOUD_SDK_BOT_PRIVATE_KEY:
+        required: true
+
+permissions: {}
+
+jobs:
+  stable-release:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.SAP_CLOUD_SDK_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.SAP_CLOUD_SDK_BOT_PRIVATE_KEY }}
+          owner: SAP
+          repositories: cloud-sdk
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: $/.github/actions/setup
+        with:
+          ref: 'main'
+          persist-credentials: true
+          package-manager-cache: false
+      - name: Legacy Release
+        if: startsWith(github.ref, 'refs/tags/v1') || startsWith(github.ref, 'refs/tags/v2') || startsWith(github.ref, 'refs/tags/v3')
+        run: |
+          pnpm changeset publish --tag legacy
+      - name: Latest Release
+        if: startsWith(github.ref, 'refs/tags/v4')
+        run: |
+          pnpm changeset publish
+      - name: Checkout Docs
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: SAP/cloud-sdk
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+          path: ./cloud-sdk
+          persist-credentials: true
+      - name: Fetch full commit history (blobless)
+        run: git fetch --filter=blob:none --unshallow
+      - name: Update release notes
+        run: |
+          node scripts/add-changelog.ts
+      - name: Open PR
+        working-directory: cloud-sdk
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GIT_AUTHOR_NAME: ${{ vars.SAP_CLOUD_SDK_BOT_NAME }}
+          GIT_AUTHOR_EMAIL: ${{ vars.SAP_CLOUD_SDK_BOT_EMAIL }}
+          GIT_COMMITTER_NAME: ${{ vars.SAP_CLOUD_SDK_BOT_NAME }}
+          GIT_COMMITTER_EMAIL: ${{ vars.SAP_CLOUD_SDK_BOT_EMAIL }}
+        run: |
+          git checkout -b "update-release-notes"
+          git commit -m "update release notes" -a
+          git push -u origin update-release-notes
+
+          PR_BODY="Auto-created by update release notes workflow."
+          PR_TITLE="Update JS Release Notes"
+          gh pr create --head "update-release-notes" --title "${PR_TITLE}" --body "${PR_BODY}"

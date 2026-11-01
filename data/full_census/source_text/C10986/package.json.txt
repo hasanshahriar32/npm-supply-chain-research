@@ -1,0 +1,113 @@
+{
+  "name": "@swaggerexpert/json-pointer",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "3.0.2",
+  "description": "RCF 6901 implementation of JSON Pointer",
+  "unpkg": "./dist/json-pointer.browser.min.js",
+  "jsdelivr": "./dist/json-pointer.browser.min.js",
+  "main": "./cjs/index.cjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./es/index.mjs",
+      "require": "./cjs/index.cjs"
+    },
+    "./evaluate/realms/json": {
+      "types": "./types/evaluate/realms/json.d.ts",
+      "import": "./es/evaluate/realms/json/index.mjs",
+      "require": "./cjs/evaluate/realms/json/index.cjs"
+    },
+    "./evaluate/realms/map-set": {
+      "types": "./types/evaluate/realms/map-set.d.ts",
+      "import": "./es/evaluate/realms/map-set/index.mjs",
+      "require": "./cjs/evaluate/realms/map-set/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "watch": {
+    "test": "{src,test}/*.js"
+  },
+  "scripts": {
+    "prepublishOnly": "npm run build",
+    "grammar:compile": "node ./scripts/apg-js.js --lite --in=./src/grammar.bnf --out=./src/grammar.js && cd ./src",
+    "build": "npm run grammar:compile && npm run build:es && npm run build:cjs && npm run build:cjs:apg-lite && npm run build:umd:browser",
+    "build:es": "cross-env BABEL_ENV=es babel src --out-dir es --extensions '.js' --out-file-extension '.mjs'",
+    "build:cjs": "cross-env BABEL_ENV=cjs babel src --out-dir cjs --extensions '.js' --out-file-extension '.cjs'",
+    "build:cjs:apg-lite": "cross-env BABEL_ENV=cjs babel node_modules/apg-lite/lib/parser.js --out-file ./cjs/apg-lite.cjs",
+    "build:umd:browser": "cross-env BABEL_ENV=browser webpack --config config/webpack/browser.config.js --progress",
+    "test": "cross-env NODE_OPTIONS='--import ./test/loader.js' mocha",
+    "test:watch": "npm-watch test",
+    "watch": "npm-watch"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swaggerexpert/json-pointer.git"
+  },
+  "keywords": [
+    "json",
+    "pointer",
+    "parser",
+    "validator",
+    "evaluator",
+    "compile",
+    "representer",
+    "rfc6901"
+  ],
+  "author": "Vladimír Gorej <vladimir.gorej@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/swaggerexpert/json-pointer/issues"
+  },
+  "homepage": "https://github.com/swaggerexpert/json-pointer#readme",
+  "files": [
+    "es/",
+    "cjs/",
+    "dist/",
+    "types/",
+    "LICENSE",
+    "NOTICE",
+    "package.json",
+    "README.md",
+    "SECURITY.md"
+  ],
+  "dependencies": {
+    "apg-lite": "^1.0.5"
+  },
+  "devDependencies": {
+    "@babel/cli": "=8.0.6",
+    "@babel/core": "=8.0.9",
+    "@babel/preset-env": "=8.0.7",
+    "@commitlint/cli": "=21.2.4",
+    "@commitlint/config-conventional": "=21.2.4",
+    "@speclynx/apidom-datamodel": "^4.16.0",
+    "@speclynx/apidom-core": "^4.16.0",
+    "@speclynx/apidom-ns-openapi-3-0": "^4.16.0",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.2",
+    "@semantic-release/npm": "^13.1.3",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "apg-js": "^4.4.0",
+    "babel-loader": "^10.0.0",
+    "babel-plugin-module-resolver": "^5.0.2",
+    "chai": "=6.3.0",
+    "cross-env": "^10.1.0",
+    "husky": "=9.1.7",
+    "immutable": "^5.1.1",
+    "minim": "^0.23.8",
+    "mocha": "=11.8.0",
+    "npm-watch": "^0.13.0",
+    "prettier": "^3.5.2",
+    "semantic-release": "^25.0.2",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "^5.98.0",
+    "webpack-cli": "^7.2.1"
+  }
+}

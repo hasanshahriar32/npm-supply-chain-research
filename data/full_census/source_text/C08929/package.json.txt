@@ -1,0 +1,47 @@
+{
+  "name": "patrun",
+  "version": "7.3.0",
+  "main": "dist/patrun.js",
+  "types": "dist/patrun.d.ts",
+  "description": "A fast pattern matcher on JavaScript object properties.",
+  "homepage": "https://github.com/rjrodger/patrun",
+  "keywords": [
+    "pattern",
+    "matcher",
+    "object",
+    "property",
+    "json"
+  ],
+  "author": "Richard Rodger (http://richardrodger.com)",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/rjrodger/patrun.git"
+  },
+  "scripts": {
+    "watch": "tsc -w -d",
+    "test": "node --test 'test/*.test.js'",
+    "build": "tsc -d",
+    "clean": "rm -rf node_modules yarn.lock package-lock.json",
+    "reset": "npm run clean && npm i && npm run build && npm test",
+    "repo-tag": "REPO_VERSION=`node -e \"console.log(require('./package').version)\"` && echo TAG: v$REPO_VERSION && git commit -a -m v$REPO_VERSION && git push && git tag v$REPO_VERSION && git push --tags;",
+    "repo-publish": "npm run clean && npm i && npm run repo-publish-quick",
+    "repo-publish-quick": "npm run build && npm run test && npm run repo-tag && npm publish --registry https://registry.npmjs.org "
+  },
+  "license": "MIT",
+  "files": [
+    "src",
+    "dist",
+    "LICENSE"
+  ],
+  "contributors": [
+    "Adrien Becchis (https://github.com/AdrieanKhisbe)"
+  ],
+  "dependencies": {
+    "gex": "4.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "jsonic": "2.27.0",
+    "typescript": "6.0.3"
+  }
+}

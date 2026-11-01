@@ -1,0 +1,31 @@
+name: Node.js
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x, 23.x]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install binaryen
+        yarn
+    - name: Build
+      run: yarn build
+    - name: Lint
+      run: yarn lint
+    - name: Test Coverage
+      run: yarn test-coverage
+    - name: Bundle Size
+      run: yarn size

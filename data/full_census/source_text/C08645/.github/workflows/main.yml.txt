@@ -1,0 +1,68 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+      - beta
+      - 1.x
+  pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - '.npmignore'
+      - '*.md'
+
+jobs:
+  build:
+    name: Lint and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Lint
+        run: bun lint
+      
+      - name: Test
+        run: bun run test
+          
+      - name: TS
+        run: bun lint:types
+
+      - name: Build
+        run: bun run build
+
+  publish-module:
+    name: Publish Module to NPM
+    needs: build
+    if: github.repository == 'react-hook-form/resolvers'  && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/1.x')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Use Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Publish
+        run: bunx semantic-release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: '${{secrets.GITHUB_TOKEN}}'

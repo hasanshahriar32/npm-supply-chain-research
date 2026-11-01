@@ -1,0 +1,80 @@
+{
+  "name": "all-contributors-cli",
+  "version": "7.0.0",
+  "description": "Tool to easily add recognition for new contributors",
+  "bin": {
+    "all-contributors": "dist/cli.js"
+  },
+  "main": "dist/api.js",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22.22.0"
+  },
+  "scripts": {
+    "add-contributor": "node src/cli.js add",
+    "knip": "knip",
+    "build": "cp -r src dist",
+    "lint": "eslint . && prettier --check --ignore-unknown .",
+    "lint-fix": "eslint --fix . && prettier --write --ignore-unknown .",
+    "test": "vitest",
+    "test-coverage": "vitest --coverage",
+    "commit": "git-cz",
+    "start": "./dist/cli.js",
+    "prepare": "husky",
+    "dev": "./src/cli.js"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "!(*.js)": "prettier --ignore-unknown --write"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/all-contributors/cli.git"
+  },
+  "type": "module",
+  "keywords": [
+    "all-contributors",
+    "contributors"
+  ],
+  "author": "Jeroen Engels <jfm.engels@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/all-contributors/all-contributors-cli/issues"
+  },
+  "homepage": "https://github.com/all-contributors/all-contributors-cli#readme",
+  "dependencies": {
+    "eta": "^4.5.1",
+    "inquirer": "^14.0.2",
+    "json-fixer": "^1.6.8",
+    "yargs": "^18.0.0",
+    "yoctocolors": "^2.1.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@vitest/coverage-v8": "^5.0.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-vitest": "^0.5.4",
+    "git-cz": "^4.7.6",
+    "globals": "^17.1.0",
+    "husky": "^9.1.0",
+    "knip": "^6.10.0",
+    "lint-staged": "^17.0.8",
+    "nock": "^14.0.10",
+    "prettier": "^3.8.1",
+    "vitest": "^5.0.0"
+  },
+  "optionalDependencies": {
+    "prettier": "^3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "cz-conventional-changelog"
+    }
+  }
+}

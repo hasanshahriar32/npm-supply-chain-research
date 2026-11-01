@@ -1,0 +1,75 @@
+{
+  "name": "@knocklabs/javascript",
+  "author": "@knocklabs",
+  "version": "0.1.0-rc.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "build:packages": "turbo build --filter=\"./packages/*\"",
+    "dev": "turbo dev",
+    "dev:next-example": "turbo dev --filter=\"./packages/*\" --filter=nextjs-example",
+    "dev:next-app-dir-example": "turbo dev --filter=\"./packages/*\" --filter=nextjs-app-dir-example",
+    "dev:packages": "turbo dev --filter=\"./packages/*\"",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "format:check": "turbo format:check",
+    "test": "vitest run --config=./vitest/config.ts",
+    "test:watch": "vitest run --config=./vitest/config.ts --watch",
+    "test:coverage": "vitest run --config=./vitest/config.ts --coverage",
+    "test:ci": "vitest run --config=./vitest/config.ts --silent --coverage --reporter=junit --outputFile=test-report.junit.xml",
+    "test:integration": "yarn test:integration:react-18 && yarn test:integration:react-19",
+    "test:integration:react-18": "./integration/run-integration.sh 18.2.0",
+    "test:integration:react-19": "./integration/run-integration.sh 19.1.0",
+    "test:integration:runner": "cd ./integration && yarn test:integration && cd ..",
+    "type:check": "turbo type:check",
+    "release:version": "yarn changeset version && yarn install --mode=update-lockfile",
+    "release:publish": "yarn build:packages && yarn workspaces foreach -Rpt --no-private --from '@knocklabs/*' npm publish --access public --tolerate-republish --tag \"$NPM_CONFIG_TAG\" && yarn changeset tag",
+    "postinstall": "manypkg check"
+  },
+  "prettier": "@knocklabs/prettier-config",
+  "packageManager": "yarn@4.9.1",
+  "workspaces": [
+    "examples/*",
+    "packages/*",
+    "integration"
+  ],
+  "manypkg": {
+    "defaultBranch": "main",
+    "ignoredRules": [
+      "INTERNAL_MISMATCH"
+    ]
+  },
+  "dependenciesMeta": {
+    "@swc/core": {
+      "built": true
+    },
+    "esbuild": {
+      "built": true
+    },
+    "sharp": {
+      "built": true
+    },
+    "unrs-resolver": {
+      "built": true
+    }
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.29.2",
+    "@knocklabs/eslint-config": "workspace:^",
+    "@knocklabs/prettier-config": "workspace:^",
+    "@knocklabs/typescript-config": "workspace:^",
+    "@manypkg/cli": "^0.25.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "prettier": "^3.5.3",
+    "turbo": "^2.9.16",
+    "vitest": "^4.1.10"
+  },
+  "resolutions": {
+    "lodash@npm:~4.17.15": "4.18.1",
+    "uuid@npm:^7.0.3": "11.1.1"
+  },
+  "engines": {
+    "node": ">=24.13.0"
+  }
+}

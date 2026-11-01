@@ -1,0 +1,54 @@
+{
+  "name": "simple-html-tokenizer",
+  "version": "1.0.0",
+  "description": "Simple HTML Tokenizer is a lightweight JavaScript library that can be used to tokenize the kind of HTML normally found in templates.",
+  "keywords": [
+    "html",
+    "tokenizer"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/emberjs/simple-html-tokenizer.git"
+  },
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "pnpm clean && concurrently \"pnpm:build:*\" --names \"build:\" --prefixColors auto",
+    "build:js": "rolldown -c",
+    "build:types": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\"",
+    "codegen:char-refs": "node commands/build-char-refs.js",
+    "codegen:tokenizer-states": "node commands/build-tokenizer-states.js",
+    "lint": "concurrently \"pnpm:lint:*(!fix)\" --names \"lint:\" --prefixColors auto",
+    "lint:oxlint": "oxlint --deny-warnings",
+    "lint:tsc": "tsc --noEmit",
+    "prepare": "pnpm build",
+    "test": "pnpm build && tsc -p tsconfig.tests.json && qunit tmp/tests/tokenizer-tests.js"
+  },
+  "devDependencies": {
+    "@types/qunit": "^2.19.14",
+    "concurrently": "^9.2.5",
+    "oxlint": "^1.88.0",
+    "qunit": "^2.26.0",
+    "release-plan": "^0.18.0",
+    "rolldown": "^1.2.14",
+    "typescript": "^7.0.2"
+  },
+  "packageManager": "pnpm@10.26.0",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  },
+  "engines": {
+    "node": ">= 20.19"
+  }
+}

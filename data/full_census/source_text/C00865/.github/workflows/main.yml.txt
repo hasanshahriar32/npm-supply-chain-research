@@ -1,0 +1,39 @@
+name: Node CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: yarn
+      - name: Install
+        run: yarn --prefer-offline --frozen-lockfile --non-interactive --silent
+      - name: Build
+        run: yarn build
+      - name: Test
+        run: yarn test --ci
+        env:
+          CI: true
+      - name: saucelabs
+        # Skipped: the SAUCE_USERNAME / SAUCE_ACCESS_KEY repo secrets are
+        # rejected with 401 (Unauthorized). The legacy tooling itself works —
+        # change this to `if: true` once valid SauceLabs credentials are restored.
+        if: false
+        run: yarn run test:browser
+        env:
+          CI: true
+          # webpack 4 relies on MD4 hashing, which OpenSSL 3 (Node 17+) rejects
+          NODE_OPTIONS: --openssl-legacy-provider
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}

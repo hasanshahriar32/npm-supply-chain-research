@@ -1,0 +1,110 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "*/**.md"
+      - "*/**.txt"
+  pull_request:
+    paths-ignore:
+      - "*/**.md"
+      - "*/**.txt"
+  workflow_dispatch:
+
+env:
+  CI: true
+  NODE_LATEST: 26.x
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: check
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version:
+          - 22.x
+          - 26.x
+        platform:
+          - ubuntu-latest
+
+    runs-on: ${{matrix.platform}}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: ${{matrix.node-version}}@${{matrix.platform}}-build-${{hashFiles('package-lock.json')}}
+          restore-keys: |
+            ${{matrix.node-version}}@${{matrix.platform}}-build-
+      # - name: dump some variables
+      #   run: |
+      #     echo '## github object' >> $GITHUB_STEP_SUMMARY
+      #     echo '```json' >> $GITHUB_STEP_SUMMARY
+      #     echo '${{toJSON(github)}}' >> $GITHUB_STEP_SUMMARY
+      #     echo '```' >> $GITHUB_STEP_SUMMARY
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{matrix.node-version}}
+      - run: npm clean-install --ignore-scripts
+      - run: node --run=depcruise
+        if: matrix.node-version == env.NODE_LATEST
+      - run: node --run=lint
+        if: matrix.node-version == env.NODE_LATEST
+      - run: node --run=test:cover
+        if: matrix.node-version == env.NODE_LATEST
+      - run: node --run=build
+      - name: emit coverage results to step summary
+        if: always() && matrix.node-version == env.NODE_LATEST
+        run: |
+          echo '## Code coverage' >> $GITHUB_STEP_SUMMARY
+          node --experimental-strip-types tools/istanbul-json-summary-to-markdown.ts < coverage/coverage-summary.json >> $GITHUB_STEP_SUMMARY
+      - name: emit full depcruise results to step summary
+        if: always() && matrix.node-version == env.NODE_LATEST
+        run: |
+          node --run=depcruise -- --output-type markdown >> $GITHUB_STEP_SUMMARY
+      - name: on pushes to the default branch emit graph to the step summary
+        if: always() && matrix.node-version == env.NODE_LATEST && github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        run: |
+          echo '## Visual overview' >> $GITHUB_STEP_SUMMARY
+          echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+          node --run=depcruise:graph:diff:mermaid >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+      - name: on pull requests emit depcruise graph to step summary with changed modules highlighted
+        if: always() && matrix.node-version == env.NODE_LATEST && github.event_name == 'pull_request' && github.ref_name != github.event.repository.default_branch
+        run: |
+          echo '## Visual diff' >> $GITHUB_STEP_SUMMARY
+          echo Modules changed in this PR have a fluorescent green color. >> $GITHUB_STEP_SUMMARY
+          echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+          SHA=${{github.event.pull_request.base.sha}} node --run=depcruise:graph:diff:mermaid >> $GITHUB_STEP_SUMMARY
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  check-windows:
+    env:
+      PLATFORM: windows-latest
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: ${{env.NODE_LATEST}}@${{env.PLATFORM}}-build-${{hashFiles('package-lock.json')}}
+          restore-keys: |
+            ${{env.NODE_LATEST}}@${{env.PLATFORM}}-build-
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{env.NODE_LATEST}}
+      - name: install & build
+        run: |
+          npm clean-install --ignore-scripts
+          node --run=build
+      - run: node --run=test

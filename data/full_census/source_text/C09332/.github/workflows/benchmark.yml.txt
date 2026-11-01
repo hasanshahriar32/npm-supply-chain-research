@@ -1,0 +1,53 @@
+name: benchmark
+on:
+  push:
+    branches:
+      - master
+env:
+  CI: true
+permissions:
+  contents: write
+jobs:
+  benchmark:
+    name: "Test on Node.js ${{ matrix.node-version }}"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+      - name: setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # v3.9.1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install
+        run: pnpm install
+      - name: Build
+        run: pnpm run build
+      - name: Run Benchmark
+        run: cd examples/benchmark && node index.js | tee output.txt
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+      - name: Store benchmark result
+        uses: rhysd/github-action-benchmark@4322e5726e6334590d251fc4f92bec0efafc45dc # v1.22.2
+        with:
+          name: Secretlint benchmark
+          tool: 'benchmarkjs'
+          output-file-path: examples/benchmark/output.txt
+          github-token: ${{ steps.generate_token.outputs.token }}
+          auto-push: true
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: true
+          alert-comment-cc-users: '@azu'

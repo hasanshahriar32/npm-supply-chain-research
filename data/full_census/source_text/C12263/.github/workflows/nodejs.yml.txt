@@ -1,0 +1,98 @@
+name: schema-utils
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+# A new commit supersedes the previous one's jobs, so stop paying for them
+# across the whole matrix below. Only pull request runs share a group; every
+# other run gets a group of its own (`github.run_id`), because a group holds
+# at most one pending run and a later push would otherwise evict the one
+# waiting — `cancel-in-progress` protects the running run, not the queued one.
+# Runs for the branches this also builds on push publish the coverage later
+# comparisons are measured against, and losing one would also hide a breakage
+# that is already on the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: Lint - ${{ matrix.os }} - Node v${{ matrix.node-version }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        node-version: [lts/*]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build declarations
+        run: npm run build:types
+      - name: Run lint declarations
+        run: if [ -n "$(git status declarations --porcelain)" ]; then echo "Missing declarations in git"; exit 1; else echo "All declarations are valid"; fi
+      - name: Security audit
+        run: npm run security
+  test:
+    name: Test - ${{ matrix.os }} - Node v${{ matrix.node-version }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x, 26.x]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup Git
+        if: matrix.os == 'windows-latest'
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        id: calculate_architecture
+        with:
+          result-encoding: string
+          script: |
+            if ('${{ matrix.os }}' === 'macos-latest' && ('${{ matrix['node-version'] }}' === '10.x' || '${{ matrix['node-version'] }}' === '12.x' || '${{ matrix['node-version'] }}' === '14.x')) {
+              return "x64"
+            } else {
+              return ''
+            }
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          architecture: ${{ steps.calculate_architecture.outputs.result }}
+          cache: "npm"
+      - name: Install dependencies
+        # The dev dependencies require an active LTS release, so install the versions that still
+        # run on the version under test. Legacy versions do not generate types either, so skip
+        # scripts that invoke `prepare` and explicitly run the code build without generating types.
+        # `--legacy-peer-deps` is what lets npm 7 and above downgrade over the lockfile
+        run: |
+          npm i -D typescript@4 del-cli@^3 jest@^27 babel-jest@^27 @babel/cli@^7 @babel/core@^7 @babel/preset-env@^7 --ignore-scripts --legacy-peer-deps
+          npm i --ignore-engines --ignore-scripts --legacy-peer-deps
+          npm run build:code
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x' || matrix.node-version == '14.x' || matrix.node-version == '16.x' || matrix.node-version == '18.x' || matrix.node-version == '20.x'
+      - name: Install dependencies
+        run: npm ci
+        if: matrix.node-version == '22.x' || matrix.node-version == '24.x' || matrix.node-version == '26.x'
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --ci
+      - uses: codecov/codecov-action@v5
+        with:
+          flags: integration
+          token: ${{ secrets.CODECOV_TOKEN }}

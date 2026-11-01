@@ -1,0 +1,48 @@
+{
+  "name": "babel-plugin-react-require",
+  "version": "4.0.3",
+  "description": "Babel plugin that adds React import declaration if file contains JSX tags.",
+  "keywords": [
+    "babel",
+    "babel-plugin",
+    "react",
+    "jsx"
+  ],
+  "homepage": "https://github.com/vslinko/babel-plugin-react-require",
+  "bugs": {
+    "url": "https://github.com/vslinko/babel-plugin-react-require/issues",
+    "email": "me@vslinko.com"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Vyacheslav Slinko",
+    "email": "me@vslinko.com",
+    "url": "https://vslinko.com/"
+  },
+  "main": "lib",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vslinko/babel-plugin-react-require.git"
+  },
+  "scripts": {
+    "clean": "rimraf coverage",
+    "build-examples": "babel examples -d built-examples",
+    "lint": "prettier --check lib test && eslint lib test",
+    "prepare": "npm run clean && npm run build-examples",
+    "test": "jest",
+    "test-coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.5",
+    "@babel/plugin-syntax-jsx": "^7.27.1",
+    "@eslint/eslintrc": "^3.3.3",
+    "@eslint/js": "^9.39.1",
+    "babel-plugin-inline-react-svg": "^2.0.2",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "prettier": "^3.7.4",
+    "rimraf": "^6.1.2"
+  }
+}

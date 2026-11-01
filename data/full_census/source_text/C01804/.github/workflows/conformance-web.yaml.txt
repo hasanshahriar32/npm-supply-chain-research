@@ -1,0 +1,39 @@
+name: "Web Conformance"
+
+on:
+  push:
+    branches: [main, "v*"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # https://consoledonottrack.com/
+  DO_NOT_TRACK: 1
+
+jobs:
+  # Conformance tests for @connectrpc/connect-web clients run only on Node.js in CI
+  node:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [26.x, 24.x, 22.x]
+        client: [promise, callback]
+    name: "Node.js ${{ matrix.node-version }} ${{ matrix.client }}"
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}/web-conformance/${{ github.sha }}
+          restore-keys: ${{ runner.os }}/web-conformance
+      - run: npm ci
+      - run: npx turbo run conformance:node:${{matrix.client}} --filter '@connectrpc/connect-web' --output-logs new-only --log-order stream

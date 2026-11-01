@@ -1,0 +1,106 @@
+name: Rust Quality
+
+on:
+  push:
+    branches:
+      - v2
+    paths:
+      - ".github/workflows/rust.yml"
+      - ".cargo/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".clippy.toml"
+      - "deny.toml"
+      - "bench/**"
+      - "crates/**"
+      - "packages/compiler/**"
+  pull_request:
+    branches:
+      - v2
+    paths:
+      - ".github/workflows/rust.yml"
+      - ".cargo/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".clippy.toml"
+      - "deny.toml"
+      - "bench/**"
+      - "crates/**"
+      - "packages/compiler/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/v2' }}
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        run: rustup toolchain install 1.93.0 --profile minimal --component clippy --component rustfmt
+
+      - name: Cache Cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-lint-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-lint-${{ runner.os }}-
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        run: rustup toolchain install 1.93.0 --profile minimal --component clippy --component rustfmt
+
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Cache Cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: rust-test-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
+          restore-keys: |
+            rust-test-${{ runner.os }}-
+
+      - name: Check workspace
+        run: cargo check --workspace --locked
+
+      - name: Run tests
+        run: cargo nextest run --workspace --locked
+
+      - name: Run doc tests
+        run: cargo test --workspace --doc --locked

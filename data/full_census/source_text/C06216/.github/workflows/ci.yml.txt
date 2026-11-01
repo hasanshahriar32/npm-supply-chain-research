@@ -1,0 +1,63 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or ref to run CI on"
+        required: false
+        default: ""
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        node-version: [22.x, 24.x, 26.x]
+
+    permissions: {}
+
+    steps:
+      # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Use Node.js ${{ matrix.node-version }}
+        # v7.1.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: ${{ matrix.node-version }}
+          package-manager-cache: false
+      # Node 22 bundles npm 10; the cooldown requires npm >=11.10.
+      # Drop this step after Node 22 support ends and all selected Node versions bundle npm >=11.10.
+      - name: Use npm with release-age support
+        run: npm install -g npm@11.21.1
+      - run: npm ci
+      - run: npm run build
+      - run: npm run lint
+      - run: npm test
+      - name: Check out the previous SDK contract
+        if: github.event_name == 'pull_request' && matrix.node-version == '22.x'
+        # v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .compat-baseline
+          persist-credentials: false
+      - name: Check SDK compatibility
+        if: github.event_name == 'pull_request' && matrix.node-version == '22.x'
+        # A reviewed contract change can merge before its minor release. The
+        # step still reports it, and Increment Version blocks a patch release.
+        continue-on-error: ${{ contains(github.event.pull_request.labels.*.name, 'contract-change') }}
+        run: npm run check:compatibility -- .compat-baseline/src/index.ts

@@ -1,0 +1,52 @@
+{
+  "name": "simple-libs",
+  "type": "module",
+  "private": true,
+  "version": "0.0.0",
+  "description": "A set of packages with simple utilities.",
+  "author": "dangreen",
+  "license": "MIT",
+  "funding": "https://ko-fi.com/dangreen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TrigenSoftware/simple-release-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TrigenSoftware/simple-release-tools/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clear": "pnpm -r --no-sort clear",
+    "build": "pnpm -r --no-sort build",
+    "lint": "pnpm -r --no-sort --if-present lint",
+    "test:unit": "pnpm -r --no-sort --if-present test:unit",
+    "test:types": "pnpm -r --no-sort --if-present test:types",
+    "test": "run -p lint test:unit test:types",
+    "commit": "cz",
+    "updateGitHooks": "simple-git-hooks"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.0",
+    "@commitlint/config-conventional": "^21.0.0",
+    "@commitlint/config-pnpm-scopes": "^21.0.0",
+    "@commitlint/cz-commitlint": "^21.0.0",
+    "@trigen/oxlint": "^9.1.0",
+    "@trigen/oxlint-config": "^9.2.3",
+    "@trigen/scripts": "^9.0.0",
+    "@typescript/native-preview": "latest",
+    "@vitest/coverage-v8": "^4.1.9",
+    "clean-publish": "5.2.2",
+    "commitizen": "^4.3.1",
+    "del-cli": "^7.0.0",
+    "nano-staged": "^1.0.0",
+    "oxlint": "^1.71.0",
+    "oxlint-tsgolint": "^0.23.0",
+    "simple-git-hooks": "^2.13.1",
+    "tsm": "^2.3.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.0",
+    "vitest": "^4.1.9"
+  }
+}

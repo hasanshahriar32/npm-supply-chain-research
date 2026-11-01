@@ -1,0 +1,64 @@
+{
+  "name": "ts-debounce",
+  "version": "5.0.1",
+  "description": "TypeScript implementation of debounce",
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.esm.js",
+  "types": "dist/src/index.d.ts",
+  "author": {
+    "name": "Jakub Chodorowicz",
+    "url": "https://github.com/chodorowicz"
+  },
+  "keywords": [
+    "TypeScript",
+    "ts",
+    "TS",
+    "std lib",
+    "function",
+    "debounce",
+    "wait"
+  ],
+  "files": [
+    "dist/**/*"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chodorowicz/ts-debounce"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "all-contributors-cli": "^6.20.0",
+    "jest": "^30.3.0",
+    "microbundle": "^0.15",
+    "np": "^11.2.0",
+    "prettier": "^3.8.3",
+    "ts-jest": "^29",
+    "tsd": "^0.33.0",
+    "typescript": "~5.4"
+  },
+  "scripts": {
+    "build": "microbundle && cp ./src/index.test-d.ts ./dist/src/",
+    "dev": "microbundle watch",
+    "prepublishOnly": "npm run build",
+    "test": "npm run test:code && npm run test:types",
+    "test:code": "jest",
+    "test:types": "tsc --noEmit && tsd",
+    "prettier:check": "prettier --check .",
+    "release": "np"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(src/__tests__/.*|(\\.|/)(test|spec))\\.ts$",
+    "moduleFileExtensions": [
+      "js",
+      "ts"
+    ]
+  },
+  "tsd": {
+    "directory": "src"
+  },
+  "packageManager": "pnpm@10.33.0"
+}

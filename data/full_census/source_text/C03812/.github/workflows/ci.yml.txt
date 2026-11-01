@@ -1,0 +1,98 @@
+name: ci
+
+# How this workflow works:
+# - Pull requests run typecheck, lint, test, and build jobs.
+# - Pushes to `main` rerun the same validation suite after merge.
+# - The build job verifies publish-sensitive invariants like matching versions,
+#   npm pack contents, and the built-package smoke test.
+#
+# How to use it:
+# - Open a pull request to run the main validation suite.
+# - Merges to `main` rerun the same checks without duplicating branch push runs.
+# - Package publishing is handled separately by `.github/workflows/release.yml`.
+on:
+  pull_request:
+    branches:
+      - "**"
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint ci . --reporter=github
+
+  test:
+    needs: [lint, typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm test:tz
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm check:versions
+      - run: pnpm pack:dry-run
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rdp-dist
+          path: packages/*/dist
+
+  test-built-packages:
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/download-artifact@v4
+        with:
+          name: rdp-dist
+          path: packages
+      # Test the downloaded artifact exactly as it would be published on npm.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:build

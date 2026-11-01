@@ -1,0 +1,95 @@
+name: Ecosystem CI
+
+env:
+  CI: 1
+  # 7 GiB by default on GitHub, setting to 6 GiB
+  # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#supported-runners-and-hardware-resources
+  NODE_OPTIONS: --max-old-space-size=6144
+  FNM_COREPACK_ENABLED: true
+  FNM_RESOLVE_ENGINES: true
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "swc version to use"
+        required: false
+        type: string
+        default: "nightly"
+
+      suites:
+        description: 'JSON array for test suites to run. Select ["_"] to run all tests'
+        required: true
+        type: string
+
+      allowBreakingWasm:
+        description: "Allow wasm breakage"
+        required: false
+        type: boolean
+        default: false
+
+      mode:
+        type: string
+        description: "Passing is a regular proces, and ignored is about ignored tests"
+
+permissions: {}
+
+jobs:
+  list-tests:
+    name: "List tests"
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      suites: ${{ steps.list-tests.outputs.suites }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-node
+
+      - id: list-tests
+        run: pnpm exec tsx run-all.ts
+        working-directory: .github/swc-ecosystem-ci
+        env:
+          CI_MODE: ${{ github.event.inputs.mode || 'passing' }}
+
+  run-test-suite:
+    name: Test ${{ matrix.suite }}
+    needs:
+      - list-tests
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: ${{ fromJSON(needs.list-tests.outputs.suites) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-node
+
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc
+        working-directory: .github/swc-ecosystem-ci
+
+      - id: ecosystem-ci-run
+        working-directory: .github/swc-ecosystem-ci
+        run: |
+          bash -r
+          echo $PATH
+          which node
+
+          corepack disable
+          node ecosystem-ci.js run-suites ${{ matrix.suite }}
+        env:
+          SWC_VERSION: ${{ inputs.version }}
+          CI_MODE: ${{ inputs.mode }}
+          ALLOW_BREAKING_WASM: ${{ inputs.allowBreakingWasm || 'false' }}

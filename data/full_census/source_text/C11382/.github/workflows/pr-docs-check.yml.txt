@@ -1,0 +1,41 @@
+name: PR docs check 🔍
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - closed
+    paths:
+      - '.github/**/*'
+      - 'website/**/*'
+
+concurrency:
+  group: preview-doc-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # Required to push commits
+  pages: write # Required to deploy to Pages
+  pull-requests: write # If creating/updating PRs
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout️ 🛎
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 20
+          fetch-tags: false
+
+      - name: Setup docs workspace ⚙️
+        uses: ./.github/actions/setup-docspace
+        with:
+          base-url: '/jest-preset-angular/pr-preview/pr-${{ github.event.pull_request.number }}/'
+
+      - name: Deploy preview 🚀
+        uses: rossjrw/pr-preview-action@873417d2df72380da1f3978378fb58560bcde976 # v1
+        with:
+          source-dir: ./website/build

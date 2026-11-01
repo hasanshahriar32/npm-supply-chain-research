@@ -1,0 +1,186 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    name: Java ${{ matrix.java }} ${{ matrix.os }}
+    strategy:
+      matrix:
+        java: [17]
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "corretto"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: clean and build
+        run: ./gradlew clean build -Plog-tests
+
+      - name: publish
+        run: ./gradlew publish
+
+  protocol-tests:
+    runs-on: ${{ matrix.os }}
+    name: Protocol Tests
+    strategy:
+      matrix:
+        java: [17]
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: "yarn"
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: "corretto"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      - name: clean and build
+        run: ./gradlew clean build -Plog-tests
+      - name: Install dependencies
+        run: |
+          yarn
+          yarn turbo telemetry disable
+      - name: Build packages
+        run: node ./scripts/retry -- yarn build
+      - name: Run protocol tests
+        run: node ./scripts/retry -- yarn test:protocols
+
+  lint-typescript:
+    runs-on: ubuntu-latest
+    name: TypeScript Lint
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: "yarn"
+      - name: Install dependencies
+        run: yarn
+      - name: Run linter
+        run: yarn lint
+
+  test-typescript:
+    runs-on: smithy-typescript_ubuntu-latest_8-core
+    name: TypeScript Test ${{ matrix.node }}
+    needs: ["ensure-typescript-packages-have-changesets", "lint-typescript", "ensure-typescript-formatted"]
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24, 26]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          java-version: "17"
+          distribution: "corretto"
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+      - name: Install dependencies
+        run: |
+          yarn
+          yarn turbo telemetry disable
+      - name: Build
+        run: node ./scripts/retry -- yarn build
+      - name: Run unit tests
+        run: node ./scripts/retry -- yarn test
+      - name: Run integration tests
+        run: |
+          yarn config set enableImmutableInstalls false
+          node ./scripts/retry -- yarn test:integration
+
+  extract-docs:
+    runs-on: smithy-typescript_ubuntu-latest_8-core
+    name: Extract Docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: "yarn"
+      - name: Install dependencies
+        run: |
+          yarn
+          yarn turbo telemetry disable
+      - name: Build packages
+        run: node ./scripts/retry -- yarn build
+      - name: Run API Extractor
+        run: yarn extract:docs
+
+  ensure-typescript-formatted:
+    runs-on: ubuntu-latest
+    name: Ensure TypeScript is formatted
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: "yarn"
+      - name: Install dependencies
+        run: yarn
+      - name: Run the code formatter
+        run: yarn format
+      # This checks the output of git diff. If it's not empty (i.e there were
+      # changes) it'll return a non-zero error code.
+      - name: Ensure there are no changes from running the formatter
+        run: |
+          git diff
+          test -z "$(git diff)"
+
+  ensure-typescript-packages-have-changesets:
+    runs-on: ubuntu-latest
+    name: Ensure TypeScript packages have changesets
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Include full git history needed for `yarn changeset status`
+        with:
+          ref: ${{github.event.pull_request.head.sha}}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: "yarn"
+      - name: Install
+        run: yarn
+      - name: Ensure changesets exist for each changed package
+        # Skip on the release PR opened by the changesets action, where
+        # changesets have already been consumed by `changeset version`.
+        if: github.head_ref != 'changeset-release/main'
+        run: yarn changeset status --since=origin/main

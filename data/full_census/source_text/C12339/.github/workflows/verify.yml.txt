@@ -1,0 +1,225 @@
+name: Verify
+on:
+  workflow_call:
+  workflow_dispatch:
+
+concurrency:
+  group: >-
+    verify-${{ github.event_name == 'pull_request' && github.event.pull_request.head.label || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Check code
+        run: pnpm check
+
+      - name: Check types
+        run: pnpm check:types
+
+      - name: Check examples
+        run: pnpm zile examples:check
+
+      - name: Verify trusted setup artifact
+        run: pnpm trusted-setups:check
+
+  test-core:
+    name: Test Runtime (core)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run tests
+        run: pnpm test --project core --bail=1 --coverage
+        env:
+          VITE_ANVIL_FORK_URL: ${{ secrets.VITE_ANVIL_FORK_URL }}
+
+  test-frames:
+    name: Test Runtime (tmp_frames)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run tests
+        run: pnpm test --project tmp_frames --bail=1
+
+  test-browser:
+    name: Test Runtime (browser)
+    # Playwright does not support Ubuntu 26.04, which `ubuntu-latest` now resolves to.
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Run tests
+        run: pnpm test --project browser --project browser-webauthn --bail=1
+
+  test-tempo:
+    name: 'Test Runtime (tempo, env: localnet, tag: ${{ matrix.tag }})'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # `edge` tracks `tempoxyz/tempo` main and includes unreleased
+        # features the tests depend on (e.g. TIP-1049 admin keys). The
+        # `latest` tag is pinned to released versions and lags behind.
+        tag:
+          - edge
+          # - https://rpc.moderato.tempo.xyz
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run tests
+        run: pnpm test --project tempo-unit --project tempo --bail=1 --coverage
+        env:
+          VITE_TEMPO_CREDENTIALS: ${{ secrets.VITE_TEMPO_CREDENTIALS }}
+          VITE_TEMPO_TAG: ${{ matrix.tag }}
+
+  test-tempo-multisig:
+    name: Test Runtime (tempo multisig)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run tests
+        run: pnpm test --project tempo-configurable-accounts --bail=1
+
+  # test-tempo-e2e:
+  #   name: 'Test Runtime (tempo, env: ${{ matrix.tempo-env }}, e2e)'
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       tempo-env:
+  #         # - devnet TODO: re-enable.
+  #         - testnet
+
+  #   steps:
+  #     - name: Clone repository
+  #       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+  #       with:
+  #         submodules: 'recursive'
+
+  #     - name: Install dependencies
+  #       uses: ./.github/actions/install-dependencies
+
+  #     - name: Run tests
+  #       run: pnpm test --project tempo e2e --bail=1
+  #       env:
+  #         VITE_TEMPO_CREDENTIALS: ${{ secrets.VITE_TEMPO_CREDENTIALS }}
+  #         VITE_TEMPO_ENV: ${{ matrix.tempo-env }}
+
+  fuzz:
+    name: Fuzz
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      # The counterexamples behind the `Hex` and `Base64` decode fixes surfaced
+      # at iterations 372 and 1612, so the previous budget of 200 could not
+      # have found either. 10k timed out at the default per-test limit on a
+      # runner, which is several times slower than a laptop.
+      #
+      # Node only: browsers triple the wall time, and what is unique about them
+      # -- native codecs that differ between engine versions -- is already
+      # pinned here by the `*.conformance.ts` suites under the `browser`
+      # project. Add `--project fuzz-browser` to fuzz them too.
+      - name: Run fuzz tests
+        run: pnpm test:fuzz --bail=1
+        env:
+          FC_NUM_RUNS: 2000
+
+  vectors:
+    name: Vectors
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run test vectors
+        shell: bash
+        run: pnpm vectors
+
+  wasm:
+    name: WASM Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Restore WASM toolchain
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .wasm-toolchain
+          key: wasi-sdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('wasm/toolchain.json') }}
+
+      - name: Verify committed artifacts are reproducible
+        run: pnpm wasm:check

@@ -1,0 +1,78 @@
+name: Run Test Suite
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  release:
+    types: [released, prereleased]
+
+permissions: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm run test-coverage
+        env:
+          NODE_OPTIONS: --experimental-vm-modules
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+  publish:
+    name: >-
+      Publish cli 📦 to NPM
+    if:
+      github.repository_owner == 'all-contributors' && github.event_name ==
+      'release'
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    environment:
+      name: npm-publish
+      url: https://www.npmjs.com/package/all-contributors-cli
+    permissions:
+      id-token: write # mandatory for OIDC / NPM publishing
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      # Ensure npm 11.5.1 or later for trusted publishing
+      - name: Install latest version of npm
+        run: npm install -g npm@latest
+      - name: Install deps and build package
+        run: |
+          npm ci
+          npm run build
+      - name: Publish to NPM via trusted publishing (tag next if prerelease)
+        run: |
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            npm publish --provenance --tag next
+          else
+            npm publish --provenance
+          fi

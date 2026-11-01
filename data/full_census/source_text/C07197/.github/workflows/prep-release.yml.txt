@@ -1,0 +1,56 @@
+name: Prepare Release PR
+
+permissions:
+  contents: write
+
+on:
+  workflow_call:
+    inputs:
+      release_type:
+        description: Type of release. patch or minor (major if breaking)
+        type: string
+        required: false
+        default: patch
+      changelog_file:
+        description: Name of changelog file.
+        type: string
+        required: false
+        default: NEWS.md
+      changelog_json:
+        description: Whether or not it should generate a changelog.json (should only be for node-newrelic)
+        type: boolean
+        required: false
+
+jobs:
+  generate-release-notes:
+    # prepare-release.js uses GITHUB_TOKEN to push a release-notes branch and open a PR.
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+    # Check out caller repo
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    # check out agent repo to agent-repo for the bin folders
+    - uses: actions/checkout@v6
+      with:
+        repository: newrelic/node-newrelic
+        path: agent-repo
+    - uses: actions/setup-node@v6
+      with:
+        node-version: lts/*
+        check-latest: true
+    # Only need to install deps in agent-repo because of the bin scripts
+    - name: Install Dependencies
+      run: npm install --prefix agent-repo
+    - name: Setup GitHub Credentials
+      run: |
+        git config user.name $GITHUB_ACTOR
+        git config user.email gh-actions-${GITHUB_ACTOR}@github.com
+    - name: Create Release Notes
+      run: node ./agent-repo/bin/prepare-release.js --release-type ${{ inputs.release_type }} --branch ${{ github.ref }} --repo ${{ github.repository }} --changelog ${{ inputs.changelog_file }} ${{ inputs.changelog_json == true && '--changelog-json' || ''}}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

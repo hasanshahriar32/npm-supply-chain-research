@@ -1,0 +1,38 @@
+name: Continuous Releases
+
+on:
+  push:
+    branches:
+      - main
+      - v10
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: ⬇️ Checkout Code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: 🧑‍🔧 Get Core Dependencies
+        uses: ./.github/workflows/actions/get-core-dependencies
+
+      - name: 👷 Bootstrap Packages
+        run: pnpm run setup
+        shell: bash
+        env:
+          NODE_ENV: production
+          GITHUB_AUTH: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        run: pnpx pkg-pr-new publish --pnpm './packages/*'

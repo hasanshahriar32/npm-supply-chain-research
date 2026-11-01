@@ -1,0 +1,37 @@
+name: Benchmark
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Performance regression check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+          check-latest: true
+
+      - name: 'Install dependencies'
+        run: yarn install
+      - name: Build code
+        run: yarn transpile && yarn build:node-release
+      - name: 'Run benchmark'
+        run: yarn benchmark:node
+
+      # Run benchmark action
+      - name: Compare benchmark results
+        uses: rhysd/github-action-benchmark@v1.8.1
+        with:
+          name: Parcel sourcemap benchmark
+          tool: 'benchmarkjs'
+          output-file-path: bench.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          benchmark-data-dir-path: public/bench
+          comment-always: true
+          max-items-in-chart: 1000
+          auto-push: ${{ github.ref == 'refs/heads/master' }}

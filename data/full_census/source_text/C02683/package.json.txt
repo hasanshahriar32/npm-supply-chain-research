@@ -1,0 +1,110 @@
+{
+  "name": "@eggjs/monorepo",
+  "version": "4.2.0",
+  "private": true,
+  "description": "Eggjs framework monorepo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eggjs/egg.git"
+  },
+  "files": [
+    "README.md"
+  ],
+  "type": "module",
+  "scripts": {
+    "clean-dist": "ut run clean --workspaces --if-present",
+    "prebuild": "node --test scripts/test/check-package.test.js",
+    "build": "tsdown",
+    "prelint": "ut run clean-dist",
+    "lint": "oxlint --type-aware --type-check --quiet",
+    "fmt": "oxfmt",
+    "typecheck": "ut run clean-dist && ut run typecheck --workspaces --if-present",
+    "fmtcheck": "oxfmt --check .",
+    "pretest": "ut run clean-dist && ut run pretest --workspaces --if-present",
+    "test": "vitest run --bail 1 --retry 2 --testTimeout 20000 --hookTimeout 20000",
+    "test:cov": "ut run test -- --coverage",
+    "benchmark:ci-test": "node scripts/ci-test-benchmark.js",
+    "preci": "ut run pretest --workspaces --if-present",
+    "ci": "ut run test -- --coverage",
+    "dev:services:start": "node scripts/dev-services.js start",
+    "dev:services:stop": "node scripts/dev-services.js stop",
+    "dev:services:status": "node scripts/dev-services.js status",
+    "dev:services:reset": "node scripts/dev-services.js reset",
+    "site:dev": "cd site && npm run dev",
+    "site:build": "cd site && npm run build",
+    "puml": "puml . --dest ./site",
+    "example:dev:commonjs": "ut run dev --workspace helloworld-commonjs",
+    "example:dev:typescript": "ut run dev --workspace helloworld-typescript",
+    "example:dev:tegg": "ut run dev --workspace helloworld-tegg",
+    "example:test:all": "ut run test --workspace 'helloworld-*' --if-present",
+    "prepare": "husky",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major",
+    "version:prerelease": "node scripts/version.js prerelease",
+    "version:prepatch": "node scripts/version.js prepatch",
+    "version:preminor": "node scripts/version.js preminor",
+    "version:premajor": "node scripts/version.js premajor",
+    "version:alpha": "node scripts/version.js prerelease --prerelease-tag=alpha",
+    "version:beta": "node scripts/version.js prerelease --prerelease-tag=beta",
+    "version:rc": "node scripts/version.js prerelease --prerelease-tag=rc"
+  },
+  "devDependencies": {
+    "@e18e/eslint-plugin": "catalog:",
+    "@eggjs/bin": "workspace:*",
+    "@eggjs/tsconfig": "workspace:*",
+    "@oxc-node/core": "catalog:",
+    "@types/content-type": "catalog:",
+    "@types/js-yaml": "catalog:",
+    "@types/koa-compose": "catalog:",
+    "@types/node": "catalog:",
+    "@typescript/native": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
+    "c8": "catalog:",
+    "husky": "catalog:",
+    "js-yaml": "catalog:",
+    "lint-staged": "catalog:",
+    "mocha": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "oxlint-tsgolint": "catalog:",
+    "publint": "catalog:",
+    "rimraf": "catalog:",
+    "semver": "catalog:",
+    "smol-toml": "catalog:",
+    "tsdown": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:compiler-api",
+    "unplugin-unused": "catalog:",
+    "urllib": "catalog:",
+    "utoo": "catalog:",
+    "vitest": "catalog:"
+  },
+  "lint-staged": {
+    "*": [
+      "oxfmt --no-error-on-unmatched-pattern",
+      "oxlint --type-aware --fix --no-error-on-unmatched-pattern"
+    ]
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "optionalDependencies": {
+    "@utoo/utoo-mingw64_nt-10.0-26100-x64": "npm:@utoo/utoo-win32-x64@1.0.28"
+  },
+  "workspaces": [
+    "packages/*",
+    "plugins/*",
+    "examples/*",
+    "tools/*",
+    "site",
+    "tegg/core/*",
+    "tegg/plugin/*",
+    "tegg/standalone/*"
+  ],
+  "overrides": {
+    "vite": "npm:rolldown-vite@^7.1.13"
+  }
+}

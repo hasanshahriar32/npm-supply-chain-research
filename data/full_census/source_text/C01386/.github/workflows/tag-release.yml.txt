@@ -1,0 +1,85 @@
+name: tag-release
+run-name: tag-release
+
+on:
+  merge_group:
+  pull_request:
+    types:
+      - closed
+
+  workflow_dispatch:
+    inputs:
+      project:
+        type: choice
+        required: true
+        default: "jco"
+        options:
+          - jco
+          - bare-jco
+          - jco-node-fs
+          - jco-transpile
+          - jco-cm-runtime
+          - jco-std
+          - js-component-bindgen
+          - preview2-shim
+          - preview3-shim
+          - rolldown-plugin-jco
+        description: |
+          Project to tag for release (ex. `0.1.0`)
+
+      ref:
+        type: string
+        required: true
+        description: |
+          Repository ref to tag (e.x. 'branch', 'jco-v0.1.0', '<long SHA>')
+
+      version:
+        type: string
+        required: true
+        description: |
+          Version tag (e.x. `0.1.0`)
+
+permissions:
+  contents: none
+
+jobs:
+  tag-release:
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.merged }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.ref || 'main' }}
+          persist-credentials: false
+
+      # Pull project and version
+      # (automatically triggered run)
+      - name: Collect metadata
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        id: meta
+        with:
+          script: |
+            const { collectReleaseMetadata } = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/scripts/release-metadata.cjs`
+            );
+            const metadata = collectReleaseMetadata(context);
+            if (metadata) {
+              core.setOutput('proceed', 'true');
+              core.setOutput('project', metadata.project);
+              core.setOutput('version', metadata.version);
+            }
+
+      - name: Push tag
+        if: ${{ steps.meta.outputs.proceed }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          PROJECT: ${{ steps.meta.outputs.project }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          TAG="$PROJECT-v$VERSION"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f "ref=refs/tags/$TAG" \
+            -f "sha=$(git rev-parse HEAD)"

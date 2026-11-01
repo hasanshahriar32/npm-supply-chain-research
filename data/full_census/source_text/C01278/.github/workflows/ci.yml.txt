@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request: {}
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint: 
+    runs-on: "ubuntu-latest"
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 24
+        cache: pnpm
+    - run: pnpm install
+    - run: pnpm lint
+
+  test:
+    name: "Tests - Node ${{ matrix.node-version }}"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Broccoli 4 is installed by default and requires node>=20.19
+        node-version: [20.x, 22.x, 24.x]
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: pnpm
+    - run: pnpm install
+    - run: pnpm test
+
+  legacy-test:
+    name: "Legacy Tests - Node ${{ matrix.node-version }} - Broccoli ${{ matrix.broccoli-version }}"
+    runs-on: "ubuntu-latest"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        broccoli-version: ["1", "2", "3"]
+        # when github updates their latest 24.x to include this patch number we can remove the specific version here
+        node-version: [14.x, 16.x, 18.x, 20.x, 22.x, 24.13.1]
+
+    steps:
+    - uses: actions/checkout@v6
+    # prevent yarn from complaining about the packageManager key in the package.json
+    - run: cat package.json | jq "del(.packageManager)" | tee package.json
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: yarn
+    - run: yarn install --frozen-lockfile --ignore-engines
+    - run: yarn add broccoli@${{matrix.broccoli-version}} --ignore-engines
+    - run: node -v
+    - run: yarn tsc -v
+    - run: yarn test
+
+  windows-test:
+    name: "Windows smoke tests - Broccoli ${{ matrix.broccoli-version }}"
+    runs-on: "windows-latest"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        broccoli-version: ["1", "2", "3", "4"]
+
+    steps:
+    - uses: actions/checkout@v6
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 20
+        cache: pnpm
+    - run: pnpm install
+    - run: pnpm install broccoli@${{matrix.broccoli-version}}
+    - run: pnpm test

@@ -1,0 +1,138 @@
+{
+  "name": "angularx-qrcode",
+  "version": "22.0.1",
+  "private": true,
+  "author": {
+    "name": "Andreas Jacob <andreas@cordobo.de>",
+    "url": "http://cordobo.com/"
+  },
+  "description": "Simple QRCode generator library for Angular 4-22 and Ionic 3-8 using node-qrcode",
+  "license": "MIT",
+  "scripts": {
+    "lint": "ng lint",
+    "ng": "ng",
+    "test": "ng test",
+    "watch": "ng build --project angularx-qrcode --watch --configuration development",
+    "start": "ng serve demo-app --open",
+    "start:dev": "npm run build && npm run build:demo -- --configuration development && npm run start:server",
+    "start:prod": "npm run build && npm run build:demo -- --configuration production && npm run start:server",
+    "start:server": "sirv dist/demo-app/browser --single --port 3000",
+    "prepare:build": "rimraf .angular dist tmp && cp ./README.md ./LICENSE projects/angularx-qrcode/",
+    "build": "npm run prepare:build && ng build --project angularx-qrcode --configuration production",
+    "build:demo": "ng build --project demo-app",
+    "publish": "node -e \"console.log('Publishing is only available via github. See .github/publish.yml')\"",
+    "security:cache": "bash scripts/security/github-actions-cache-check.sh",
+    "security:ioc": "bash scripts/security/npm-supply-chain-check.sh",
+    "ci:build:lib": "cp README.md projects/angularx-qrcode/README.md && ng build --project angularx-qrcode --configuration production",
+    "ci:build:app": "ng build --project demo-app --configuration production --base-href=/angularx-qrcode/",
+    "format": "prettier --write .",
+    "security:cache:test": "node --test scripts/security/github-actions-cache-check.test.mjs",
+    "test:ssr": "npm run ci:build:lib && node scripts/ssr/render.mjs",
+    "check:docs": "node scripts/docs/check-links.mjs"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
+  },
+  "peerDependencies": {
+    "@angular/core": ">= 22.0.0 < 23.0.0"
+  },
+  "devDependencies": {
+    "@angular/build": "22.1.8",
+    "@angular/cdk": "22.1.7",
+    "@angular/cli": "22.1.8",
+    "@angular/common": "22.1.7",
+    "@angular/compiler": "22.1.7",
+    "@angular/compiler-cli": "22.1.7",
+    "@angular/core": "22.1.7",
+    "@angular/forms": "22.1.7",
+    "@angular/material": "22.1.7",
+    "@angular/platform-browser": "22.1.7",
+    "@angular/platform-server": "22.1.7",
+    "@angular/router": "22.1.7",
+    "@eslint/js": "^10.0.1",
+    "@types/qrcode": "1.5.6",
+    "angular-eslint": "^22.1.0",
+    "eslint": "^10.7.0",
+    "jsdom": "^29.1.1",
+    "jsqr": "1.4.0",
+    "ng-packagr": "22.1.1",
+    "ngx-color-picker": "20.1.1",
+    "prettier": "3.6.2",
+    "rimraf": "6.1.2",
+    "rxjs": "~7.8.0",
+    "sirv-cli": "3.0.1",
+    "tslib": "^2.3.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.64.0",
+    "vitest": "^4.1.11",
+    "yaml": "2.9.1"
+  },
+  "keywords": [
+    "angularx-qrcode",
+    "angular-qrcode",
+    "ng-qrcode",
+    "ngx-qrcode",
+    "angular",
+    "angular4",
+    "angular5",
+    "angular6",
+    "angular7",
+    "angular8",
+    "angular9",
+    "angular10",
+    "angular11",
+    "angular12",
+    "angular13",
+    "angular14",
+    "angular15",
+    "angular16",
+    "angular17",
+    "angular18",
+    "angular19",
+    "angular20",
+    "angular21",
+    "angular22",
+    "ionic",
+    "ionic3",
+    "ionic4",
+    "ionic5",
+    "ionic6",
+    "ionic7",
+    "ionic8",
+    "aot",
+    "aot-compatible",
+    "aot-compilation",
+    "library",
+    "ng",
+    "ng-qrcode",
+    "ng2",
+    "ngx",
+    "ivy",
+    "qr",
+    "code",
+    "qrcode",
+    "qr-code"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cordobo/angularx-qrcode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cordobo/angularx-qrcode/issues"
+  },
+  "homepage": "https://cordobo.github.io/angularx-qrcode/"
+}

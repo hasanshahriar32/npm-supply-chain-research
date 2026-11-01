@@ -1,0 +1,44 @@
+name: Changesets
+on:
+  push:
+    branches:
+      - main
+env:
+  CI: true
+  
+jobs:
+  version:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CHANGESET_ACTIONS }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: build 
+        run: |
+          yarn prepare
+          yarn package:check
+          yarn package:packed-check
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: npx changeset publish
+          commit: 'release: version packages'
+          title: 'release: version packages'
+        env:
+          GITHUB_TOKEN: ${{ secrets.CHANGESET_ACTIONS }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,74 @@
+{
+  "private": true,
+  "scripts": {
+    "bundle": "lerna exec \"ncc build src/index.tsx --target web --filename color\" --scope @uiw/react-color",
+    "bundle:watch": "lerna exec \"ncc watch src/index.tsx --target web --filename color\" --scope @uiw/react-color",
+    "bundle:min": "lerna exec \"ncc build src/index.tsx --target web --filename color --minify\" --scope @uiw/react-color",
+    "⬇️⬇️⬇️⬇️⬇️ watch ⬇️⬇️⬇️⬇️⬇️": "▼▼▼▼▼ watch::package ▼▼▼▼▼",
+    "watch:all": "lerna exec --parallel --scope @uiw/* -- tsbb \"watch src/*.{ts,tsx}\" --use-babel --cjs cjs",
+    "watch:color": "lerna exec --parallel --scope @uiw/react-color-block -- tsbb \"watch src/*.{ts,tsx}\" --use-babel --cjs cjs",
+    "watch:alpha": "lerna exec --parallel --scope @uiw/react-alpha -- tsbb \"watch src/*.{ts,tsx}\" --use-babel --cjs cjs",
+    "⬆️⬆️⬆️⬆️⬆️ watch ⬆️⬆️⬆️⬆️⬆️": "▲▲▲▲▲ watch::package ▲▲▲▲▲",
+    "build": "lerna exec --scope @uiw/* -- tsbb build \"src/*.{ts,tsx}\" --use-babel --cjs cjs",
+    "start": "lerna exec --scope website -- npm run start",
+    "doc": "lerna exec --scope website -- npm run build",
+    "type-check": "lerna exec \"tsc --noEmit\" --scope @uiw/* --stream",
+    "test": "tsbb test --env=jsdom",
+    "coverage": "tsbb test --coverage --bail",
+    "prepare": "husky",
+    "publish": "lerna publish from-package --yes --no-verify-access",
+    "version": "lerna version --exact --force-publish --no-push --no-git-tag-version",
+    "prettier": "prettier --write '**/*.{js,jsx,tsx,ts,less,md,json}'",
+    "remove": "npm run clean && lerna exec \"rm -rf package-lock.json\" --scope @uiw/* --scope website",
+    "clean": "lerna clean --yes"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,less,md,json}": [
+      "prettier --write"
+    ]
+  },
+  "license": "MIT",
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(colors-named|colors-named-hex)/)"
+    ],
+    "collectCoverageFrom": [
+      "<rootDir>/packages/**/*.{tsx,ts}",
+      "!**/.kktrc.ts",
+      "!**/*.{js,d.ts}"
+    ],
+    "coverageReporters": [
+      "lcov",
+      "json-summary"
+    ],
+    "testMatch": [
+      "<rootDir>/test/*.{ts,tsx}"
+    ]
+  },
+  "workspaces": [
+    "packages/**",
+    "website"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {
+    "@kkt/less-modules": "^7.2.0",
+    "@kkt/ncc": "^1.0.13",
+    "@testing-library/react": "^14.0.0",
+    "@types/react": "~18.3.0",
+    "@types/react-dom": "~18.3.0",
+    "@types/react-test-renderer": "~18.0.0",
+    "husky": "9.1.7",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "jest-watch-typeahead": "^2.2.2",
+    "lerna": "8.0.0",
+    "lint-staged": "^15.1.0",
+    "prettier": "^3.0.0",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "react-test-renderer": "~18.2.0",
+    "tsbb": "^4.5.1"
+  }
+}

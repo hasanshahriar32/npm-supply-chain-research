@@ -1,0 +1,57 @@
+name: Publish Package to NPM
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:  # Allows manually publishing the version in package.json
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for npm trusted publishing (OIDC)
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive  # Required for JSON Schema Test Suite submodule
+
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24.x'
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+
+    - name: Update npm
+      run: npm install -g npm@latest  # Trusted publishing requires npm >= 11.5.1
+
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Verify package version matches release tag
+      run: |
+        PKG_VERSION=$(node -p "require('./package.json').version")
+        GITHUB_REF_NAME=${GITHUB_REF#refs/tags/}
+        GITHUB_TAG=${GITHUB_REF_NAME#v}
+        echo "Package version: $PKG_VERSION"
+        echo "GitHub tag (without v): $GITHUB_TAG"
+        if [ "$PKG_VERSION" != "$GITHUB_TAG" ] && [ "$PKG_VERSION" != "${GITHUB_TAG#v}" ]; then
+          echo "⚠️ WARNING: GitHub release tag ($GITHUB_REF_NAME) doesn't match package.json version ($PKG_VERSION)"
+          echo "The package will be published with the version from package.json: $PKG_VERSION"
+        fi
+    
+    - name: Build
+      run: npm run build
+    
+    - name: Test
+      run: npm test
+      
+    - name: Verify dual module compatibility
+      run: |
+        node -e "require('./dist/index.js')" # Test CJS
+        node --input-type=module -e "import * as mod from './dist/index.mjs'; console.log(typeof mod.convertJsonSchemaToZod === 'function')" # Test ESM
+    
+    - name: Publish to NPM
+      run: npm publish  # Authenticates via OIDC trusted publishing, no token needed

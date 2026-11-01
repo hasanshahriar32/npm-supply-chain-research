@@ -1,0 +1,1461 @@
+name: Test & Release
+
+env:
+  DEBUG: 'napi:*'
+  RUST_BACKTRACE: 1
+  # https://github.com/nodejs/node/issues/51555#issuecomment-2290742072
+  DISABLE_V8_COMPILE_CACHE: 1
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  # Supply-chain gate: audit every lifecycle script in the lockfile before any
+  # other job runs. Every job below `needs: audit`, so nothing installs deps or
+  # runs until the audit is clean. On a clean audit the rest of the pipeline
+  # installs deps with a normal `yarn install`.
+  audit:
+    name: Audit lifecycle scripts (script-jail)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # Docker backend: GitHub-hosted runners have Docker but no /dev/kvm (so the
+      # Firecracker backend is unavailable), and Docker writes the audit
+      # events/strace to the host-backed overlay — no fixed scratch disk to
+      # ENOSPC on a large monorepo. The committed `.script-jail.lock.yml` is
+      # Docker-produced + linux/x64-spoofed, so the backend/spoof must match.
+      #
+      # mode:check (audit only — no `install: true`): script-jail re-runs the
+      # two-phase lifecycle audit inside the sandbox and FAILS the job if the
+      # freshly generated lock diverges from the committed one (supply-chain
+      # drift). It does NOT materialize node_modules on the runner — every other
+      # job installs deps with its own normal `yarn install`. This job is the
+      # gate for the whole pipeline.
+      - name: script-jail audit (enforce committed lock)
+        uses: Brooooooklyn/script-jail@v0.2.10
+        with:
+          mode: check
+          backend: docker
+          spoof-platform: linux
+          spoof-arch: x64
+
+      # On a check-mode failure, surface the freshly generated lock for diffing.
+      - name: Upload regenerated lock on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: script-jail-lock
+          # .script-jail.* are dotfiles; upload-artifact skips hidden files by default.
+          include-hidden-files: true
+          path: |
+            .script-jail.lock.yml
+            .script-jail.yml
+
+  lint:
+    name: Lint SourceCode
+    runs-on: ubuntu-latest
+    needs: audit
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: lint-cargo-cache
+
+      - name: 'Install dependencies'
+        run: yarn install --immutable --mode=skip-build
+
+      - name: 'Lint JS/TS'
+        run: yarn lint
+
+      - name: 'Check JS/TS format'
+        run: yarn format:check
+
+      - name: Cargo fmt
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        run: cargo clippy
+
+  wasm-runtime:
+    name: wasm-runtime (Node ${{ matrix.node }}, emnapi ${{ matrix.emnapi }})
+    runs-on: ubuntu-latest
+    needs: audit
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20.19.0', '22.13.0', '24', '26']
+        emnapi: ['1.7.1', '1.11.1', '2.0.0-beta.2']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: yarn
+      - name: Install runtime build and test dependencies
+        run: yarn workspaces focus @napi-rs/wasm-runtime
+      - name: Pack runtime (prepack builds the bundles)
+        run: yarn workspace @napi-rs/wasm-runtime pack --out "$RUNNER_TEMP/wasm-runtime.tgz"
+      - name: Install packed runtime with consumer peers
+        # Install outside the workspace so root resolutions cannot mask a
+        # broken peer contract or substitute source files for the tarball.
+        run: >-
+          npm install --prefix "$RUNNER_TEMP/wasm-runtime-consumer"
+          --ignore-scripts --no-audit --no-fund
+          "$RUNNER_TEMP/wasm-runtime.tgz"
+          @emnapi/core@${{ matrix.emnapi }}
+          @emnapi/runtime@${{ matrix.emnapi }}
+      - name: Exercise real plugins from packed CommonJS and ESM entries
+        run: >-
+          WASM_RUNTIME_TEST_PACKAGE="$RUNNER_TEMP/wasm-runtime-consumer/node_modules/@napi-rs/wasm-runtime"
+          node --test wasm-runtime/plugins.test.js
+
+  build_and_test:
+    needs: audit
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24', '26']
+        settings:
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: yarn build:test
+            test: |
+              yarn test:cli
+              yarn test
+              yarn workspace @examples/napi test:leak
+              yarn tsc -p examples/napi/tsconfig.json --noEmit --skipLibCheck
+              yarn test:macro
+              cargo test
+              cargo test -p napi --features tokio_rt,async-runtime
+              cargo test -p napi --features async-runtime
+            toolchain: stable
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            build: yarn build:test
+            test: |
+              yarn test:cli
+              yarn test
+              yarn tsc -p examples/napi/tsconfig.json --noEmit --skipLibCheck
+              yarn test:macro
+            toolchain: 1.88.0
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            build: yarn build:test
+            test: |
+              yarn test:cli
+              yarn test
+              yarn workspace @examples/napi test:leak
+              yarn tsc -p examples/napi/tsconfig.json --noEmit --skipLibCheck
+              RUSTFLAGS="-C link-args=-Wl,-undefined,dynamic_lookup,-no_fixup_chains"
+              cargo test
+            toolchain: stable
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            build: yarn workspace @examples/napi build
+            test: |
+              yarn workspace @examples/napi test
+              yarn workspace @examples/napi test:leak
+              yarn tsc -p examples/napi/tsconfig.json --noEmit --skipLibCheck
+              yarn test:macro
+              cargo test
+            toolchain: stable
+          - host: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            build: yarn build:test
+            test: |
+              yarn test
+              yarn test:macro
+            toolchain: stable
+          # The Windows jobs are the critical path of this workflow, and the CLI
+          # suite does not use the examples built above (it builds its own
+          # throwaway crates in temp dirs). Running `yarn test:cli` in its own
+          # `shard: cli` job on each Windows host shortens the wall clock at the
+          # cost of one extra setup (checkout, toolchain, cache, install) per
+          # Windows job, an accepted runner-cost trade. A shard skips the
+          # workspace check/build steps, which the unsharded job still runs.
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            shard: cli
+            test: yarn test:cli
+            toolchain: stable
+          - host: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            shard: cli
+            test: yarn test:cli
+            toolchain: stable
+          # Electron 44 dropped win32-ia32 binaries, so skip Electron on i686.
+          - host: windows-latest
+            target: i686-pc-windows-msvc
+            build: |
+              yarn workspace @examples/napi build --target i686-pc-windows-msvc --release
+              yarn workspace @examples/compat-mode build --target i686-pc-windows-msvc --release
+            test: |
+              export NODE_OPTIONS="--max-old-space-size=3072"
+              yarn workspace @examples/napi test -s
+            toolchain: stable
+    name: ${{ matrix.settings.target }} - node@${{ matrix.node }} - toolchain@ ${{ matrix.settings.toolchain }}${{ matrix.settings.shard && format(' - {0}', matrix.settings.shard) || '' }}
+    runs-on: ${{ matrix.settings.host }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'yarn'
+
+      - name: Install rustup (Windows 11 ARM)
+        if: matrix.settings.host == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://static.rust-lang.org/rustup/dist/aarch64-pc-windows-msvc/rustup-init.exe" -OutFile rustup-init.exe
+          .\rustup-init.exe --default-toolchain none -y
+          "$env:USERPROFILE\.cargo\bin" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
+          "CARGO_HOME=$env:USERPROFILE\.cargo" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+
+      - name: Install Rust (Windows 11 ARM)
+        if: matrix.settings.host == 'windows-11-arm'
+        shell: pwsh
+        run: |
+          rustup install stable
+          rustup target add ${{ matrix.settings.target }}
+          cargo --version
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        if: matrix.settings.host != 'windows-11-arm'
+        with:
+          toolchain: ${{ matrix.settings.toolchain }}
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ matrix.settings.host }}-${{ matrix.settings.toolchain }}-${{ matrix.settings.target }}-cargo-cache${{ matrix.settings.shard && format('-{0}', matrix.settings.shard) || '' }}
+
+      - name: 'Install dependencies'
+        shell: bash
+        run: |
+          yarn config set supportedArchitectures.cpu --json '["current", "x64", "ia32", "wasm32"]'
+          yarn install --mode=skip-build --immutable
+
+      - name: Check build
+        if: ${{ !matrix.settings.shard }}
+        run: cargo check --target ${{ matrix.settings.target }} --all --bins --examples --tests -vvv
+
+      - name: Build tests
+        if: matrix.settings.build
+        run: ${{ matrix.settings.build }}
+        env:
+          CARGO_PROFILE_DEV_OPT_LEVEL: 1
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        if: matrix.settings.target == 'i686-pc-windows-msvc'
+        with:
+          node-version: 22
+          architecture: 'x86'
+
+      - name: Unit tests
+        if: matrix.settings.test
+        run: ${{ matrix.settings.test }}
+        shell: bash
+        timeout-minutes: 20
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          DISABLE_V8_COMPILE_CACHE: 1
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Electron tests
+        if: ${{ !matrix.settings.shard && (matrix.settings.target == 'aarch64-apple-darwin' || matrix.settings.target == 'x86_64-pc-windows-msvc') }}
+        shell: bash
+        run: |
+          node ./.github/install-electron.mjs
+          node -e "const p='node_modules/electron/path.txt'; if(!require('fs').existsSync(p)){console.log('::error::Electron binary missing ('+p+') after install');process.exit(1)}"
+          yarn test:electron
+
+      - name: Electron tests
+        if: matrix.settings.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          node ./.github/install-electron.mjs
+          node -e "const p='node_modules/electron/path.txt'; if(!require('fs').existsSync(p)){console.log('::error::Electron binary missing ('+p+') after install');process.exit(1)}"
+          xvfb-run --auto-servernum yarn test:electron
+
+      - name: Test build with profile
+        if: ${{ !matrix.settings.shard }}
+        run: yarn workspace @examples/napi build --profile napi-rs-custom
+
+  build-and-test-msys2:
+    needs: audit
+    strategy:
+      matrix:
+        sys: [UCRT64, CLANG64]
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.sys }}
+          update: true
+          install: >-
+            base-devel
+          pacboy: >-
+            rust:p
+            nodejs:p
+            ${{ matrix.sys == 'CLANG64' && 'gcc-compat:p' || '' }}
+
+      - name: Cargo test
+        shell: msys2 {0}
+        run: |
+          cargo test
+  # Because dependencies use napi-rs itself they use older versions of napi-rs to install the package, this will fail automatically during build, uncomment when bootstrap issues have been solved
+  #    - name: Install dependencies
+  #      shell: msys2 {0}
+  #      run: |
+  #        yarn install --immutable --mode=skip-build
+  #
+  #    - name: Build tests
+  #      shell: msys2 {0}
+  #      run: yarn build:test
+  #
+  #    - name: Run tests
+  #      shell: msys2 {0}
+  #      run: |
+  #        yarn test:cli
+  #        yarn test
+  #        yarn tsc -p examples/napi/tsconfig.json --noEmit --skipLibCheck
+  #        yarn test:macro
+
+  build_only:
+    name: Build only test - ${{ matrix.settings.target }}
+    runs-on: ${{ matrix.settings.host }}
+    needs: audit
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - host: ubuntu-latest
+            target: aarch64-linux-android
+          - host: ubuntu-latest
+            target: armv7-linux-androideabi
+          - host: ubuntu-24.04
+            target: aarch64-unknown-linux-ohos
+          - host: ubuntu-latest
+            target: riscv64gc-unknown-linux-gnu
+            setup: |
+              sudo apt-get update
+              sudo apt-get install -y gcc-riscv64-linux-gnu
+          - host: ubuntu-latest
+            target: loongarch64-unknown-linux-gnu
+            # TODO: Switch to gcc-loongarch64-linux when available
+            setup: |
+              sudo apt-get update
+              sudo apt-get install -y gcc-13-loongarch64-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Setup OpenHarmony SDK
+        if: ${{ contains(matrix.settings.target, 'ohos') }}
+        uses: openharmony-rs/setup-ohos-sdk@v1.0
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: stable-${{ matrix.settings.host }}-${{ matrix.settings.target }}-cargo-cache
+
+      - name: Setup toolchain
+        if: matrix.settings.setup
+        run: ${{ matrix.settings.setup }}
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Cross build native tests
+        run: yarn build:test -- --target ${{ matrix.settings.target }} --release
+        shell: bash
+        env:
+          TARGET_CC: clang
+
+  build_for_test_in_docker:
+    name: build - ${{ matrix.settings.target }}
+    runs-on: ubuntu-latest
+    needs: audit
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - target: powerpc64le-unknown-linux-gnu
+          - target: s390x-unknown-linux-gnu
+          - target: x86_64-unknown-linux-gnu
+          - target: aarch64-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.settings.target }}
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            ~/.napi-rs
+          key: stable-ubuntu-latest-${{ matrix.settings.target }}-cargo-cache
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Cross build native tests
+        run: yarn build:test -- --target ${{ matrix.settings.target }} --release --use-napi-cross
+        shell: bash
+        env:
+          CARGO_PROFILE_DEV_OPT_LEVEL: 1
+          TARGET_CC: clang
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.settings.target }}-example
+          path: examples/napi/*.node
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.settings.target }}-example-compat
+          path: examples/napi-compat-mode/index.node
+
+  build_musl:
+    name: build - ${{ matrix.settings.target }}
+    runs-on: ubuntu-latest
+    needs: audit
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - target: x86_64-unknown-linux-musl
+          - target: aarch64-unknown-linux-musl
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.settings.target }}
+
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+
+      - name: Install ziglang
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+
+      - name: Install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tool: cargo-zigbuild
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            .cargo-cache/registry
+            .cargo-cache/git
+            target
+          key: stable-${{ matrix.settings.target }}-cargo-cache
+
+      - name: Cross build musl
+        run: yarn build:test -- --target ${{ matrix.settings.target }} -x
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.settings.target }}-example
+          path: examples/napi/*.node
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.settings.target }}-example-compat
+          path: examples/napi-compat-mode/index.node
+          if-no-files-found: error
+
+  test_in_docker:
+    name: Test - ${{ matrix.settings.target }} - ${{ matrix.node }}
+    # Node.js on qemu segfaults on s390x and arm64v8 when using 24.04
+    # See also https://github.com/actions/runner-images/issues/11471
+    runs-on: ${{ contains(matrix.settings.target, 'aarch64') && 'ubuntu-24.04-arm' || 'ubuntu-22.04' }}
+    permissions:
+      contents: read
+    needs:
+      - build_musl
+      - build_for_test_in_docker
+    strategy:
+      fail-fast: false
+      matrix:
+        # Node 26 is covered by the build_and_test matrix.
+        node: [22, 24]
+        settings:
+          - image: 'node:{:version}-slim'
+            target: x86_64-unknown-linux-gnu
+            args: ''
+            arch: 'x64'
+            libc: 'gnu'
+          - image: 'node:{:version}-slim'
+            target: aarch64-unknown-linux-gnu
+            args: '--platform linux/arm64'
+            arch: 'arm64'
+            libc: 'gnu'
+          - image: 'node:{:version}-slim'
+            target: powerpc64le-unknown-linux-gnu
+            args: '--platform linux/ppc64le'
+            arch: 'ppc64'
+            libc: 'gnu'
+          - image: 'node:{:version}-slim'
+            target: s390x-unknown-linux-gnu
+            args: '--platform linux/s390x'
+            arch: 's390x'
+            libc: 'gnu'
+          - image: 'node:{:version}-alpine'
+            target: x86_64-unknown-linux-musl
+            args: ''
+            arch: 'x64'
+            libc: 'musl'
+          - image: 'node:{:version}-alpine'
+            target: aarch64-unknown-linux-musl
+            args: '--platform linux/arm64'
+            arch: 'arm64'
+            libc: 'musl'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.settings.target }}-example
+          path: examples/napi/
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.settings.target }}-example-compat
+          path: examples/napi-compat-mode/index.node
+      - name: Install dependencies
+        if: ${{ matrix.settings.arch != 's390x' }}
+        run: |
+          yarn config set --json supportedArchitectures.cpu '["current", "${{ matrix.settings.arch }}"]'
+          yarn config set --json supportedArchitectures.libc '["current", "${{ matrix.settings.libc }}"]'
+          yarn install --immutable --mode=skip-build
+      - name: Install dependencies
+        if: ${{ matrix.settings.arch == 's390x' }}
+        run: |
+          yarn config set --json supportedArchitectures.cpu '["current", "wasm32"]'
+          yarn install --immutable --mode=skip-build
+          yarn workspace @napi-rs/wasm-runtime build
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        if: ${{ !contains(matrix.settings.target, 'aarch64') }}
+        with:
+          platforms: all
+          image: tonistiigi/binfmt:qemu-v8.1.5
+      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+        if: ${{ !contains(matrix.settings.target, 'aarch64') }}
+      - name: Setup image name
+        id: image-name
+        run: |
+          node -e "console.info('docker-image=${{ matrix.settings.image }}'.replace('{:version}', ${{ matrix.node }}))" >> "$GITHUB_OUTPUT"
+      - name: Setup and run tests
+        # Node.js on qemu randomly segfaults on powerpc64le
+        continue-on-error: ${{ matrix.settings.target == 'powerpc64le-unknown-linux-gnu' || matrix.settings.target == 's390x-unknown-linux-gnu' }}
+        run: >-
+          docker run --rm
+          ${{ matrix.settings.args }}
+          -v ${{ github.workspace }}:/build -w /build
+          ${{ steps.image-name.outputs.docker-image }}
+          sh -c "export NODE_OPTIONS=--max-old-space-size=8192 && export DISABLE_V8_COMPILE_CACHE=1 && node .yarn/releases/yarn-4.18.1.cjs workspace @examples/napi test"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-test-linux-armv7:
+    name: stable - armv7-unknown-linux-gnueabihf - node@22
+    runs-on: ubuntu-latest
+    needs: audit
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: armv7-unknown-linux-gnueabihf
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: stable-linux-armv7-gnueabihf-node@22-cargo-cache
+
+      - name: Install dependencies
+        run: |
+          yarn config set --json supportedArchitectures.cpu '["arm", "current"]'
+          yarn install --immutable --mode=skip-build
+
+      - name: Cross build native tests
+        run: yarn build:test -- --target armv7-unknown-linux-gnueabihf --use-napi-cross
+        env:
+          TARGET_CC: clang
+
+      - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+      - name: Setup and run tests
+        run: >-
+          docker run --rm
+          --platform linux/arm/v7
+          -v ${{ github.workspace }}:/build -w /build
+          node:22-slim
+          node .yarn/releases/yarn-4.18.1.cjs test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_binary_crate:
+    runs-on: ubuntu-latest
+    name: Test cli build binary
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: stable-cargo-cache-build-binary
+
+      - name: 'Install dependencies'
+        run: yarn install --mode=skip-build --immutable
+
+      - name: Build and run binary
+        run: |
+          yarn workspace binary build
+          ./examples/binary/napi-examples-binary
+          yarn workspace binary build --profile napi-rs-custom
+
+  check-all-features:
+    needs: audit
+    strategy:
+      fail-fast: false
+      matrix:
+        settings:
+          - features: 'napi1,napi2,napi3,napi4,napi5,napi6,napi7,napi8,napi9,experimental,async,chrono_date,latin1,full'
+            package: 'napi'
+          - features: 'napi3'
+            package: 'napi'
+          - features: 'napi3,compat-mode'
+            package: 'napi'
+          - features: 'napi9'
+            package: 'napi'
+          - features: 'napi3,serde-json'
+            package: 'napi'
+          - features: 'napi9,serde-json'
+            package: 'napi'
+          - features: 'async,compat-mode'
+            package: 'napi'
+          - features: 'compat-mode,strict,type-def,noop,full,default'
+            package: 'napi-derive'
+          - features: 'noop'
+            package: 'napi-examples'
+          - features: 'snmalloc'
+            package: 'napi-examples'
+    name: stable - ubuntu-latest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Check build
+        run: cargo check -p ${{ matrix.settings.package }} -F ${{ matrix.settings.features }}
+
+  test-freebsd:
+    runs-on: ubuntu-latest
+    name: Test freebsd target
+    needs: audit
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install ziglang
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+      - uses: jaxxstorm/action-install-gh-release@v3.0.0
+        with:
+          repo: rust-cross/cargo-zigbuild
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-freebsd
+
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: stable-cargo-cache-build-freebsd
+
+      - name: 'Install dependencies'
+        run: |
+          yarn config set supportedArchitectures.cpu --json '["current", "x64", "arm64", "wasm32"]'
+          yarn config set supportedArchitectures.os --json '["current", "freebsd"]'
+          yarn install --mode=skip-build --immutable
+      - name: Build
+        run: |
+          yarn workspace @examples/napi build --target x86_64-unknown-freebsd -x
+          yarn tsc -p examples/napi/tsconfig.json
+          rm -rf examples/napi/__tests__
+          mv examples/napi/dist/__tests__ examples/napi/
+      - name: Test
+        id: build
+        uses: cross-platform-actions/action@v1.7.0
+        env:
+          DEBUG: 'napi:*'
+          RUSTUP_HOME: /home/runner/rustup
+          CARGO_HOME: /home/runner/cargo
+          RUSTUP_IO_THREADS: 1
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          operating_system: freebsd
+          version: '15.1'
+          memory: 12G
+          cpu_count: 3
+          environment_variables: 'DEBUG RUSTUP_IO_THREADS GITHUB_TOKEN'
+          shell: bash
+          run: |
+            env | sort
+            sudo pkg install -y -f curl node libnghttp2 npm
+            sudo npm install -g corepack
+            sudo corepack enable
+            echo "~~~~ node -v ~~~~"
+            node -v
+            echo "~~~~ yarn --version ~~~~"
+            yarn --version
+            pwd
+            ls -lah
+            whoami
+            env
+            freebsd-version
+            export NODE_OPTIONS="--max-old-space-size=8192"
+            yarn workspace @examples/napi test-js -s
+
+  test-freebsd-arm64:
+    runs-on: ubuntu-latest
+    name: Test freebsd arm64 target
+    needs: audit
+    # The VM is emulated, so the native build is slow.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+      - name: 'Install dependencies'
+        run: yarn install --mode=skip-build --immutable
+      # `napi-raw` runs the CLI from source through @oxc-node/core, which has
+      # no FreeBSD arm64 binary, so the VM runs the bundled CLI instead.
+      - name: Build CLI
+        run: yarn workspace @napi-rs/cli build
+      - name: Test
+        uses: cross-platform-actions/action@v1.7.0
+        with:
+          operating_system: freebsd
+          architecture: arm64
+          version: '15.1'
+          memory: 8G
+          cpu_count: 4
+          shell: bash
+          # rustup ships no std for the tier 3 aarch64-unknown-freebsd target,
+          # so build natively with the toolchain from pkg.
+          run: |
+            sudo pkg install -y -f node rust
+            freebsd-version
+            node -v
+            rustc -V
+            cd examples/shared-async-runtime
+            node ../../cli/dist/cli.js build --platform --js index.cjs --dts index.d.cts
+            test -f shared_async_runtime.freebsd-arm64.node
+            node -e "
+              const b = require('./index.cjs')
+              if (b.__napiBindingTarget !== 'native') throw new Error('loaded ' + b.__napiBindingTarget)
+              b.plus100(1).then((v) => {
+                if (v !== 101) throw new Error('plus100(1) returned ' + v)
+                console.log('ok')
+              })
+            "
+
+  napi-async-runtime:
+    runs-on: ubuntu-latest
+    name: Test napi-async-runtime shared scheduler (cargo)
+    # The wasm test binary is large and runs under an interpreter-grade host.
+    timeout-minutes: 25
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1,wasm32-wasip1-threads
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: napi-async-runtime-cargo-cache
+      - name: Check napi-async-runtime is tokio-free
+        run: |
+          if cargo tree -p napi-async-runtime -e normal --prefix none | grep -E '^tokio v'; then
+            echo 'tokio leaked into the shared async runtime crate' >&2
+            exit 1
+          fi
+          if cargo tree -p napi-async-runtime --no-default-features -e normal --prefix none | grep -E '^tokio v'; then
+            echo 'tokio leaked into the napi-free scheduler build' >&2
+            exit 1
+          fi
+      - name: Test napi-async-runtime (default features)
+        run: cargo test -p napi-async-runtime
+      - name: Test napi-async-runtime (scheduler only)
+        run: cargo test -p napi-async-runtime --no-default-features
+      - name: Check napi-async-runtime on the WASI targets
+        # `--tests` on both triples: the two WASI targets now compile
+        # DIFFERENT code (`napi_runtime_os_threads`), and a gate typo that
+        # only shows under `cfg(test)` is otherwise invisible until someone
+        # runs the suite on one of them.
+        run: |
+          cargo check -p napi-async-runtime --tests --target wasm32-wasip1
+          cargo check -p napi-async-runtime --tests --target wasm32-wasip1-threads
+          cargo check -p napi-async-runtime --tests --no-default-features --target wasm32-wasip1
+          cargo check -p napi-async-runtime --tests --no-default-features --target wasm32-wasip1-threads
+      - name: Install a pinned wasmtime (-S threads is version-fragile)
+        # 42.0.0 and 44.0.0 accept the flag and then fail with "shared memory
+        # support is disabled for this engine"; 48.0.2 removed it while its
+        # `-S help` still lists it. Bump this pin only with a run.
+        run: |
+          asset=wasmtime-v35.0.0-x86_64-linux
+          # The v35.0.0 release publishes no SHA256SUMS/.sha256 asset, so this
+          # digest comes from two independent downloads of the same asset on
+          # 2026-09-22, which agreed. Recompute it the same way on a pin bump.
+          sha256=e3d2aae710a5cef548ab13f7e4ed23adc4fa1e9b4797049f4459320f32224011
+          curl -sSfL -o "$asset.tar.xz" \
+            "https://github.com/bytecodealliance/wasmtime/releases/download/v35.0.0/$asset.tar.xz"
+          if ! sha256sum -c --strict - <<<"$sha256  $asset.tar.xz"; then
+            echo "wasmtime tarball does not match the pinned SHA-256; refusing to extract" >&2
+            exit 1
+          fi
+          sudo tar -xJf "$asset.tar.xz" --strip-components=1 -C /usr/local/bin "$asset/wasmtime"
+          rm -f "$asset.tar.xz"
+          wasmtime --version
+      - name: Test napi-async-runtime on the WASI targets
+        # The runners live in `.cargo/config.toml`. Only the napi-free lane
+        # runs: a default-features wasm test build would need a Node-API host,
+        # and wasmtime is not one.
+        run: |
+          cargo test -p napi-async-runtime --no-default-features --target wasm32-wasip1
+          cargo test -p napi-async-runtime --no-default-features --target wasm32-wasip1-threads
+      - name: Test the shared-async-runtime example (native)
+        run: cargo test -p napi-shared-async-runtime-example
+
+  test-custom-async-runtime-wasi:
+    runs-on: ubuntu-latest
+    name: Test custom async runtime on wasm32-wasip1
+    # The last step builds this addon twice for wasm32-wasip1 — once
+    # `async-runtime`-only, once combined with `tokio_rt` — and the two feature
+    # sets share no cargo fingerprints, so the second is a full rebuild.
+    timeout-minutes: 15
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      # The example workspace is excluded from the root `yarn test`, so this
+      # job is the only CI gate for the native lane (duplicate-registration,
+      # start-error, worker-reload, and termination-loop scenarios). Run it
+      # before the WASI builds below overwrite the shared root artifacts.
+      - name: Build and test native
+        working-directory: examples/custom-async-runtime
+        run: |
+          node build.mjs
+          node test.mjs native
+      - name: Build
+        run: |
+          yarn workspace @napi-rs/wasm-runtime build
+          node cli/cli.mjs build \
+            --cwd examples/custom-async-runtime \
+            --target wasm32-wasip1 \
+            --platform \
+            --js index.cjs \
+            --no-default-features \
+            --features async-runtime \
+            --dts index.d.cts
+          yarn workspace @examples/napi build --target wasm32-wasip1 --profile wasi
+          # Native builds regenerate every configured WASI flavor.
+          yarn workspace @examples/napi build --target x86_64-unknown-linux-gnu --release
+      - name: Test
+        run: node examples/custom-async-runtime/test.mjs wasi
+      - name: Test public Buffer and deferred lifecycle APIs
+        run: |
+          yarn workspace @examples/napi test \
+            __tests__/wasi-binding-target-conflict.spec.ts \
+            __tests__/wasi-host-install-binding-target.spec.ts \
+            __tests__/wasi-buffer-public-api.spec.ts \
+            __tests__/wasi-deferred-before-exit.spec.ts \
+            __tests__/wasi-env-cleanup-export.spec.ts \
+            __tests__/wasi-heap-sync-exports.spec.ts
+        env:
+          NAPI_RS_TEST_THREADLESS_WASI_BUFFER: '1'
+      - name: Test lifecycle public surface
+        run: |
+          yarn workspace @examples/napi test \
+            __tests__/wasi-eager-before-exit.spec.ts
+        env:
+          WASI_TEST: 'true'
+          # The child picks its loader from argv, so a test-only name is
+          # enough. Exporting NAPI_RS_WASI_FLAVOR here would also hit
+          # @oxc-node/core's generated loader — its baked flavor list only
+          # contains wasm32-wasi — and the strict check would fail the whole
+          # Node process before ava starts.
+          WASI_FLAVOR: wasm32-wasip1
+      - name: Browser test (single-thread, no cross-origin isolation)
+        run: |
+          yarn workspace @examples/custom-async-runtime playwright install chromium
+          yarn workspace @examples/custom-async-runtime test:browser
+      - name: Workerd test (miniflare)
+        run: yarn workspace @examples/custom-async-runtime test:workerd
+      - name: Test examples/napi threadless public surfaces
+        run: yarn workspace @examples/napi test:wasi-public-surfaces
+      # Last: this rebuilds custom_async_runtime.wasm32-wasip1.wasm in place. It
+      # is the only lane that loads the addon through a loader the test controls,
+      # which is what makes it able to drive `napi_prepare_wasm_env_cleanup` by
+      # hand and observe that the backend shut down while the environment was
+      # still alive.
+      - name: Test threadless WASI environment teardown barrier
+        run: yarn workspace @examples/custom-async-runtime test:wasi
+
+  # The threaded sibling of the job above, and the only CI gate for the
+  # example's `wasi-threads` mode — nothing else runs it. wasm32-wasip1-threads
+  # is the one configuration of this example in which a backend can cancel a
+  # task on a thread that is not the JavaScript thread, which is the case a raw,
+  # synchronous `Context.destroy()` used to strand: the cross-thread settle can
+  # only enter the threadsafe-function queue, and destroy() drains that queue
+  # with a null env. No wasi-sdk is needed; the CLI ships the emnapi archives
+  # for this target, exactly as `test-node-wasi` relies on.
+  test-custom-async-runtime-wasi-threads:
+    runs-on: ubuntu-latest
+    name: Test custom async runtime on wasm32-wasip1-threads
+    timeout-minutes: 15
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1-threads
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Build
+        run: yarn workspace @napi-rs/wasm-runtime build
+      - name: Test
+        run: yarn workspace @examples/custom-async-runtime test:wasi-threads
+
+  # napi's allocator lock on wasm32-wasip1-threads (crates/napi/src/wasi_heap_sync.rs).
+  # V8 updates a shared memory's size only on the thread that grew it, and checks
+  # memory.fill / memory.copy / atomics (and, without its wasm trap handler, every load
+  # and store) against each thread's own size, so a thread that touches pages another
+  # thread just grew traps. `examples/wasi-heap-sync` allocates, fills, copies and frees
+  # on OS threads and emnapi's async-work pool, and hands blocks between threads and to
+  # JavaScript. `--wasm-enforce-bounds-checks` stands in for hosts without the trap
+  # handler, and `--disable-wasm-trap-handler` turns it off. Built with
+  # `--cfg napi_wasi_no_heap_sync`, 25-40% of these runs trapped or hung in local runs,
+  # so the steps are not retried: one failure is a regression. Each run has its own
+  # 30 s timeout.
+  test-wasi-heap-sync:
+    runs-on: ubuntu-latest
+    name: Test WASI heap sync on wasm32-wasip1-threads
+    timeout-minutes: 20
+    needs: audit
+    defaults:
+      run:
+        working-directory: examples/wasi-heap-sync
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1-threads
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Build
+        run: |
+          yarn workspace @napi-rs/wasm-runtime build
+          yarn build:wasi-threads
+      - name: Stress (5 runs)
+        run: node stress.mjs --runs 5
+      - name: Stress with bounds checks (20 runs)
+        run: node stress.mjs --runs 20 --node-flag=--wasm-enforce-bounds-checks
+      - name: Stress without the trap handler (10 runs)
+        run: node stress.mjs --runs 10 --node-flag=--disable-wasm-trap-handler
+      # The loader's memory starts at the module's minimum, so the heap has no pages to
+      # spare and grows while the threads allocate (each run checks that it did).
+      - name: Stress with forced growth and bounds checks (20 runs)
+        run: >-
+          node stress.mjs --runs 20 --initial-pages min --expect-grows some
+          --node-flag=--wasm-enforce-bounds-checks
+      # With the loader's default memory, the same loads fit in the pages between the
+      # module's own memory and the loader's, so nothing grows.
+      - name: Heap grows only past the loader memory
+        run: node stress.mjs --expect-grows zero
+      # An allocator that calls memory.grow itself takes pages, then libc allocates more
+      # than is left: napi's sbrk must hand out fresh pages, never the foreign ones, both
+      # with the loader's default memory and with none to spare.
+      - name: Foreign memory grower
+        run: |
+          node stress.mjs --cases foreign
+          node stress.mjs --cases foreign --initial-pages min
+      # Threads that call libc's sbrk directly, between malloc / free calls: napi's sbrk
+      # must take the allocator lock for them, so no two callers get the same pages.
+      - name: Direct sbrk callers (5 runs)
+        run: node stress.mjs --cases raw-sbrk --runs 5 --expect-grows zero
+
+  # Node-only lane: the threadless wasm32-wasip1 artifact built from the real
+  # `napi-async-runtime` adapter driven by the real `@napi-rs/async-runtime`
+  # JavaScript hosts. The browser lane stays out of scope (the
+  # custom-async-runtime jobs cover it); the deferred (`./workerd`) loader is
+  # exercised here under Node, because this is the only example whose binding
+  # exports the CurrentThread host protocol that loader registers against.
+  # The threaded artifact is built last, for one case: a pool worker that fails
+  # while it loads must still end the shutdown waits of the MultiThread runtime
+  # on the loader thread (the addon crash flag the worker raises).
+  test-shared-async-runtime-wasi:
+    runs-on: ubuntu-latest
+    name: Test shared async runtime on wasm32-wasip1
+    timeout-minutes: 10
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1,wasm32-wasip1-threads
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Build
+        run: |
+          yarn workspace @napi-rs/wasm-runtime build
+          yarn workspace @examples/shared-async-runtime build:wasi
+      - name: Test
+        run: yarn workspace @examples/shared-async-runtime test:wasi
+      - name: Test the deferred (workerd) loader
+        run: yarn workspace @examples/shared-async-runtime test:wasi-workerd
+      - name: Build the threaded artifact
+        run: yarn workspace @examples/shared-async-runtime build:wasi-threads
+      - name: Test a pool worker that fails to load
+        run: yarn workspace @examples/shared-async-runtime test:wasi-threads-crash
+      - name: Test the thread pool preload
+        run: yarn workspace @examples/shared-async-runtime test:wasi-threads-pool
+
+  test-node-wasi:
+    runs-on: ubuntu-latest
+    name: Test node wasi target
+    timeout-minutes: 10
+    needs: audit
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1-threads
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Check
+        run: cargo check -p napi --all-features --target wasm32-wasip1-threads
+        env:
+          RUSTFLAGS: '--cfg tokio_unstable'
+      - name: Build
+        run: |
+          yarn build
+          yarn workspace @examples/napi build --target wasm32-wasip1-threads --profile wasi
+        env:
+          RUSTFLAGS: '--cfg tokio_unstable'
+      - name: Test
+        run: yarn workspace @examples/napi test -s
+        env:
+          WASI_TEST: 'true'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          SKIP_UNWIND_TEST: 1
+      - name: Browser test
+        run: |
+          yarn workspace @examples/napi playwright install chromium
+          yarn workspace @examples/napi vitest
+
+  # `test-node-wasi` above links through `rust-lld` against the wasi-libc that
+  # ships with the Rust standard library. This job links through a real
+  # wasi-sdk instead, which is what `WASI_SDK_PATH` selects.
+  #
+  # wasi-libc dropped the unused `int op` parameter from
+  # `__wasilibc_futex_wait_atomic_wait` / `__wasilibc_futex_wait_maybe_busy`,
+  # and wasi-sdk 34 is the first release shipping the 3-argument signature.
+  # emnapi therefore publishes two archive sets for the threaded target, and
+  # the CLI picks between them by wasi-sdk version. Linking the wrong one makes
+  # `wasm-ld` report `function signature mismatch` and emit an invalid wasm
+  # module, so building against both a pre-34 and a post-34 sdk keeps that
+  # selection honest.
+  wasi-sdk:
+    runs-on: ubuntu-latest
+    name: WASI via wasi-sdk ${{ matrix.wasi-sdk }} on ${{ matrix.toolchain }} Rust
+    timeout-minutes: 20
+    needs: audit
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Legacy 4-argument futex ABI, on the toolchain most users have.
+          # Stable rustc does not link `crt1-reactor.o`, so napi-build still
+          # supplies it, and that `crt1` matches this sysroot.
+          - wasi-sdk: '33'
+            toolchain: stable
+          # 3-argument futex ABI. This lane needs nightly. wasi-sdk 34 deleted
+          # `__wasi_init_tp`, which stable's pre-34 `crt1-reactor.o` still
+          # calls, so a stable build links but cannot instantiate. Nightly
+          # ships an sdk-34 era `crt1` and links it itself, which is the case
+          # `rustc_links_reactor_crt()` detects. Stable gets the same sysroot
+          # in 1.100, via rust-lang/rust#161773. See #3491.
+          - wasi-sdk: '34'
+            toolchain: nightly
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          targets: wasm32-wasip1-threads
+      - name: Setup wasi-sdk ${{ matrix.wasi-sdk }}
+        shell: bash
+        run: |
+          sdk="wasi-sdk-${{ matrix.wasi-sdk }}.0-x86_64-linux"
+          curl -fsSL -o "$sdk.tar.gz" \
+            "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${{ matrix.wasi-sdk }}/$sdk.tar.gz"
+          tar -xf "$sdk.tar.gz"
+          echo "WASI_SDK_PATH=$(pwd)/$sdk" >> "$GITHUB_ENV"
+      # napi-build wraps wasi-libc's allocator entries by name (crates/build/src/wasi.rs).
+      # Both libc.a files an addon can link must still match that list: the wasi-sdk
+      # sysroot's (this lane) and rustc's self-contained one (the rust-lld lanes).
+      - name: Check the allocator symbols napi's heap sync wraps
+        shell: bash
+        run: |
+          node .github/check-wasi-dlmalloc-symbols.mjs \
+            "$WASI_SDK_PATH/share/wasi-sysroot/lib/wasm32-wasip1-threads/libc.a" \
+            "$(rustc --print sysroot)/lib/rustlib/wasm32-wasip1-threads/lib/self-contained/libc.a"
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Build
+        shell: bash
+        run: |
+          yarn build
+          yarn workspace @examples/napi build \
+            --target wasm32-wasip1-threads --profile wasi 2>&1 | tee wasi-sdk-build.log
+        env:
+          RUSTFLAGS: '--cfg tokio_unstable'
+      # The build above already fails hard when the archive ABI does not match
+      # the sysroot. This guard catches the quieter case: emnapi without the
+      # wasi-sdk 34 archives, where the CLI warns and falls back to the legacy
+      # set instead of erroring.
+      - name: Assert the emnapi archive selection did not degrade
+        shell: bash
+        run: |
+          if grep -q 'does not ship the wasm32-wasip1-threads-wasi-sdk-34' wasi-sdk-build.log; then
+            echo "::error::The CLI fell back to the legacy emnapi archives for wasi-sdk ${{ matrix.wasi-sdk }}."
+            exit 1
+          fi
+      - name: Test
+        run: yarn workspace @examples/napi test -s
+        env:
+          WASI_TEST: 'true'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+          SKIP_UNWIND_TEST: 1
+
+  test-latest-bun:
+    runs-on: ubuntu-latest
+    name: Test latest bun
+    timeout-minutes: 10
+    needs: audit
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
+      - name: Cache cargo
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: stable-x86_64-unknown-linux-gnu-node@18-cargo-cache
+      - name: Install dependencies
+        run: yarn install --immutable --mode=skip-build
+      - name: Build
+        run: |
+          bun run build
+          yarn workspace @examples/napi build --features dyn-symbols
+      - name: Test
+        continue-on-error: true
+        run: bun run test:bun
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-npm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    needs:
+      - lint
+      - build_binary_crate
+    if: "startsWith(github.event.head_commit.message, 'chore(release): publish')"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'yarn'
+      - name: Publish
+        run: |
+          yarn install --mode=skip-build
+          npm install -g npm
+          yarn build
+          node ./.github/publish.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  done:
+    runs-on: ubuntu-latest
+    # Job-level always(): a job whose `needs` include a failed or skipped
+    # dependency is SKIPPED by default, and a step-level always() cannot
+    # resurrect a skipped job. Without this, a failing `audit` would skip every
+    # downstream job AND skip `done` itself — and a skipped aggregate check does
+    # not block a merge. always() forces `done` to run so the step below can
+    # fail the run.
+    if: ${{ always() }}
+    needs:
+      - audit
+      - lint
+      - build_and_test
+      - build-and-test-msys2
+      - build_only
+      - test_in_docker
+      - build-and-test-linux-armv7
+      - build_binary_crate
+      - check-all-features
+      - test-freebsd
+      - test-freebsd-arm64
+      - napi-async-runtime
+      - test-custom-async-runtime-wasi
+      - test-custom-async-runtime-wasi-threads
+      - test-wasi-heap-sync
+      - test-shared-async-runtime-wasi
+      - test-node-wasi
+      - wasi-sdk
+      - test-latest-bun
+    steps:
+      # `skipped` is included because a failed `audit` (or a failed
+      # build_musl/build_for_test_in_docker upstream of test_in_docker) leaves
+      # the affected `needs` as `skipped`, not `failure`.
+      - run: exit 1
+        if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) }}

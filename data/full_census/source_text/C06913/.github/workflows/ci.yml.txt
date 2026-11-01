@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+    ################################
+    ##
+    ## BUILD
+    ##
+    ################################
+    Build:
+      name: Build
+      runs-on: ubuntu-latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      steps:
+        - name: 'Checkout'
+          uses: actions/checkout@v7
+
+        - name: 'Setup Nodejs'
+          uses: actions/setup-node@v7
+          with:
+            node-version: 26
+
+        - name: 'Install dependencies'
+          run: npm ci
+
+        - name: 'Build'
+          run: npm run build
+
+        - name: 'Upload Build artifacts'
+          if: always()
+          uses: actions/upload-artifact@v7
+          with:
+            name: build-artifact
+            if-no-files-found: error
+            path: |
+              dist/
+
+    ################################
+    ##
+    ## CHECKS (typecheck + lint)
+    ## failures fail the job directly, no separate report workflow needed
+    ##
+    ################################
+    Check:
+      name: Check
+      needs: Build
+      runs-on: ubuntu-latest
+      steps:
+        - name: 'Checkout'
+          uses: actions/checkout@v7
+
+        - name: 'Download build artifacts'
+          uses: actions/download-artifact@v8
+          with:
+            name: build-artifact
+            path: dist
+
+        - name: 'Setup Nodejs'
+          uses: actions/setup-node@v7
+          with:
+            node-version: 26
+
+        - name: 'Install dependencies'
+          run: npm ci
+
+        - name: 'Typecheck & Lint'
+          run: npm run check
+
+    ################################
+    ##
+    ## TEST
+    ##
+    ################################
+    Test:
+      name: Test
+      needs: Build
+      runs-on: ubuntu-latest
+      steps:
+        - name: 'Checkout'
+          uses: actions/checkout@v7
+
+        - name: 'Download build artifacts'
+          uses: actions/download-artifact@v8
+          with:
+            name: build-artifact
+            path: dist
+
+        - name: 'Setup Nodejs'
+          uses: actions/setup-node@v7
+          with:
+            node-version: 26
+
+        - name: 'Install dependencies'
+          run: npm ci
+
+        - name: 'Install playwright Browsers'
+          run: npx playwright install --with-deps
+
+        - name: 'Run Playwright Tests'
+          run: npm test
+
+        - name: 'Upload Test artifacts'
+          if: always()
+          uses: actions/upload-artifact@v7
+          with:
+            name: test-artifact
+            if-no-files-found: error
+            path: |
+              .nyc_output/
+              test-results/
+              coverage/
+              playwright-report/
+              tests/__snapshots__/
+
+        # Runs in the PR's own context: works for forks too (tokenless upload),
+        # no workflow_run / write token needed.
+        - name: 'Upload coverage reports to Codecov'
+          if: ${{ !cancelled() }}
+          uses: codecov/codecov-action@v7
+          with:
+            directory: ./coverage/

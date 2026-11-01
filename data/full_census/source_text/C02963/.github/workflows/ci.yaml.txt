@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22, 24]
+
+    name: Examples Node ${{ matrix.node }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        run: |
+          corepack enable
+          yarn install
+
+      - name: Lint workspaces
+        run: yarn lint
+
+      - name: Build workspaces
+        run: yarn build
+
+      - name: Tests workspaces
+        run: yarn test:ci
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        if: matrix.node == '18'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

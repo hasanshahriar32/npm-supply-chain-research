@@ -1,0 +1,45 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [master]
+
+concurrency:
+  group: dependabot-merge-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+# GITHUB_TOKEN needs no permissions: every API call goes through
+# MERGE_ME_GITHUB_TOKEN (a PAT that acts as a distinct identity from
+# dependabot[bot], satisfying the non-author review requirement).
+permissions: {}
+
+jobs:
+  dependabot-auto-merge:
+    name: Auto-merge non-major updates
+    runs-on: ubuntu-latest
+    # Use pull_request.user.login (PR author, immutable) rather than
+    # github.actor — actor flips to whoever pushed the latest commit on
+    # `synchronize`, which would skip this job if a maintainer pushed a
+    # fixup to the dependabot branch.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: "${{ secrets.MERGE_ME_GITHUB_TOKEN }}"
+
+      - name: Approve PR
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.MERGE_ME_GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for non-major updates
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.MERGE_ME_GITHUB_TOKEN }}

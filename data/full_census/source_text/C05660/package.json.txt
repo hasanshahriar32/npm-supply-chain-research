@@ -1,0 +1,111 @@
+{
+  "name": "@knocklabs/telegraph",
+  "version": "0.0.1",
+  "description": "The design system at Knock",
+  "main": "index.js",
+  "repository": "https://github.com/knocklabs/telegraph",
+  "author": "@knocklabs",
+  "license": "MIT",
+  "private": true,
+  "packageManager": "yarn@4.9.1",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "generate:package": "moon generate package",
+    "dev:packages": "turbo dev --filter=\"./packages/*\" --concurrency=100",
+    "build:packages": "turbo build --filter=\"./packages/*\"",
+    "build:config": "turbo build --filter=\"./packages/*-config\"",
+    "test": "vitest run --config=./vitest/config.mts",
+    "test:watch": "vitest watch --config=./vitest/config.mts",
+    "test:browser": "vitest run --config=./vitest.browser.config.mts",
+    "lint": "oxlint packages --max-warnings=0",
+    "format": "oxfmt \"packages/**/src/**/*.ts\" \"packages/**/src/**/*.tsx\" \"packages/**/src/**/*.js\"",
+    "format:check": "oxfmt --check \"packages/**/src/**/*.ts\" \"packages/**/src/**/*.tsx\" \"packages/**/src/**/*.js\"",
+    "type:check": "node node_modules/typescript-7/bin/tsc -p tsconfig.check.json",
+    "dev:storybook": "storybook dev --port 3005 --no-open --exact-port",
+    "build:storybook": "storybook build",
+    "release": "yarn release:publish && yarn changeset git-tag",
+    "release:publish": "yarn workspaces foreach -Rpt --no-private --from '@telegraph/*' npm publish --access public --tolerate-republish",
+    "postinstall": "manypkg check",
+    "prepare": "husky",
+    "manypkg:check": "manypkg check",
+    "manypkg:fix": "manypkg fix"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "manypkg": {
+    "defaultBranch": "main",
+    "ignoredRules": [
+      "INTERNAL_MISMATCH"
+    ]
+  },
+  "resolutions": {
+    "parse5": "^7.2.1"
+  },
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    },
+    "sharp": {
+      "built": true
+    },
+    "unrs-resolver": {
+      "built": true
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "oxlint --fix --max-warnings=0",
+      "oxfmt"
+    ],
+    "*.{js,cjs,mjs}": [
+      "oxfmt"
+    ]
+  },
+  "devDependencies": {
+    "@actions/core": "^3.0.1",
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@github-ui/storybook-addon-performance-panel": "^1.2.0",
+    "@manypkg/cli": "^0.25.1",
+    "@moonrepo/cli": "^2.3.5",
+    "@storybook/addon-links": "^10.5.6",
+    "@storybook/addon-onboarding": "^10.6.1",
+    "@storybook/addon-themes": "^10.5.6",
+    "@storybook/icons": "^2.0.2",
+    "@storybook/react": "^10.5.6",
+    "@storybook/react-vite": "^10.5.6",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/browser": "5.0.5",
+    "@vitest/browser-playwright": "5.0.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "husky": "^9.1.7",
+    "jsdom": "^30.0.1",
+    "lint-staged": "^17.0.2",
+    "oxfmt": "0.60.0",
+    "oxlint": "1.75.0",
+    "playwright": "^1.62.1",
+    "postcss-import": "^17.0.0",
+    "postcss-import-ext-glob": "^2.1.1",
+    "prop-types": "^15.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "storybook": "^10.6.5",
+    "storybook-addon-render-modes": "^0.0.11",
+    "turbo": "^2.9.0",
+    "typescript": "^6.0.2",
+    "typescript-7": "npm:typescript@7.0.2",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "5.0.5",
+    "vitest-axe": "0.1.0",
+    "vitest-browser-react": "^2.2.0"
+  }
+}

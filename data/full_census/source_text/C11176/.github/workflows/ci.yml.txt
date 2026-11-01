@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x, 24.x, 25.x]
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Use Nodejs ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Install
+        env:
+          TS_NODE_TRANSPILE_ONLY: '1'
+        run: |
+          npm run bootstrap
+
+      - name: Run tests
+        env:
+          TAP_TYPECHECK: '0'
+          TAP_TIMEOUT: '0'
+          TAP_COLOR: '1'
+          TAP_REPORTER: 'dot'
+        run: |
+          npm test -ws --color=always

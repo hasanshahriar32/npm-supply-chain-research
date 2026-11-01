@@ -1,0 +1,137 @@
+{
+  "name": "@phun-ky/typeof",
+  "version": "3.0.10",
+  "description": "A set of JavaScript helper functions to check for types",
+  "keywords": [
+    "types",
+    "string",
+    "number",
+    "object",
+    "javascript",
+    "typeof",
+    "isString",
+    "isNotString",
+    "isNumber",
+    "isNotNumber",
+    "isBoolean",
+    "isNotBoolean",
+    "isUndefined",
+    "isNotUndefined",
+    "isDefined",
+    "isObjectStrict",
+    "isObjectLoose",
+    "isClass",
+    "isBuiltInConstructor",
+    "isBuiltInCallable",
+    "isInstanceOfUnknownClass"
+  ],
+  "homepage": "https://github.com/phun-ky/typeof#readme",
+  "bugs": {
+    "url": "https://github.com/phun-ky/typeof/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phun-ky/typeof.git"
+  },
+  "funding": "https://github.com/phun-ky/typeof?sponsor=1",
+  "license": "MIT",
+  "author": "Alexander Vassbotn Røyne-Helgesen <alexander@phun-ky.net>",
+  "type": "module",
+  "main": "./dist/typeof.cjs",
+  "module": "./dist/typeof.js",
+  "types": "./dist/typeof.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/typeof.d.ts",
+        "default": "./dist/typeof.js"
+      },
+      "require": {
+        "types": "./dist/typeof.d.cts",
+        "default": "./dist/typeof.cjs"
+      }
+    },
+    "./package.json": "./package.json",
+    "./dist/*": "./dist/*"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "!src/**/__tests__",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "bestpractices:url": "node scripts/bestpractices-url.mjs",
+    "build": "npm run clean && npm run rollup",
+    "check:bestpractices": "node scripts/check-bestpractices.mjs",
+    "check:pack": "node scripts/check-pack.mjs",
+    "clean": "rm -rf dist dts",
+    "commit": "npx git-cz",
+    "docs:gen": "node ./node_modules/.bin/typedoc",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "release": "npx release-it --ci",
+    "release:dry-run": "bash .github/scripts/should-release.sh --check && release-it --ci --dry-run --github.release=false --no-git.requireCleanWorkingDir --no-git.requireUpstream --no-npm.publish",
+    "rollup": "rollup -c",
+    "prerollup:dev": "npm run clean",
+    "rollup:dev": "rollup -c -w",
+    "style:code": "npx putout src",
+    "style:format": "eslint . --fix && prettier --write src",
+    "style:lint": "eslint . && prettier --check src",
+    "test": "node --test --no-warnings 'src/**/__tests__/**/*.ts'",
+    "pretest:ci": "rm -rf coverage && mkdir -p coverage",
+    "test:ci": "node --test --no-warnings --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-exclude='src/**/__tests__/**' --test-coverage-lines=100 --test-coverage-functions=100 --test-coverage-branches=100 --test-reporter=cobertura --test-reporter-destination=coverage/cobertura-coverage.xml --test-reporter=spec --test-reporter-destination=stdout 'src/**/__tests__/**/*.ts'",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/git-cz"
+    }
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@release-it/conventional-changelog": "^12.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^1.0.0",
+    "@types/node": "^24.19.2",
+    "cobertura": "^1.0.1",
+    "eslint": "^10.0.0",
+    "eslint-config-phun-ky": "^2.0.10",
+    "fast-check": "^4.10.2",
+    "git-cz": "^4.9.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.8.0",
+    "publint": "^0.3.25",
+    "putout": "^42.0.13",
+    "release-it": "^21.1.1",
+    "remark-github": "^12.0.0",
+    "remark-toc": "^9.0.0",
+    "rollup": "^4.12.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "rollup-plugin-typescript2": "^0.37.0",
+    "typedoc": "^0.28.2",
+    "typedoc-plugin-markdown": "^4.2.3",
+    "typedoc-plugin-mdn-links": "^5.0.1",
+    "typedoc-plugin-remark": "^2.0.0",
+    "typedoc-plugin-rename-defaults": "^0.7.1",
+    "typescript": "^6.0.2",
+    "unified-prettier": "^2.0.1"
+  },
+  "overrides": {
+    "get-uri": {
+      "basic-ftp": "^6.2.2"
+    },
+    "micromark-extension-math": {
+      "katex": "^0.18.2"
+    },
+    "release-it": {
+      "undici": "^7.30.1"
+    }
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

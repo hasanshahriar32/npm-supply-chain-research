@@ -1,0 +1,92 @@
+{
+  "name": "webpack-remove-empty-scripts",
+  "version": "1.1.1",
+  "description": "Webpack plugin removes empty JavaScript files generated when using styles.",
+  "keywords": [
+    "webpack",
+    "plugin",
+    "remove",
+    "empty",
+    "script",
+    "entry",
+    "style",
+    "scss",
+    "sass",
+    "css",
+    "js",
+    "javascript"
+  ],
+  "license": "ISC",
+  "author": "webdiscus (https://github.com/webdiscus)",
+  "maintainers": [
+    "webdiscus (https://github.com/webdiscus)"
+  ],
+  "funding": {
+    "type": "patreon",
+    "url": "https://patreon.com/biodiscus"
+  },
+  "homepage": "https://github.com/webdiscus/webpack-remove-empty-scripts#readme",
+  "bugs": {
+    "url": "https://github.com/webdiscus/webpack-remove-empty-scripts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webdiscus/webpack-remove-empty-scripts.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "install:yarn": "yarn install --ignore-engines",
+    "postinstall": "npm run build && npm i webpack-remove-empty-scripts -D",
+    "build": "rollup -c",
+    "test": "jest --detectOpenHandles --config ./test/jest.config.js",
+    "test:coverage": "jest --detectOpenHandles --collectCoverage --config ./test/jest.config.js",
+    "publish:public": "(npm run build) && npm publish ./dist --access public",
+    "publish:beta": "(npm run build) && npm publish ./dist --tag beta"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=12.14"
+  },
+  "peerDependencies": {
+    "webpack": ">=5.32.0"
+  },
+  "dependencies": {
+    "ansis": "4.0.0-node10"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@rollup/plugin-commonjs": "^28.0.9",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@test-fixtures/lorem": "0.0.2",
+    "@types/jest": "^30.0.0",
+    "@wordpress/dependency-extraction-webpack-plugin": "^6.24.0",
+    "@wordpress/scripts": "^30.27.0",
+    "css-loader": "^7.1.2",
+    "html-loader": "^5.1.0",
+    "jest": "^30.2.0",
+    "mini-css-extract-plugin": "^2.9.4",
+    "rollup": "^4.52.5",
+    "rollup-plugin-copy": "^3.5.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "webpack": "5.102.1",
+    "webpack-hot-middleware": "2.26.1",
+    "webpack-manifest-plugin": "5.0.1",
+    "webpack-merge": "6.0.1",
+    "webpack-remove-empty-scripts": "file:dist"
+  },
+  "overrides": {
+    "rollup-plugin-copy": {
+      "globby": "^11.0.0"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+name: Run tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  merge_group:
+  pull_request:
+    branches:
+      - main
+      - release/*
+      - feat/*
+
+concurrency:
+  cancel-in-progress: true
+  group: test-${{ github.ref }}
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24, 26]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}.x
+          cache: yarn
+      - run: yarn
+      - run: yarn build:release
+      - run: yarn format:check
+      - run: yarn lint:check
+      - run: yarn test
+      - run: yarn workspace nestjs-cls run test:dual-build

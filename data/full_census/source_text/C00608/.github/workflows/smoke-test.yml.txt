@@ -1,0 +1,259 @@
+on:
+  workflow_call:
+    inputs:
+      composition-versions:
+        description: 'JSON list of supergraph versions'
+        required: true
+        type: string
+      router-versions:
+        description: 'JSON list of router versions'
+        required: true
+        type: string
+      features:
+        description: 'Comma-separated list of features to be enabled'
+        required: false
+        type: string
+
+name: Smoke Tests
+jobs:
+  build_binaries:
+    name: Build Rover & E2E Binary
+    strategy:
+      matrix:
+        compile_target:
+          # This should stay in sync with the matrix in release.yaml, minus MUSL targets as
+          # those deliberately do not work with composition at this time.
+          - target: x86_64-unknown-linux-gnu
+            compiles_on: ubuntu-latest
+            container: ghcr.io/apollographql/ci-utility-docker-images/apollo-rust-builder:0.30.6
+          - target: aarch64-unknown-linux-gnu
+            compiles_on: ubuntu-22.04-arm
+          - target: x86_64-apple-darwin
+            # macos-xx-large images are intel Macs: https://github.com/actions/runner-images
+            compiles_on: macos-14-large
+          - target: aarch64-apple-darwin
+            compiles_on: macos-14
+          - target: x86_64-pc-windows-msvc
+            compiles_on: windows-2022
+    runs-on: ${{ matrix.compile_target.compiles_on }}
+    container: ${{ matrix.compile_target.container }}
+    steps:
+      - uses: actions/checkout@v7
+        name: "Checkout rover repo"
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          # Save caches from main only: other PRs can't reuse a PR's cache, and it evicts main's (10 GB repo limit).
+          cache-save-if: ${{ github.ref == 'refs/heads/main' }}
+          target: ${{ matrix.compile_target.target }}
+      - name: Build binaries
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.features }}" ]; then
+            export FEATURES="--features ${{ inputs.features }}"
+          else
+            export FEATURES=""
+          fi
+          cargo build --target ${{ matrix.compile_target.target }} --test e2e ${FEATURES}
+      - uses: ./.github/actions/upload-artifact-with-retry
+        name: "Store built binaries to use later on"
+        with:
+          name: ${{ matrix.compile_target.target }}
+          path: |
+            target/${{ matrix.compile_target.target }}/debug/rover*
+            !target/${{ matrix.compile_target.target }}/debug/rover.pdb
+            target/${{ matrix.compile_target.target }}/debug/deps/e2e-*
+            !target/${{ matrix.compile_target.target }}/debug/deps/e2e-*.o
+            !target/${{ matrix.compile_target.target }}/debug/deps/e2e-*.d
+            !target/${{ matrix.compile_target.target }}/debug/deps/e2e-*.exp
+            !target/${{ matrix.compile_target.target }}/debug/deps/e2e-*.lib
+            !target/${{ matrix.compile_target.target }}/debug/deps/e2e-*.pdb
+          if-no-files-found: error
+          retention-days: 5
+  smoke_tests:
+    timeout-minutes: 15
+    needs: build_binaries
+    name: Run E2E Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        composition-version: ${{ fromJSON(inputs.composition-versions) }}
+        router-version: ${{ fromJSON(inputs.router-versions) }}
+        testing_target:
+          - run_test_on: ubuntu-latest
+            binary_under_test: x86_64-unknown-linux-gnu
+          - run_test_on: ubuntu-22.04-arm
+            binary_under_test: aarch64-unknown-linux-gnu
+          # Test on the full matrix of supported OSes for Mac/Windows
+          - run_test_on: macos-14-large
+            binary_under_test: x86_64-apple-darwin
+          - run_test_on: macos-15-large
+            binary_under_test: x86_64-apple-darwin
+          - run_test_on: macos-26-large
+            binary_under_test: x86_64-apple-darwin
+          - run_test_on: macos-14
+            binary_under_test: aarch64-apple-darwin
+          - run_test_on: macos-15
+            binary_under_test: aarch64-apple-darwin
+          - run_test_on: macos-26
+            binary_under_test: aarch64-apple-darwin
+          - run_test_on: windows-2022
+            binary_under_test: x86_64-pc-windows-msvc
+          - run_test_on: windows-2025
+            binary_under_test: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.testing_target.run_test_on }}
+    steps:
+      - uses: actions/checkout@v7
+        name: "Checkout rover repo"
+
+      - uses: actions/download-artifact@v8
+        name: "Download artifact built in previous stage"
+        with:
+          name: ${{ matrix.testing_target.binary_under_test }}
+          path: ${{ matrix.testing_target.binary_under_test }}
+
+      - if: ${{ !contains(matrix.testing_target.binary_under_test, 'windows')}}
+        name: "Set permissions on artifacts correctly"
+        run: |
+          chmod -R +x ./${{ matrix.testing_target.binary_under_test }}
+
+      - name: "Create expected directory structure for test binary lookup"
+        shell: bash
+        run: |
+          mkdir -p target/${{ matrix.testing_target.binary_under_test }}/debug
+          cp -r ./${{ matrix.testing_target.binary_under_test }}/* target/${{ matrix.testing_target.binary_under_test }}/debug/
+
+      - name: "Create symlink for Linux container path (compiled in Docker with different workspace)"
+        if: ${{ matrix.testing_target.binary_under_test == 'x86_64-unknown-linux-gnu' }}
+        run: |
+          # The Linux binary was compiled in Docker where workspace was /__w/rover/rover
+          # On Ubuntu runner, workspace is /home/runner/work/rover/rover
+          # Create a symlink so any baked-in paths from compilation resolve correctly
+          sudo mkdir -p /__w/rover
+          sudo ln -s ${{ github.workspace }} /__w/rover/rover
+          echo "Created symlink: /__w/rover/rover -> ${{ github.workspace }}"
+          ls -la /__w/rover/
+
+      - name: Install OpenSSL (arm ubuntu)
+        if: ${{ matrix.testing_target.binary_under_test == 'aarch64-unknown-linux-gnu' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+          ldd --version
+
+      - name: Run Smoke Tests (Non-Windows)
+        if: ${{ !contains(matrix.testing_target.binary_under_test, 'windows')}}
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          APOLLO_ROVER_DEV_COMPOSITION_VERSION: ${{ matrix.composition-version }}
+          APOLLO_ROVER_DEV_ROUTER_VERSION: ${{ matrix.router-version }}
+          # FR95 of the profile-configuration spec: the suite must pass for a
+          # user with no configuration at all, so point Rover's config home at
+          # a location that's empty (it doesn't exist yet) rather than the
+          # runner's own. The checkout has no `.rover/` above it either.
+          APOLLO_CONFIG_HOME: ${{ runner.temp }}/rover-empty-config-home
+          APOLLO_ELV2_LICENSE: accept
+          CARGO_BIN_EXE_rover: ${{ github.workspace }}/${{ matrix.testing_target.binary_under_test }}/rover
+          CARGO_MANIFEST_DIR: ${{ github.workspace }}
+          APOLLO_KEY: ${{ secrets.APOLLO_KEY_ROVER_E2E_TESTS }}
+          APOLLO_KEY_ROVER_E2E_MONOGRAPH: ${{ secrets.APOLLO_KEY_ROVER_E2E_MONOGRAPH }}
+          # The client-credential pair lifecycle test (tests/e2e/api_key) needs an org admin's
+          # key on an organization enrolled in client-credential support; it skips when unset.
+          APOLLO_KEY_ROVER_E2E_ORG_ADMIN: ${{ secrets.APOLLO_KEY_ROVER_E2E_ORG_ADMIN }}
+          ROVER_E2E_ORG_ID: ${{ vars.ROVER_E2E_ORG_ID }}
+          ROVER_E2E_GRAPH_ID: ${{ vars.ROVER_E2E_GRAPH_ID }}
+        with:
+          max_attempts: 2
+          timeout_minutes: 10
+          shell: bash
+          command: |
+            E2E_BINARY=$(find ./${{ matrix.testing_target.binary_under_test }}/deps -type f ! -name "*.*" -and -name "e2e-*")
+            echo "Found '$E2E_BINARY'"
+            $E2E_BINARY --ignored --nocapture
+
+      - name: Run Smoke Tests (Windows)
+        if: ${{ contains(matrix.testing_target.binary_under_test, 'windows')}}
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60 # v4.0.0
+        env:
+          APOLLO_ROVER_DEV_COMPOSITION_VERSION: ${{ matrix.composition-version }}
+          APOLLO_ROVER_DEV_ROUTER_VERSION: ${{ matrix.router-version }}
+          # FR95 of the profile-configuration spec: the suite must pass for a
+          # user with no configuration at all, so point Rover's config home at
+          # a location that's empty (it doesn't exist yet) rather than the
+          # runner's own. The checkout has no `.rover/` above it either.
+          APOLLO_CONFIG_HOME: ${{ runner.temp }}\rover-empty-config-home
+          APOLLO_ELV2_LICENSE: accept
+          CARGO_BIN_EXE_rover: ${{ github.workspace }}\${{ matrix.testing_target.binary_under_test }}\rover.exe
+          CARGO_MANIFEST_DIR: ${{ github.workspace }}
+          APOLLO_KEY: ${{ secrets.APOLLO_KEY_ROVER_E2E_TESTS }}
+          APOLLO_KEY_ROVER_E2E_MONOGRAPH: ${{ secrets.APOLLO_KEY_ROVER_E2E_MONOGRAPH }}
+          # The client-credential pair lifecycle test (tests/e2e/api_key) needs an org admin's
+          # key on an organization enrolled in client-credential support; it skips when unset.
+          APOLLO_KEY_ROVER_E2E_ORG_ADMIN: ${{ secrets.APOLLO_KEY_ROVER_E2E_ORG_ADMIN }}
+          ROVER_E2E_ORG_ID: ${{ vars.ROVER_E2E_ORG_ID }}
+          ROVER_E2E_GRAPH_ID: ${{ vars.ROVER_E2E_GRAPH_ID }}
+        with:
+          max_attempts: 2
+          timeout_minutes: 10
+          shell: pwsh
+          command: |
+            $E2E_BINARY=Get-ChildItem -Path .\${{ matrix.testing_target.binary_under_test }}\deps -File | Where-Object { $_.Name -like 'e2e-*.exe' } | ForEach-Object { $_.FullName }
+            Write-Output "Found '$E2E_BINARY'"
+            & $E2E_BINARY --ignored --nocapture
+
+  docker_smoke_tests:
+    name: Build & smoke-test Docker image (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runs-on: ubuntu-latest
+          - platform: linux/arm64
+            runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: rover:pr
+          cache-from: type=gha,scope=docker-pr-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=docker-pr-${{ matrix.platform }}
+
+      # Exercises rustls + ca-certificates + DNS by hitting Apollo Studio.
+      - name: Verify HTTPS path with rover config whoami
+        env:
+          APOLLO_KEY: ${{ secrets.APOLLO_KEY_ROVER_E2E_TESTS }}
+        run: docker run --rm -e APOLLO_KEY rover:pr config whoami
+
+  # It appears as though GitHub Actions mechanisms for handling errors within matrix job runs are... less than
+  # intuitive. There's an answer here (https://github.com/orgs/community/discussions/26822) that describes the
+  # fact that if any of the jobs in the matrix succeeds then the job is marked successful as well. So we
+  # have to intervene manually to ensure this job actually fails if any of the branches of the matrix fails.
+  #
+  # It might be the case we can simplify this as future GitHub Actions changes may render this obsolete, but for
+  # now this appears to be the only solution.
+  results:
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    name: Final Results
+    needs: [ smoke_tests, docker_smoke_tests ]
+    steps:
+      - run: exit 1
+        if: >-
+          ${{
+               contains(needs.*.result, 'failure')
+            || contains(needs.*.result, 'cancelled')
+            || contains(needs.*.result, 'skipped')
+          }}

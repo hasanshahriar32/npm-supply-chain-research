@@ -1,0 +1,129 @@
+{
+  "name": "nostics",
+  "type": "module",
+  "version": "1.3.0",
+  "packageManager": "pnpm@12.5.1",
+  "description": "Structured diagnostic code library",
+  "author": "Anthony Fu <anthonyfu117@hotmail.com>",
+  "contributors": [
+    "Eduardo San Martin Morote <posva13@gmail.com>",
+    "Daniel Roe <daniel@roe.dev>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/vercel-labs/nostics#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vercel-labs/nostics.git"
+  },
+  "bugs": "https://github.com/vercel-labs/nostics/issues",
+  "keywords": [],
+  "sideEffects": false,
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./formatters/ansi": "./dist/formatters/ansi.mjs",
+    "./formatters/json": "./dist/formatters/json.mjs",
+    "./reporters/dev": "./dist/reporters/dev.mjs",
+    "./reporters/fetch": "./dist/reporters/fetch.mjs",
+    "./reporters/node": "./dist/reporters/node.mjs",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist",
+    "skills"
+  ],
+  "scripts": {
+    "build": "tsdown && pnpm --filter \"./packages/*\" run build",
+    "dev": "vitest",
+    "docs": "pnpm -C docs run dev",
+    "docs:build": "pnpm -C docs run build",
+    "play": "pnpm -C playground run dev",
+    "lint": "oxlint ${CI:+--deny-warnings} . && oxfmt --check .",
+    "lint:fix": "oxfmt && oxlint --fix .",
+    "fmt": "oxfmt",
+    "prepublishOnly": "pnpm run build",
+    "release": "node scripts/release.ts",
+    "size": "size-limit",
+    "test": "pnpm run build && pnpm run \"/^test:/\"",
+    "test:unit": "vitest run --coverage",
+    "test:types": "pnpm run typecheck",
+    "test:lint": "pnpm run lint",
+    "test:demo": "pnpm -C demo-lib run build && pnpm -C demo-lib run test && pnpm -C playground run build",
+    "typecheck": "tsc && pnpm --filter \"./packages/*\" run typecheck",
+    "prepare": "simple-git-hooks"
+  },
+  "devDependencies": {
+    "@posva/prompts": "catalog:cli",
+    "@size-limit/esbuild-why": "catalog:cli",
+    "@size-limit/preset-small-lib": "catalog:cli",
+    "@types/node": "catalog:types",
+    "@types/semver": "catalog:types",
+    "@vitest/coverage-v8": "catalog:testing",
+    "conventional-changelog": "catalog:cli",
+    "conventional-changelog-angular": "catalog:cli",
+    "lint-staged": "catalog:cli",
+    "oxfmt": "catalog:cli",
+    "oxlint": "catalog:cli",
+    "oxlint-plugin-posva": "catalog:cli",
+    "publint": "catalog:cli",
+    "semver": "catalog:cli",
+    "simple-git-hooks": "catalog:cli",
+    "size-limit": "catalog:cli",
+    "tsdown": "catalog:cli",
+    "tsnapi": "catalog:testing",
+    "typescript": "catalog:cli",
+    "vite": "catalog:cli",
+    "vitest": "catalog:testing"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm i --frozen-lockfile --ignore-scripts --offline && pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*": [
+      "oxfmt --no-error-on-unmatched-pattern",
+      "oxlint --no-error-on-unmatched-pattern --fix"
+    ]
+  },
+  "size-limit": [
+    {
+      "name": "defineDiagnostics from source",
+      "path": "src/index.ts",
+      "import": "{ defineDiagnostics }"
+    },
+    {
+      "name": "defineDiagnostics",
+      "path": "dist/index.mjs",
+      "import": "{ defineDiagnostics }"
+    },
+    {
+      "name": "defineProdDiagnostics",
+      "path": "dist/index.mjs",
+      "import": "{ defineProdDiagnostics }"
+    },
+    {
+      "name": "defineDiagnostics + createConsoleReporter",
+      "path": "dist/index.mjs",
+      "import": "{ defineDiagnostics, createConsoleReporter }"
+    },
+    {
+      "name": "defineProdDiagnostics + createConsoleReporter",
+      "path": "dist/index.mjs",
+      "import": "{ defineProdDiagnostics, createConsoleReporter }"
+    },
+    {
+      "name": "formatDiagnostic",
+      "path": "dist/index.mjs",
+      "import": "{ formatDiagnostic }"
+    },
+    {
+      "name": "full root",
+      "path": "dist/index.mjs",
+      "import": "*"
+    },
+    {
+      "name": "ansi formatter",
+      "path": "dist/formatters/ansi.mjs",
+      "import": "*"
+    }
+  ]
+}

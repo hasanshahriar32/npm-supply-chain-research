@@ -1,0 +1,599 @@
+name: build_and_test
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - main
+      - v*
+    tags:
+      - v*
+env:
+  FLOW_BIN_PRIVATE_KEY_BASE64: ${{ secrets.FLOW_BIN_PRIVATE_KEY_BASE64 }}
+  NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+  RUST_TOOLCHAIN: nightly-2026-04-11
+jobs:
+  build_and_test:
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+    - name: set up rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: flow-rust-port
+    - name: Build Rust port
+      working-directory: rust_port
+      run: cargo build
+    - name: Test Rust port
+      working-directory: rust_port
+      run: cargo test
+    - name: Build Rust port binary
+      working-directory: rust_port
+      env:
+        CARGO_PROFILE_RELEASE_STRIP: 'true'
+        CARGO_PROFILE_RELEASE_LTO: fat
+        CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
+      run: cargo build --release --bin flow_cli
+    - name: Create artifacts
+      run: |-
+        mkdir -p bin/rust-port-linux dist/flow
+        cp rust_port/target/release/flow_cli bin/rust-port-linux/flow
+        cp bin/rust-port-linux/flow dist/flow/flow
+        cd dist && zip -r flow-linux64.zip flow/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_and_test_rust_port_bin
+        path: bin/rust-port-linux/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_and_test_rust_port_dist
+        path: dist/flow-linux64.zip
+  build_linux_arm64:
+    runs-on: 4-core-ubuntu-arm
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+    - name: set up rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: flow-rust-port-linux-arm64
+        workspaces: rust_port -> target
+    - name: Build Rust port binary
+      working-directory: rust_port
+      env:
+        CARGO_PROFILE_RELEASE_STRIP: 'true'
+        CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
+        # jemalloc fixes its page size at build time; 64 KiB pages also run on 4 and 16 KiB kernels.
+        JEMALLOC_SYS_WITH_LG_PAGE: '16'
+      run: cargo build --release --bin flow_cli
+    - name: Create artifacts
+      run: |-
+        mkdir -p bin/rust-port-linux-arm64 dist/flow
+        cp rust_port/target/release/flow_cli bin/rust-port-linux-arm64/flow
+        cp bin/rust-port-linux-arm64/flow dist/flow/flow
+        cd dist && zip -r flow-linux64-arm64.zip flow/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_linux_arm64_bin
+        path: bin/rust-port-linux-arm64/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_linux_arm64_dist
+        path: dist/flow-linux64-arm64.zip
+  build_macos_arm64:
+    runs-on: macos-15
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: maxim-lobanov/setup-xcode@v1.6.0
+      with:
+        xcode-version: '16.4.0'
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+    - name: set up rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: flow-rust-port-macos-arm64
+        workspaces: rust_port -> target
+    - name: Build Rust port binary
+      working-directory: rust_port
+      env:
+        CARGO_PROFILE_RELEASE_STRIP: 'true'
+        CARGO_PROFILE_RELEASE_LTO: fat
+        CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
+      run: cargo build --release --bin flow_cli
+    - name: Create artifacts
+      run: |-
+        mkdir -p bin/rust-port-macos-arm64 dist/flow
+        cp rust_port/target/release/flow_cli bin/rust-port-macos-arm64/flow
+        cp bin/rust-port-macos-arm64/flow dist/flow/flow
+        cd dist && zip -r flow-osx-arm64.zip flow/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_macos_arm64_bin
+        path: bin/rust-port-macos-arm64/flow
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_macos_arm64_dist
+        path: dist/flow-osx-arm64.zip
+  build_win:
+    runs-on: windows-2022
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+    - name: set up rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: flow-rust-port-win
+        workspaces: rust_port -> target
+    - name: Build Rust port binary
+      working-directory: rust_port
+      env:
+        CARGO_PROFILE_RELEASE_STRIP: 'true'
+        CARGO_PROFILE_RELEASE_LTO: fat
+        CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '1'
+      run: cargo build --release --bin flow_cli
+    - name: Create artifacts
+      run: |-
+        New-Item -ItemType Directory -Force bin\rust-port-win64
+        New-Item -ItemType Directory -Force dist\flow
+        Copy-Item rust_port\target\release\flow_cli.exe bin\rust-port-win64\flow.exe
+        Copy-Item bin\rust-port-win64\flow.exe dist\flow\flow.exe
+        Push-Location dist
+        Compress-Archive -Path flow -DestinationPath flow-win64.zip -Force
+        Pop-Location
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_win_bin
+        path: bin/rust-port-win64/flow.exe
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_rust_port_win_dist
+        path: dist/flow-win64.zip
+  build_js:
+    runs-on: ubuntu-22.04
+    env:
+      NODE_VERSION: 24.14.1
+      NPM_VERSION: 11.11.0
+      YARN_VERSION: 1.22.21
+      EMSDK_VERSION: 3.1.44
+      BINARYEN_VERSION: 121
+      BINARYEN_SHA256: c90e0e295e8f8484ba5b47da92f26e5d1d18db6cd2fcc0c5cc265a5a73609f17
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Install Node
+      uses: actions/setup-node@v4.4.0
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+    - name: Install npm and Yarn
+      run: npm install --global npm@${NPM_VERSION} yarn@${YARN_VERSION}
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+        targets: wasm32-unknown-emscripten
+        components: rust-src
+    - name: Install Emscripten
+      run: |
+        git clone --depth 1 --branch "${EMSDK_VERSION}" https://github.com/emscripten-core/emsdk.git "${RUNNER_TEMP}/emsdk"
+        "${RUNNER_TEMP}/emsdk/emsdk" install "${EMSDK_VERSION}"
+        "${RUNNER_TEMP}/emsdk/emsdk" activate "${EMSDK_VERSION}"
+        binaryen_archive="${RUNNER_TEMP}/binaryen-version_${BINARYEN_VERSION}-x86_64-linux.tar.gz"
+        curl --fail --location --retry 3 --output "${binaryen_archive}" "https://github.com/WebAssembly/binaryen/releases/download/version_${BINARYEN_VERSION}/binaryen-version_${BINARYEN_VERSION}-x86_64-linux.tar.gz"
+        echo "${BINARYEN_SHA256}  ${binaryen_archive}" | sha256sum --check -
+        mkdir -p "${RUNNER_TEMP}/binaryen"
+        tar -xzf "${binaryen_archive}" -C "${RUNNER_TEMP}/binaryen"
+        echo "${RUNNER_TEMP}/emsdk" >> "${GITHUB_PATH}"
+        echo "${RUNNER_TEMP}/emsdk/upstream/emscripten" >> "${GITHUB_PATH}"
+        echo "EMSDK=${RUNNER_TEMP}/emsdk" >> "${GITHUB_ENV}"
+        echo "EM_CONFIG=${RUNNER_TEMP}/emsdk/.emscripten" >> "${GITHUB_ENV}"
+        echo "EM_BINARYEN_ROOT=${RUNNER_TEMP}/binaryen/binaryen-version_${BINARYEN_VERSION}" >> "${GITHUB_ENV}"
+        echo "EM_CACHE=${HOME}/.emscripten_cache_${EMSDK_VERSION}" >> "${GITHUB_ENV}"
+        echo "EM_IGNORE_SANITY=1" >> "${GITHUB_ENV}"
+    - name: Verify pinned tool versions
+      run: |
+        test "$(node --version)" = "v${NODE_VERSION}"
+        test "$(npm --version)" = "${NPM_VERSION}"
+        test "$(yarn --version)" = "${YARN_VERSION}"
+        rustup show active-toolchain
+        rustc --version
+        emcc --version
+        test "$("${EM_BINARYEN_ROOT}/bin/wasm-opt" --version)" = "wasm-opt version ${BINARYEN_VERSION} (version_${BINARYEN_VERSION})"
+    - name: Build flow-parser WASM artifact
+      run: packages/scripts/buildFlowParserWasm.sh "${RUNNER_TEMP}/flow-parser-wasm.js"
+    - name: Install package dependencies
+      working-directory: packages
+      run: yarn install --frozen-lockfile
+    - name: Install bootstrap dependencies
+      working-directory: packages/scripts/bootstrap
+      run: yarn install --frozen-lockfile
+    - name: Build packages
+      working-directory: packages
+      run: ./scripts/build.sh "${RUNNER_TEMP}/flow-parser-wasm.js"
+    - name: Test packages
+      working-directory: packages
+      run: yarn test -- --testPathPatterns='flow-parser|babel-plugin-syntax-flow-parser|flow-eslint|flow-transform|flow-api-translator'
+    - name: Create package artifact
+      run: |
+        mkdir -p \
+          "${RUNNER_TEMP}/build_js_packages/flow-api-translator" \
+          "${RUNNER_TEMP}/build_js_packages/flow-eslint" \
+          "${RUNNER_TEMP}/build_js_packages/flow-estree" \
+          "${RUNNER_TEMP}/build_js_packages/flow-parser" \
+          "${RUNNER_TEMP}/build_js_packages/flow-transform"
+        cp -R packages/flow-api-translator/dist "${RUNNER_TEMP}/build_js_packages/flow-api-translator/dist"
+        cp -R packages/flow-eslint/dist "${RUNNER_TEMP}/build_js_packages/flow-eslint/dist"
+        cp -R packages/flow-estree/dist "${RUNNER_TEMP}/build_js_packages/flow-estree/dist"
+        cp -R packages/flow-parser/dist "${RUNNER_TEMP}/build_js_packages/flow-parser/dist"
+        cp -R packages/flow-transform/dist "${RUNNER_TEMP}/build_js_packages/flow-transform/dist"
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_js_packages
+        path: ${{ runner.temp }}/build_js_packages
+  build_flow_js:
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_INCREMENTAL: 0
+      CARGO_TERM_COLOR: always
+      RUSTC_BOOTSTRAP: 1
+      RUST_MIN_STACK: 5242880
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        toolchain: ${{ env.RUST_TOOLCHAIN }}
+        targets: wasm32-unknown-emscripten
+        components: rust-src
+    - name: Install Emscripten
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: 3.1.44
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+    - name: set up rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        prefix-key: flow-rust-port-flow-js
+    - name: Build and test Rust flow.js
+      run: make test-js FLOW_JS_IMPL=rust-wasm
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: build_js_rust_port_bin
+        path: bin/flow.js
+  runtests_linux:
+    runs-on: ubuntu-22.04
+    needs:
+    - build_and_test
+    env:
+      FLOW_RUNTESTS_PARALLELISM: 8
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_and_test_rust_port_bin
+        path: bin/rust-port-linux
+    - run: chmod +x bin/rust-port-linux/flow
+    - name: Run Rust port tests
+      run: bin/rust-port-linux/flow dev-tools runtests
+  runtests_macos_arm:
+    runs-on: macos-15
+    needs:
+    - build_macos_arm64
+    env:
+      FLOW_RUNTESTS_PARALLELISM: 8
+    steps:
+    - uses: maxim-lobanov/setup-xcode@v1.6.0
+      with:
+        xcode-version: '16.4.0'
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_macos_arm64_bin
+        path: bin/rust-port-macos-arm64
+    - run: chmod +x bin/rust-port-macos-arm64/flow
+    - name: Run Rust port tests
+      run: bin/rust-port-macos-arm64/flow dev-tools runtests
+  tool_test_linux:
+    runs-on: ubuntu-22.04
+    needs:
+    - build_and_test
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_and_test_rust_port_bin
+        path: bin/rust-port-linux
+    - run: chmod +x bin/rust-port-linux/flow
+    - name: Install tool deps from yarn
+      run: (cd packages/flow-dev-tools && yarn install | cat)
+    - name: Run Rust port newtests
+      run: ./tool test -p 4 --check check --bin bin/rust-port-linux/flow
+  tool_test_macos:
+    runs-on: macos-15
+    needs:
+    - build_macos_arm64
+    steps:
+    - uses: maxim-lobanov/setup-xcode@v1.6.0
+      with:
+        xcode-version: '16.4.0'
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_macos_arm64_bin
+        path: bin/rust-port-macos-arm64
+    - run: chmod +x bin/rust-port-macos-arm64/flow
+    - name: Install tool deps from yarn
+      run: (cd packages/flow-dev-tools && yarn install | cat)
+    - name: Run Rust port newtests
+      run: ./tool test -p 4 --check check --bin bin/rust-port-macos-arm64/flow
+  tool_test_win:
+    runs-on: windows-2022
+    needs:
+    - build_win
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_win_bin
+        path: bin/rust-port-win64
+    - name: Install tool deps from yarn
+      run: |-
+        cd packages/flow-dev-tools
+        yarn install --ignore-scripts --pure-lockfile
+    - name: Set TMP env var for consistency
+      run: |-
+        echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+        echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+    - name: Run Rust port newtests
+      run: node packages/flow-dev-tools/bin/tool test --check check --bin bin/rust-port-win64/flow.exe --parallelism 1
+  npm_pack:
+    runs-on: ubuntu-22.04
+    needs:
+    - build_js
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_js_packages
+        path: ${{ runner.temp }}/build_js_packages
+    - name: Install generated package artifacts
+      run: |
+        test -f "${RUNNER_TEMP}/build_js_packages/flow-api-translator/dist/index.js"
+        test -f "${RUNNER_TEMP}/build_js_packages/flow-eslint/dist/index.js"
+        test -f "${RUNNER_TEMP}/build_js_packages/flow-estree/dist/index.js"
+        test -f "${RUNNER_TEMP}/build_js_packages/flow-parser/dist/index.js"
+        test -f "${RUNNER_TEMP}/build_js_packages/flow-transform/dist/index.js"
+        test ! -e packages/flow-api-translator/dist
+        test ! -e packages/flow-eslint/dist
+        test ! -e packages/flow-estree/dist
+        test ! -e packages/flow-parser/dist
+        test ! -e packages/flow-transform/dist
+        cp -R "${RUNNER_TEMP}/build_js_packages/flow-api-translator/dist" packages/flow-api-translator/dist
+        cp -R "${RUNNER_TEMP}/build_js_packages/flow-eslint/dist" packages/flow-eslint/dist
+        cp -R "${RUNNER_TEMP}/build_js_packages/flow-estree/dist" packages/flow-estree/dist
+        cp -R "${RUNNER_TEMP}/build_js_packages/flow-parser/dist" packages/flow-parser/dist
+        cp -R "${RUNNER_TEMP}/build_js_packages/flow-transform/dist" packages/flow-transform/dist
+    - name: Pack flow-estree
+      run: |
+        test -f packages/flow-estree/dist/index.js
+        make dist/npm-flow-estree.tgz
+    - name: Pack flow-parser
+      run: |
+        test -f packages/flow-parser/dist/index.js
+        make dist/npm-flow-parser.tgz
+    - name: Pack flow-eslint
+      run: |
+        test -f packages/flow-eslint/dist/index.js
+        make dist/npm-flow-eslint.tgz
+    - name: Pack flow-transform
+      run: |
+        test -f packages/flow-transform/dist/index.js
+        make dist/npm-flow-transform.tgz
+    - name: Pack flow-api-translator
+      run: |
+        test -f packages/flow-api-translator/dist/index.js
+        make dist/npm-flow-api-translator.tgz
+    - name: Pack flow-remove-types and flow-node
+      run: |
+        rm -rf packages/flow-node
+        cp -r packages/flow-remove-types/ packages/flow-node/
+        sed -i '0,/flow-remove-types/s//flow-node/' packages/flow-node/package.json
+        make dist/npm-flow-remove-types.tgz
+        make dist/npm-flow-node.tgz
+    - name: Pack flow-upgrade
+      run: |
+        cd packages/flow-upgrade
+        yarn install
+        yarn build
+        yarn test
+        cd ../..
+        make dist/npm-flow-upgrade.tgz
+    - uses: actions/upload-artifact@v4.4.0
+      with:
+        name: npm_pack
+        path: |
+          dist/npm-flow-api-translator.tgz
+          dist/npm-flow-eslint.tgz
+          dist/npm-flow-estree.tgz
+          dist/npm-flow-parser.tgz
+          dist/npm-flow-transform.tgz
+          dist/npm-flow-node.tgz
+          dist/npm-flow-remove-types.tgz
+          dist/npm-flow-upgrade.tgz
+    - name: Deploy to npm
+      if: contains(github.event_name, 'push') && startsWith( github.ref, 'refs/tags/v' )
+      run: .circleci/deploy_npm.sh
+  website_deploy:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-22.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    needs:
+    - build_and_test
+    - build_flow_js
+    steps:
+    - uses: actions/checkout@v3.6.0
+      with:
+        # Full history so Docusaurus's `showLastUpdateTime` can find the real
+        # last-touched commit for each doc page; the default shallow clone
+        # only sees HEAD and makes every page show the deploy date.
+        fetch-depth: 0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_and_test_rust_port_bin
+        path: bin/rust-port-linux
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_js_rust_port_bin
+        path: dist
+    - run: chmod +x bin/rust-port-linux/flow
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+    - name: Node cache
+      uses: actions/cache@v4
+      with:
+        key: v2-website-${{ github.ref_name }}-${{ hashFiles('website/yarn.lock') }}
+        path: website/node_modules
+    - name: Install yarn deps
+      run: cd website && yarn install
+    - name: Build website
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: PATH=${{ github.workspace }}/bin/rust-port-linux:$PATH .circleci/build_website.sh
+    - name: Configure GitHub Pages
+      uses: actions/configure-pages@v5
+    - name: Upload GitHub Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: website/build
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+  # Deploy jobs
+  github_upload:
+    if: contains(github.event_name, 'push') && startsWith( github.ref, 'refs/tags/v' )
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    needs:
+    - build_and_test
+    - build_linux_arm64
+    - build_macos_arm64
+    - build_win
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_and_test_rust_port_dist
+        path: dist
+    - name: Upload Linux binary (x86_64)
+      run: .circleci/github_upload.sh dist/flow-linux64.zip "flow-linux64-${{ github.ref_name }}.zip"
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_linux_arm64_dist
+        path: dist
+    - name: Upload Linux binary (arm64)
+      run: .circleci/github_upload.sh dist/flow-linux64-arm64.zip "flow-linux-arm64-${{ github.ref_name }}.zip"
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_macos_arm64_dist
+        path: dist
+    - name: Upload Mac binary (arm64)
+      run: .circleci/github_upload.sh dist/flow-osx-arm64.zip "flow-osx-arm64-${{ github.ref_name }}.zip"
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_rust_port_win_dist
+        path: dist
+    - name: Upload Windows binary
+      run: .circleci/github_upload.sh dist/flow-win64.zip "flow-win64-${{ github.ref_name }}.zip"
+  flow_bin_deploy:
+    if: contains(github.event_name, 'push') && startsWith( github.ref, 'refs/tags/v' )
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    needs:
+    - github_upload
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - name: Deploy flow-bin
+      run: .circleci/deploy_flow_bin.sh
+    - uses: meta/dotslash-publish-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        config: .github/dotslash-config.json
+        tag: ${{ github.ref_name }}
+    - name: Fill release notes
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: bash .github/scripts/update_github_release_notes.sh
+  try_flow_deploy:
+    if: contains(github.event_name, 'push') && startsWith( github.ref, 'refs/tags/v' )
+    runs-on: ubuntu-22.04
+    needs:
+    - build_flow_js
+    steps:
+    - uses: actions/checkout@v3.6.0
+    - uses: actions/download-artifact@v4.1.7
+      with:
+        name: build_js_rust_port_bin
+        path: dist
+    - name: Assemble files
+      run: |
+        cp dist/flow.js packages/try-flow-website-js/flow.js
+        cp -r lib packages/try-flow-website-js/flowlib
+        cp -r tslib packages/try-flow-website-js/tslib
+        scripts/apply-tslib-patches.sh packages/try-flow-website-js/tslib_patches
+        make dist/npm-try-flow-website-js.tgz
+    - name: Deploy to NPM
+      run: |
+        echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        npm publish ./dist/npm-try-flow-website-js.tgz

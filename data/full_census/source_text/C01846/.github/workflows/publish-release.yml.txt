@@ -1,0 +1,312 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check if version is already published
+        id: check
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          echo "version=${PKG_VERSION}" >> "$GITHUB_OUTPUT"
+          if npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync package.json description from README
+        if: steps.check.outputs.published == 'false'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json','utf-8'));
+            const lines = fs.readFileSync('README.md','utf-8').split('\n');
+            for (const line of lines) {
+              const t = line.trim();
+              if (!t || t.startsWith('#') || t.startsWith('[') || t.startsWith('<') || t.startsWith('http') || t.startsWith('![')) continue;
+              pkg.description = t.replace(/[*_\`]/g,'').replace(/\s+/g,' ').trim();
+              break;
+            }
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Strip video URLs from README for npm
+        if: steps.check.outputs.published == 'false'
+        run: sed -i '/^https:\/\/github.com\/user-attachments\//d' README.md
+
+      - name: Build
+        if: steps.check.outputs.published == 'false'
+        run: pnpm build
+
+      - name: Upload workspace
+        if: steps.check.outputs.published == 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: workspace
+          path: .
+          include-hidden-files: true
+          retention-days: 1
+
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      published: ${{ steps.check.outputs.published }}
+
+  publish:
+    needs: build
+    if: needs.build.outputs.published == 'false'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write
+      id-token: write
+      actions: write
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: workspace
+
+      - name: Configure git credentials
+        run: |
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git config --local url."https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      - name: Publish to npm
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Ensure git tag exists
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          if ! git rev-parse "${TAG}" >/dev/null 2>&1; then
+            git tag "${TAG}"
+            git push origin "${TAG}"
+          fi
+
+      - name: Update major version tag for GitHub Action
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          MAJOR="v$(echo "${VERSION}" | cut -d. -f1)"
+          git tag -f "${MAJOR}"
+          git push origin "${MAJOR}" --force
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          gh release create "${TAG}" --generate-notes --title "${TAG}" --verify-tag --latest
+
+      - name: Trigger Docker publish workflow
+        # GitHub's anti-recursion rule: tags pushed by GITHUB_TOKEN do NOT
+        # trigger downstream workflows. Explicitly dispatch publish-docker.yml
+        # so the GHCR image actually gets built on every release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          TAG="v${VERSION}"
+          gh workflow run publish-docker.yml --ref "${TAG}"
+
+      - name: Notify Slack
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          VERSION: ${{ needs.build.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then echo "SLACK_WEBHOOK not set, skipping"; exit 0; fi
+          NL=$'\n'
+          TEXT="📦 *@copilotkit/aimock v${VERSION} published*${NL}npm: https://www.npmjs.com/package/@copilotkit/aimock/v/${VERSION}${NL}Release: https://github.com/${REPO}/releases/tag/v${VERSION}"
+          PAYLOAD=$(jq -n --arg text "$TEXT" '{text: $text}')
+          curl -s -X POST "$SLACK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD"
+
+  publish-pytest:
+    needs: [build, publish]
+    if: >-
+      always() &&
+      (needs.publish.result == 'success' || needs.build.outputs.published == 'true')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Verify pinned npm release is published
+        # This gate exists to stop aimock-pytest shipping a pin to an npm
+        # version that was never published, so it MUST still fail when the
+        # version is genuinely absent. It used to ask ONCE, and so it raced the
+        # registry: on the v1.41.0 release (run 34546620094) the publish job
+        # landed 1.41.0 at 00:30:31 and this step asked for it at 00:30:49 — 18
+        # seconds later — and npm answered E404. The version existed; re-running
+        # the job unchanged passed. A release gate that cries wolf is one people
+        # stop reading, so poll to a deadline instead of asking once.
+        #
+        # 300s: ~16x the observed 18s lag, past npm's replication tail, and
+        # still small beside this job's own checkout/setup. A pin still missing
+        # after five minutes is a bad pin, not propagation, and must go red.
+        run: |
+          # Read the pin WITHOUT importing the package: aimock_pytest/__init__.py
+          # imports _server, which imports `requests`, and no Python deps are
+          # installed at this point in the job. runpy executes _version.py alone.
+          VERSION=$(python -c "import runpy; print(runpy.run_path('packages/aimock-pytest/src/aimock_pytest/_version.py')['AIMOCK_VERSION'])")
+          PKG="@copilotkit/aimock"
+          DEADLINE=${NPM_VIEW_DEADLINE_SECONDS:-300}
+          DELAY=${NPM_VIEW_INITIAL_DELAY_SECONDS:-5}
+          MAX_DELAY=${NPM_VIEW_MAX_DELAY_SECONDS:-30}
+          START=$(date +%s)
+          ATTEMPT=0
+
+          while :; do
+            ATTEMPT=$((ATTEMPT + 1))
+            if FOUND=$(npm view "${PKG}@${VERSION}" version 2>&1); then
+              echo "attempt ${ATTEMPT}: ${PKG}@${VERSION} is published (${FOUND})"
+              exit 0
+            fi
+            echo "attempt ${ATTEMPT} (t+$(($(date +%s) - START))s): ${PKG}@${VERSION} not visible yet"
+            printf '%s\n' "${FOUND}" | sed 's/^/  | /'
+
+            # Companion query. `npm view <pkg> versions` distinguishes the two
+            # failures the per-version E404 conflates:
+            #   - the package itself is missing  -> a bad pin, never propagation
+            #   - the package lists the version  -> published; the per-version
+            #     404 was a stale packument, so stop waiting on a fact already
+            #     proven by the registry itself
+            # Anything else stays ambiguous (propagating publish vs typo'd
+            # version) and is what the deadline below is for.
+            if VERSIONS=$(npm view "${PKG}" versions --json 2>&1); then
+              if printf '%s' "${VERSIONS}" | node -e '
+                const want = process.argv[1];
+                let raw = "";
+                process.stdin.on("data", (c) => (raw += c));
+                process.stdin.on("end", () => {
+                  let list;
+                  try { list = JSON.parse(raw); } catch { process.exit(2); }
+                  if (typeof list === "string") list = [list];
+                  process.exit(Array.isArray(list) && list.includes(want) ? 0 : 1);
+                });
+              ' "${VERSION}"; then
+                echo "${PKG}@${VERSION} IS in the registry version list; the per-version 404 is propagation lag"
+                exit 0
+              fi
+              echo "  ${PKG} exists but does not list ${VERSION} yet - lag or a bad pin, still waiting"
+            elif printf '%s' "${VERSIONS}" | grep -q "E404"; then
+              echo "::error::npm has no package named ${PKG} at all, so the pin ${VERSION} in packages/aimock-pytest/src/aimock_pytest/_version.py is not a propagation delay. Failing immediately."
+              printf '%s\n' "${VERSIONS}" | sed 's/^/  | /'
+              exit 1
+            else
+              echo "  package-level query failed without a 404 - registry unreachable, treating as transient"
+              printf '%s\n' "${VERSIONS}" | sed 's/^/  | /'
+            fi
+
+            ELAPSED=$(($(date +%s) - START))
+            if [ "${ELAPSED}" -ge "${DEADLINE}" ]; then
+              echo "::error::${PKG}@${VERSION} is still not published after ${ATTEMPT} attempts over ${ELAPSED}s (deadline ${DEADLINE}s). aimock-pytest pins this version in packages/aimock-pytest/src/aimock_pytest/_version.py; refusing to publish a pin to a version npm does not have."
+              exit 1
+            fi
+            echo "  retrying in ${DELAY}s"
+            sleep "${DELAY}"
+            DELAY=$((DELAY * 2))
+            if [ "${DELAY}" -gt "${MAX_DELAY}" ]; then DELAY=${MAX_DELAY}; fi
+          done
+
+      - name: Install build tools
+        # HASH-PINNED, and hatchling rather than hatch. Both halves were measured
+        # on 2026-08-05, not reasoned about:
+        #
+        #  1. `pip install hatch` resolves a NAME from PyPI at run time. Run
+        #     verbatim with the registry serving substituted bytes, it installed
+        #     them (exit 0) and `hatch build` then EXECUTED them (exit 0). This
+        #     job carries `environment: pypi` and `id-token: write` and is the
+        #     job that publishes aimock-pytest under our own OIDC identity, so
+        #     that is arbitrary code beside a publish token.
+        #
+        #  2. Pinning `hatch` would NOT have been sufficient — the same
+        #     pinned-wrapper/unpinned-payload shape as the Ollama installer.
+        #     `hatch build` builds in an ISOLATED environment and fetches this
+        #     project's `build-system.requires` (hatchling) from PyPI at build
+        #     time, unpinned. Against an empty index `hatch build` dies with
+        #     "hatchling was not found in the package registry"; `python -m
+        #     hatchling build` succeeds, because it fetches nothing.
+        #
+        # `--require-hashes` is scoped to THIS invocation on purpose. Applying it
+        # job-wide (PIP_REQUIRE_HASHES) would also hit the unhashed `pip install
+        # --dry-run` probe in the next step, whose FAILURE means "not published
+        # yet" — a hash-gated probe would fail for the wrong reason and turn the
+        # already-published gate into an unconditional publish.
+        #
+        # `python -m pip` rather than `pip` so the interpreter that installs the
+        # backend is the same one that imports it in the build step below.
+        run: python -m pip install --require-hashes -r .github/requirements/hatchling.txt
+
+      - name: Check if pytest version is already published
+        id: check
+        run: |
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('packages/aimock-pytest/pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if pip install "aimock-pytest==$VERSION" --dry-run --no-deps 2>/dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build pytest package
+        if: steps.check.outputs.published == 'false'
+        # The published artifacts are unchanged: `hatch build` and `python -m
+        # hatchling build` produced byte-identical sdist and wheel for this
+        # package at 0.5.2 — sha256 0a54957ba57c52957c863fdb85b535d9715269f07ff9b4d776de98d0f6d68580
+        # and 29ac7b3a07d9c73955ab08f75736ebcf728134eceb5264b988e8e933f5ee2c35.
+        # `python -m` rather than the console script so the build does not depend
+        # on where the pinned install put its entry points on PATH.
+        run: cd packages/aimock-pytest && python -m hatchling build
+
+      - name: Publish pytest package to PyPI
+        if: steps.check.outputs.published == 'false'
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # release/v1
+        with:
+          packages-dir: packages/aimock-pytest/dist/

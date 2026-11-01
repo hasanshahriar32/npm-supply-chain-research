@@ -1,0 +1,245 @@
+name: Locutus CI
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Existing tag or ref to publish, for example v3.0.35
+        required: true
+  push:
+    branches: [main]
+    tags: ['*']
+jobs:
+  ci:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['^22.23.4', '^24.22.1', '^26.12.1']
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref }}
+      - uses: actions/setup-node@v6
+        id: node
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          registry-url: 'https://registry.npmjs.org'
+      # Corepack is no longer bundled with Node.js 25 and later.
+      - name: Install Corepack
+        run: |
+          npm install --global corepack@0.36.0
+          corepack enable
+      - name: Engine bump guardrail
+        run: |
+          node scripts/check-engine-bump.ts
+      - name: Get yarn cache directory path
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        id: yarn-cache-dir-path
+        run: echo "dir=$(corepack yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+      # Parity cache hits skip execution; isolate results by the resolved Node version.
+      - uses: actions/cache@v5
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            .yarn
+            website/.yarn
+            dist/.yarn
+            .cache
+          key: ${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ steps.node.outputs.node-version }}-yarn-
+      - name: Install Dependencies
+        run: |
+          corepack yarn install --immutable
+      - name: Install Browser Runtime
+        run: |
+          corepack yarn browser:install
+      - name: Lint
+        run: |
+          corepack yarn lint
+      - name: TypeScript Check
+        run: |
+          corepack yarn lint:ts
+      - name: TypeScript Strict-Next Check
+        run: |
+          corepack yarn lint:ts:strict-next
+      - name: Type Debt Policy Check
+        run: |
+          corepack yarn lint:ts:debt:policy
+      - name: API Signature Snapshot Check
+        run: |
+          corepack yarn lint:api:snapshot
+      - name: Header Format Check
+        run: |
+          corepack yarn lint:headers
+      - name: No Stray JS Check
+        run: |
+          corepack yarn lint:no-stray-js
+      - name: Build
+        run: |
+          corepack yarn build
+      - name: Test
+        run: |
+          corepack yarn test
+      - name: Browser Test
+        run: |
+          corepack yarn browser:test
+      - name: Select parity targets
+        if: github.event_name == 'pull_request'
+        id: parity-targets
+        run: |
+          corepack yarn select:parity --base-ref origin/${{ github.event.pull_request.base.ref }} --github-output "$GITHUB_OUTPUT"
+      - name: Upstream surface inventory (selective)
+        if: github.event_name == 'pull_request' && steps.parity-targets.outputs.upstream_surface_languages != ''
+        run: |
+          mapfile -t languages < <(printf '%s\n' "${{ steps.parity-targets.outputs.upstream_surface_languages }}" | sed '/^$/d')
+          printf 'Running upstream surface inventory checks on %s languages\n' "${#languages[@]}"
+          printf '  %s\n' "${languages[@]}"
+          corepack yarn test:upstream-surface "${languages[@]}"
+      - name: Upstream surface inventory (full)
+        if: github.event_name != 'pull_request'
+        run: |
+          corepack yarn test:upstream-surface
+      - name: Parity tests (selective)
+        if: github.event_name == 'pull_request'
+        run: |
+          printf '%s\n' "${{ steps.parity-targets.outputs.summary }}"
+          if [ "${{ steps.parity-targets.outputs.mode }}" = "full" ]; then
+            corepack yarn test:parity
+            exit 0
+          fi
+
+          mapfile -t targets < <(printf '%s\n' "${{ steps.parity-targets.outputs.targets }}" | sed '/^$/d')
+          printf 'Running selective parity on %s targets\n' "${#targets[@]}"
+          printf '  %s\n' "${targets[@]}"
+          corepack yarn test:parity "${targets[@]}"
+      - name: Parity tests (full)
+        if: github.event_name != 'pull_request'
+        run: |
+          corepack yarn test:parity
+      - name: Upload release artifact
+        if: ${{ matrix.node == '^26.12.1' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+      - name: Prepare release notes artifact
+        if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        env:
+          RELEASE_REF_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref_name }}
+        run: |
+          node scripts/extract-release-notes.ts --version "${RELEASE_REF_NAME}" > release-notes.md
+      - name: Upload release notes artifact
+        if: ${{ matrix.node == '^26.12.1' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+      - name: Website Build
+        if: github.event_name == 'pull_request' || (github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch')
+        run: |
+          corepack yarn website:ci
+      - name: Upload website artifact
+        if: matrix.node == '^26.12.1' && github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-public
+          path: website/public
+          if-no-files-found: error
+
+  # Preserve branch protection's required check while every runtime must pass.
+  ci-status:
+    name: ci
+    if: always()
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require every Node runtime to pass
+        env:
+          MATRIX_RESULT: ${{ needs.ci.result }}
+        run: test "$MATRIX_RESULT" = success
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+    needs: ci-status
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '^26.12.1'
+          check-latest: true
+          registry-url: 'https://registry.npmjs.org'
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: .
+      - name: Publish package and create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_REF_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.release_ref || github.ref_name }}
+        run: |
+          PACKAGE_NAME=$(node -p "require('./dist/package.json').name")
+          PACKAGE_VERSION=$(node -p "require('./dist/package.json').version")
+          EXPECTED_TAG="v${PACKAGE_VERSION}"
+          if [ "$EXPECTED_TAG" != "${RELEASE_REF_NAME}" ]; then
+            echo "Tag/version mismatch: expected $EXPECTED_TAG from dist/package.json, got ${RELEASE_REF_NAME}" >&2
+            exit 1
+          fi
+
+          NPM_VERSION=$(npm --version)
+          node -e "const [major, minor] = process.argv[1].split('.').map(Number); if (major < 11 || (major === 11 && minor < 5)) { console.error('npm >=11.5.1 is required for trusted publishing, got ' + process.argv[1]); process.exit(1) }" "$NPM_VERSION"
+
+          SHOULD_CREATE_GITHUB_RELEASE=0
+          if gh release view "${RELEASE_REF_NAME}" >/dev/null 2>&1; then
+            echo "GitHub release already exists: ${RELEASE_REF_NAME}"
+          else
+            SHOULD_CREATE_GITHUB_RELEASE=1
+          fi
+
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "npm package already published: ${PACKAGE_NAME}@${PACKAGE_VERSION}"
+          else
+            cd dist/
+            npm publish --access public --provenance
+            cd ..
+          fi
+
+          if [ "$SHOULD_CREATE_GITHUB_RELEASE" = "1" ]; then
+            gh release create "${RELEASE_REF_NAME}" --title "${RELEASE_REF_NAME}" --notes-file release-notes.md
+          fi
+
+  website-deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'workflow_dispatch'
+    needs: ci-status
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: website-public
+          path: website/public
+      - name: Website Deploy 🚀
+        run: |
+          ./scripts/deploy-gh-pages.sh

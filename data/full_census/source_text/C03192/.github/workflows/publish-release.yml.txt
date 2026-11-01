@@ -1,0 +1,54 @@
+name: Publish Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  # we use a personal access token to push the release branch
+  id-token: write # required for provenance/signed releases on npm
+
+jobs:
+  publish:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # we want to push the release branch later
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - name: Set node version to 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.1
+          cache: 'pnpm'
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Gather release information
+        run: |
+          RELEASE_VERSION=$(jq -r '.version' package.json)
+          echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+          RELEASE_MAJOR=$(jq -r '.version | split(".")[0]' package.json)
+          echo "RELEASE_MAJOR=$RELEASE_MAJOR" >> $GITHUB_ENV
+
+      - name: Prepare README
+        run: |
+          echo -e "$(grep -P '## 📙 API Documentation' -B 10000 README.md)\n\n- [Getting Started Guide](https://fakerjs.dev/guide/)\n- [API Reference](https://fakerjs.dev/api/)\n\n$(grep -P '## 🚀 Features' -A 10000 README.md)" > README.md
+          sed -i "s|/fakerjs.dev/|/v$RELEASE_MAJOR.fakerjs.dev/|g" README.md
+
+      - name: Publish
+        run: |
+          pnpm publish --access public --tag next --no-git-checks --provenance
+
+      - name: Push to Release Branch
+        run: |
+          git push origin $GITHUB_REF_NAME:v$RELEASE_MAJOR

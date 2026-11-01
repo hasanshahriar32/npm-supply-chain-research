@@ -1,0 +1,59 @@
+{
+  "name": "sugarss",
+  "version": "5.0.2",
+  "description": "Indent-based CSS syntax for PostCSS",
+  "keywords": [
+    "css",
+    "indent",
+    "parser",
+    "postcss",
+    "postcss-syntax",
+    "syntax"
+  ],
+  "license": "MIT",
+  "author": "Andrey Sitnik <andrey@sitnik.es>",
+  "repository": "postcss/sugarss",
+  "funding": [
+    {
+      "type": "opencollective",
+      "url": "https://opencollective.com/postcss/"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/ai"
+    }
+  ],
+  "exports": {
+    ".": {
+      "require": "./index.js",
+      "import": "./index.mjs"
+    },
+    "./parse": "./parse.js",
+    "./stringify": "./stringify.js",
+    "./tokenize": "./tokenize.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "unit": "node --test test/*.test.js",
+    "test:coverage": "bnt --coverage 98",
+    "test:lint": "oxlint",
+    "test": "pnpm run /^test:/"
+  },
+  "devDependencies": {
+    "@logux/oxc-configs": "^1.2.0",
+    "better-node-test": "^1.0.0",
+    "multiocular": "^0.8.4",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "postcss": "^8.5.29",
+    "postcss-parser-tests": "^8.10.0",
+    "typescript": "^7.0.2"
+  },
+  "peerDependencies": {
+    "postcss": "^8.3.3"
+  },
+  "engines": {
+    "node": ">=18.0"
+  }
+}

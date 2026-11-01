@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CI: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.x
+
+      - run: npm install
+      - run: npm run type-check
+      - run: npm run build
+      - run: npm run lint:check
+      - run: npm run format:check
+      - name: "Run tests"
+        run: npm run test
+        env:
+          PORT: '8080'
+      - name: "Rebuild test container (uncontrolled)"
+        run: |
+          npm run build
+        env:
+          STORYBOOK_UNCONTROLLED: 'true'
+      - name: "Run tests (uncontrolled)"
+        run: npm run test
+        env:
+          PORT: '8081'
+          STORYBOOK_UNCONTROLLED: 'true'
+      - name: "Rebuild test container (root-dummy-inputs)"
+        run: |
+          npm run build
+        env:
+          STORYBOOK_UNCONTROLLED: 'true'
+          STORYBOOK_ROOT_DUMMY_INPUTS: 'true'
+      - name: "Run tests (root-dummy-inputs)"
+        run: npm run test
+        env:
+          PORT: '8082'
+          STORYBOOK_UNCONTROLLED: 'true'
+          STORYBOOK_ROOT_DUMMY_INPUTS: 'true'
+      - name: "Rebuild test container (ShadowDOM)"
+        run: |
+          npm run build
+        env:
+          SHADOWDOM: 'true'
+      - name: "Run tests (ShadowDOM)"
+        run: npm run test
+        env:
+          PORT: '8083'
+          SHADOWDOM: 'true'
+      - name: "Rebuild test container (ShadowDOM uncontrolled)"
+        run: |
+          npm run build
+        env:
+          SHADOWDOM: 'true'
+          STORYBOOK_UNCONTROLLED: 'true'
+      - name: "Run tests (ShadowDOM uncontrolled)"
+        run: npm run test
+        env:
+          PORT: '8084'
+          SHADOWDOM: 'true'
+          STORYBOOK_UNCONTROLLED: 'true'
+      - name: "Rebuild test container (ShadowDOM root-dummy-inputs)"
+        run: |
+          npm run build
+        env:
+          SHADOWDOM: 'true'
+          STORYBOOK_UNCONTROLLED: 'true'
+          STORYBOOK_ROOT_DUMMY_INPUTS: 'true'
+      - name: "Run tests (ShadowDOM root-dummy-inputs)"
+        run: npm run test
+        env:
+          PORT: '8085'
+          SHADOWDOM: 'true'
+          STORYBOOK_UNCONTROLLED: 'true'
+          STORYBOOK_ROOT_DUMMY_INPUTS: 'true'
+      - name: "Check for unstaged changes"
+        run: |
+          git status --porcelain
+          git diff-index --quiet HEAD -- || exit 1
+      - name: "Build docs"
+        run: npm run build-docs
+      - name: "Test docs dependency compatibility"
+        run: npm test --prefix docs

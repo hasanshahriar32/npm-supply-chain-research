@@ -1,0 +1,104 @@
+name: Publish to npm
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check commit message for release trigger
+        id: check
+        # Pass the commit message via env, never interpolate it into the script.
+        # Inlining ${{ github.event.head_commit.message }} pastes attacker- or
+        # author-controlled text straight into bash: backticks in a commit body
+        # ran as command substitution and failed this step with exit 127, and in
+        # a job holding id-token: write that is a command-injection vector, not
+        # just a crash.
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          # Only the first line (subject) is the release trigger. Matching the
+          # whole message let a body line beginning "release:" publish.
+          SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -n1)
+          if printf '%s' "$SUBJECT" | grep -qE '^release: [0-9]+\.[0-9]+\.[0-9]+'; then
+            VERSION=$(printf '%s' "$SUBJECT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^ ]*' | head -n1)
+            echo "triggered=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            if printf '%s' "$VERSION" | grep -qE '-'; then
+              echo "tag=next" >> "$GITHUB_OUTPUT"
+            else
+              echo "tag=latest" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "triggered=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify package.json version matches commit message
+        if: steps.check.outputs.triggered == 'true'
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          MSG_VERSION="${{ steps.check.outputs.version }}"
+          if [ "$PKG_VERSION" != "$MSG_VERSION" ]; then
+            echo "❌ package.json version ($PKG_VERSION) does not match commit message version ($MSG_VERSION)"
+            exit 1
+          fi
+          echo "✅ Version $PKG_VERSION confirmed"
+
+      # Node 24 ships npm 11.17, comfortably past the 11.5.1 that trusted
+      # publishing needs, so there is no `npm install -g npm@latest` step. That
+      # step is a trap on a pinned Node: npm@latest is npm 12, whose engines are
+      # ^22.22.2 || ^24.15.0 || >=26.0.0, so it refuses to install on Node 20 and
+      # fails the release before it builds anything. Observed for real on
+      # stencil-apexcharts 3.1.1, which had the identical pairing.
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.triggered == 'true'
+        with:
+          node-version: "24"
+
+      # npm, matching the committed package-lock.json. There is no yarn.lock,
+      # so `yarn install --frozen-lockfile` had nothing to hold it to and
+      # would have resolved fresh versions on the release runner.
+      - run: npm ci
+        if: steps.check.outputs.triggered == 'true'
+
+      - run: npm test
+        if: steps.check.outputs.triggered == 'true'
+
+      # npm ci installs the apexcharts devDependency (8.x), but the peer range
+      # still accepts 5.10, so run the suite again on the oldest supported
+      # release. Behaviour differs between them: 8.x turns a Date xaxis.min
+      # into a timestamp, 5.x drops it, so passing on one proves nothing about
+      # the other. --no-save leaves package.json and the lockfile alone, and
+      # the build below keeps apexcharts external, so this copy never ships.
+      - name: Test on the oldest supported apexcharts (5.10.3)
+        if: steps.check.outputs.triggered == 'true'
+        run: |
+          npm install --no-save apexcharts@5.10.3
+          npm test
+
+      - run: npm run build
+        if: steps.check.outputs.triggered == 'true'
+
+      # The components use the app's own apexcharts, so none may ship in dist.
+      # 1.11.1 did: the build externalised only the bare "apexcharts", so the
+      # server components' import('apexcharts/ssr') pulled the version
+      # installed on the build machine (5.10.0) into the package.
+      - name: Check dist carries no copy of ApexCharts
+        if: steps.check.outputs.triggered == 'true'
+        run: |
+          if ls dist/apexcharts* 2>/dev/null || grep -l 'ApexCharts v[0-9]' dist/*.js dist/*.cjs; then
+            echo "dist bundles ApexCharts: every apexcharts import must stay external (vite.config*.ts)"
+            exit 1
+          fi
+          echo "dist leaves apexcharts to the app"
+
+      - run: npm publish --provenance --tag ${{ steps.check.outputs.tag }}
+        if: steps.check.outputs.triggered == 'true'

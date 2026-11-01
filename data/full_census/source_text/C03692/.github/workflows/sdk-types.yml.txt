@@ -1,0 +1,329 @@
+# Publishes one `@girs/sdk-<runtime>-<branch>` package per Flatpak SDK channel: the whole GIR
+# set of that SDK, generated as ONE self-contained npm package (`ts-for-gir --bundle`).
+#
+# WHY A SEPARATE WORKFLOW. `release.yml` publishes the ~700 per-namespace packages from the
+# committed tree whenever this repository is pushed. The channels have neither property: they
+# are regenerated from a Flatpak SDK rather than committed (34 MB per channel, rebuilt monthly,
+# reproducible in seconds — the registry is the artifact store, this repository holds only the
+# recipe), and they move on their own cadence, because an SDK updates inside a GNOME cycle
+# without ts-for-gir releasing and ts-for-gir releases without the SDK moving.
+#
+# WHY NO STATE FILE. Each published channel manifest carries the SDK commit and the generator
+# version it was built from, so `plan.mjs` asks the registry whether a rebuild is due. A
+# checked-in copy of that answer would be a second truth that drifts.
+#
+# ADDING A CHANNEL is one line in `sdk-channels.json` — plus, once, `gjsify onboard` for the new
+# package name against THIS workflow file. npm Trusted Publishing can update a package but
+# cannot create one, and the 404 it fails with reads like a broken trusted publisher.
+name: SDK Types
+
+on:
+  # ts-for-gir released: every channel is rebuilt against the new generator.
+  repository_dispatch:
+    types: [generator-released]
+  # The SDKs move on their own: a weekly poll catches an SDK update inside a cycle. Channels
+  # whose SDK commit and generator are both unchanged cost one registry request and stop.
+  schedule:
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Only this SDK branch (default: every channel in sdk-channels.json)"
+        required: false
+      dry_run:
+        description: "Generate and plan, publish nothing"
+        type: boolean
+        default: false
+      force:
+        description: "Rebuild and publish even when the plan says up to date"
+        type: boolean
+        default: false
+
+concurrency:
+  group: npm-publish-sdk-types
+  cancel-in-progress: false
+
+env:
+  node-version: 24.x
+
+jobs:
+  plan:
+    name: Channels
+    runs-on: ubuntu-24.04
+    # Reads the repository and the public registry, writes nothing.
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.channels.outputs.matrix }}
+      runtime: ${{ steps.channels.outputs.runtime }}
+      remotes: ${{ steps.channels.outputs.remotes }}
+      generator: ${{ steps.generator.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test the planning script
+        run: node --test .github/sdk-channels/plan.test.mjs
+
+      - name: Read sdk-channels.json
+        id: channels
+        env:
+          ONLY: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          matrix=$(jq -c --arg only "$ONLY" \
+            '[.channels[] | select($only == "" or .branch == $only)]' sdk-channels.json)
+          if [ "$(jq 'length' <<<"$matrix")" -eq 0 ]; then
+            echo "no channel matches '${ONLY}'" >&2
+            exit 1
+          fi
+          # Every channel must name a remote the manifest defines; a typo here would
+          # otherwise surface as `flatpak install` failing against a remote that was never
+          # added, six steps later and under the wrong name.
+          jq -e '[.channels[].remote] - (.remotes | keys) | length == 0' sdk-channels.json > /dev/null \
+            || { echo "a channel names a remote that sdk-channels.json does not define" >&2; exit 1; }
+          {
+            echo "matrix=$matrix"
+            echo "runtime=$(jq -r .runtime sdk-channels.json)"
+            echo "remotes=$(jq -c .remotes sdk-channels.json)"
+          } >> "$GITHUB_OUTPUT"
+
+      # Resolved once and passed to every leg: two legs of one run must not silently use
+      # different generators, which is exactly what `@latest` per job would allow.
+      #
+      # A release dispatch names its own version, and it has to: `release-types.yml` (which
+      # sends it) and `release-app.yml` (which publishes the CLI) both fire on the SAME
+      # `release: published` event, so asking npm for `latest` here races the publish that is
+      # meant to have happened already. Waiting for the named version turns that race into a
+      # wait; every other trigger has no version in mind and asks for the current one.
+      - name: Resolve the generator version
+        id: generator
+        env:
+          RELEASE: ${{ github.event.client_payload.release }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RELEASE:-}" ]; then
+            wanted="${RELEASE#v}"
+            echo "waiting for @ts-for-gir/cli@${wanted} to appear on the registry…"
+            for attempt in $(seq 1 40); do
+              if npm view "@ts-for-gir/cli@${wanted}" version > /dev/null 2>&1; then
+                echo "version=${wanted}" >> "$GITHUB_OUTPUT"
+                echo "::notice::generator ${wanted} (from the release dispatch, after ${attempt} check(s))"
+                exit 0
+              fi
+              sleep 30
+            done
+            echo "@ts-for-gir/cli@${wanted} did not appear within 20 minutes" >&2
+            exit 1
+          fi
+          # A read that FAILED must not become a version. `set -e` does not look inside a
+          # command substitution that expands into `echo`, so a registry hiccup here wrote an
+          # EMPTY version and the run carried on — and `@ts-for-gir/cli@` is not an error to
+          # npm, it resolves to `latest`. That is precisely the unpinned generator the comment
+          # above forbids, arrived at by a failed lookup rather than by a choice.
+          current=$(npm view @ts-for-gir/cli version)
+          if [ -z "$current" ]; then
+            echo "npm did not name a current @ts-for-gir/cli version" >&2
+            exit 1
+          fi
+          echo "version=${current}" >> "$GITHUB_OUTPUT"
+
+      # A generator without `--bundle` does NOT fail on the flag — yargs ignores what it does
+      # not know — it quietly emits per-namespace packages named `@girs/gtk-4.0` instead, into
+      # a directory this workflow then hands to the publisher. The manifest check downstream
+      # would catch it, but only after a full generation and only by accident. Asked here, the
+      # answer is one line and the failure names the cause.
+      #
+      # The install is ALSO where the release race is waited out. `plan.mjs` already knows that
+      # a version npm serves is a claim rather than the artifact; the same holds one level up,
+      # for a package's dependency CLOSURE. Measured on the 5.2.0 release: npm served
+      # `@ts-for-gir/cli@5.2.0` at 14:37:54 and `@ts-for-gir/templates@5.2.0`, which that CLI
+      # depends on, only at 14:39:22. The step above waits for the CLI to be VISIBLE, so this
+      # one ran 88 seconds before the CLI was INSTALLABLE: `npx` died with ETARGET on the
+      # dependency, `grep` read an empty stream, and the run blamed the release for missing a
+      # flag it carries — leaving all four channels skipped and stuck on the old generator.
+      # So a FAILING INSTALL is retried, and only an install that succeeded may judge the flag.
+      - name: Require a generator that can bundle
+        env:
+          GENERATOR: ${{ steps.generator.outputs.version }}
+          # Retrying against npm's own cache retries ONE answer. The registry serves a
+          # packument `cache-control: public, max-age=300` (measured, abbreviated form too),
+          # and npm does not re-check data it still considers fresh, so the loop below would
+          # spend its first ten attempts re-reading a single snapshot — the whole point of
+          # waiting, spent on the copy that says the dependency is not there.
+          npm_config_prefer_online: "true"
+        run: |
+          set -euo pipefail
+          err="${RUNNER_TEMP}/require-bundle.err"
+          for attempt in $(seq 1 20); do
+            if help=$(npx --yes "@ts-for-gir/cli@${GENERATOR}" generate --help 2> "$err"); then
+              case "$help" in
+                *--bundle*)
+                  echo "::notice::generator ${GENERATOR} supports --bundle (attempt ${attempt})"
+                  exit 0
+                  ;;
+              esac
+              echo "@ts-for-gir/cli@${GENERATOR} installs but has no --bundle:" >&2
+              echo "the channels need a release that carries it" >&2
+              exit 1
+            fi
+            echo "attempt ${attempt}: @ts-for-gir/cli@${GENERATOR} is not installable yet" >&2
+            tail -n 3 "$err" >&2
+            sleep 30
+          done
+          echo "@ts-for-gir/cli@${GENERATOR} never became installable within 10 minutes" >&2
+          cat "$err" >&2
+          exit 1
+
+  channel:
+    name: ${{ matrix.channel.package }}
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.node-version }}
+          registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
+
+      # npm >= 11.5.1 is a hard requirement for Trusted Publishing; below it a publish fails as
+      # an AUTH error, which reads like a broken trusted publisher rather than a stale npm.
+      - name: Pin an npm that can use Trusted Publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
+      # The remote comes from the channel, not from a global default: measured on 2026-09-05,
+      # stable `org.gnome.Sdk` on Flathub ends at 50, so `master` lives on gnome-nightly and a
+      # pre-release cycle on flathub-beta. One shared remote would install the wrong thing or
+      # nothing at all.
+      - name: Install flatpak and the SDK
+        env:
+          REMOTES: ${{ needs.plan.outputs.remotes }}
+          REMOTE: ${{ matrix.channel.remote }}
+          REF: ${{ needs.plan.outputs.runtime }}//${{ matrix.channel.branch }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y flatpak jq
+          url=$(jq -r --arg name "$REMOTE" '.[$name]' <<<"$REMOTES")
+          flatpak remote-add --if-not-exists --user "$REMOTE" "$url"
+          # A branch a remote does not carry is a declaration that ran ahead of reality — the
+          # usual case being a GNOME cycle added here before Flathub publishes it. Say which,
+          # rather than let `install` fail with a resolution error that names neither.
+          if ! flatpak remote-info --user "$REMOTE" "$REF" > /dev/null 2>&1; then
+            echo "$REMOTE does not carry $REF yet" >&2
+            exit 1
+          fi
+          flatpak install --user --noninteractive --no-related "$REMOTE" "$REF"
+
+      # The SDK ships the GIR XML the Platform runtime does not, and it lies on disk as ordinary
+      # files — no sandbox to enter, so the generator runs beside it with the normal toolchain.
+      - name: Locate the GIR files
+        id: sdk
+        run: |
+          set -euo pipefail
+          ref="${{ needs.plan.outputs.runtime }}//${{ matrix.channel.branch }}"
+          location=$(flatpak info --user --show-location "$ref")
+          girs="$location/files/share/gir-1.0"
+          count=$(find "$girs" -name '*.gir' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "no GIR files under $girs — the SDK layout changed" >&2
+            exit 1
+          fi
+          {
+            echo "girs=$girs"
+            echo "commit=$(flatpak info --user --show-commit "$ref")"
+            echo "count=$count"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::$ref carries $count GIR files"
+
+      - name: Plan this channel
+        id: channel_plan
+        run: |
+          node .github/sdk-channels/plan.mjs \
+            --package '${{ matrix.channel.package }}' \
+            --sdk-commit '${{ steps.sdk.outputs.commit }}' \
+            --generator '${{ needs.plan.outputs.generator }}' \
+            ${{ inputs.force && '--force' || '' }}
+
+      - name: Up to date
+        if: steps.channel_plan.outputs.rebuild != 'true'
+        run: echo "::notice::${{ matrix.channel.package }} skipped — ${{ steps.channel_plan.outputs.reason }}"
+
+      - name: Generate the bundle
+        if: steps.channel_plan.outputs.rebuild == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p sdk
+          npx --yes @ts-for-gir/cli@${{ needs.plan.outputs.generator }} generate '*' \
+            --girDirectories '${{ steps.sdk.outputs.girs }}' \
+            --outdir './sdk/${{ matrix.channel.branch }}' \
+            --bundle '${{ matrix.channel.package }}' \
+            --bundleMeta "$(jq -nc \
+              --arg id '${{ needs.plan.outputs.runtime }}' \
+              --arg branch '${{ matrix.channel.branch }}' \
+              --arg commit '${{ steps.sdk.outputs.commit }}' \
+              --arg generator '${{ needs.plan.outputs.generator }}' \
+              --arg version '${{ steps.channel_plan.outputs.version }}' \
+              --arg repo "git+${{ github.server_url }}/${{ github.repository }}.git" \
+              '{sdk: {id: $id, branch: $branch, commit: $commit}, generator: $generator, version: $version,
+                repository: {type: "git", url: $repo}}')" \
+            --ignoreVersionConflicts
+
+      # The manifest decides what is published, so it is checked before the sweep runs rather
+      # than trusted because the generator exited 0.
+      - name: Check the manifest
+        if: steps.channel_plan.outputs.rebuild == 'true'
+        run: |
+          set -euo pipefail
+          manifest="./sdk/${{ matrix.channel.branch }}/package.json"
+          node -e '
+            const [file, name, version, commit] = process.argv.slice(1);
+            const manifest = require(require("node:path").resolve(file));
+            const fail = (message) => { console.error(message); process.exit(1); };
+            if (manifest.name !== name) fail(`name ${manifest.name} != ${name}`);
+            if (manifest.version !== version) fail(`version ${manifest.version} != ${version}`);
+            if (manifest.sdk?.commit !== commit) fail("sdk.commit missing or wrong");
+            // npm --provenance refuses a package whose repository.url does not match the
+            // repository the attestation names, and says so only after uploading the tarball:
+            // "E422 … \"repository.url\" is \"\"". The generator cannot know where a bundle
+            // gets published, so the workflow supplies it — and checks that it arrived.
+            if (!manifest.repository?.url) fail("repository.url missing — provenance would fail with E422");
+            const subpaths = Object.keys(manifest.exports ?? {});
+            if (subpaths.length < 50) fail(`only ${subpaths.length} subpaths — the bundle is short`);
+            console.log(`${manifest.name}@${manifest.version}: ${subpaths.length} subpaths`);
+          ' "$manifest" '${{ matrix.channel.package }}' '${{ steps.channel_plan.outputs.version }}' '${{ steps.sdk.outputs.commit }}'
+
+      # NOT gated on `dry_run`: `npm ci` is what puts `semver` on disk, and the publisher
+      # imports it whether or not it ends up publishing. Gating the install on the run being
+      # real made a dry run fail on a missing module — a failure about the harness, not about
+      # the channel it was asked to check.
+      - name: Check and test the release script
+        if: steps.channel_plan.outputs.rebuild == 'true'
+        working-directory: .github/release-script
+        run: |
+          npm ci
+          npm run check
+          npm test
+
+      # Same publisher as release.yml, pointed at `sdk/` — including its retry policy and its
+      # refusal to treat "this version already exists" as success.
+      - name: Publish
+        if: steps.channel_plan.outputs.rebuild == 'true'
+        run: |
+          node --experimental-specifier-resolution=node --experimental-strip-types \
+            --experimental-transform-types --no-warnings \
+            ./.github/release-script/src/index.ts --root sdk ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

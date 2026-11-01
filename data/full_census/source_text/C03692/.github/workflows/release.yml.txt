@@ -1,0 +1,127 @@
+# Publishes the ~700 per-namespace `@girs/*` packages from the committed tree.
+#
+# The operational warnings below live in a workflow header, not in a README, because this
+# repository has no README, CONTRIBUTING or AGENTS.md to put them in: its root is ~700
+# GENERATED namespace directories that the type generator rewrites wholesale on every release.
+# `.github/` is the part of the tree the generator does not touch, so it is where prose
+# survives. Please do not "tidy" this into a README — there isn't one, and a new one would be
+# the first thing a regeneration removes.
+#
+# ⚠️  A MERGE TO `main` PUBLISHES. This workflow triggers on `push: main`, not only on a
+# release, so ANY merge — a one-line workflow fix, a typo in a comment — starts a full publish
+# sweep of every package in the tree. That is usually harmless, because a package whose version
+# npm already serves is reported as already published and skipped, so the sweep is a no-op that
+# costs an hour of runner time. It is NOT harmless when the tree carries versions the registry
+# does not have yet: then the merge publishes them, and publishing is irreversible.
+#
+# Measured, so this is not hypothetical: merging PR #20 (a change to `sdk-types.yml`, touching
+# nothing else) started run 35017963560, which reported `714 already published, 2 to publish`
+# and published `@girs/clutter-7@5.2.0` and `@girs/meta-8@5.2.0`. Those two were genuinely
+# missing and the publish was the right outcome — but it was a SIDE EFFECT of a merge, not a
+# decision anybody made. Before merging anything here, know which versions in the tree the
+# registry is missing; `npm view` will not tell you reliably (see below).
+#
+# ⚠️  READING npm TELLS YOU WHAT npm CACHED. A packument is served
+# `cache-control: public, max-age=300`, the abbreviated form npm installs from included, and
+# npm ships `prefer-online=false`, so it does not re-check data it still considers fresh.
+# A retry loop polling npm every 30 seconds therefore spends its first ten attempts re-reading
+# ONE five-minute-old snapshot: twenty attempts, two real lookups. Anyone writing a retry
+# against the registry needs `npm_config_prefer_online=true` (see the `Require a generator that
+# can bundle` step in `sdk-types.yml`), and anyone VERIFYING what got published needs a real
+# cache buster — `curl -H 'Cache-Control: no-cache' ".../@girs%2fname?cb=$(date +%s)"` — because
+# `npm view` and a bare `curl` will both hand back a stale packument and look authoritative.
+name: Release CI
+
+on:
+  release:
+    types: published
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: npm-publish-types
+  cancel-in-progress: false
+
+env:
+  node-version: 24.x
+  # Serialized publishing (batch=1) avoids E429 from concurrent provenance signing
+  NPM_BATCH_SIZE: 1
+  NPM_BATCH_DELAY_MS: 5000
+  NPM_PUBLISH_DELAY_MS: 1000
+  NPM_STATUS_CONCURRENCY: 20
+  NPM_MAX_RETRIES: 10
+  NPM_STATUS_MAX_RETRIES: 5
+  NPM_RETRY_BASE_MS: 5000
+  NPM_RETRY_MAX_MS: 300000
+  NPM_TIMEOUT_SEC: 600
+
+jobs:
+  release:
+    name: Release CI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # `package-manager-cache: false`: setup-node caches npm automatically, and
+      # a poisoned cache can expose credentials — the OIDC token included — to
+      # attacker-controlled code.
+      - name: Use Node.js ${{ env.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      # npm >= 11.5.1 is a hard requirement for Trusted Publishing; below it a
+      # publish fails even when the OIDC permissions are right, and it fails as
+      # an auth error — so it reads as a broken Trusted Publisher rather than as
+      # a stale toolchain. PINNED rather than asserted at runtime: which npm a
+      # `24.x` runner carries is a moving target (24.0 shipped 11.3), and this
+      # workflow controls its own environment.
+      - name: Pin an npm that can use Trusted Publishing
+        run: |
+          npm install -g npm@^11.5.1
+          npm --version
+
+      # The publisher is TypeScript executed with type STRIPPING, which does no
+      # checking whatsoever — so a type error in the script that publishes 716
+      # packages would first surface at release time, halfway through a sweep.
+      # The package has had a `check` script all along; nothing ran it.
+      #
+      # `npm ci` is also what puts `semver` on disk for the publish step below: the
+      # closure gate asks whether a declared RANGE is satisfiable, and reimplementing
+      # that would be a second truth about the one question npm already answers.
+      #
+      # `npm test` runs the plan and the gate against the recorded v4.9.0 graph,
+      # including the arm that must be RED — see publish-plan.test.ts. It is on the
+      # critical path on purpose: a publisher whose ordering is broken should never
+      # reach the first `npm publish`.
+      - name: Check and test the release script
+        working-directory: .github/release-script
+        run: |
+          npm ci
+          npm run check
+          npm test
+
+      # Both auth paths stay supported, and the token decides which one runs.
+      #
+      # With a token: the simple path, and the ONLY one that can create a package
+      # that does not exist yet — npm Trusted Publishing requires the package to
+      # already be there, so the first publish of a new `@girs/*` namespace needs
+      # this or a prior `gjsify onboard` sweep.
+      #
+      # Without one: OIDC, via `id-token: write` above and the `registry-url`
+      # npmrc setup-node wrote. An unset secret makes this an EMPTY string, which
+      # both npm and the script read as no token at all.
+      - name: Publish
+        run: node --experimental-specifier-resolution=node --experimental-strip-types --experimental-transform-types --no-warnings ./.github/release-script/src/index.ts --continue-on-error
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

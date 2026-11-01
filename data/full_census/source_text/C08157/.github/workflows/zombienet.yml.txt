@@ -1,0 +1,78 @@
+name: E2E Zombienet CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        node-version:
+          - "24"
+        version:
+          - polkadot-v1.1.0
+          - polkadot-stable2506-4
+          - polkadot-stable2603
+        kind:
+          - ws
+          - sm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-${{ matrix.node-version }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.node-version }}-turbo-
+      - uses: pnpm/action-setup@v6.1.0
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: pnpm
+      - name: Install deps
+        run: pnpm install
+      - name: Build core
+        run: pnpm turbo build-core --cache-dir=.turbo
+      - name: Install papi
+        run: pnpm install
+      - uses: cargo-bins/cargo-binstall@v1.25.3
+      - name: Install zombienet
+        run: |
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
+          cargo binstall --locked -y zombie-cli
+      - name: Download Polkadot and parachain binaries
+        run: |
+          _files=(polkadot polkadot-execute-worker polkadot-prepare-worker)
+          for _file in "${_files[@]}"; do
+            wget --no-verbose "https://github.com/paritytech/polkadot-sdk/releases/download/${{ matrix.version }}/$_file" &
+            _pids+=($!)
+          done
+          for _pid in "${_pids[@]}"; do
+            wait "$_pid" || exit 1
+          done
+          chmod +x "${_files[@]}"
+        working-directory: integration-tests/zombie-tests
+      - name: Run a local relaychain using zombienet
+        run: |
+          export PATH=$(pwd):$PATH
+          zombie-cli spawn -p native zombienet.native.toml > zombie.txt 2>&1 &
+          source wait_until.sh 'grep -qF "network is up, in" zombie.txt'
+        working-directory: integration-tests/zombie-tests
+      - name: Run test
+        run: PROVIDER=${{ matrix.kind }} VERSION=${{matrix.version}} pnpm e2e
+        working-directory: integration-tests/zombie-tests
+      - name: Store logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Logs
+          path: integration-tests/zombie-tests/${{matrix.version}}*

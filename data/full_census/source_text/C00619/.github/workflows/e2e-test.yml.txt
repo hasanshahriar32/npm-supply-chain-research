@@ -1,0 +1,80 @@
+name: E2E Tests
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '*.md'
+      - 'mkdocs.yml'
+
+jobs:
+  e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        browser: [chrome, edge]
+    name: E2E Tests on ${{ matrix.browser }} - ${{ matrix.os }}
+    permissions:
+      contents: read
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Use Node.js LTS
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm install
+      - name: Configure Appium Server
+        shell: bash
+        run: |
+          appium_ver=$(node -p "require('./package.json').peerDependencies?.appium")
+          npm install -g "appium@$appium_ver"
+          cwd=$(pwd)
+          pushd "$cwd"
+          cd ~
+          appium driver install --source=local "$cwd"
+          popd
+      - name: Setup Chrome
+        if: matrix.browser == 'chrome' && runner.os != 'macOS'
+        uses: browser-actions/setup-chrome@latest
+        id: setup-chrome
+        with:
+          chrome-version: stable
+      - name: Configure Chrome
+        if: matrix.browser == 'chrome' && runner.os != 'macOS'
+        shell: bash
+        run: echo "CHROME_BIN=${{ steps.setup-chrome.outputs.chrome-path }}" >> $GITHUB_ENV
+      - name: Configure Chrome
+        if: matrix.browser == 'chrome' && runner.os == 'macOS'
+        shell: bash
+        # To avoid several permission errors on macOS which could occur with the setup-chrome action.
+        run: echo "CHROME_BIN=/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" >> $GITHUB_ENV
+      - name: Configure Microsoft Edge
+        if: matrix.browser == 'edge' && runner.os == 'Windows'
+        shell: bash
+        run: echo "MSEDGE_BIN=C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe" >> $GITHUB_ENV
+      - name: Configure Microsoft Edge
+        if: matrix.browser == 'edge' && runner.os == 'macOS'
+        shell: bash
+        run: echo "MSEDGE_BIN=/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" >> $GITHUB_ENV
+      - name: Configure Microsoft Edge
+        if: matrix.browser == 'edge' && runner.os == 'linux'
+        shell: bash
+        run: echo "MSEDGE_BIN=/usr/bin/microsoft-edge" >> $GITHUB_ENV
+      - name: Run E2E tests on Chrome
+        if: matrix.browser == 'chrome'
+        shell: bash
+        run: npm run test:e2e
+        env:
+          TEST_PLATFORM: ${{ runner.os }}
+      - name: Run E2E tests on Microsoft Edge
+        if: matrix.browser == 'edge'
+        shell: bash
+        run: npm run test:e2e -- --browser=edge
+        env:
+          IS_MSEDGE: 1
+          TEST_PLATFORM: ${{ runner.os }}

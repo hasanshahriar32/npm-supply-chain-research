@@ -1,0 +1,72 @@
+name: Beta Release
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  beta_release:
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    concurrency:
+      group: beta-release-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      id-token: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.14.0'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Install dev dependencies
+        run: yarn install
+
+      - name: Setup git credentials
+        run: |
+          git config --global user.name 'Auto Release Bot'
+          git config --global user.email 'auto-release-bot@users.noreply.github.com'
+
+      - name: Get current package.json version
+        run: echo "PACKAGE_VERSION=$(npm pkg get version)" >> $GITHUB_ENV
+
+      - name: Setup Beta Release Version
+        run: node beta-release.js --issue $GITHUB_PR_NUMBER
+        env:
+          GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Release a new beta version
+        run: npm publish --tag beta --access public
+
+      - name: Upload npm debug logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs
+
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `Beta version released with the last commit 🚀
+
+              \`\`\`
+              yarn add react-tooltip@${{ env.NEW_VERSION }}
+              \`\`\`
+              or
+              \`\`\`
+              npm install react-tooltip@${{ env.NEW_VERSION }}
+              \`\`\`
+              `
+            })

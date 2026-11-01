@@ -1,0 +1,78 @@
+{
+	"name": "@svta/common-media-library",
+	"license": "Apache-2.0",
+	"type": "module",
+	"homepage": "https://github.com/streaming-video-technology-alliance/common-media-library",
+	"authors": "Casey Occhialini <1508707+littlespex@users.noreply.github.com>",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/streaming-video-technology-alliance/common-media-library.git"
+	},
+	"bugs": {
+		"url": "https://github.com/streaming-video-technology-alliance/common-media-library/issues"
+	},
+	"keywords": [
+		"CTA-5004",
+		"Common Media Client Data",
+		"CMCD",
+		"CTA-5006",
+		"Common Media Server Data",
+		"CMSD",
+		"RFC8941",
+		"Structured Field Values",
+		"ID3",
+		"Common Media Request",
+		"Common Media Response",
+		"CTA 608",
+		"CEA 608",
+		"ISO BMFF",
+		"WebVTT",
+		"VTT",
+		"DASH",
+		"DRM"
+	],
+	"scripts": {
+		"format": "vp lint --fix . && vp fmt .",
+		"lint": "vp lint .",
+		"build": "node scripts/buildAll.ts",
+		"pretest": "npm run lint && vp fmt --check . && npm run build && npm run typecheck",
+		"test": "vp test --run",
+		"start": "npm start -w dev",
+		"prepare-release": "node scripts/prepareRelease.ts",
+		"pub": "node scripts/publish.ts",
+		"clean": "node scripts/clean.ts",
+		"ver": "node scripts/version.ts",
+		"site": "npm start -w site",
+		"notes": "node scripts/createReleaseNotes.ts",
+		"typecheck": "vp lint --type-aware --type-check ."
+	},
+	"workspaces": [
+		"site",
+		"dev",
+		"libs/*"
+	],
+	"engines": {
+		"node": ">=20"
+	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=24.11.0",
+			"onFail": "error"
+		}
+	},
+	"devDependencies": {
+		"@microsoft/api-extractor": "7.59.4",
+		"@types/node": "24.19.2",
+		"hi-base32": "0.5.1",
+		"typedoc": "0.28.20",
+		"typedoc-plugin-markdown": "4.14.1",
+		"typedoc-vitepress-theme": "1.1.4",
+		"typescript": "6.0.3",
+		"vite-plus": "1.3.0",
+		"vitepress": "2.0.0-alpha.20"
+	},
+	"overrides": {
+		"vite": "npm:@voidzero-dev/vite-plus-core@1.3.0"
+	}
+}

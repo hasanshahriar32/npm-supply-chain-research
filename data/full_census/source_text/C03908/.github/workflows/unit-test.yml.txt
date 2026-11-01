@@ -1,0 +1,67 @@
+name: Unit Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  # Reuse sxzz workflow for lint/typecheck only
+  lint-and-check:
+    uses: sxzz/workflows/.github/workflows/unit-test.yml@main
+    with:
+      # Run lint and typecheck, but skip the built-in test matrix (which includes Windows)
+      skip-test: true
+
+  # Custom test job that runs only on Ubuntu
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 24, 26]
+      fail-fast: false
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@main
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit Test
+        run: pnpm run test
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser Test
+        run: pnpm run test:browser
+
+      - name: Ecosystem CI
+        run: pnpm run ecosystem-ci
+
+  # Custom test job that runs only on Windows
+  test-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [22, 24, 26]
+      fail-fast: false
+    steps:
+      - name: Setup JS
+        uses: sxzz/workflows/setup-js@main
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Unit Test
+        run: pnpm run test
+
+      - name: Ecosystem CI
+        run: pnpm run ecosystem-ci

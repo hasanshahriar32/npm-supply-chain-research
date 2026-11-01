@@ -1,0 +1,126 @@
+{
+  "name": "ts-graphviz-monorepo",
+  "private": true,
+  "description": "Graphviz libraries for TypeScript",
+  "keywords": [
+    "graphviz",
+    "dot"
+  ],
+  "homepage": "https://ts-graphviz.github.io/api/",
+  "bugs": {
+    "url": "https://github.com/ts-graphviz/ts-graphviz/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ts-graphviz/ts-graphviz.git"
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/ts-graphviz"
+    },
+    {
+      "type": "opencollective",
+      "url": "https://opencollective.com/ts-graphviz"
+    }
+  ],
+  "license": "MIT",
+  "author": "kamiazya <yuki@kamiazya.tech>",
+  "type": "module",
+  "scripts": {
+    "codegen": "pnpm -r codegen",
+    "build": "pnpm -r --filter './packages/*' build",
+    "doc": "typedoc",
+    "lint": "biome check --write ./**",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit --strict --skipLibCheck",
+    "typecheck:strict": "tsc --project tsconfig.packages.json --noEmit --skipLibCheck false",
+    "test:e2e": "pnpm --filter @ts-graphviz/e2e test",
+    "build:website": "pnpm build && pnpm doc && pnpm --filter @ts-graphviz/website build && pnpm --filter @ts-graphviz/website copy-api && pnpm --filter @ts-graphviz/website check-links"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.0.0",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.4",
+    "@pnpm/workspace.find-packages": "^1000.0.24",
+    "@pnpm/workspace.pkgs-graph": "^1000.0.1",
+    "@types/node": "^20.17.46",
+    "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "jsdom": "^26.1.0",
+    "lefthook": "^1.13.6",
+    "react": "^19.0.0",
+    "svgo": "^3.3.2",
+    "typedoc": "^0.28.4",
+    "typedoc-plugin-mdn-links": "^5.0.10",
+    "typescript": "~5.8.3",
+    "vite": "^7.2.2",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.12.1",
+  "pnpm": {
+    "overrides": {
+      "tar@<6.2.1": ">=6.2.1",
+      "braces@<3.0.3": ">=3.0.3",
+      "ejs@<3.1.10": ">=3.1.10",
+      "ws@>=8.0.0 <8.17.1": ">=8.17.1",
+      "micromatch@<4.0.8": ">=4.0.8",
+      "ssri@>=5.2.2 <6.0.2": ">=6.0.2",
+      "tough-cookie@<4.1.3": ">=4.1.3",
+      "@octokit/request-error@>=1.0.0 <5.1.1": ">=5.1.1",
+      "@octokit/request@>=1.0.0 <8.4.1": ">=8.4.1",
+      "@octokit/plugin-paginate-rest@>=1.0.0 <9.2.2": ">=9.2.2",
+      "@babel/runtime@<7.26.10": ">=7.26.10",
+      "cross-spawn@>=7.0.0 <7.0.5": ">=7.0.5",
+      "serialize-javascript@<7.1.3": ">=7.1.3",
+      "postcss-selector-parser@<7.1.6": ">=7.1.6",
+      "@isaacs/brace-expansion@>=5.0.0 <5.0.1": "5.0.1",
+      "ajv@>=8.0.0 <8.18.0": "8.20.0",
+      "brace-expansion@>=1.0.0 <1.1.21": "1.1.21",
+      "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
+      "compression@>=1.0.0 <1.8.2": "1.8.2",
+      "fast-uri@>=3.0.0 <3.1.9": "3.1.9",
+      "form-data@>=4.0.0 <4.0.6": "4.0.6",
+      "glob@>=10.0.0 <10.5.0": "10.5.0",
+      "glob@>=11.0.0 <11.1.0": "11.1.0",
+      "handlebars@>=4.0.0 <4.7.10": "4.7.10",
+      "js-yaml@>=3.0.0 <3.15.2": "3.15.2",
+      "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
+      "jws@>=3.0.0 <3.2.3": "3.2.3",
+      "linkify-it@>=5.0.0 <5.0.2": "5.0.2",
+      "lodash@>=4.0.0 <4.18.0": "4.18.1",
+      "markdown-it@>=14.0.0 <14.3.3": "14.3.3",
+      "minimatch@>=10.0.0 <10.2.3": "10.2.6",
+      "minimatch@>=3.0.0 <3.1.4": "3.1.5",
+      "minimatch@>=5.0.0 <5.1.8": "5.1.9",
+      "minimatch@>=7.0.0 <7.4.8": "7.4.9",
+      "minimatch@>=9.0.0 <9.0.7": "9.0.9",
+      "nanoid@>=3.0.0 <3.3.18": "3.3.20",
+      "on-headers@>=1.0.0 <1.1.0": "1.1.0",
+      "path-to-regexp@>=0.0.0 <0.1.13": "0.1.13",
+      "picomatch@>=2.0.0 <2.3.2": "2.3.2",
+      "picomatch@>=4.0.0 <4.0.4": "4.0.7",
+      "postcss@>=8.0.0 <8.5.23": "8.5.31",
+      "proxy-addr@>=2.0.0 <2.0.8": "2.0.8",
+      "qs@>=6.0.0 <6.16.1": "6.16.1",
+      "rollup@>=4.0.0 <4.59.0": "4.64.12",
+      "shell-quote@>=1.0.0 <1.9.0": "1.12.0",
+      "source-map-js@>=1.0.0 <1.2.2": "1.2.2",
+      "svgo@>=3.0.0 <3.3.5": "3.3.5",
+      "tar@>=7.0.0 <7.5.21": "7.5.22",
+      "tmp@>=0.0.0 <0.2.6": "0.2.7",
+      "validator@>=13.0.0 <13.15.22": "13.15.35",
+      "vite@>=7.0.0 <7.3.7": "7.3.7",
+      "ws@>=8.0.0 <8.21.0": "8.22.0",
+      "yaml@>=2.0.0 <2.8.3": "2.9.1"
+    },
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "core-js",
+      "esbuild",
+      "lefthook",
+      "snyk"
+    ]
+  }
+}

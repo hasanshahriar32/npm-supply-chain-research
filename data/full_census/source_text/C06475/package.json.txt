@@ -1,0 +1,47 @@
+{
+  "name": "fastparallel",
+  "version": "2.4.1",
+  "description": "Zero-overhead asynchronous parallel/each/map function call",
+  "main": "parallel.js",
+  "scripts": {
+    "lint": "standard",
+    "test": "tape test.js | faucet",
+    "coverage": "nyc --reporter=lcov tape test.js; cat coverage/lcov.info | coveralls"
+  },
+  "pre-commit": [
+    "lint",
+    "test"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mcollina/fastparallel.git"
+  },
+  "keywords": [
+    "parallel",
+    "fast",
+    "async"
+  ],
+  "author": "Matteo Collina <hello@matteocollina.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mcollina/fastparallel/issues"
+  },
+  "homepage": "https://github.com/mcollina/fastparallel",
+  "devDependencies": {
+    "async": "^3.2.6",
+    "coveralls": "^3.1.1",
+    "fastbench": "^1.0.1",
+    "faucet": "0.0.4",
+    "insync": "^2.1.1",
+    "items": "^2.2.1",
+    "neo-async": "^2.6.2",
+    "nyc": "^17.1.0",
+    "parallelize": "^3.0.1",
+    "pre-commit": "^1.2.2",
+    "standard": "^17.1.2",
+    "tape": "^5.9.0"
+  },
+  "dependencies": {
+    "reusify": "^1.1.0"
+  }
+}

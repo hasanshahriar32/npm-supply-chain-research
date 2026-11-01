@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_COLOR: 2
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Smoke test legacy package
+        run: npm run test:legacy-package
+
+      - name: Smoke test standalone package
+        run: npm run test:standalone-package
+
+      - name: Run Coveralls
+        uses: coverallsapp/github-action@v2
+        if: matrix.node == 22
+        with:
+          files: >
+            ./packages/inquirer-autocomplete-prompt/coverage/lcov.info
+            ./packages/inquirer-autocomplete-standalone/coverage/lcov.info
+          github-token: '${{ secrets.GITHUB_TOKEN }}'

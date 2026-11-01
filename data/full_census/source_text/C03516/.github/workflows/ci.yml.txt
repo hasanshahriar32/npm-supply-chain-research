@@ -1,0 +1,59 @@
+name: CI
+
+# Runs build and test on:
+#   every push to main or the 2026 uplift integration branch
+#   every pull request with either as the base
+on:
+  push:
+    branches:
+      - main
+      - chore/2026-uplift
+  pull_request:
+    branches:
+      - main
+      - chore/2026-uplift
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Check all package.json's and tsconfig.json's are in sync.
+        run: |
+          pnpm sync
+          git diff --no-ext-diff --quiet --exit-code
+
+      - name: Build libraries and distributions
+        run: pnpm build
+
+      - name: Types
+        run: pnpm types:check
+
+      - name: 📄 Bundle size report
+        uses: ./.github/actions/bundle-size # path to composite action
+        with:
+          paths: "packages/victory/dist/victory.min.js"
+          onlyDiff: "true"
+          header: "Bundle size report" # PR comment header
+
+  lint:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Lint
+        run: pnpm lint
+
+  test:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      - name: Test
+        run: pnpm jest

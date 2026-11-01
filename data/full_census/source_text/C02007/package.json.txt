@@ -1,0 +1,88 @@
+{
+	"name": "playwright-ctrf-json-reporter",
+	"version": "0.2.2",
+	"description": "A Playwright JSON test reporter to create test results reports",
+	"type": "module",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		}
+	},
+	"scripts": {
+		"build": "tsup",
+		"build:check": "tsc -p . --noEmit",
+		"build:watch": "tsup --watch",
+		"clean": "rm -rf dist && rm -rf coverage && rm -rf ctrf",
+		"test": "vitest run",
+		"test:integration": "npm run build && node tests/integration/run.mjs",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage",
+		"lint": "biome lint --write . --unsafe",
+		"lint:check": "biome lint .",
+		"format": "biome format --write .",
+		"format:check": "biome format .",
+		"all": "npm run lint:check && npm run format:check && npm run build:check && npm run test:coverage && npm run build",
+		"check": "biome check .",
+		"test:standard:conformance:unit": "vitest run --config vitest.conformance.config.ts",
+		"test:standard:conformance:integration": "npm run build && node tests/standard/conformance/integration/run.mjs",
+		"test:standard:conformance": "node tests/standard/conformance/run-all.mjs",
+		"test:standard:unit": "npm run test:standard:conformance:unit",
+		"test:standard:integration": "npm run test:standard:conformance:integration",
+		"test:standard": "node tests/standard/run-all.mjs",
+		"test:standard:checker": "node tests/standard/checker/run.mjs"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ctrf-io/playwright-ctrf-json-reporter.git"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"homepage": "https://ctrf.io",
+	"files": [
+		"dist/",
+		"README.md"
+	],
+	"author": "Matthew Poulton-White",
+	"license": "MIT",
+	"keywords": [
+		"ctrf",
+		"common-test-report-format",
+		"test-reporting",
+		"test-results",
+		"testing",
+		"json",
+		"ci",
+		"playwright",
+		"playwright-reporter"
+	],
+	"security": {
+		"email": "security@ctrf.io",
+		"url": "https://github.com/ctrf-io/.github/blob/main/SECURITY.md"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.15",
+		"@d2t/vitest-ctrf-json-reporter": "1.3.0",
+		"@playwright/test": "1.64.1",
+		"@types/node": "26.6.5",
+		"@vitest/coverage-v8": "5.0.3",
+		"tsup": "9.0.0",
+		"typescript": "npm:@typescript/typescript6@6.0.2",
+		"vitest": "5.0.3",
+		"@typescript/native": "npm:typescript@7.0.2",
+		"ajv": "8.20.0",
+		"ajv-formats": "3.0.1"
+	},
+	"dependencies": {
+		"ctrf": "0.5.0"
+	},
+	"overrides": {
+		"esbuild": "0.28.2"
+	}
+}

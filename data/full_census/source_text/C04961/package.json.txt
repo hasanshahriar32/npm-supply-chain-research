@@ -1,0 +1,126 @@
+{
+  "name": "root",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "pnpm build && vitest bench --run --config .config/vitest.config.ts && pnpm run --filter bench report",
+    "bench:baselines": "pnpm run --filter bench baselines",
+    "bench:check": "pnpm run --filter bench check",
+    "bench:compare": "pnpm run --filter bench compare",
+    "bench:preview": "pnpm run --filter bench preview",
+    "build": "pnpm run --filter './packages/**' build",
+    "build:examples": "pnpm --filter './examples/**' --parallel build",
+    "bundlesize": "pnpm run --filter './packages/**' --parallel bundlesize",
+    "check": "pnpm --filter root --parallel run '/^check:/'",
+    "check:packages": "pnpm run --filter './packages/**' --parallel check",
+    "check:scripts": "tsc --project .config/tsconfig.scripts.json --noEmit",
+    "dev": "vitest --config .config/vitest.config.ts",
+    "docs": "pnpm run --filter './docs' dev",
+    "preinstall": "npx only-allow pnpm",
+    "lint:skills": "skill-check check --no-security-scan --strict",
+    "lint-staged": "lint-staged --config .config/lint-staged.config.ts",
+    "prepare": "pnpm run '/^prepare:.*/'",
+    "prepare:hooks": "git config core.hooksPath .github/hooks",
+    "prepare:packages": "pnpm build",
+    "prettier": "prettier --config .prettierrc.json --ignore-unknown --no-error-on-unmatched-pattern",
+    "syncpack:fix": "syncpack fix",
+    "syncpack:lint": "syncpack lint",
+    "test": "vitest --config .config/vitest.config.ts run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2",
+    "@vitest/coverage-v8": "4.1.5",
+    "lint-staged": "17.0.3",
+    "prettier": "3.8.3",
+    "prettier-plugin-astro": "0.14.1",
+    "prettier-plugin-packagejson": "3.0.2",
+    "prettier-plugin-tailwindcss": "0.8.0",
+    "skill-check": "1.2.0",
+    "syncpack": "15.0.0",
+    "tsdown": "0.22.4",
+    "typescript": "6.0.3",
+    "vitest": "4.1.11"
+  },
+  "packageManager": "pnpm@11.0.9",
+  "engines": {
+    "node": "24"
+  },
+  "syncpack": {
+    "customTypes": {
+      "nodeEngine": {
+        "path": "engines.node",
+        "strategy": "version"
+      },
+      "packageManager": {
+        "path": "packageManager",
+        "strategy": "name@version"
+      }
+    },
+    "versionGroups": [
+      {
+        "label": "Use `workspace:*` protocol for local packages",
+        "packages": [
+          "!example-*"
+        ],
+        "dependencies": [
+          "cva",
+          "class-variance-authority"
+        ],
+        "dependencyTypes": [
+          "!local"
+        ],
+        "pinVersion": "workspace:*"
+      },
+      {
+        "label": "Use `latest` for `latest` examples",
+        "packages": [
+          "example-*"
+        ],
+        "dependencies": [
+          "class-variance-authority"
+        ],
+        "pinVersion": "latest"
+      },
+      {
+        "label": "Use `beta` for `beta` examples",
+        "packages": [
+          "example-beta-*"
+        ],
+        "dependencies": [
+          "cva"
+        ],
+        "pinVersion": "beta"
+      },
+      {
+        "label": "Examples allow Node >=22 — StackBlitz WebContainers run an older, fixed Node",
+        "packages": [
+          "example-*"
+        ],
+        "dependencyTypes": [
+          "nodeEngine"
+        ],
+        "pinVersion": ">=22"
+      },
+      {
+        "label": "Snap `engines.node` and `packageManager` to the root package",
+        "dependencyTypes": [
+          "nodeEngine",
+          "packageManager"
+        ],
+        "snapTo": [
+          "root"
+        ]
+      },
+      {
+        "label": "Ignore peer dependencies in `cva`",
+        "packages": [
+          "cva"
+        ],
+        "dependencyTypes": [
+          "peer"
+        ],
+        "isIgnored": true
+      }
+    ]
+  }
+}

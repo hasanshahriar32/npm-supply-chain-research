@@ -1,0 +1,27 @@
+{
+  "name": "publint-monorepo",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "lint": "prettier \"**/*.{js,ts,css,md,vue,svelte,html}\" --check",
+    "format": "prettier \"**/*.{js,ts,css,md,vue,svelte,html}\" --write",
+    "lint-publint": "pnpm --filter \"./packages/*\" --no-bail run lint-publint",
+    "typecheck": "pnpm --parallel --no-bail run typecheck",
+    "test": "pnpm --filter \"./packages/*\" --filter \"./site\" run test"
+  },
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
+    "@types/node": "^26.6.3",
+    "@types/pnpapi": "^0.0.5",
+    "prettier": "^3.9.9",
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte": "^5.57.1",
+    "typescript": "~6.0.3"
+  }
+}

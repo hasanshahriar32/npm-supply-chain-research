@@ -1,0 +1,128 @@
+name: promote-rc-to-latest
+
+on:
+  workflow_dispatch:
+    inputs:
+      ignore-missing:
+        type: boolean
+        required: false
+        default: false
+        description: Ignore 'oclif promote' errors when a specific target is missing.
+  schedule:
+    # Wednesdays 1pm central
+    - cron: '0 18 * * 3'
+
+jobs:
+  promote:
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/promote.yml
+    secrets: inherit
+    with:
+      old-channel: latest-rc
+      new-channel: latest
+      use-ctc: true
+      ignore-missing: ${{ github.event_name == 'workflow_dispatch' && inputs.ignore-missing || false }}
+
+  promote-verify:
+    runs-on: ubuntu-latest
+    needs: [promote]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ vars.NODE_VERSION_OVERRIDE || 'lts/*' }}
+          check-latest: true
+          cache: yarn
+
+      - name: Verify promote scripts
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: 5
+          retry_wait_seconds: 120
+          command: ./scripts/verify-promote latest-rc latest
+
+      - name: Install plugin-release-management
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: 5
+          retry_wait_seconds: 120
+          command: npm install -g @salesforce/plugin-release-management --omit=dev
+
+      # Retry several times because the S3 cache can cause failures
+      - name: Version inspect (with retries)
+        uses: salesforcecli/github-workflows/.github/actions/retry@main
+        with:
+          max_attempts: 5
+          retry_wait_seconds: 120
+          command: sf-release cli:versions:inspect -c stable -l archive ${{ inputs.ignore-missing && '--ignore-missing' || '' }}
+
+  verify-docker-version:
+    needs: [promote-verify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest version
+        id: latest-version
+        run: |
+          VERSION=$(npm view @salesforce/cli@latest --json | jq -r '.version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get docker-full CLI version
+        id: docker-full-version
+        run: |
+          docker pull salesforce/cli:latest-full
+          VERSION=$(docker run --rm salesforce/cli:latest-full sf version --json | jq -r '.cliVersion' | cut -d'/' -f 3)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get docker-slim CLI version
+        id: docker-slim-version
+        run: |
+          docker pull salesforce/cli:latest-slim
+          VERSION=$(docker run --rm salesforce/cli:latest-slim sf version --json | jq -r '.cliVersion' | cut -d'/' -f 3)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Compare Docker versions against npm
+        run: |
+          echo "[INFO] NPM latest version is: $STEPS_LAST_VERSION_VERSION"
+          echo "[INFO] Docker-full version is: $STEPS_DOCKER_FULL_VERSION_VERSION"
+          echo "[INFO] Docker-slim version is: $STEPS_DOCKER_SLIM_VERSION_VERSION"
+          if [ "$STEPS_LAST_VERSION_VERSION" == "$STEPS_DOCKER_FULL_VERSION_VERSION" ] && [ "$STEPS_DOCKER_FULL_VERSION_VERSION" == "$STEPS_DOCKER_SLIM_VERSION_VERSION" ]; then
+            echo "Docker versions match npm version. Proceeding..."
+          else
+            echo "Version mismatch! Exiting..."
+            exit 1
+          fi
+        env:
+          STEPS_LAST_VERSION_VERSION: ${{ steps.latest-version.outputs.version }}
+          STEPS_DOCKER_FULL_VERSION_VERSION: ${{ steps.docker-full-version.outputs.version }}
+          STEPS_DOCKER_SLIM_VERSION_VERSION: ${{ steps.docker-slim-version.outputs.version }}
+
+  announce-promotion-to-slack:
+    runs-on: ubuntu-latest
+    needs: [promote-verify, verify-docker-version]
+    steps:
+      - name: Get latest-rc version
+        id: latest-rc-version
+        run: |
+          VERSION=$(npm view @salesforce/cli@latest-rc --json | jq -r '.version')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Announce promotion
+        id: slack
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.PLATFORM_CLI_CHANNEL_SLACK_INCOMING_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+        with:
+          payload: |
+            {
+              "blocks": [{
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": ":rocket: `sf` version `${{ steps.latest-rc-version.outputs.version }}` has been promoted from `latest-rc` to `latest` :rocket:\nRun `sf whatsnew -v latest` to see what's new"
+                }
+              }]
+            }

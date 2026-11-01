@@ -1,0 +1,30 @@
+name: Builds, tests & co
+
+on:
+  - push
+  - pull_request
+
+permissions: read-all
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [25, 24, 22, 20]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tree
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Set-up Mise
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1.6.4.2.1
+        with:
+          cache: false
+          mise_toml: |
+            [tools]
+            bun = "latest"
+            node = "${{ matrix.node-version }}"
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+      - run: bun run build
+      - run: bun run test

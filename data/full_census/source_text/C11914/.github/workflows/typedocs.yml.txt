@@ -1,0 +1,39 @@
+name: 'Publish TypeDoc'
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  publish-typedoc:
+    permissions:
+      id-token: 'write'
+      pages: 'write'
+
+    environment:
+      name: 'github-pages'
+      url: '${{ steps.deployment.outputs.page_url }}'
+
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: 'actions/checkout@v7'
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          cache: 'npm'
+          node-version: 22
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: 'Build TypeDoc'
+        run: npm run typedoc
+
+      - name: 'Upload Pages artifact'
+        uses: 'actions/upload-pages-artifact@v5'
+        with:
+          path: 'docs/'
+
+      - name: 'Deploy TypeDoc to GitHub Pages'
+        uses: 'actions/deploy-pages@v5'

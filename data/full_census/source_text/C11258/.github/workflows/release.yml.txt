@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main, next]
+  pull_request:
+    branches: [main, next]
+  schedule:
+    # Tuesdays at 14:45 UTC (10:45 EST)
+    - cron: 45 14 * * 1
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main:
+    # ignore all-contributors PRs
+    if: ${{ !contains(github.head_ref, 'all-contributors') }}
+    name: Svelte ${{ matrix.svelte }}, Node ${{ matrix.node }}, ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    permissions:
+      id-token: write # codecov uploads
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['16', '18', '20', '22']
+        svelte: ['3', '4', '5']
+        check: ['test:vitest:jsdom', 'test:vitest:happy-dom', 'test:jest']
+        exclude:
+          # Don't run Svelte 3 on Node versions greater than 20
+          - { svelte: '3', node: '22' }
+          # Only run Svelte 5 on Node versions greater than or equal to 20
+          - { svelte: '5', node: '16' }
+          - { svelte: '5', node: '18' }
+        include:
+          # Only lint and test examples on latest Node and Svelte
+          - { svelte: '5', node: '22', check: 'lint' }
+          - { svelte: '5', node: '22', check: 'test:examples' }
+          # Run type checks in latest applicable Node
+          - { svelte: '3', node: '20', check: 'typecheck:legacy' }
+          - { svelte: '4', node: '22', check: 'typecheck:legacy' }
+          - { svelte: '5', node: '22', check: 'typecheck' }
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
+
+      - name: 🧱 Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          standalone: true
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: 📥 Install dependencies
+        run: pnpm run install:${{ matrix.svelte }}
+
+      - name: 📥 Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+          path: packages
+
+      - name: ▶️ Run ${{ matrix.check }}
+        run: pnpm run ${{ matrix.check }}
+
+      - name: ⬆️ Upload coverage report
+        if: ${{ startsWith(matrix.check, 'test:') }}
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          fail_ci_if_error: true
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
+
+      - name: 🧱 Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: 📥 Install dependencies
+        run: pnpm install
+
+      - name: 🏗️ Build types and documentation
+        run: pnpm run build
+
+      - name: ⬆️ Upload build
+        uses: actions/upload-artifact@v7
+        with:
+          name: build
+          path: |
+            packages/svelte/README.md
+            packages/svelte/dist
+            packages/svelte-core/dist
+
+  release:
+    needs: [main, build]
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'testing-library/svelte-testing-library' &&
+      contains('refs/heads/main,refs/heads/next', github.ref) &&
+      github.event_name == 'push' }}
+    permissions:
+      contents: write # GitHub release publish
+      issues: write # released issues comments
+      pull-requests: write # released pull requests comments
+      id-token: write # trusted publishing and npm provenance
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v7
+
+      - name: 🧱 Setup pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: 📥 Download build
+        uses: actions/download-artifact@v8
+        with:
+          name: build
+          path: packages
+
+      - name: 🚀 Release
+        run: |
+          pnpm \
+            --package="@anolilab/multi-semantic-release@3" \
+            --package="@anolilab/semantic-release-pnpm@3" \
+            --package="semantic-release@25" \
+            --package="conventional-changelog-conventionalcommits@9" \
+            dlx \
+            multi-semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

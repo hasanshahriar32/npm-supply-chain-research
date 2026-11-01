@@ -1,0 +1,72 @@
+name: CI
+on:
+  push:
+    paths:
+      - '.github/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.storybook/**'
+      - '!demo/**'
+      - '!docs/**'
+      - '!**.md'
+      - '!.changeset/**'
+  pull_request:
+    paths:
+      - '.github/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.storybook/**'
+      - '!demo/**'
+      - '!docs/**'
+      - '!**.md'
+      - '!.changeset/**'
+jobs:
+  build:
+    name: Build, lint, and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Use Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Cache pnpm modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - uses: pnpm/action-setup@v2.0.1
+        with:
+          version: 9
+          run_install: true
+
+      - uses: actions/cache@v3
+        name: Setup pnpm build cache
+        id: pnpm-build-cache
+        with:
+          path: packages/**/dist
+          key: ${{ runner.os }}-pnpm-build-${{ hashFiles('/packages/**/*') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-build-
+
+      - name: Build
+        if: steps.pnpm-build-cache.outputs.cache-hit != 'true'
+        run: pnpm build
+
+      - name: Check types
+        run: pnpm tsc
+
+      - name: Check formatting
+        run: pnpm prettier
+
+      - name: Lint files
+        run: pnpm lint:full

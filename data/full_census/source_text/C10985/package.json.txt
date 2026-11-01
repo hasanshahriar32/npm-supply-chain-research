@@ -1,0 +1,121 @@
+{
+  "name": "@swaggerexpert/cookie",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org",
+    "provenance": true
+  },
+  "version": "2.1.1",
+  "description": "RFC 6265 compliant cookie parser, validator and serializer.",
+  "browser": {
+    "./cjs/set-cookie/serialize/encoders/base64.node.cjs": "./cjs/set-cookie/serialize/encoders/base64.browser.cjs",
+    "./es/set-cookie/serialize/encoders/base64.node.mjs": "./es/set-cookie/serialize/encoders/base64.browser.mjs",
+    "./cjs/set-cookie/serialize/encoders/base64url.node.cjs": "./cjs/set-cookie/serialize/encoders/base64url.browser.cjs",
+    "./es/set-cookie/serialize/encoders/base64url.node.mjs": "./es/set-cookie/serialize/encoders/base64url.browser.mjs",
+    "./cjs/set-cookie/parse/decoders/base64.node.cjs": "./cjs/set-cookie/parse/decoders/base64.browser.cjs",
+    "./es/set-cookie/parse/decoders/base64.node.mjs": "./es/set-cookie/parse/decoders/base64.browser.mjs",
+    "./cjs/set-cookie/parse/decoders/base64url.node.cjs": "./cjs/set-cookie/parse/decoders/base64url.browser.cjs",
+    "./es/set-cookie/parse/decoders/base64url.node.mjs": "./es/set-cookie/parse/decoders/base64url.browser.mjs"
+  },
+  "unpkg": "./dist/cookie.browser.min.js",
+  "jsdelivr": "./dist/cookie.browser.min.js",
+  "main": "./cjs/index.cjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./types/index.d.ts",
+        "default": "./es/index.mjs"
+      },
+      "require": {
+        "types": "./types/index.d.cts",
+        "default": "./cjs/index.cjs"
+      }
+    },
+    "./package.json": "./package.json",
+    "./grammar.bnf": "./src/grammar.bnf"
+  },
+  "watch": {
+    "test": "{src,test}/**/*.js"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "prepublishOnly": "npm run build",
+    "grammar:compile": "node ./scripts/apg-js.js --lite --in=./src/grammar.bnf --out=./src/grammar.js && cd ./src",
+    "clean": "node -e \"const fs = require('node:fs'); for (const path of ['es', 'cjs', 'dist', 'types/index.d.cts']) fs.rmSync(path, { recursive: true, force: true });\"",
+    "build": "npm run clean && npm run grammar:compile && npm run build:es && npm run build:cjs && npm run build:cjs:apg-lite && npm run build:types && npm run build:umd:browser",
+    "build:es": "cross-env BABEL_ENV=es babel src --out-dir es --extensions '.js' --out-file-extension '.mjs'",
+    "build:cjs": "cross-env BABEL_ENV=cjs babel src --out-dir cjs --extensions '.js' --out-file-extension '.cjs'",
+    "build:cjs:apg-lite": "cross-env BABEL_ENV=cjs babel node_modules/apg-lite/lib/parser.js --out-file ./cjs/apg-lite.cjs",
+    "build:types": "node -e \"require('node:fs').copyFileSync('types/index.d.ts', 'types/index.d.cts')\"",
+    "build:umd:browser": "cross-env BABEL_ENV=browser webpack --config config/webpack/browser.config.js --progress && node -e \"require('node:fs').copyFileSync('config/webpack/dist-package.json', 'dist/package.json')\"",
+    "test": "mocha",
+    "test:artifacts": "node ./test/artifacts/smoke.cjs",
+    "test:types": "tsc --noEmit --strict --skipLibCheck false --module node16 --moduleResolution node16 --target es2020 test/artifacts/types/consumer.cts test/artifacts/types/consumer.mts test/artifacts/types/legacy.cts test/artifacts/types/legacy.mts && tsc --noEmit --strict --module esnext --moduleResolution bundler --target es2020 test/artifacts/types/consumer.mts test/artifacts/types/legacy.mts",
+    "test:watch": "npm-watch test",
+    "watch": "npm-watch"
+  },
+  "engines": {
+    "node": ">=12.20.0"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swaggerexpert/cookie"
+  },
+  "keywords": [
+    "cookie",
+    "parser",
+    "validator",
+    "serializer",
+    "cookies",
+    "rfc6265"
+  ],
+  "author": "Vladimír Gorej <vladimir.gorej@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/swaggerexpert/cookie/issues"
+  },
+  "homepage": "https://github.com/swaggerexpert/cookie#readme",
+  "files": [
+    "es/",
+    "cjs/",
+    "dist/",
+    "types/",
+    "src/grammar.bnf",
+    "LICENSE",
+    "NOTICE",
+    "package.json",
+    "README.md",
+    "SECURITY.md"
+  ],
+  "dependencies": {
+    "apg-lite": "^1.0.7"
+  },
+  "devDependencies": {
+    "@babel/cli": "=7.28.6",
+    "@babel/core": "=7.29.7",
+    "@babel/preset-env": "=7.29.0",
+    "@commitlint/cli": "=20.5.0",
+    "@commitlint/config-conventional": "=20.5.0",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^11.0.1",
+    "@semantic-release/github": "^12.0.10",
+    "@semantic-release/npm": "^13.2.0",
+    "@semantic-release/release-notes-generator": "^14.1.1",
+    "apg-js": "^4.4.0",
+    "babel-loader": "^10.1.1",
+    "babel-plugin-module-resolver": "^5.0.3",
+    "chai": "=6.2.2",
+    "cross-env": "^10.0.0",
+    "husky": "=9.1.7",
+    "mocha": "=12.0.3",
+    "npm-watch": "^0.13.0",
+    "prettier": "^3.1.1",
+    "semantic-release": "^25.0.9",
+    "terser-webpack-plugin": "^5.6.1",
+    "typescript": "^7.0.2",
+    "webpack": "^5.112.2",
+    "webpack-cli": "^7.2.3"
+  }
+}

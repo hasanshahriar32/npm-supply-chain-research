@@ -1,0 +1,34 @@
+name: Test
+
+on:
+    push:
+        branches: [main, next]
+    pull_request:
+        branches: [main, next]
+    workflow_dispatch:
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v6
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: '24'
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm i
+
+            - name: Generate and validate declarations
+              run: pnpm generate:types
+
+            - name: Run tests
+              run: pnpm run test

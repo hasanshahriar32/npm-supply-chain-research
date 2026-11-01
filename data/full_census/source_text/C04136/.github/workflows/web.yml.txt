@@ -1,0 +1,14 @@
+name: Deploy website
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: github.repository == 'hey-api/hey-api'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deploy hook
+        run: curl -X POST "${{ secrets.DEPLOY_HOOK_URL }}"

@@ -1,0 +1,40 @@
+name: Changelog
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  release:
+    name: Changelog
+    if: github.repository_owner == 'withastro'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write # Required for npm trusted publishing
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+
+      - name: Install Tools & Dependencies
+        uses: ./.github/actions/install
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@198f833dd7d863100ea6e28967bc9a9fdefadb0a # v2.1.0
+        with:
+          publish-script: pnpm release
+
+      - name: push main branch to latest branch
+        if: steps.changesets.outputs.published == 'true'
+        id: git-push-latest
+        # Note: this will fail if "latest" and "main" have different commit history,
+        # which is a good thing! Also, don't push if in pre-release mode.
+        run: '(test -f .changeset/pre.json && echo "prerelease: skip pushing to latest branch.") || git push origin main:latest'

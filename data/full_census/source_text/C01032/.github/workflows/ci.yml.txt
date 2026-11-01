@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+      branches:
+        - main
+  push:
+      branches:
+        - main
+  merge_group: {}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: better-auth/shared-workflows/.github/actions/setup-pnpm@08e5520e7a829b03bee1152913682b67d2ba44b1
+
+      - name: Build
+        run: pnpm build
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test

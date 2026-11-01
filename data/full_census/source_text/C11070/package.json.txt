@@ -1,0 +1,111 @@
+{
+  "name": "mdast-util-to-nlcst",
+  "version": "7.0.1",
+  "description": "mdast utility to transform to nlcst",
+  "license": "MIT",
+  "keywords": [
+    "unist",
+    "mdast",
+    "mdast-util",
+    "nlcst",
+    "nlcst-util",
+    "util",
+    "utility",
+    "markdown",
+    "natural",
+    "language"
+  ],
+  "repository": "syntax-tree/mdast-util-to-nlcst",
+  "bugs": "https://github.com/syntax-tree/mdast-util-to-nlcst/issues",
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/unified"
+  },
+  "author": "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)",
+  "contributors": [
+    "Titus Wormer <tituswormer@gmail.com> (https://wooorm.com)"
+  ],
+  "sideEffects": false,
+  "type": "module",
+  "exports": "./index.js",
+  "files": [
+    "lib/",
+    "index.d.ts.map",
+    "index.d.ts",
+    "index.js"
+  ],
+  "dependencies": {
+    "@types/mdast": "^4.0.0",
+    "@types/nlcst": "^2.0.0",
+    "@types/unist": "^3.0.0",
+    "nlcst-to-string": "^4.0.0",
+    "unist-util-position": "^5.0.0",
+    "vfile": "^6.0.0",
+    "vfile-location": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "c8": "^9.0.0",
+    "is-hidden": "^2.0.0",
+    "mdast-util-from-markdown": "^2.0.0",
+    "mdast-util-frontmatter": "^2.0.0",
+    "mdast-util-gfm": "^3.0.0",
+    "micromark-extension-frontmatter": "^2.0.0",
+    "micromark-extension-gfm": "^3.0.0",
+    "parse-dutch": "^7.0.0",
+    "parse-english": "^7.0.0",
+    "parse-latin": "^7.0.0",
+    "prettier": "^3.0.0",
+    "remark-cli": "^12.0.0",
+    "remark-preset-wooorm": "^10.0.0",
+    "to-vfile": "^8.0.0",
+    "type-coverage": "^2.0.0",
+    "typescript": "^5.0.0",
+    "xo": "^0.58.0"
+  },
+  "scripts": {
+    "prepack": "npm run build && npm run format",
+    "build": "tsc --build --clean && tsc --build && type-coverage",
+    "format": "remark . -qfo --ignore-pattern test/ && prettier . -w --log-level warn && xo --fix",
+    "test-api": "node --conditions development test/index.js",
+    "test-coverage": "c8 --check-coverage --100 --reporter lcov npm run test-api",
+    "test": "npm run build && npm run format && npm run test-coverage"
+  },
+  "prettier": {
+    "tabWidth": 2,
+    "useTabs": false,
+    "singleQuote": true,
+    "bracketSpacing": false,
+    "semi": false,
+    "trailingComma": "none"
+  },
+  "xo": {
+    "prettier": true,
+    "rules": {
+      "unicorn/prefer-at": "off",
+      "unicorn/prefer-switch": "off"
+    },
+    "overrides": [
+      {
+        "files": "test/**/*.js",
+        "rules": {
+          "no-await-in-loop": "off"
+        }
+      }
+    ]
+  },
+  "remarkConfig": {
+    "plugins": [
+      "remark-preset-wooorm",
+      [
+        "remark-lint-no-html",
+        false
+      ]
+    ]
+  },
+  "typeCoverage": {
+    "atLeast": 100,
+    "detail": true,
+    "strict": true
+  }
+}

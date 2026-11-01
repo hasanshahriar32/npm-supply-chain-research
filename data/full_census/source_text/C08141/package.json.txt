@@ -1,0 +1,65 @@
+{
+  "name": "@pnpm/npm-lifecycle",
+  "version": "1100.1.0",
+  "description": "JavaScript package lifecycle hook runner",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "prerelease": "npm t",
+    "postrelease": "npm publish && git push --follow-tags",
+    "pretest": "standard",
+    "release": "standard-version -s",
+    "test": "node --test test/*.js",
+    "update-coc": "weallbehave -o . && git add CODE_OF_CONDUCT.md && git commit -m 'docs(coc): updated CODE_OF_CONDUCT.md'",
+    "update-contrib": "weallcontribute -o . && git add CONTRIBUTING.md && git commit -m 'docs(contributing): updated CONTRIBUTING.md'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/pnpm/npm-lifecycle.git"
+  },
+  "keywords": [
+    "npm",
+    "lifecycle",
+    "hook",
+    "runner"
+  ],
+  "author": "Mike Sherov",
+  "license": "Artistic-2.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "bugs": {
+    "url": "https://github.com/pnpm/npm-lifecycle/issues"
+  },
+  "homepage": "https://github.com/pnpm/npm-lifecycle#readme",
+  "dependencies": {
+    "@pnpm/byline": "^1.0.0",
+    "@pnpm/error": "^1000.0.2",
+    "@yarnpkg/fslib": "^3.1.2",
+    "@yarnpkg/shell": "4.0.0",
+    "node-gyp": "^11.2.0",
+    "uid-number": "0.0.6",
+    "which": "^4.0.0"
+  },
+  "devDependencies": {
+    "standard": "17.1.0",
+    "standard-version": "9.1.1",
+    "weallbehave": "1.2.0",
+    "weallcontribute": "1.0.9"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "node-gyp-bin"
+  ],
+  "publishConfig": {
+    "executableFiles": [
+      "./node-gyp-bin/node-gyp",
+      "./node-gyp-bin/node-gyp.cmd"
+    ]
+  },
+  "packageManager": "pnpm@12.0.0"
+}

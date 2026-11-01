@@ -1,0 +1,92 @@
+name: Release
+
+permissions: {}
+
+on:
+    workflow_dispatch:
+        inputs:
+            releaseVersion:
+                type: string
+                required: true
+                description: The version of this release. Must be a semantic version of the form X.Y.Z.
+            dry_run:
+                type: boolean
+                required: true
+                default: false
+                description: Dry run, will not push branches or upload the artifacts.
+            skip_tag:
+                type: boolean
+                required: true
+                default: false
+                description: If true, don't tag this release, just push it.
+            pre_release:
+                type: boolean
+                required: true
+                default: false
+                description: If true, mark this as a pre-release
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        environment: production
+        permissions:
+            contents: write # Push tags to the repository
+            actions: write # Trigger downstream workflows
+            id-token: write # npm provenance via OIDC
+        steps:
+            - name: Checkout Javascript
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  persist-credentials: false
+            - name: Setup Node
+              uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+              with:
+                  # Pinned to 26.7: Node 26.8.0 rewrote fs.readFile
+                  # (nodejs/node#65327) so that binding.open is no longer called
+                  # from JS, which breaks mock-fs at require time
+                  node-version: '26.7'
+                  registry-url: 'https://registry.npmjs.org'
+            - name: Install dependencies
+              run: npm install
+            - name: Package
+              run: ./build-package.sh
+            - name: Upload release
+              if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.pre_release != 'true' }}
+              run: npm publish --tag latest
+            - name: Upload pre-release
+              if: ${{ github.event.inputs.dry_run != 'true' && github.event.inputs.pre_release == 'true' }}
+              run: npm publish --tag next
+            - name: Tag release
+              if: ${{ github.event.inputs.skip_tag != 'true' }}
+              run: |
+                  git config --global user.name 'Github Bot'
+                  git config --global user.email '<>'
+                  git tag "${RELEASE_VERSION}"
+              env:
+                  RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
+            - name: Push tag
+              if: ${{ github.event.inputs.dry_run != 'true' }}
+              run: |
+                  git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+                  git push origin "${RELEASE_VERSION}"
+              env:
+                  RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install docs dependencies
+              run: cd docs && npm ci
+            - name: Run prebuild
+              run: cd docs && npm run prebuild
+            - name: Create version snapshot
+              run: cd docs && npx docusaurus docs:version "${RELEASE_VERSION}"
+              env:
+                  RELEASE_VERSION: ${{ github.event.inputs.releaseVersion }}
+            - name: Commit versioned docs
+              if: ${{ github.event.inputs.dry_run != 'true' }}
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git add docs/versions.json docs/versioned_docs/ docs/versioned_sidebars/
+                  git commit -m "docs: snapshot version ${REF_NAME}" || echo "No changes to commit"
+                  git push
+              env:
+                  REF_NAME: ${{ github.ref_name }}

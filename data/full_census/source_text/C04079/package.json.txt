@@ -1,0 +1,92 @@
+{
+  "name": "pothos-repo-root",
+  "version": "0.0.0",
+  "description": "A strongly typed code first schema builder for GraphQL",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "generate": "pnpm turbo run generate --filter='@pothos/*'",
+    "build": "pnpm turbo run build --filter='@pothos/*'",
+    "clean:all": "pnpm clean && rm -rf ./packages/*/node_modules node_modules && pnpm i",
+    "clean": "rm -rf ./{packages/*,examples*,website}/{tsconfig.*tsbuildinfo,lib,esm,dts,.turbo,.next} && git checkout -- 'packages/*/esm/*'",
+    "ci": "pnpm turbo run build generate test type --concurrency=4 && pnpm run lint:ci",
+    "ci:version": "pnpm lint && changeset version && pnpm lint --write && pnpm install --frozen-lockfile false",
+    "coverage": "pnpm run test -- --coverage",
+    "format": "biome format",
+    "lint": "biome check",
+    "lint:ci": "biome check",
+    "test": "pnpm turbo run test --filter='@pothos/*'",
+    "type": "pnpm turbo run type --filter='@pothos/*'",
+    "prerelease": "pnpm clean && pnpm install && pnpm run ci",
+    "release": "pnpm run prerelease && changeset publish && git push && pnpm git-tag && git status",
+    "git-tag": "TAG=\"release-`date +%s`\" && git tag $TAG && git push origin $TAG",
+    "snapshot": "pnpm prerelease && changeset version --snapshot preview && pnpm install && changeset publish --tag preview"
+  },
+  "workspaces": [
+    "packages/*",
+    "examples/*",
+    "website"
+  ],
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@changesets/cli": "^2.30.0",
+    "@faker-js/faker": "^10.4.0",
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.24",
+    "@types/node": "^25.6.0",
+    "graphql": "^17.0.1",
+    "pkg-pr-new": "^0.0.66",
+    "tsx": "^4.21.0",
+    "turbo": "^2.9.6",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.4"
+  },
+  "engines": {
+    "pnpm": ">=9.0.0"
+  },
+  "resolutions": {
+    "graphql": "^16.10.0",
+    "@whatwg-node/fetch": "0.8.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hayes/pothos.git"
+  },
+  "author": "Michael Hayes",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hayes/pothos/issues"
+  },
+  "homepage": "https://pothos-graphql.dev",
+  "packageManager": "pnpm@10.15.1",
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "webpack",
+        "@babel/*",
+        "@types/node"
+      ],
+      "allowedVersions": {
+        "graphql": ">=16.6.0",
+        "chokidar": "^4.0.3"
+      }
+    },
+    "patchedDependencies": {
+      "@changesets/assemble-release-plan@6.0.9": "patches/@changesets__assemble-release-plan@6.0.9.patch"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/engines",
+      "@swc/core",
+      "better-sqlite3",
+      "esbuild",
+      "prisma",
+      "sqlite3"
+    ],
+    "overrides": {
+      "graphql": "^17.0.1"
+    }
+  }
+}

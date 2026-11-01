@@ -1,0 +1,179 @@
+name: "[Web] - Build  - Called"
+
+on:
+  workflow_call:
+    inputs:
+      build-web-tools:
+        description: Whether to build web tools
+        required: false
+        default: true
+        type: string
+
+      vercel-production:
+        description: When true, deploy web tools to Vercel production
+        required: false
+        default: "false"
+        type: string
+
+    secrets:
+      AWS_ACCOUNT_ID_PROD:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_BRANCH:
+        required: true
+      AWS_CACHE_OIDC_ROLE_ARN_DEVELOP:
+        required: true
+      AWS_CACHE_REGION:
+        required: true
+      AWS_CACHE_ROLE_NAME:
+        required: true
+      NX_KEY:
+        required: true
+      VERCEL_LEDGER_WALLET_TEAM_ID:
+        required: true
+      VERCEL_LEDGER_WALLET_TOKEN:
+        required: true
+      VERCEL_PROJECT_WEBTOOLS:
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: |
+          If you run this manually, and want to run on a PR, the correct ref should be refs/pull/{PR_NUMBER}/merge to
+          have the "normal" scenario involving checking out a merge commit between your branch and the base branch.
+          If you want to run only on a branch or specific commit, you can use either the sha or the branch name instead (prefer the first verion for PRs).
+        required: false
+      build-web-tools:
+        description: Whether to build web tools
+        required: false
+        default: true
+      vercel-production:
+        description: Deploy Vercel targets to production
+        required: false
+        default: "false"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+
+  build-web-tools:
+    name: "Web Tools Build"
+    permissions:
+      id-token: write
+      contents: read
+    if: ${{ inputs.build-web-tools != 'false' }}
+    runs-on: ledger-wallet-4cpu-aws-public-cached
+    outputs:
+      deployment-url: ${{ steps.build-deploy.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup the caches
+        uses: LedgerHQ/ledger-live/tools/actions/composites/setup-caches@develop
+        id: setup-caches
+        with:
+          use-mise: true
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-develop-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_DEVELOP }}
+          cache-branch-role-arn: ${{ secrets.AWS_CACHE_OIDC_ROLE_ARN_BRANCH }}
+          nx-key: ${{ secrets.NX_KEY }}
+          accountId: ${{ secrets.AWS_ACCOUNT_ID_PROD }}
+          roleName: ${{ secrets.AWS_CACHE_ROLE_NAME }}
+          region: ${{ secrets.AWS_CACHE_REGION }}
+
+      # Before the Vercel build so both npx and Vercel's own install resolve through JFrog.
+      - name: JFrog npm auth
+        uses: LedgerHQ/ledger-live/tools/actions/composites/jfrog-npm-auth@develop
+        with:
+          registry: ${{ vars.ARTIFACTORY_URL }}
+
+      - name: Build and Deploy
+        id: build-deploy
+        uses: LedgerHQ/ledger-live/tools/actions/composites/vercel-deploy@develop
+        with:
+          vercel-token: ${{ secrets.VERCEL_LEDGER_WALLET_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_LEDGER_WALLET_TEAM_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_WEBTOOLS }}
+          working-directory: apps/web-tools
+          production: ${{ inputs.vercel-production }}
+
+      - name: Check formatting web-tools
+        if: github.base_ref == 'develop' || github.ref == 'refs/heads/develop' || github.event_name == 'merge_group' || github.event_name == 'workflow_dispatch'
+        uses: LedgerHQ/ledger-live/tools/actions/composites/nx-step@develop
+        with:
+          command: pnpm exec nx run @ledgerhq/web-tools:format:check
+          disable_cache: false
+
+      - name: Typecheck web-tools
+        uses: LedgerHQ/ledger-live/tools/actions/composites/nx-step@develop
+        with:
+          command: pnpm exec nx run @ledgerhq/web-tools:typecheck
+          disable_cache: false
+
+
+  post-build-summary:
+    name: "Post build status to PR"
+    needs: [build-web-tools]
+    if: ${{ always() && !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Post build status summary
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const needs = JSON.parse(process.env.NEEDS_JSON || '{}');
+            const jobs = [
+              { id: 'build-web-tools', name: 'Web Tools Build' },
+            ];
+
+            const rows = jobs.map(({ id, name }) => {
+              const jobNeeds = needs[id];
+              const result = jobNeeds?.result ?? 'skipped';
+              const statusEmoji = result === 'success' ? '✅' : result === 'failure' ? '❌' : '⏭️';
+              const statusLabel = result === 'success' ? 'Deployed' : result === 'failure' ? 'Failed' : 'Skipped';
+              const deploymentUrl = jobNeeds?.outputs?.['deployment-url'];
+              const url = (result === 'success' && deploymentUrl)
+                ? `[${deploymentUrl}](${deploymentUrl})`
+                : '—';
+              return `| ${name} | ${statusEmoji} ${statusLabel} | ${url} |`;
+            }).join('\n');
+
+            const body = `## Web Tools Build Status
+
+            | Build | Status | Deployment |
+            |-------|--------|------------|
+            ${rows}
+
+            <!-- web-tools-build-summary -->`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const existing = comments.find(c => c.body.includes('<!-- web-tools-build-summary -->'));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }
+        env:
+          NEEDS_JSON: '${{ toJson(needs) }}'

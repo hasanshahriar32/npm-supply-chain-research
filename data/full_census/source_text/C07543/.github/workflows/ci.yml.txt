@@ -1,0 +1,29 @@
+name: ci
+
+env:
+  NODE_OPTIONS: --max_old_space_size=6144
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm i -g --force corepack && corepack enable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+      - run: pnpm install && pnpm dev:prepare
+      # - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
+      # - run: pnpm test:types
+      - run: pnpm dev:build

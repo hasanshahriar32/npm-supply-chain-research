@@ -1,0 +1,124 @@
+name: semver-checks
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  projects:
+    name: Select published Rust release crates
+    if: startsWith(github.head_ref, 'prep-release-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      plan: ${{ steps.projects.outputs.plan }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Select published crates
+        id: projects
+        env:
+          RELEASE_BRANCH: ${{ github.head_ref }}
+        run: node scripts/rust-semver-checks.mjs select
+
+  semver-checks:
+    name: semver-checks (${{ matrix.package }})
+    needs: projects
+    if: fromJSON(needs.projects.outputs.plan).rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.projects.outputs.plan).matrix }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+
+      # Published crates use the registry baseline and their Cargo version bump.
+      # Keep failures advisory, but preserve raw outcomes for the PR comment.
+      - name: Check public Rust API (all features)
+        id: all-features
+        continue-on-error: true
+        uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2.9
+        with:
+          package: ${{ matrix.package }}
+          feature-group: all-features
+
+      - name: Check public Rust API (no default features)
+        id: no-default-features
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2.9
+        with:
+          package: ${{ matrix.package }}
+          feature-group: only-explicit-features
+
+      - name: Record check outcomes
+        if: ${{ !cancelled() }}
+        env:
+          CRATE: ${{ matrix.package }}
+          ALL_FEATURES: ${{ steps.all-features.outcome }}
+          NO_DEFAULT_FEATURES: ${{ steps.no-default-features.outcome }}
+          RESULTS_DIR: ${{ runner.temp }}/semver-results
+        run: node scripts/rust-semver-checks.mjs record
+      - name: Upload check outcomes
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: semver-${{ matrix.package }}
+          path: ${{ runner.temp }}/semver-results
+          if-no-files-found: error
+          retention-days: 7
+
+  report:
+    name: Report semver-checks
+    needs: [projects, semver-checks]
+    if: ${{ !cancelled() && needs.projects.result == 'success' && fromJSON(needs.projects.outputs.plan).rust }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # The comment-writing job executes scripts from the trusted base revision.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          sparse-checkout: scripts
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Download check outcomes
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: semver-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/semver-results
+      - name: Summarize results and update the release PR
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SEMVER_PLAN: ${{ needs.projects.outputs.plan }}
+          RESULTS_DIR: ${{ runner.temp }}/semver-results
+        run: node scripts/rust-semver-checks.mjs report

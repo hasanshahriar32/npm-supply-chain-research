@@ -1,0 +1,37 @@
+name: test-pr
+
+on: [pull_request]
+
+jobs:
+  test:
+    name: Run tests on PR
+
+    strategy:
+      matrix:
+        node-version: [20.x, 24.x]
+        os: [ubuntu-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Touch cli file to prevent npm ci from freaking out
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const file = "packages/html-to-text-cli/bin/cli.js";
+            fs.mkdirSync(path.dirname(file), { recursive: true });
+            fs.writeFileSync(file, "// placeholder\n");
+          '
+
+      - run: npm ci
+
+      - run: npm test

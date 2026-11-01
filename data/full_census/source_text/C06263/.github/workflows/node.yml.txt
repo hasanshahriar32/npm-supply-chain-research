@@ -1,0 +1,14 @@
+name: Node
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+    - run: npm ci
+    - name: Install CJK font
+      run: wget https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf -O /usr/share/fonts/NotoSansCJKsc-Regular.otf && fc-cache -fv
+    - run: npm test

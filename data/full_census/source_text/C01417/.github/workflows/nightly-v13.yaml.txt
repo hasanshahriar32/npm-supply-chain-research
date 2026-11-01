@@ -1,0 +1,103 @@
+name: Nightly v13 - React Native Checks
+on:
+  # Runs every night at 6 AM UTC, after the RN nightly publish window (~03:30-04:50 UTC).
+  # See the note in `nightly.yaml` for why resolving during that window breaks.
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+# Set minimal permissions by default
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !contains(github.ref, 'v13-stable')}}
+
+jobs:
+  lint:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Lint → ${{ matrix.rn-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-version: [latest, next, nightly]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v13-stable
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.rn-version == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.rn-version == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.rn-version == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+
+      - name: Lint
+        run: yarn lint
+
+  typecheck:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Typecheck → ${{ matrix.rn-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-version: [latest, next, nightly]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v13-stable
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.rn-version == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.rn-version == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.rn-version == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+
+      - name: Typecheck
+        run: yarn typecheck
+
+  test:
+    if: github.repository == 'callstack/react-native-testing-library' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: Test → ${{ matrix.rn-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn-version: [latest, next, nightly]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: v13-stable
+
+      - name: Setup Node.js and deps (latest)
+        if: matrix.rn-version == 'latest'
+        uses: ./.github/actions/setup-deps-rn-latest
+
+      - name: Setup Node.js and deps (next)
+        if: matrix.rn-version == 'next'
+        uses: ./.github/actions/setup-deps-rn-next
+
+      - name: Setup Node.js and deps (nightly)
+        if: matrix.rn-version == 'nightly'
+        uses: ./.github/actions/setup-deps-rn-nightly
+
+      - name: Test
+        run: yarn test:ci

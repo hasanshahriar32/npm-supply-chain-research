@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+    - opened
+    - reopened
+    - synchronize
+    # So you can add a label to make it run, including no-changeset-needed
+    - labeled
+    - unlabeled
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [ 20, 22, 24 ]
+    name: Build and test with Node ${{ matrix.node }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/node
+      with:
+        node-version-override: ${{ matrix.node }}
+    - run: npm test
+
+  # This runs against an old alpha of GraphQL v17; hopefully Apollo Server v5
+  # will support the released version when they both come out.
+  graphql-17-alpha-incremental-delivery:
+    runs-on: ubuntu-latest
+    name: Test against GraphQL 17 alpha with incremental delivery
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/node
+    - run: npm i --legacy-peer-deps graphql@17.0.0-alpha.2
+    - run: npm test
+      env:
+        INCREMENTAL_DELIVERY_TESTS_ENABLED: 't'
+
+  prettier:
+    runs-on: ubuntu-latest
+    name: Prettier
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/node
+    - run: npm run prettier-check
+
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/node
+    - run: npm run lint
+
+  spell-check:
+    runs-on: ubuntu-latest
+    name: Spell Check
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ./.github/actions/node
+    - run: npm run spell-check
+
+  # Ensure that any PR that changes packages has a changeset on it (perhaps an
+  # empty one created with `changeset --empty`). We run the Changesets job
+  # itself on all branches so that we can require it to pass, gbut we don't run
+  # the actual check on the "Version Packages" PRs themselves.
+  changeset:
+    runs-on: ubuntu-latest
+    name: Changesets
+    if: ${{ (! startsWith(github.head_ref, 'changeset-release/')) && (!contains(github.event.pull_request.labels.*.name, 'no-changeset-needed')) }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+        fetch-depth: 0
+    - uses: ./.github/actions/node
+    - run: npm run changeset-check

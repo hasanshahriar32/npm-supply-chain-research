@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+jobs:
+  test-node:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node_version: [12, 14, 16]
+    steps:
+    - name: checkout
+      uses: actions/checkout@main
+    - name: use node ${{ matrix.node_version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node_version }}
+    - run: npm ci
+    - run: npm test
+  test-browser:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bundler: [browserify, webpack, "webpack:node"]
+    steps:
+    - name: checkout
+      uses: actions/checkout@main
+    - name: use node 14
+      uses: actions/setup-node@v1
+      with:
+        node-version: 14.x
+    - run: npm ci
+    - run: npm run test:${{ matrix.bundler }}
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@master
+    - name: use node 14
+      uses: actions/setup-node@v1
+      with:
+        node-version: 14.x
+    - run: npm ci
+    - run: npm run lint

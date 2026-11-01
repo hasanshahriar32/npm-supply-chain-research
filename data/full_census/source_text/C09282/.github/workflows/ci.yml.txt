@@ -1,0 +1,40 @@
+name: Release
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          cache: true
+
+      - run: vp i -g pnpm
+      - run: vp i --frozen-lockfile
+      - run: vp run lint
+      - run: vp run test
+      - run: vp run build
+
+      - name: Setup git user
+        run: |
+          git config user.name "${{ vars.GIT_USER }}"
+          git config user.email "${{ vars.GIT_EMAIL }}"
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm nx release -y

@@ -1,0 +1,118 @@
+{
+  "name": "preview-email",
+  "description": "Automatically opens your browser and iOS Simulator to preview Node.js email messages sent with Nodemailer. Made for Forward Email and Lad. Cross-browser and cross-platform email testing.",
+  "version": "3.4.1",
+  "author": "Forward Email (https://forwardemail.net)",
+  "bugs": {
+    "url": "https://github.com/forwardemail/test-preview-emails-cross-browsers-ios-simulator-nodejs-javascript/issues",
+    "email": "niftylettuce@gmail.com"
+  },
+  "contributors": [
+    "Nick Baugh <niftylettuce@gmail.com> (http://niftylettuce.com/)"
+  ],
+  "dependencies": {
+    "ci-info": "^4.4.0",
+    "display-notification": "^3.0.0",
+    "get-port": "7.2.0",
+    "mailparser": "3.9.20",
+    "nodemailer": "^9.1.1",
+    "open": "10",
+    "p-event": "6.0.1",
+    "p-wait-for": "5.0.2",
+    "pug": "^3.0.4"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "ava": "^5.3.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-xo-lass": "^2.0.1",
+    "fixpack": "^4.0.0",
+    "husky": "9.1.7",
+    "lint-staged": "^15.5.2",
+    "nyc": "^17.1.0",
+    "remark-cli": "11.0.0",
+    "remark-preset-github": "^4.0.4",
+    "xo": "^0.56.0"
+  },
+  "engines": {
+    "node": ">=18.12.0"
+  },
+  "files": [
+    "index.js",
+    "template.pug"
+  ],
+  "homepage": "https://github.com/forwardemail/test-preview-emails-cross-browsers-ios-simulator-nodejs-javascript",
+  "keywords": [
+    "app",
+    "apple",
+    "auto",
+    "automatic",
+    "automatically",
+    "browser",
+    "chrome",
+    "demo",
+    "email",
+    "emails",
+    "engine",
+    "express",
+    "file",
+    "ios",
+    "koa",
+    "lad",
+    "lass",
+    "letter",
+    "litmus",
+    "mac",
+    "macos",
+    "mail",
+    "mail",
+    "mailer",
+    "native",
+    "nodemailer",
+    "open",
+    "open",
+    "opener",
+    "opn",
+    "os",
+    "path",
+    "preview",
+    "previewer",
+    "pug",
+    "render",
+    "render",
+    "show",
+    "sim",
+    "simulate",
+    "simulator",
+    "smtp",
+    "template",
+    "templates",
+    "test",
+    "web",
+    "webkit",
+    "xcode"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "overrides": {
+    "mailparser": {
+      "@zone-eu/mailsplit": "5.4.17",
+      "encoding-japanese": "2.4.0",
+      "html-to-text": "9.0.5",
+      "libmime": "5.4.4"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/forwardemail/test-preview-emails-cross-browsers-ios-simulator-nodejs-javascript"
+  },
+  "scripts": {
+    "ava": "cross-env NODE_ENV=test NODE_DEBUG=preview-email ava",
+    "lint": "xo --fix && remark . -qfo && fixpack",
+    "prepare": "husky",
+    "pretest": "npm run lint",
+    "test": "cross-env NODE_ENV=test NODE_DEBUG=preview-email nyc ava"
+  }
+}

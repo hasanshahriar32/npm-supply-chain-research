@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Format
+        run: pnpm run format
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+  test:
+    name: Test (Node.js ${{ matrix.node }}, ${{ matrix.os.name }})
+    runs-on: ${{ matrix.os.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - 22
+          - 24
+          - 26
+        os:
+          - name: Ubuntu
+            version: ubuntu-latest
+          - name: Windows
+            version: windows-latest
+          - name: macOS
+            version: macOS-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test
+        run: pnpm exec vitest --coverage
+
+      - name: Submit coverage
+        uses: coverallsapp/github-action@master
+        continue-on-error: true
+        with:
+          github-token: ${{ secrets.github_token }}
+          flag-name: Node.js ${{ matrix.node }} on ${{ matrix.os.name }}
+          parallel: true
+
+  coverage:
+    name: Coverage
+    needs: test
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Finish coverage
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true

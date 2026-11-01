@@ -1,0 +1,81 @@
+{
+  "name": "@storybook/addon-styling-webpack",
+  "version": "3.0.2",
+  "description": "A base addon for configuring popular styling tools in Webpack",
+  "keywords": [
+    "style",
+    "design",
+    "webpack",
+    "configuration",
+    "storybook-addons"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/storybookjs/addon-styling-webpack"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Shaun Evening",
+    "email": "goodeveningshaun@gmail.com"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./preset": {
+      "types": "./dist/preset.d.ts",
+      "default": "./dist/preset.js"
+    },
+    "./package.json": "./package.json",
+    "./postinstall": "./postinstall.js"
+  },
+  "files": [
+    "bin/**/*",
+    "dist/**/*",
+    "README.md",
+    "*.js",
+    "*.d.ts"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "pnpm build --watch",
+    "format": "prettier --write .",
+    "release": "pnpm build && pnpm changeset publish",
+    "changeset": "changeset"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.6",
+    "@types/node": "^22.15.29",
+    "picocolors": "^1.1.0",
+    "pkg-pr-new": "^0.0.57",
+    "prettier": "^3.5.3",
+    "storybook": "^10.0.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3",
+    "webpack": "^5.99.9"
+  },
+  "peerDependencies": {
+    "storybook": "^0.0.0-0 || ^10.0.0 || ^10.0.0-0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0 || ^10.5.0-0 || ^10.6.0-0 || ^11.0.0-0",
+    "webpack": "^5.0.0"
+  },
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "storybook": {
+    "displayName": "Styling-Webpack",
+    "supportedFrameworks": [
+      "react",
+      "vue",
+      "web-components",
+      "html",
+      "preact"
+    ],
+    "icon": "https://raw.githubusercontent.com/storybookjs/addon-styling/1e17a71614dde4337f402dd5f00d761991d1a9d8/.github/media/styling.svg"
+  }
+}

@@ -1,0 +1,45 @@
+name: GHPages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: null
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+      - name: Install Packages
+        run: npm install -f
+      - name: Build
+        run: npm run build
+      - name: Update docs
+        run: npm run update
+      - name: Build docs
+        run: npm run docs:build
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./docs/.vitepress/dist/eslint-plugin-yml
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
