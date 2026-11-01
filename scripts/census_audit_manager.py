@@ -418,18 +418,88 @@ def cmd_audit(endpoints: list):
 
         # 4. Lockfile
         lock_files = []
-        for lf in ['package-lock.json.txt', 'pnpm-lock.yaml.txt', 'yarn.lock.txt', 'npm-shrinkwrap.json.txt']:
-            if (sdir / lf).exists():
-                lock_files.append(lf)
-        c4 = 'supported' if lock_files else 'unsupported'
+        if (sdir / 'package-lock.json.txt').exists():
+            lock_files.append(('package-lock.json', sdir / 'package-lock.json.txt'))
+        if (sdir / 'npm-shrinkwrap.json.txt').exists():
+            lock_files.append(('npm-shrinkwrap.json', sdir / 'npm-shrinkwrap.json.txt'))
+        if (sdir / 'pnpm-lock.yaml.txt').exists():
+            lock_files.append(('pnpm-lock.yaml', sdir / 'pnpm-lock.yaml.txt'))
+        if (sdir / 'yarn.lock.txt').exists():
+            lock_files.append(('yarn.lock', sdir / 'yarn.lock.txt'))
 
-        # 5. Dependency version
-        c5 = 'unsupported'
-        c5_note = 'no lockfile present'
         if lock_files:
-            # Check if dependencies can be matched
-            c5 = 'supported'
-            c5_note = f"lockfile {lock_files[0].replace('.txt','')} present"
+            c4 = 'supported'
+            c4_note = f"{lock_files[0][0]} present"
+        else:
+            c4 = 'unsupported'
+            c4_note = "no lockfile observed"
+
+        # 5. Dependency version (Deep lockfile inspection matching build_audit.py)
+        c5 = 'unsupported'
+        c5_note = 'no lockfile available'
+        if lock_files:
+            manifest_deps = {}
+            for pj in all_pj:
+                try:
+                    pj_d = json.loads(pj.read_text(encoding='utf-8', errors='replace'))
+                    for sec in ['dependencies', 'devDependencies', 'peerDependencies']:
+                        if sec in pj_d and isinstance(pj_d[sec], dict):
+                            for dn, ds in pj_d[sec].items():
+                                manifest_deps[dn] = (sec, str(ds), pj.name.replace('.txt', ''))
+                except Exception:
+                    pass
+
+            c5_match = None
+            lock_name, lock_path = lock_files[0]
+            try:
+                lock_txt = lock_path.read_text(encoding='utf-8', errors='replace')
+                if lock_name in ['package-lock.json', 'npm-shrinkwrap.json']:
+                    pld = json.loads(lock_txt)
+                    if 'packages' in pld and isinstance(pld['packages'], dict):
+                        for dn, (sec, ds, pjn) in manifest_deps.items():
+                            k = f"node_modules/{dn}"
+                            if k in pld['packages'] and 'version' in pld['packages'][k]:
+                                c5_match = (dn, sec, ds, pld['packages'][k]['version'], k, lock_name)
+                                break
+                    if not c5_match and 'dependencies' in pld and isinstance(pld['dependencies'], dict):
+                        for dn, (sec, ds, pjn) in manifest_deps.items():
+                            if dn in pld['dependencies'] and 'version' in pld['dependencies'][dn]:
+                                c5_match = (dn, sec, ds, pld['dependencies'][dn]['version'], dn, lock_name)
+                                break
+                elif lock_name == 'pnpm-lock.yaml':
+                    for dn, (sec, ds, pjn) in manifest_deps.items():
+                        pat = re.compile(r'[/\"\']?' + re.escape(dn) + r'@([0-9][0-9a-zA-Z\.\-\+]+)')
+                        m = pat.search(lock_txt)
+                        if m:
+                            c5_match = (dn, sec, ds, m.group(1), m.group(0), 'pnpm-lock.yaml')
+                            break
+                elif lock_name == 'yarn.lock':
+                    for dn, (sec, ds, pjn) in manifest_deps.items():
+                        pat_v1 = re.compile(re.escape(dn) + r'@[^:\n]+:\s*\n\s+version:?\s+[\"\']?([0-9][0-9a-zA-Z\.\-\+]+)')
+                        m = pat_v1.search(lock_txt)
+                        if m:
+                            c5_match = (dn, sec, ds, m.group(1), f"{dn}@...", 'yarn.lock')
+                            break
+                    if not c5_match:
+                        for dn, (sec, ds, pjn) in manifest_deps.items():
+                            pat_berry = re.compile(r'[\"\' ]?' + re.escape(dn) + r'@npm:[^:\n]+:\s*\n\s+version:\s*[\"\']?([0-9][0-9a-zA-Z\.\-\+]+)')
+                            m = pat_berry.search(lock_txt)
+                            if m:
+                                c5_match = (dn, sec, ds, m.group(1), f"{dn}@npm:...", 'yarn.lock')
+                                break
+            except Exception:
+                pass
+
+            if c5_match:
+                c5 = 'supported'
+                c5_note = f"'{c5_match[0]}' ({c5_match[1]} '{c5_match[2]}') resolved to '{c5_match[3]}' in {c5_match[5]} ({c5_match[4]})"
+            else:
+                if not manifest_deps:
+                    c5 = 'unsupported'
+                    c5_note = "no dependencies declared in manifest"
+                else:
+                    c5 = 'unknown'
+                    c5_note = f"lockfile present ({lock_name}) but dependency match unconfirmed"
 
         results.append({
             'audit_id': aid, 'repository': repo, 'commit_sha': commit_sha,
@@ -438,7 +508,7 @@ def cmd_audit(endpoints: list):
             'install_directive_observed': c3,
             'lockfile_present': c4,
             'dependency_version_supported': c5,
-            'evidence_notes': f"Mapping: {'; '.join(map_notes)}. Workflows: {len(wf_files)}. Install: {c3_note}. Lock: {', '.join(lock_files) if lock_files else 'none'}."
+            'evidence_notes': f"Mapping: {'; '.join(map_notes)}. Workflows: {len(wf_files)}. Install: {c3_note}. Lock: {c4_note}. Version: {c5_note}."
         })
 
     # Save CSV
