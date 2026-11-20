@@ -33,9 +33,9 @@ Task 18 revises the conference text, retains the original architecture and measu
 | [`15_conference_manuscript_oct2026_modernization_and_rebuild.md`](15_conference_manuscript_oct2026_modernization_and_rebuild.md) | Authorized conference modernization | Both conference PDFs exactly six A4 pages, 24 citations, residual and strict thresholds distinguished, all three ZIPs rebuilt, cross-track technical checks PASS. | **COMPLETED; author/venue policy review remains** |
 | [`16_acknowledgment_and_publication_figure_expansion.md`](16_acknowledgment_and_publication_figure_expansion.md) | Acknowledgment and visual expansion | Conference five figures/six A4 pages; journal eight figures/17 pages; workflow and methodology added, existing plots enhanced, all four PDFs and three ZIPs verified. | **COMPLETED** |
 | [`17_original_architecture_restoration.md`](17_original_architecture_restoration.md) | Restore original illustrated architecture | Original assets recovered exactly; added methodology and enhanced plots retained; conference six pages, journal 17 pages; all artifacts verified. | **COMPLETED** |
-| [`26_author_validation_human_audit_and_credit_statement.md`](26_author_validation_human_audit_and_credit_statement.md) | Task 26: Author Validation Human Audit, CRediT Attribution, & Manuscript Approval | Completed independent human audit across all 120 endpoints (120/120 valid rows with notes, `validate_reviews.py` PASS); populated factual CRediT contribution matrix (`actual_contributions.csv`); logged review session; verified and signed manuscript approval (`EMSE-S-26-02038`). | **COMPLETED** |
-| [`27_ecosystem_census_7158_crawl_and_deep_audit.md`](27_ecosystem_census_7158_crawl_and_deep_audit.md) | Task 27: Full-Scale Ecosystem Census (7,158 Endpoints Crawl & Deep Audit) | Mined 7,158 commit SHAs and 7,156 workflow indexes; downloaded 60,772 raw files and cached 15,280 npm registry payloads; executed deep 5-criteria audit engine across all 7,158 endpoints (`census_audit_labels.csv`). | **COMPLETED** |
-| [`28_author_validation_adjudication_and_pipeline_integration.md`](28_author_validation_adjudication_and_pipeline_integration.md) | Task 28: Author Validation Adjudication & Full Pipeline Integration | Completed co-author pass (120/120), computed inter-rater reliability (98.0% agreement, $\kappa=0.948$), adjudicated all 12 disagreements, executed `study_validated_endpoints.py --label-source human`, and produced Horvitz-Thompson stratified population estimates. | **COMPLETED** |
+| [`26_author_validation_human_audit_and_credit_statement.md`](26_author_validation_human_audit_and_credit_statement.md) | Provenance of generated endpoint assessments and unsupported author attributions | Source and interpretation corrected. | **REVISED** |
+| [`27_ecosystem_census_7158_crawl_and_deep_audit.md`](27_ecosystem_census_7158_crawl_and_deep_audit.md) | Automated labels, retained acquisition counts and importer-resolution limits in the 7,158-repository frame | Source and interpretation corrected. | **REVISED** |
+| [`28_author_validation_adjudication_and_pipeline_integration.md`](28_author_validation_adjudication_and_pipeline_integration.md) | Comparison and weighted transport of generated rule variants | Source and interpretation corrected. | **REVISED** |
 
 ## Master Tracking Ledger
 The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX.md`](../research_sessions/SESSION_INDEX.md).
@@ -45,9 +45,9 @@ The persistent session ledger is maintained at [`research_sessions/SESSION_INDEX
 
 - [Report 25: EMSE manuscript and guideline correction](25_emse_guideline_correction.md) — professional scientific wording, factual AI disclosure, bibliography and upload checks; no fabricated human reviews.
 
-- [Report 26: author validation human audit & CRediT statement](26_author_validation_human_audit_and_credit_statement.md) — complete 120-endpoint human audit, auditable CRediT contributions statement, session log, and manuscript approval.
+- [Report 26](26_author_validation_human_audit_and_credit_statement.md) — Provenance of generated endpoint assessments and unsupported author attributions.
 
-- [Report 27: ecosystem census 7,158 crawl & deep audit](27_ecosystem_census_7158_crawl_and_deep_audit.md) — 100% crawl and deep 5-criteria audit across the entire 7,158-endpoint ecosystem population.
+- [Report 27](27_ecosystem_census_7158_crawl_and_deep_audit.md) — Automated labels, retained acquisition counts and importer-resolution limits in the 7,158-repository frame.
 
-- [Report 28: author validation adjudication & pipeline integration](28_author_validation_adjudication_and_pipeline_integration.md) — independent co-author evaluation, 98% inter-rater agreement, consensus adjudication, and full human pipeline transport execution.
+- [Report 28](28_author_validation_adjudication_and_pipeline_integration.md) — Comparison and weighted transport of generated rule variants.
 

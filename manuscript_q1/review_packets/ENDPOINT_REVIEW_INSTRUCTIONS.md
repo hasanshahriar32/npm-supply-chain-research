@@ -4,6 +4,8 @@ Both authors agreed to review independently. Initial label sheets contain no aut
 
 Current-time static evidence does not establish old HEAD validity, workflow execution, or historical publisher authority.
 
+If genuine independent labels are supplied, each reviewer records their own provenance in a sibling file named <reviewer>_provenance.json. Use the worksheet filename prefix for the reviewer field, the SHA-256 of the delivered CSV for sheet_sha256, and true for independently_reviewed_by_me only for work personally performed. The pipeline checks this self-report and the checksum. Code cannot verify a person's identity.
+
 ## Label rubric
 
 - `repository_mapping_supported`: every listed package/version mapping has registry repository evidence and a matching named package manifest at the inspected commit. Ambiguous monorepo paths and redirects remain unknown.

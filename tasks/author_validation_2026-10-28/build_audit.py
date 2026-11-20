@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Comprehensive Author Validation Audit Engine.
-
-Evaluates all 120 endpoints against the 5 criteria from Author_Validation_Guide.md.
-"""
+"""Generate deterministic machine labels for the archived 120-endpoint sample."""
 import csv
 import json
 import re
@@ -14,7 +11,7 @@ EVIDENCE_DIR = HERE / 'evidence'
 REG_DIR = EVIDENCE_DIR / 'registry'
 GH_DIR = EVIDENCE_DIR / 'github_responses'
 SRC_DIR = EVIDENCE_DIR / 'source_text'
-OUTPUT_CSV = HERE / 'reviews' / 'Md_Ashikul_Islam_independent_labels.csv'
+OUTPUT_CSV = HERE / 'generated_evidence' / 'rule_a.csv'
 
 # 1. Build Registry Lookup
 reg_lookup = {}
@@ -325,12 +322,13 @@ for r in audit_rows:
 fieldnames = ['audit_id', 'repository', 'commit_sha', 
               'repository_mapping_supported', 'workflow_file_present', 
               'install_directive_observed', 'lockfile_present', 
-              'dependency_version_supported', 'evidence_notes']
+              'dependency_version_supported', 'evidence_notes', 'label_source']
 
+OUTPUT_CSV.parent.mkdir(exist_ok=True)
 with OUTPUT_CSV.open('w', newline='', encoding='utf-8') as f:
     writer = csv.DictWriter(f, fieldnames=fieldnames, lineterminator='\r\n')
     writer.writeheader()
-    writer.writerows(results)
+    writer.writerows(dict(row, label_source='generated_scenario') for row in results)
 
 print(f"Successfully audited {len(results)} endpoints.")
 print("Summary of label counts:")

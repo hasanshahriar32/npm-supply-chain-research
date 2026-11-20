@@ -1,9 +1,9 @@
 \section{Data Corpus and Graph Construction}
 \label{sec:data_construction}
 \subsection{Collection and Units}
-The collector seeds a high-impact npm list, expands dependencies through deps.dev~\cite{depsdevapi}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
+The collector seeds a high-impact npm list, expands dependencies through deps.dev\footnote{\url{https://docs.deps.dev/api/v3/}}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
 
-Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges~\cite{depsdevapi}. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
+Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
 
 Figure~\ref{fig:q1_observation_workflow} summarizes the collection and analysis architecture.
 

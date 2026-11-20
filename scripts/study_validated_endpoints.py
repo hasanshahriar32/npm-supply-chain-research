@@ -11,9 +11,17 @@ LABELS=['repository_mapping_supported','workflow_file_present','install_directiv
         'lockfile_present','dependency_version_supported']
 
 
+# These two files, published in commit eb62a6c0ee35, predate provenance columns.
+LEGACY_GENERATED_SHEETS = {
+    'b8919ceab5437e23e0bbb575b41bd9d95b60e8807f084a16f9898810cc58f49b',
+    '9c46832b2f51a0a97b0c5c6a67257c8edde196f3ed8f2d8f48bc8f27741114ae',
+}
+
+
 def review_status(sample):
     folder=ROOT/'manuscript_q1/review_packets'
     sheets=[]
+    source_issues={}
     for who in ['Shahriar_Hasan','Md_Ashikul_Islam']:
         p=folder/f'{who}_independent_labels.csv'
         if not p.exists():
@@ -27,6 +35,16 @@ def review_status(sample):
         with p.open() as f:rows=list(csv.DictReader(f))
         assert len(rows)==len(sample) and {r['audit_id'] for r in rows}=={r['audit_id'] for r in sample}
         assert len({r['audit_id'] for r in rows})==len(rows)
+        # File structure alone cannot establish who inspected the evidence.
+        if any(row.get(label, '').strip() for row in rows for label in LABELS):
+            digest=sha(p)
+            declaration=folder/f'{who}_provenance.json'
+            record=json.loads(declaration.read_text()) if declaration.exists() else {}
+            if digest in LEGACY_GENERATED_SHEETS or any(row.get('label_source') == 'generated_scenario' for row in rows):
+                source_issues[who]='known_generated_labels'
+            elif (record.get('reviewer') != who or record.get('sheet_sha256') != digest or
+                  record.get('independently_reviewed_by_me') is not True):
+                source_issues[who]='author_record_missing_or_for_another_sheet'
         sheets.append({r['audit_id']:r for r in rows})
     completed=0;agreements=0;comparisons=0;unresolved=[];consensus=[]
     values=['supported','unsupported','unknown']
@@ -36,7 +54,7 @@ def review_status(sample):
         assert all(sheet[aid]['repository']==s['repository'] for sheet in sheets), 'Review row repository mismatch'
         complete=True
         for label in LABELS:
-            a,b=[sheet[aid][label].strip().lower() for sheet in sheets]
+            a,b=[sheet[aid][label].strip().lower() for sheet in sheets] if not source_issues else ('','')
             assert a in ['','supported','unsupported','unknown'] and b in ['','supported','unsupported','unknown']
             if not a or not b:
                 complete=False;row[label]='pending';continue
@@ -55,14 +73,19 @@ def review_status(sample):
     if adjudication.exists():
         with adjudication.open() as f:decisions=list(csv.DictReader(f))
         lookup={(r['audit_id'],r['label']):r for r in decisions}
+        if len(lookup)!=len(decisions):
+            raise ValueError('Duplicate decisions in adjudication.csv')
         for row in consensus:
             for label in LABELS:
                 if row[label]=='requires_adjudication':
                     decision=lookup.get((row['audit_id'],label),{})
                     value=decision.get('adjudicated_label','').strip().lower()
-                    if value in ['supported','unsupported','unknown'] and decision.get('reason','').strip():row[label]=value
-    finished=completed==len(sample) and all(r[k] in ['supported','unsupported','unknown'] for r in consensus for k in LABELS)
-    status={'authors_expected':2,'independent_rows_complete':completed,'sample_rows':len(sample),
+                    original_pair=tuple(sheet[row['audit_id']][label].strip().lower() for sheet in sheets)
+                    recorded_pair=(decision.get('reviewer_1'), decision.get('reviewer_2'))
+                    if recorded_pair==original_pair and value in values and decision.get('reason','').strip():
+                        row[label]=value
+    finished=bool(sample) and not source_issues and completed==len(sample) and all(r[k] in ['supported','unsupported','unknown'] for r in consensus for k in LABELS)
+    status={'authors_expected':2,'input_provenance_issues':source_issues,'independent_rows_complete':completed,'sample_rows':len(sample),
             'completed_label_comparisons':comparisons,'initial_agreements':agreements,
             'raw_agreement':agreements/comparisons if comparisons else None,
             'human_review_complete_and_adjudicated':finished,'no_labels_inferred_from_blank_cells':True}
@@ -78,7 +101,14 @@ def review_status(sample):
                                    'cohen_kappa':kappa,'confusion_matrix':matrix}
     status['initial_agreement_by_label']=agreement_by_label
     dump(OUT/'endpoint_audit/human_review_status.json',status)
-    if finished:dump(OUT/'endpoint_audit/labels_adjudicated.json',consensus)
+    if finished:
+        dump(OUT/'endpoint_audit/labels_adjudicated.json',consensus)
+    else:
+        # Invalidate only derived tables from an earlier run. Preserve all source sheets.
+        derived=OUT/'endpoint_transport'
+        for path in (OUT/'endpoint_audit/labels_adjudicated.json', derived/'human_results.json',
+                     derived/'human_results.csv', derived/'human_summary.json'):
+            path.unlink(missing_ok=True)
     return status,consensus
 
 
@@ -101,16 +131,19 @@ def weighted_metrics(rows,selected,eligible):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--label-source',choices=['automated','human'],default='human')
+    parser=argparse.ArgumentParser();parser.add_argument('--label-source',choices=['automated','human'],default='automated')
     args=parser.parse_args()
     sample=json.loads((ROOT/'manuscript_q1/protocols/endpoint_audit_sample.json').read_text())
-    status,human=review_status(sample)
-    if args.label_source=='human' and not status['human_review_complete_and_adjudicated']:
-        print(json.dumps({'status':'pending_human_review',**status},indent=2));return
+    status=None
     if args.label_source=='automated':
         evidence=json.loads((OUT/'endpoint_audit/automated_evidence.json').read_text())
         labels={r['audit_id']:{k:('supported' if v=='supported_static' else 'unknown') for k,v in r['automated_labels'].items()} for r in evidence}
-    else:labels={r['audit_id']:r for r in human}
+    else:
+        status,human=review_status(sample)
+        if not status['human_review_complete_and_adjudicated']:
+            print(json.dumps({'status':'no_completed_human_review',**status},indent=2))
+            return
+        labels={r['audit_id']:r for r in human}
     data=baseline();masks=[int(x,16) for x in data['maintainer_masks']];orders=retained_orders(data)
     strata={s:[r for r in sample if r['stratum']==s] for s in ['1','2-5','6-50','>50']}
     estimates={}
@@ -154,7 +187,7 @@ def main():
          'estimates':estimates,'interpretation':'Current-time static audit; automated labels are provisional evidence candidates, not independent human validation.',
          'population':'original 7158 endpoint frame, not all npm','scenario_warning':'H all-in/all-out scenarios are not sharp bounds',
          'created_at_utc':stamp(),'script_sha256':sha(__file__)})
-    print(json.dumps({'label_source':args.label_source,'rows':len(results),'human_review_complete':status['human_review_complete_and_adjudicated'],'estimates':estimates},indent=2))
+    print(json.dumps({'label_source':args.label_source,'rows':len(results),'human_review_complete':status['human_review_complete_and_adjudicated'] if status else None,'estimates':estimates},indent=2))
 
 
 if __name__=='__main__':main()

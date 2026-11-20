@@ -1,15 +1,7 @@
-# Author validation task
+# Endpoint evidence and optional author review
 
-Start with **Author_Validation_Guide.pdf**. It explains the complete workflow for Shahriar Hasan and Md. Ashikul Islam.
+The working author sheets, session log, contributions form and approval form are blank templates restored from the original October ZIP. The historical assessments and numerical results are in [generated_evidence](generated_evidence/). The generators write only to that directory. The two generated sheets cannot document manual review by either author. The previously filled author forms and the legacy file names remain in Git at `eb62a6c0ee35`.
 
-1. Open `Evidence_Index.html` in your browser.
-2. Each author independently completes their own file in `reviews/` for the same 120 endpoints.
-3. Preserve both initial files before comparing labels or resolving disagreements.
-4. Return the completed files and actual contribution descriptions for analysis and manuscript integration.
-5. Read and approve the exact final manuscript yourselves.
+The evidence index and original guide describe the sampled endpoints. The old roadmap and inventory describe proposed tasks. Only actual personal confirmations can support authorship declarations on a future submission. An automated study can use the explicitly automated endpoint measurements without filling any author review sheet.
 
-The sheets are intentionally unfilled. This folder records a task, not completed reviews. The endpoint audit is optional additional research; actual author approval is required for submission. The corrected manuscript already describes the absence of manual validation.
-
-`Evidence_Packet.md` provides the detailed original source links. `templates/` contains unfilled contribution, session-log and approval forms. `validate_reviews.py` checks only local sheet structure/completeness and does not alter records or calculate agreement. The analysis program reads the canonical repository sheets, so these task copies must be handed back or explicitly integrated before analysis.
-
-Rebuild the PDF with `python3 build_guide.py` (requires Tectonic). This folder and its ZIP can be shared between the two authors; keep the initial label files separate during review. The task includes frozen request records and readable source-text copies under `evidence/`, linked from the HTML index. Extract the complete ZIP to use them offline. Public pinned and live API links need internet access. No automated label summaries are included.
+The analysis uses the canonical sheets in `manuscript_q1/review_packets/`. A future genuinely independent review requires provenance matching the delivered sheets. See the [canonical packet instructions](../../manuscript_q1/review_packets/ENDPOINT_REVIEW_INSTRUCTIONS.md).

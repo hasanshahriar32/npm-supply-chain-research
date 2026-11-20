@@ -1,6 +1,7 @@
 """Boundary tests for new source-set and human-review semantics."""
 import csv
 import itertools
+import json
 from pathlib import Path
 import sys
 import tempfile
@@ -69,10 +70,41 @@ class RevisionEvidenceTests(unittest.TestCase):
                         w.writerow({**row,**{label:value for label in audit.LABELS},'evidence_notes':'Inspected recorded evidence'})
             with patch.object(audit,'ROOT',root),patch.object(audit,'OUT',root/'results'):
                 status,rows=audit.review_status(sample)
+                self.assertEqual(status['completed_label_comparisons'],0)
+                self.assertEqual(len(status['input_provenance_issues']),2)
+                for author in ['Shahriar_Hasan','Md_Ashikul_Islam']:
+                    sheet=folder/f'{author}_independent_labels.csv'
+                    (folder/f'{author}_provenance.json').write_text(json.dumps({
+                        'reviewer':author,'sheet_sha256':audit.sha(sheet),'independently_reviewed_by_me':True}))
+                status,rows=audit.review_status(sample)
             self.assertFalse(status['human_review_complete_and_adjudicated'])
             self.assertEqual(status['raw_agreement'],.5)
             self.assertEqual(status['initial_agreement_by_label'][audit.LABELS[0]]['cohen_kappa'],0)
             self.assertTrue((folder/'adjudication.csv').exists())
+
+    def test_generated_input_is_rejected_even_with_matching_declaration(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'manuscript_q1/review_packets';folder.mkdir(parents=True)
+            sample=[{'audit_id':'A001','repository':'owner/one'}]
+            for author in ['Shahriar_Hasan','Md_Ashikul_Islam']:
+                sheet=folder/f'{author}_independent_labels.csv'
+                with sheet.open('w',newline='') as f:
+                    writer=csv.DictWriter(f,['audit_id','repository',*audit.LABELS,'evidence_notes','label_source'])
+                    writer.writeheader()
+                    writer.writerow({**sample[0],**{key:'supported' for key in audit.LABELS},
+                                     'evidence_notes':'Fixture','label_source':'generated_scenario'})
+                (folder/f'{author}_provenance.json').write_text(json.dumps({
+                    'reviewer':author,'sheet_sha256':audit.sha(sheet),'independently_reviewed_by_me':True}))
+            out=root/'results'
+            previous=out/'endpoint_transport/human_results.csv'
+            previous.parent.mkdir(parents=True)
+            previous.write_text('previous derived output')
+            with patch.object(audit,'ROOT',root),patch.object(audit,'OUT',out):
+                status,_=audit.review_status(sample)
+            self.assertFalse(status['human_review_complete_and_adjudicated'])
+            self.assertEqual(set(status['input_provenance_issues'].values()),{'known_generated_labels'})
+            self.assertEqual(status['completed_label_comparisons'],0)
+            self.assertFalse(previous.exists())
 
 
 if __name__=='__main__':unittest.main()

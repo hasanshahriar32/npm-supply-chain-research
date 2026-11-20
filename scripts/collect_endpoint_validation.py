@@ -220,7 +220,7 @@ def summarize():
            'Use supported / unsupported / unknown for each label and cite evidence paths in notes. '
            'Do not discuss initial labels until both sheets are saved. Automated evidence remains provisional.',
            '', 'Current-time static evidence does not establish old HEAD validity, workflow execution, or historical publisher authority.','']
-    lines += ['## Label rubric','',
+    lines += ["If genuine independent labels are supplied, each reviewer records their own provenance in a sibling file named <reviewer>_provenance.json. Use the worksheet filename prefix for the reviewer field, the SHA-256 of the delivered CSV for sheet_sha256, and true for independently_reviewed_by_me only for work personally performed. The pipeline checks this self-report and the checksum. Code cannot verify a person's identity.", '', '## Label rubric','',
         '- `repository_mapping_supported`: every listed package/version mapping has registry repository evidence and a matching named package manifest at the inspected commit. Ambiguous monorepo paths and redirects remain unknown.',
         '- `workflow_file_present`: an actual workflow YAML file is present at the pinned commit.',
         '- `install_directive_observed`: a relevant workflow run step contains an installation command in the package path, or a reusable workflow/action has been resolved to equivalent evidence. Echoed examples, comments and unrelated paths do not count. Record conditions. This never claims a run succeeded.',

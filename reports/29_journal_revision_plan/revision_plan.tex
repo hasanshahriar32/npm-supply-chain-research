@@ -1,0 +1,208 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=21mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{fontspec}
+\usepackage{xcolor,booktabs,tabularx,array,enumitem,fancyhdr,amsmath}
+\usepackage[colorlinks=true,urlcolor=teal,linkcolor=teal]{hyperref}
+\definecolor{ink}{HTML}{142F43}
+\definecolor{muted}{HTML}{496375}
+\definecolor{accent}{HTML}{006B67}
+\hypersetup{pdftitle={How to rebuild the npm maintainer prioritization study},pdfsubject={Evidence audit and journal revision plan}}
+\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small\color{muted}npm maintainer prioritization}\fancyhead[R]{\small\color{muted}Journal revision plan}\fancyfoot[R]{\small\thepage}\setlength{\headheight}{15pt}
+\setlength{\parindent}{0pt}\setlength{\parskip}{5pt}
+\setlist[itemize]{leftmargin=*,topsep=2pt,itemsep=3pt}
+\setlist[enumerate]{leftmargin=*,topsep=2pt,itemsep=4pt}
+\setcounter{secnumdepth}{0}\raggedbottom\setlength{\emergencystretch}{2em}
+\newcommand{\pg}[1]{\newpage\section{\color{ink}#1}}
+\newcommand{\hd}[1]{\par\textbf{\color{accent}#1}\par\nopagebreak}
+\newcommand{\doi}[2]{\href{https://doi.org/#1}{#2}}
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\begin{document}
+{\small\color{muted}RESEARCH PLAN \quad 20 NOVEMBER 2026 \quad Repository revision \code{eb62a6c0ee35}}\par
+{\Huge\bfseries\color{ink}How to rebuild the npm maintainer prioritization study\par}
+\medskip
+\textbf{Publication judgment.} I would fund a pilot and hold submission. The paper already answers a graph question: under a fixed account budget, objectives select different maintainer portfolios. What makes this consequential for a software engineer is still open. Would those differences survive when downstream projects supply their own evidence of which dependency versions they resolve? That question is both narrower and harder. A credible answer in either direction would be worth reading.
+
+\hd{What is worth keeping}
+The paper states its objectives precisely. At 100 accounts, greedy coverage reaches 5,538 repositories and additive ranking reaches 4,407. The respective shares of modeled account--repository pairs are 11.48\% and 33.79\%. The new cohort repeats the direction, while the effect of enforcing version continuity on total pair count changes from 42.44\% to 3.33\%. The paper also reports a simpler heuristic beating its proposed one in one setting. These are informative findings about measurement and model choice.
+
+\hd{What stands between this draft and a journal submission}
+\begin{enumerate}
+\item \textbf{Evidence for the decision.} A workflow directory, one matching package name and one lockfile entry can refer to three different things. Establish a specific consumer workspace, dependency path and version at the same commit. Evaluate the decisions on those observations.
+\item \textbf{A narrower claim of originality.} Prior journal research already models developers jointly with dependencies and compares how scarce support should be allocated. The open contribution is the size, causes and decision consequences of using cheaper representations in a defined population. \doi{10.1177/26339137241231912}{Schueller and Wachs, 2024.}
+\item \textbf{Trustworthy validation.} The current census contains internally inconsistent version matches. The two author-named sheets come from generators. Rebuild the measurement and obtain independent reference judgments before using either source to support accuracy.
+\end{enumerate}
+\hd{Where I would send it}
+First target after validation: \textit{Journal of Systems and Software} (JSS). Use \textit{Empirical Software Engineering} (EMSE) as a methodological benchmark after its rejection. Reserve IEEE TSE or ACM TOSEM for a result that transfers independently or a method whose practical advantage is demonstrated. This ordering reflects fit, and gives no numerical acceptance prediction.
+\smallskip
+
+\small\textcolor{muted}{Scope of review. The archived Editorial Manager PDF is 32 pages. The current local EMSE export is 34 pages and includes later studies. The decision letter does not identify which experiments the editors assessed. The plan evaluates the stronger local draft and the later repository evidence.}
+\pg{Where the paper meets the bar, and where it falls short}
+\small
+\renewcommand{\arraystretch}{1.17}
+\begin{tabularx}{\linewidth}{@{}p{.19\linewidth}XX@{}}
+\toprule
+Dimension & Evidence in the current work & What would change the assessment\\\midrule
+Originality \newline \textit{Partial} & Maintainer reach, greedy vetting, and joint developer--dependency risk have precedents. The additive optimum follows from the score. & Show how many review slots change or lose documented coverage under a version- and workspace-specific reference. Explain a case where the old method works as well.\\
+Empirical relevance \newline \textit{Main weakness} & High-impact npm seeds lead to upstream package repositories with workflow directories. That is a useful engineering population, but the draft speaks about review programs and hardening. & Identify who makes the decision, the projects they serve, and the observable outcome. Supply real program evidence only if claiming real adoption or benefit.\\
+Construct validity \newline \textit{Blocking} & A standing registry username, package name, GitHub URL, and workflow lookup each measure a different object. The lockfile check currently accepts the first matching dependency. & Independently assess source-package-to-consumer paths, time alignment, candidate omissions and unresolved cases. Document where account identity stops being observable.\\
+Evaluation and comparisons \newline \textit{Partial} & 86 of 96 restricted exact settings attain the optimum, with a worst deficit of 66. Conditions share instances. Some rule comparisons describe built-in properties of their scores. & Compare frozen selections on common, held-out consumer evidence. Give paired absolute effects, simple comparators and failure examples. Keep small exact optima as diagnostics.\\
+Generalization \newline \textit{Weak} & The 100-root sample came from the original frame. Budget 100 consumes 0.82\% of original accounts and 9.51\% of new ones. & Test a separately enumerated consumer frame, absolute and proportional budgets, and report losses to follow-up by group.\\
+Reproducibility \newline \textit{Mixed} & Frozen inputs, checksums and exact computations are strengths. Source counts in Report 27 and labels in Report 28 disagree with what the checkout can establish. & Publish the exact inputs behind each result, a clean recalculation, an error ledger and a release specific to the new paper.\\
+Clarity and significance \newline \textit{Partial} & Thirteen figures cover objectives, modeling, auditing and replication. Several questions compete for the headline. & Organize around one decision, one primary endpoint and three questions. Show what changes for the reader and the uncertainty in that conclusion.\\
+\bottomrule
+\end{tabularx}
+\normalsize
+\hd{What the rejection actually establishes}
+The editors identify empirical depth and the rationale for evaluating the proposed approach on these data. They give no finding about originality, bibliography composition, AI wording, or misconduct. The quality judgments above are my assessment of the current material. \href{https://link.springer.com/journal/10664/aims-and-scope}{EMSE scope.}
+\pg{What comparable journals actually publish}
+\textbf{Journal expectations} below come from the publisher or an editor. The proposed tests and the target order are my judgment. Sample sizes in published papers illustrate design choices and carry no special editorial status.
+
+\hd{Journal of Systems and Software — first target after the new study}
+JSS asks for evidence supporting claims and knowledge applicable to software engineering beyond the immediate application. Mujahid et al. grounded npm package-selection characteristics in a developer survey and regression on observed packages. For this paper, the transferable lesson would be when a cheap dependency representation changes a review decision, under which evidence conditions, and by how much. A paired consumer study plus a replicable measurement procedure fits. A broad security recommendation supported only by the old graph does not clear that bar. \href{https://shop.elsevier.com/journals/journal-of-systems-and-software/0164-1212}{Publisher scope}. \doi{10.1016/j.jss.2022.111588}{JSS example.}
+
+\hd{Empirical Software Engineering — standard for evidence depth}
+EMSE emphasizes applied research with a strong empirical component. Samaana et al. repeated a prior technical-leverage study in npm, explicitly changed dependency depth, and assessed how findings changed. Mohayeji et al. studied security-update handling through actual developer responses to updates. Our analogue is to measure the fate of a frozen selection against consumer evidence and to explain discrepancies. The decision is a rejection. Plan a new submission to another journal. If the authors later consider EMSE for substantially different work, establish its eligibility with the office first. \href{https://link.springer.com/journal/10664/aims-and-scope}{Publisher scope}. \doi{10.1007/s10664-025-10648-8}{Technical leverage}. \doi{10.1007/s10664-025-10638-w}{Dependabot study.}
+
+\hd{IEEE Transactions on Software Engineering — stretch target}
+IEEE asks for theoretical or empirical contributions with potential impact on software construction, analysis or management. Cogo et al. interpreted npm dependency downgrades using repository artifacts alongside quantitative measures. Wang et al.'s Plumber study derived remediation strategies and evaluated reports using developer feedback. A TSE case here would need a decision or principle that transfers and a meaningful advantage over a simple alternative, or a convincing explanation of when the cheaper alternative suffices. If claiming a program works in practice, observe real decisions, time or uptake. \href{https://www.computer.org/digital-library/journals/ts/cfp-ieee-transactions-on-software-engineering}{IEEE scope}. \doi{10.1109/TSE.2019.2952130}{Downgrades}. \doi{10.1109/TSE.2023.3243262}{Plumber.}
+
+\hd{ACM Transactions on Software Engineering and Methodology — stretch target}
+TOSEM's editorial describes a focus on foundations and emerging SE methods. Alfadel et al. defined what vulnerability information was discoverable at specific times and applied those definitions to 6,546 Node.js applications. Bogart et al. used independent sources to test how far dependency practices transfer. A competitive case here would be a reusable, well-specified way to measure ranking errors, independently checked on a second setting, with evidence of what its added complexity buys. \href{https://abhikrc.com/pdf/TOSEMeditorial2025.pdf}{TOSEM editorial}. \doi{10.1145/3571848}{Discoverability}. \doi{10.1145/3447245}{Ecosystem practices.}
+
+\pg{What the census can support today}
+The later repository changes bring substantial source material. They do not enter the current 34-page paper as results. Treat the 7,158 rows as observations from the previously selected, source-reachable repository frame. Selection already favored workflow-positive projects. A high workflow rediscovery rate cannot establish workflow prevalence across npm.
+
+\hd{A fresh consistency check on all 4,375 positive version examples}
+I extracted the one declared specification and the one resolved version from each census note labeled \code{dependency_version_supported=supported}. I tested the pair with npm's \code{semver} 7.8.5, using its default range and prerelease behavior. Every positive note yielded one pair. Unsupported protocol specifications and invalid versions are unassessable here.
+\begin{center}
+\begin{tabular}{lrrr}\toprule
+File recorded in note & Within range & Outside range & Unassessable\\\midrule
+\code{package-lock.json} &2,175&7&8\\
+\code{npm-shrinkwrap.json} &2&0&0\\
+\code{pnpm-lock.yaml} &1,102&78&76\\
+\code{yarn.lock} &760&142&25\\\midrule
+Total &4,039&227&109\\\bottomrule
+\end{tabular}
+\end{center}
+That is 227 of 4,266 assessable examples (5.32\%) outside their recorded range. One pairs \code{^1.3.2} with \code{1.2.0}. Overrides, aliases, unusual specifications and stale metadata need inspection. This measures inconsistency in the stored explanation. It does not estimate false positives across all claims. Even a semver-compatible example may come from the wrong importer or concern a dependency unrelated to the claimed maintainer.
+
+\hd{Three failures that more rows cannot fix}
+\begin{itemize}
+\item \textbf{Unit mismatch.} The code pools dependencies from several manifests, takes the first retained root lockfile, and accepts a matching dependency. It never requires the matched dependency to lie on the account--consumer path being scored. Of 4,375 positive version examples, 1,090 lack a positive repository-mapping flag. Only 2,837 of all 7,158 rows have all five machine flags positive. Even these are candidates.
+\item \textbf{Missing artifacts.} The checkout tracks 36,504 files below \code{data/full_census/source_text/}. Report 27 lists 60,772. Two of the 7,158 commit requests returned 404. Reconcile the manifest, per-file failures and collection caps before estimating absence from the archive.
+\item \textbf{Label provenance.} Two scripts generate the author-named review sheets. One applies predetermined disagreement overrides. The 588 of 600 matching labels in Report 28 describe generated output. Exclude those files from reference labels, agreement estimates and public claims of human review. Preserve them with explicit provenance for reproducibility.
+\end{itemize}
+\small\textcolor{muted}{Reproduce the first table from data/full\_census/census\_audit\_labels.csv, SHA-256 prefix a3641ddbae922e97. Filter positive version rows, extract the quoted specification and version around “resolved to”, group by the following lockfile name, and count valid ranges and versions with semver.validRange, semver.valid and semver.satisfies.}
+\pg{The study I would actually run}
+\textbf{Working title.} How dependency representations change maintainer-review coverage in npm projects.
+
+\textbf{Decision and population.} Imagine a software assurance team with capacity to review a fixed number of upstream maintainer accounts for a defined portfolio of public JavaScript projects. Its measurable objective is to cover consumer projects with a documented dependency on at least one package associated with a selected account. A registry association is observable. Holding publish authority, participating in a review, and preventing an incident require different data. If only published package development repositories are sampled, name that population explicitly. To speak about downstream applications, sample applications directly.
+
+\hd{Three questions with explicit evidence}
+\textbf{RQ1. How accurately do graph-derived account--consumer associations describe the same consumer's committed dependency tree?} Unit: one account and one consumer repository at a pinned commit, evidenced by a named package and a traceable workspace-to-package path. Estimate support, contradictions and unknowns for graph-positive pairs. Also inspect reference-derived pairs absent from the proposed graph. Document false negatives on the auditable universe and identify out-of-universe accounts separately.
+
+\textbf{RQ2. At equal budget, how much documented consumer coverage is gained or lost by using different representations?} Compare selections made on name-level and version-consistent representations with the same selection rule, eligible accounts and information cutoff. Then vary the rule within each representation. The primary outcome is the paired difference in documented consumer coverage on held-out projects. A second outcome is how many review slots change. These two results can disagree, which is itself useful to a reviewer deciding whether to pay for finer metadata.
+
+\textbf{RQ3. When do the differences persist or disappear?} Predefine a few moderators: single-workspace versus monorepo, dependency scope, and manager/lockfile support. Replicate on an independently enumerated consumer frame or on a later, prospectively frozen cohort with appropriate limits on generalization. Examine reversals as well as stable decisions. Before scoring, record how much coverage difference would justify more costly collection. For example, five additional consumers per 100 might matter to one team. Elicit or justify the margin, record collection and analyst time, and report the interval against it. A precise near-zero effect could support the cheaper procedure.
+
+\hd{What counts as supporting evidence}
+\begin{enumerate}
+\item Freeze the consumer repository, commit date, workspace/importer and manifest path. Record the relevant package manager, lockfile path, format version and content hash.
+\item Reconstruct the path from that importer to a package/version with manager-specific rules. Preserve ancestry, nested copies, workspace links, overrides, dependency scopes and unresolved edges. Require a match to the actual package attributed to the selected account. Start with supported npm lockfile formats if that is the only parser that passes the pilot.
+\item Join to a dated registry account association using a declared observation window. If historical account membership is unavailable, use a contemporaneous prospective snapshot and state its window. A present-day list cannot supply historical authority.
+\item A workflow-specific claim additionally needs a linked job, working directory, manager command and applicable lockfile at the same commit. Unresolved actions, conditional jobs and dynamic directories stay unknown. A static path supports documented resolution. Execution or adoption would require a separate observed outcome.
+\end{enumerate}
+\href{https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json/}{npm lockfile specification}. \doi{10.1007/s10664-022-10154-1}{Zerouali et al. distinguish package consumers and external GitHub projects.}
+
+\pg{Sampling, validation and missing data}
+\hd{Build a real holdout before looking at the rankings}
+Use the current archive for parser development and failure discovery. For the main study, freeze a separately enumerable list of public JavaScript projects, for example a dated public project index with npm manifests. State the index, snapshot, query, licenses, activity window and known omissions. Draw projects before checking for a lockfile or a workflow. Record the random seed and each inclusion probability. Deduplicate forks, mirrors, common repositories and workspaces. Group related projects or organization families in a single split where identifiable. Report overlaps with the original graph and repeat without overlapping consumers. Shared upstream dependencies are expected and should be measured.
+
+\hd{Run a feasibility pilot and size the main sample from it}
+Start with approximately 40 previously unused projects across prespecified project types. This is a workload estimate. Measure acquisition success, parsable importer paths, positive/negative pair frequency, shared upstream sources, and minutes per review. Keep pilot cases out of the confirmatory test. For intuition, a simple random proportion near 50\% needs about 385 independent observations for a 95\% interval with a five-percentage-point half-width. Clustered pairs, stratification, missing evidence and paired coverage differences require a design-specific calculation. Use pilot cluster sizes and the variance of paired differences to size the real study. If the planned precision is unaffordable, narrow the population or report wider intervals.
+
+\hd{Collect evidence that can disagree with the program}
+Draw stratified cases from predicted positives, apparent negatives, parser disagreements and retrieval failures. For recall, start from a random subset of complete reference trees and enumerate independently derived source associations, including ones the cheap graph misses. A sample of marked positives alone only estimates confirmation among positives. Oversample rare managers or difficult cases if needed, retain inclusion weights, and keep purposive bug examples separate from prevalence estimates.
+
+Both authors can annotate independently if they actually perform the work. Use a fresh held-out sample so earlier generated labels cannot anchor judgments. Give each the underlying files and task identifiers, hide the program decision and the other's answers, and record path, version, evidence location, judgment, uncertainty and time. Preserve both first-pass sheets, adjudication reasons and unresolved items. Report per-label counts, raw agreement and a chance-corrected statistic with its prevalence limitations. Then report weighted precision and recall against the adjudicated cases, with the respective sampling frames, confusion counts, unknowns and intervals. Agreement between coders and accuracy of the extractor answer different questions.
+
+\hd{Identify the cases that disappear}
+Draw a flow from frame through eligibility, retrieval, parsing, account linkage and scoring. Distinguish absent file after a complete search, API failure, missing historical data, parser limitation and ambiguous evidence. Compare the observable characteristics of included and unresolved consumers. For binary coverage, show lower/upper scenarios treating unknown coverage as zero/one. For paired differences, use the feasible paired extremes per project. Retain projects without source evidence in the eligibility ledger. If missingness could reverse the interpretation, present the conditional finding and its limits.
+
+\pg{Fair comparisons and interpretable effects}
+\hd{Separate changing the graph from changing the algorithm}
+Use a crossed design. Rows are the package-name representation, version-continuous representation and, where available in development, importer-specific lockfile representation. Columns are portfolio size, additive pair ranking, greedy distinct-consumer coverage and the simpler exclusion rule if retained. Include seeded random selection as a scale reference. Freeze ties, eligibility, budgets and information cutoffs. Score every selected portfolio on the same held-out consumers and reference evidence. Use the same cost convention for every rule. One account equals one slot only in the equal-cost scenario.
+
+Make the primary comparison name versus version at the same greedy rule and a prespecified budget such as 100, contingent on feasibility before the holdout is opened. Run cheap and expensive methods against independently adjudicated evidence. Build a lockfile-informed comparison using training consumers only. An optimizer allowed to see the evaluation trees is a labeled hindsight upper reference, not a deployable baseline. Keep diagnostic comparisons that reoptimize the same fixed graph in a separate table.
+
+\hd{Define the quantity and its denominator}
+For sampled consumer $i$, let $Y_i(S)=1$ when it has an evidenced path to a package associated with at least one account in selection $S$. Let $w_i$ be its design weight. On the common evaluable consumers report
+\[
+ \widehat{\Delta}=\frac{\sum_i w_i\{Y_i(S_{\rm version})-Y_i(S_{\rm name})\}}{\sum_i w_i}.
+\]
+Publish both marginal coverages and the two discordant counts (covered only by name, only by version). Show the evaluable denominator, unresolved fraction and sensitivity on the full frame. Report absolute percentage points and changed projects per 100 as well as Jaccard overlap of the selected account sets. Large turnover with little coverage difference means several portfolios serve similar sets of consumers.
+
+\hd{Uncertainty and interpretation}
+Use design-based variance or a stratified paired cluster bootstrap at the sampled project/organization unit as justified by the frame, keeping each pair of outcomes together. For fixed portfolios call these intervals conditional on the selections. To claim stability of selection, resample development clusters and refit rankings separately. A frozen finite census has exact descriptive totals. Repeated random orders, nested budgets and shared graph nodes do not create independent projects. Report one primary contrast, label other budgets exploratory, and show proportional budgets as well as fixed ones. Report the original graph's all-source objective only for cases with defensible source completeness. Dropping unobserved sources could make “all selected” spuriously easy.
+
+\hd{Close the loop on disagreements}
+Sample discordant cases in both directions and agreements under a fixed procedure. Trace each from the consumer importer back to the difference in representation. Classify version merging, nested version, dev-only scope, workspace mismatch, missing evidence and genuine interchangeable selections. Show anonymized examples and counts for reviewed classes. Include a case where the cheap graph is adequate. Suppress account leaderboards in publication outputs. A null or reversed effect with useful precision remains publishable research.
+
+\pg{Rebuild the related work around journal evidence}
+The current EMSE build cites 28 distinct keys from 31 bibliography records. Its compiled citations comprise eight explicit conference entries, 15 miscellaneous entries and five tagged as articles. Two of those five appeared in PACM Software Engineering's FSE issues. Under your preference to exclude conference-linked issues, three of 28 are conventional journal articles. These figures describe the current build and BibTeX types, not the scholarly merit of any venue.
+
+\hd{Journal literature to use claim by claim}
+\small
+\begin{tabularx}{\linewidth}{@{}p{.26\linewidth}X@{}}
+\toprule
+Place in revised paper & Evidence and use\\\midrule
+Closest predecessor & Schueller and Wachs already joined developer and dependency networks and evaluated scarce-resource interventions in Rust. Compare their failure model, intervention, population and outcome with ours in the first related-work paragraph. \doi{10.1177/26339137241231912}{Collective Intelligence.}\\
+Graph frame and endpoints & Decan et al. compared dependency-network evolution across seven ecosystems. Zerouali et al. distinguished registry dependents from external projects. Use both to motivate the unit and the separate consumer frame. \doi{10.1007/s10664-017-9589-y}{EMSE, 2019}. \doi{10.1007/s10664-022-10154-1}{EMSE, 2022.}\\
+Dependency granularity & Samaana et al. changed dependency depth in an npm replication. Shen et al. compared package-level findings with finer evidence in their corpus. Use their methods to motivate sensitivity and construct validation. \doi{10.1007/s10664-025-10648-8}{EMSE, 2025}. \doi{10.1007/s10664-024-10581-2}{EMSE, 2025.}\\
+Time alignment & Chinthanet et al. separated upstream fixing releases from client adoption. Alfadel et al. defined what vulnerability information was discoverable at each time. Use them to justify timestamps and unavailable historical fields. \doi{10.1007/s10664-021-09951-x}{EMSE}. \doi{10.1145/3571848}{TOSEM.}\\
+Practical significance & Mujahid et al. compared developer expectations with package-selection data. Mohayeji et al. observed security-update handling. Wang et al. evaluated remediation reports with developer feedback. Use the appropriate comparator for claims about choices or utility. \doi{10.1016/j.jss.2022.111588}{JSS}. \doi{10.1007/s10664-025-10638-w}{EMSE}. \doi{10.1109/TSE.2023.3243262}{TSE.}\\
+Explanation and replication & Cogo et al. inspected artifact evidence to explain downgrades. Bogart et al. triangulated interviews, surveys, mining and documents across ecosystems. Use them to design failure analysis and limit transfer claims. \doi{10.1109/TSE.2019.2952130}{TSE}. \doi{10.1145/3447245}{TOSEM.}\\
+Optimization foundations & Credit Nemhauser, Wolsey and Fisher for the submodular result. State which objective it applies to. The paper's empirical contribution concerns regret and observed decision changes. \doi{10.1007/BF01588971}{Mathematical Programming.}\\
+\bottomrule
+\end{tabularx}
+\normalsize
+\hd{Citation policy for this revision}
+The companion BibTeX file contains only journal articles. Merge by DOI, read the primary paper and bind each citation to a specific claim. Drop off-topic detector, incident, signing and forecasting material when cutting those claims. Put dataset versions and software documentation in Methods or data availability. Where a named baseline or a priority claim originates in conference work, credit it directly or remove the dependent claim. A different journal article cannot stand in as its inventor.
+
+\pg{Novelty checks and a manuscript worth submitting}
+\hd{Protect against the two obvious priority objections}
+Zimmermann et al. already investigated npm maintainer influence and vetting. The updated ESEM 2026 study by Tsakpinis et al. evaluated support strategies in PyPI against existing mechanisms and PageRank. These proceedings are essential checks on priority and are excluded from the companion journal bibliography. Together with Schueller and Wachs, they rule out leading with “we rank maintainers” or “we compare support allocations.” Make a table of unit, decision, actual observation, comparator and validation. The prospective distinction here is evaluating a fixed account selection on independently sampled, importer-specific consumer evidence and explaining the consequences of representation errors. Reassess that distinction at submission. \href{https://www.usenix.org/conference/usenixsecurity19/presentation/zimmerman}{Original npm vetting study}. \href{https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ESEM.2026.2}{PyPI support study}. \doi{10.1177/26339137241231912}{Journal predecessor.}
+
+\hd{How the literature was selected}
+This was a targeted scoping search on 20 November 2026, using publisher pages, DOI records and author copies. Queries combined npm or package ecosystem with maintainer prioritization, developer removal, allocation of support, dependency-network evolution, lockfile resolution, consumer projects, and vulnerability-fix adoption. I kept primary journal studies that directly support a design decision and traced close nonjournal predecessors separately. This is a selected evidence set, not a systematic review or proof of first discovery. Before submission rerun these terms in IEEE Xplore, ACM DL and bibliographic indexes, snowball citations in both directions, record search dates and exclusions, and update the closest-work table. Reuse the existing citation for a work already in the manuscript.
+
+\hd{Rewrite order after the analysis}
+\begin{enumerate}
+\item \textbf{Introduction and abstract.} Open with the team's decision and the risk of spending scarce review slots on a misrepresented consumer. Give the target population, budget, primary contrast, interval, and one limit in plain language. Use the result even if the cheaper graph performs as well. Replace the long catalog of graph statistics.
+\item \textbf{Methods.} Provide frame, eligibility, overlap, sampling probabilities, cutoff dates, importer resolution, account observation window, estimand, baseline costs, human validation and missingness policy. Publish machine-readable inclusion and outcome definitions.
+\item \textbf{Results.} First show the cohort flow and validation by manager. Then show paired consumer coverage with uncertainty, slot turnover, replication and failure cases. Keep a compact table of denominators next to each primary figure.
+\item \textbf{Figures.} Use a traced consumer example, acquisition flow, paired coverage-difference plot and error breakdown. Move fixed-graph budget curves, restricted exact results and exploratory sensitivities into the supplement. Retire the historical and forecasting appendices unless directly used by the new questions.
+\item \textbf{Discussion and declarations.} Explain when the cheaper method suffices and where data cannot distinguish choices. State what costs have actually been measured. Align claims in title, abstract, captions and artifact README. Confirm real contributions, approvals and substantive AI assistance against the destination's guidance for the exact PDF.
+\end{enumerate}
+
+\pg{Execution schedule and the decision to submit}
+Suggested sequence for two authors. Weeks are workload estimates, measured from the start of the revision. Time for access, genuine review or a second collection window can extend them. Each phase has a deliverable and a reason to stop or narrow the study.
+
+\small
+\begin{tabularx}{\linewidth}{@{}p{.14\linewidth}XX@{}}
+\toprule
+When & Work and deliverable & Completion test\\\midrule
+Week 1 & Archive draft hashes. Make a claim--evidence table and closest-work comparison. Mark generated labels and reports clearly in the research artifact. Write scope, primary contrast, sampling frame, timing and uncertainty plan. & Both authors can describe the new question and name prior work that already answered the older one. Specify which statements would change after a null result.\\
+Weeks 2--3 & Use old data to repair path resolution. Build fixtures for valid and invalid ranges, duplicate versions, hoisting, workspaces, overrides, unsupported formats and missing files. Run a separate feasibility pilot. & Each positive carries a recoverable importer-to-package witness and timestamped account join. The known out-of-range example is corrected or explicitly explained. Measure reviewer effort and forecast attainable precision.\\
+Weeks 3--5 & Freeze the main protocol and draw untouched consumers. Independently annotate a probability sample and reference trees. Archive original sheets, disagreements and acquisition states. & Each validation claim has identifiable source records, a target denominator and a design weight where needed. If accuracy or evidence yield is inadequate for the primary comparison, narrow the supported formats or frame and test anew.\\
+Weeks 5--7 & Freeze selections, score held-out projects, estimate paired effects and uncertainty, then run missingness scenarios and the second cohort. Classify cases in both directions. & A clean run regenerates the flow, paired table, intervals, disagreement examples and all denominators. Any claim of transfer matches the actual independence of the second population.\\
+Weeks 7--8+ & Rewrite around the new results. Refresh literature and confirm related submissions. Prepare an independently runnable release and the target journal's files. & Both authors check a clean rebuild and approve the same final PDF. Verify disclosures, source/binary correspondence, attribution, artifact access and every headline number.\\
+\bottomrule
+\end{tabularx}
+\normalsize
+\hd{Three defensible end states}
+\textbf{Submit the comparative study to JSS} if the primary estimate is interpretable, extraction errors are characterized, and the independent evidence explains when representation matters. A precise near-zero difference qualifies. \textbf{Consider TSE or TOSEM} if the design also supports a transferable methodological result or credible evidence of a practical improvement. \textbf{Narrow the paper} if the holdout, identities or resolution evidence stay too incomplete. Report measurement coverage and failure modes in the defined frame, and retire the operational prioritization claim. Journal selection follows that revised contribution.
+
+\hd{First task}
+Take 40 fresh consumer repositories, attempt one fully traceable association per evaluable case, and record every failure and time cost. In parallel, run the known mismatch fixtures on the old census. Review the resulting evidence ledger before committing either author to a full-scale crawl or a manuscript rewrite.
+\end{document}

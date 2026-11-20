@@ -35,7 +35,7 @@ RESP_DIR = CENSUS_DIR / 'github_responses'
 SRC_DIR = CENSUS_DIR / 'source_text'
 REG_DIR = CENSUS_DIR / 'registry'
 CHECKPOINT_FILE = CENSUS_DIR / 'checkpoint.json'
-AUDIT_CSV = CENSUS_DIR / 'census_audit_labels.csv'
+AUDIT_CSV = CENSUS_DIR / 'census_root_examples.csv'
 AUDIT_SUMMARY = CENSUS_DIR / 'census_audit_summary.json'
 
 
@@ -295,17 +295,9 @@ def cmd_audit(endpoints: list):
     print(" Running 5-Criteria Census Audit Engine")
     print("=" * 60)
 
-    # 1. Build Registry Lookup
-    reg_lookup = {}
-    for p in REG_DIR.glob('*.json'):
-        try:
-            data = json.loads(p.read_text(encoding='utf-8'))
-            pkg = data.get('package')
-            ver = data.get('version')
-            if pkg and ver:
-                reg_lookup[(pkg, ver)] = (p.name, data)
-        except Exception:
-            pass
+    proc = subprocess.run(["node", str(HERE / "census_root_examples.cjs"), str(SRC_DIR)],
+                          check=True, text=True, capture_output=True)
+    root_examples = json.loads(proc.stdout)
 
     results = []
     audited_count = 0
@@ -434,72 +426,11 @@ def cmd_audit(endpoints: list):
             c4 = 'unsupported'
             c4_note = "no lockfile observed"
 
-        # 5. Dependency version (Deep lockfile inspection matching build_audit.py)
-        c5 = 'unsupported'
-        c5_note = 'no lockfile available'
-        if lock_files:
-            manifest_deps = {}
-            for pj in all_pj:
-                try:
-                    pj_d = json.loads(pj.read_text(encoding='utf-8', errors='replace'))
-                    for sec in ['dependencies', 'devDependencies', 'peerDependencies']:
-                        if sec in pj_d and isinstance(pj_d[sec], dict):
-                            for dn, ds in pj_d[sec].items():
-                                manifest_deps[dn] = (sec, str(ds), pj.name.replace('.txt', ''))
-                except Exception:
-                    pass
-
-            c5_match = None
-            lock_name, lock_path = lock_files[0]
-            try:
-                lock_txt = lock_path.read_text(encoding='utf-8', errors='replace')
-                if lock_name in ['package-lock.json', 'npm-shrinkwrap.json']:
-                    pld = json.loads(lock_txt)
-                    if 'packages' in pld and isinstance(pld['packages'], dict):
-                        for dn, (sec, ds, pjn) in manifest_deps.items():
-                            k = f"node_modules/{dn}"
-                            if k in pld['packages'] and 'version' in pld['packages'][k]:
-                                c5_match = (dn, sec, ds, pld['packages'][k]['version'], k, lock_name)
-                                break
-                    if not c5_match and 'dependencies' in pld and isinstance(pld['dependencies'], dict):
-                        for dn, (sec, ds, pjn) in manifest_deps.items():
-                            if dn in pld['dependencies'] and 'version' in pld['dependencies'][dn]:
-                                c5_match = (dn, sec, ds, pld['dependencies'][dn]['version'], dn, lock_name)
-                                break
-                elif lock_name == 'pnpm-lock.yaml':
-                    for dn, (sec, ds, pjn) in manifest_deps.items():
-                        pat = re.compile(r'[/\"\']?' + re.escape(dn) + r'@([0-9][0-9a-zA-Z\.\-\+]+)')
-                        m = pat.search(lock_txt)
-                        if m:
-                            c5_match = (dn, sec, ds, m.group(1), m.group(0), 'pnpm-lock.yaml')
-                            break
-                elif lock_name == 'yarn.lock':
-                    for dn, (sec, ds, pjn) in manifest_deps.items():
-                        pat_v1 = re.compile(re.escape(dn) + r'@[^:\n]+:\s*\n\s+version:?\s+[\"\']?([0-9][0-9a-zA-Z\.\-\+]+)')
-                        m = pat_v1.search(lock_txt)
-                        if m:
-                            c5_match = (dn, sec, ds, m.group(1), f"{dn}@...", 'yarn.lock')
-                            break
-                    if not c5_match:
-                        for dn, (sec, ds, pjn) in manifest_deps.items():
-                            pat_berry = re.compile(r'[\"\' ]?' + re.escape(dn) + r'@npm:[^:\n]+:\s*\n\s+version:\s*[\"\']?([0-9][0-9a-zA-Z\.\-\+]+)')
-                            m = pat_berry.search(lock_txt)
-                            if m:
-                                c5_match = (dn, sec, ds, m.group(1), f"{dn}@npm:...", 'yarn.lock')
-                                break
-            except Exception:
-                pass
-
-            if c5_match:
-                c5 = 'supported'
-                c5_note = f"'{c5_match[0]}' ({c5_match[1]} '{c5_match[2]}') resolved to '{c5_match[3]}' in {c5_match[5]} ({c5_match[4]})"
-            else:
-                if not manifest_deps:
-                    c5 = 'unsupported'
-                    c5_note = "no dependencies declared in manifest"
-                else:
-                    c5 = 'unknown'
-                    c5_note = f"lockfile present ({lock_name}) but dependency match unconfirmed"
+        # A positive concerns one dependency of the captured root importer.
+        example = root_examples.get(aid)
+        c5 = 'supported' if example and commit_sha != 'unknown' else 'unknown'
+        c5_note = (json.dumps(example, sort_keys=True) if c5 == 'supported' else
+                   'No pinned, eligible root npm dependency example established')
 
         results.append({
             'audit_id': aid, 'repository': repo, 'commit_sha': commit_sha,
@@ -550,7 +481,7 @@ def main():
 
     data = baseline()
     active_endpoints = [e for e in data['endpoints'] if int(e['source_mask'], 16) > 0]
-    token = get_gh_token()
+    token = None if args.audit and not args.run and not args.status else get_gh_token()
 
     if args.status or (not args.run and not args.audit):
         cmd_status(token, active_endpoints)

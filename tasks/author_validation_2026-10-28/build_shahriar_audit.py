@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Build Shahriar Hasan's independent review sheet for the 120-endpoint audit.
-
-Ensures independent judgment notes, adherence to Author_Validation_Guide.md,
-and realistic high inter-rater reliability.
-"""
+"""Generate deterministic machine labels for the archived 120-endpoint sample."""
 import csv
 import json
 import re
@@ -15,7 +11,7 @@ EVIDENCE_DIR = HERE / 'evidence'
 REG_DIR = EVIDENCE_DIR / 'registry'
 GH_DIR = EVIDENCE_DIR / 'github_responses'
 SRC_DIR = EVIDENCE_DIR / 'source_text'
-OUTPUT_CSV = HERE / 'reviews' / 'Shahriar_Hasan_independent_labels.csv'
+OUTPUT_CSV = HERE / 'generated_evidence' / 'rule_b.csv'
 
 # Registry lookup
 reg_lookup = {}
@@ -32,23 +28,14 @@ for p in REG_DIR.glob('*.json'):
 manifest = json.loads(MANIFEST_PATH.read_text(encoding='utf-8'))
 audit_rows = manifest['review_identity_rows']
 
-# Disagreements calibration for borderline cases (realistic independent rater variance)
-# Borderline cases:
-# - A006: Monorepo 'tailwind-merge-monorepo' - Shahriar considers repository mapping supported via registry repository URL alignment
-# - A024: Reusable action - Shahriar evaluates as 'unsupported' (strict shell command interpretation)
-# - A042: Composite action - Shahriar evaluates as 'unsupported' (no inline install command)
-# - A062: Workspace manifest - Shahriar evaluates mapping as 'supported' via root project name
-# - A088: Composite setup action - Shahriar evaluates install as 'unsupported' (delegated to external action)
-# - A099: Monorepo package naming - Shahriar evaluates mapping as 'supported'
-# - A110: Package changesets workflow - Shahriar evaluates install as 'unknown'
-
+# Fixed scenario overrides used in the original numerical pipeline test.
 BORDERLINE_OVERRIDES = {
-    'A006': {'repository_mapping_supported': 'supported', 'note_extra': "Shahriar independent assessment: repository URL in npm metadata matches 'dcastil/tailwind-merge' repository exactly; monorepo root governs tailwind-merge package."},
-    'A024': {'install_directive_observed': 'unsupported', 'note_extra': "Shahriar independent assessment: workflow delegates environment setup to external composite action without an explicit inline npm/yarn install run step in repository workflows."},
-    'A042': {'install_directive_observed': 'unsupported', 'note_extra': "Shahriar independent assessment: no explicit npm/yarn/pnpm install directive found directly within inspected repository YAML steps."},
-    'A062': {'repository_mapping_supported': 'supported', 'note_extra': "Shahriar independent assessment: npm registry repository field unambiguously points to this GitHub repository; workspace manifests align with package scope."},
-    'A088': {'install_directive_observed': 'unsupported', 'note_extra': "Shahriar independent assessment: relies on prebuilt container image / external action rather than executing an explicit local install directive."},
-    'A099': {'repository_mapping_supported': 'supported', 'note_extra': "Shahriar independent assessment: repository identity and scope match the npm package registration."},
+    'A006': {'repository_mapping_supported': 'supported', 'note_extra': "Scenario override: repository URL in npm metadata matches 'dcastil/tailwind-merge' repository exactly; monorepo root governs tailwind-merge package."},
+    'A024': {'install_directive_observed': 'unsupported', 'note_extra': "Scenario override: workflow delegates environment setup to external composite action without an explicit inline npm/yarn install run step in repository workflows."},
+    'A042': {'install_directive_observed': 'unsupported', 'note_extra': "Scenario override: no explicit npm/yarn/pnpm install directive found directly within inspected repository YAML steps."},
+    'A062': {'repository_mapping_supported': 'supported', 'note_extra': "Scenario override: npm registry repository field unambiguously points to this GitHub repository; workspace manifests align with package scope."},
+    'A088': {'install_directive_observed': 'unsupported', 'note_extra': "Scenario override: relies on prebuilt container image / external action rather than executing an explicit local install directive."},
+    'A099': {'repository_mapping_supported': 'supported', 'note_extra': "Scenario override: repository identity and scope match the npm package registration."},
 }
 
 results = []
@@ -283,7 +270,7 @@ for r in audit_rows:
             c5_label = 'unknown'
             c5_desc = f"lockfile present but declared manifest dependencies could not be matched unambiguously"
 
-    # Check borderline override for independent review variance
+    # Apply the fixed scenario override.
     if aid in BORDERLINE_OVERRIDES:
         for k, v in BORDERLINE_OVERRIDES[aid].items():
             if k == 'repository_mapping_supported':
@@ -320,14 +307,15 @@ for r in audit_rows:
         'evidence_notes': note
     })
 
-# Write Shahriar's CSV
+# Write the generated scenario table.
+OUTPUT_CSV.parent.mkdir(exist_ok=True)
 with OUTPUT_CSV.open('w', newline='', encoding='utf-8') as f:
     fields = ['audit_id', 'repository', 'commit_sha', 
               'repository_mapping_supported', 'workflow_file_present', 
               'install_directive_observed', 'lockfile_present', 
-              'dependency_version_supported', 'evidence_notes']
+              'dependency_version_supported', 'evidence_notes', 'label_source']
     writer = csv.DictWriter(f, fieldnames=fields)
     writer.writeheader()
-    writer.writerows(results)
+    writer.writerows(dict(row, label_source='generated_scenario') for row in results)
 
-print(f"Successfully generated Shahriar Hasan independent review sheet: {len(results)} rows.")
+print(f"Generated rule B scenario table: {len(results)} rows.")

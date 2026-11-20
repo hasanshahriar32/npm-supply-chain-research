@@ -1,0 +1,18 @@
+{
+  "design": "Exploratory feasibility pilot of public self-hosted applications indexed independently of the original npm graph",
+  "frame_repository": "awesome-selfhosted/awesome-selfhosted",
+  "frame_commit": "2a8926e0ac5014de75c00472319cdd6cb6a1f95d",
+  "frame_commit_utc": "2026-11-17T17:21:31Z",
+  "frame_path": "README.md",
+  "frame_license": "CC BY-SA 3.0, Awesome-Selfhosted contributors",
+  "eligibility": "Bullet software records whose last backtick-delimited platform field includes a slash-delimited exact token Nodejs, JavaScript, or TypeScript, case-insensitive. Require a root-level github.com/owner/repo source URL, taking the explicit Source Code URL when supplied, otherwise the project URL. Collapse case-insensitive repository duplicates. Include all sizes, activity levels and license families in the main free-software index; no archive-state, manifest, lockfile, or previous graph filter.",
+  "sample_size": 40,
+  "seed": "npm-consumer-feasibility-2026-11-20-v1",
+  "draw": "Sort the deduplicated repositories by SHA256(UTF-8(seed + newline + lowercased owner/repo)), with repository as secondary key, and draw the first 40 without replacement. Assign IDs in draw order. No replacements.",
+  "cutoff_utc": "2026-11-20T00:00:00Z",
+  "consumer_commit_rule": "GitHub commits endpoint on the default branch at retrieval, until=cutoff, per_page=1; record the first returned immutable SHA and observed committer date. A selected default-branch tip as of cutoff can still reflect later history rewriting. Record errors explicitly.",
+  "paths": ["package.json", "npm-shrinkwrap.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"],
+  "max_bytes_per_path": 6291456,
+  "scope": "Inspect repository root only. A missing root file does not establish absence of nested application workspaces. A static file does not prove installation or execution. Only allowlisted public GitHub API and GitHub raw resources are requested; no package installation, project execution, or contact with developers.",
+  "analysis_limits": "Pilot for feasibility, not a registry-wide probability sample, confirmatory evaluation, or human agreement study. No substitutions after acquisition failure. Check and report overlap with the original baseline separately."
+}
