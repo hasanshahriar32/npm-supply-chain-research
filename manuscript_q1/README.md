@@ -1,6 +1,6 @@
 # Journal research draft
 
-The November working draft includes the [consumer pilot](../research/consumer_evaluation/README.md). The journal PDFs here are the revised working copies. The October EMSE submission files and October source archive are historical snapshots.
+The November working draft includes the [consumer pilot](../research/consumer_evaluation/README.md) and a [held-out comparison](../research/consumer_holdout/README.md). The journal PDFs here are the revised working copies. The October EMSE submission files and October source archive are historical snapshots.
 
 
 For the current EMSE submission, use [`../submission/emse/EMSE_Manuscript.pdf`](../submission/emse/EMSE_Manuscript.pdf), the updated title page and flat source archive described in [`../submission/emse/README.md`](../submission/emse/README.md). The journal manuscript has 13 active figures, four focused research questions and appended exploratory material. Its data/code [prerelease](https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28) is publicly accessible and was reproduced offline after downloading the checksum-verified original input. The endpoint indicators were not manually validated. Individual contribution roles and author approval have not been inferred. See [Report 23](../reports/23_journal_validation_implementation.md) for the executed evidence and [Report 25](../reports/25_emse_guideline_correction.md) for the current manuscript and guideline correction.
