@@ -109,12 +109,21 @@ companion reproduces these results and the manuscript table.
 python scripts/study_yunohost_empty_declared_roots.py verify
 python scripts/check_yunohost_bun_direct.py verify
 python scripts/check_yunohost_npm_unresolved.py verify
+python scripts/replay_yunohost_budgets.py
 ```
 
 Use `score` with the retained capture to repeat the source checks. Source
 scoring requires Ruby for the YAML and text-lockfile inputs. Bun and npm
 scoring also use Node.js with npm SemVer. The [unresolved npm audit](runs/yunohost-npm-unresolved/results.json)
 adds three common negatives and documents missing artifact identifiers.
+
+The [exploratory budget comparison](runs/yunohost-budget-sensitivity/results.json)
+applies prefixes of the original additive orders at six equal budgets. It
+uses the earlier exact-version joins and corroborated empty roots. The
+portfolio-specific Bun join is outside this shared evidence base. The
+companion carries a projection of the relevant registry memberships as
+numeric indices and verifies the budget table and frozen five-account
+summary from that projection.
 
 ## YunoHost packaging and named importers
 

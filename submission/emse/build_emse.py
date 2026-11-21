@@ -86,6 +86,8 @@ def main() -> None:
     body = expand(canonical[start:end])
     body = body.replace(r"\IEEEPARstart{N}{pm}", "npm")
     body = body.replace("IEEEproof", "proof").replace(r"\cite{", r"\citep{")
+    body = body.replace(r"\includegraphics[width=0.96\textwidth]{study_system.pdf}",
+                        r"\includegraphics[width=0.92\textwidth]{study_system.pdf}")
     # The five-column literature matrix needs a landscape page at this text width.
     matrix_label = body.index(r"\label{tab:lit_positioning}")
     matrix_start = body.rfind(r"\begin{table*}", 0, matrix_label)
