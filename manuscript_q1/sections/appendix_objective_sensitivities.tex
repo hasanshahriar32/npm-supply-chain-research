@@ -1,3 +1,12 @@
+\onecolumn
+\begingroup
+% Keep the generated tables in reading order with their appendix subsections.
+\newenvironment{appendixresult}[1]{%
+  \par\medskip\noindent\begin{minipage}{\linewidth}\captionsetup{type=#1}%
+}{\end{minipage}\par\medskip}
+\renewenvironment{table*}[1][]{\begin{appendixresult}{table}}{\end{appendixresult}}
+\renewenvironment{table}[1][]{\begin{appendixresult}{table}}{\end{appendixresult}}
+
 \section{Extended Objective Sensitivities}
 \label{sec:objective_supplement}
 \subsection{Exploratory Scalarization}
@@ -6,35 +15,32 @@ We evaluate $J_\alpha(S)=\alpha C(S)/|R_{\mathrm{wf}}|+(1-\alpha)H(S)$ at seven 
 Table~\ref{tab:q1_pareto_frontier} and Figure~\ref{fig:q1_pareto_frontier} summarize the evaluated scalarization settings.
 \input{tables/q1_pareto_table}
 
-\begin{figure}[t]
+\begin{appendixresult}{figure}
 \centering
-\includegraphics[width=\columnwidth]{q1_pareto_frontier.pdf}
+\includegraphics[width=0.58\linewidth]{q1_pareto_frontier.pdf}
 \caption{Observed greedy scalarization results at budget 100. Connecting seven evaluated settings guides the eye; the curve is not a certified global Pareto frontier. Equal weighting is a sensitivity choice.}
 \label{fig:q1_pareto_frontier}
-\end{figure}
+\end{appendixresult}
 
 At $\alpha=0.50$, the name graph gives $C=5{,}020$, $H=31.19\%$, and $P=626$; the version graph gives $C=5{,}000$, $H=38.65\%$, and $P=648$. The name result retains 90.65\% of greedy's baseline coverage and 92.31\% of exact union's H. Relative to greedy, it loses 518 covered repositories and gains 19.71 percentage points of H. Relative to exact union, it gains 613 repositories and loses 2.60 points of H. A preferred operating point requires review costs and stakeholder preferences that were not measured here.
 
+\clearpage
 \subsection{Strict Zero-Anchored Threshold Sensitivity}
 \label{sec:quorum_exclusion}
 
-We evaluate the strict rule in Eq.~\ref{eq:strict_quorum} on the 7,158 endpoints with observed sources. The other 13 endpoints have no observed sources.
-The unguarded condition $t_r(S)<k$ credits every endpoint with $n_r<k$ even at zero hardening. In the strict model, a single-source endpoint must have its sole maintainer hardened at every threshold, and any endpoint with $n_r<k$ requires complete exclusion. This ensures a zero baseline for each tested $k$; it is not equivalent to subtracting the old zero-budget count.
-
-A protection interpretation still requires a measured policy in which every successful attack needs the designated number of distinct upstream identities with no bypass. Our graph lacks package-level signer groups, role constraints, and bypass privileges. Two unrelated single-maintainer dependencies can each poison a consumer even if their combined source cardinality is two. Table~\ref{tab:q1_quorum_exclusion} is therefore a structural sensitivity analysis, not a count of empirically protected repositories.
+Equation~\ref{eq:strict_quorum} gives zero credit at budget zero. An endpoint with $n_r<k$ requires complete source exclusion. Table~\ref{tab:q1_quorum_exclusion} applies the rule to the 7,158 endpoints with observed sources. A protection interpretation would require measured signer groups, authorization rules, and bypass privileges.
 
 \input{tables/q1_quorum_exclusion_table}
 
-Table~\ref{tab:q1_quorum_exclusion} lists the budget-100 counts. The source-cardinality distribution is $n_r=0$: 13, $n_r=1$: 1,716, $n_r=2$: 546, $n_r=3$: 354, $n_r=4$: 347, and $n_r\ge5$: 4,195. All strict zero-budget counts are zero.
+There are 13 source-free endpoints. Endpoint counts for $n_r=1,2,3,4$ are 1,716, 546, 354, and 347, respectively. The remaining 4,195 have $n_r\ge5$. All thresholds use the same maintainer orders. Direct $P$ uses the original $k=1$ heuristic. Counts are nondecreasing in budget for a fixed $k$.
 
-The same ordered maintainer selections are reused at all thresholds, and the Direct $P$ strategy continues to optimize its original $k=1$ heuristic. Counts are nondecreasing with nested hardening budgets for a fixed $k$. Comparisons across $k$ represent different hypothetical policies and need not be monotone, because endpoints with $n_r<k$ revert to complete-exclusion requirements.
-
-For an additional hypothetical sensitivity, uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$. At $\eta=0.90$, Pareto Hybrid yields $28.07\%$ effective scenario exposure reduction. This uniform multiplier preserves all $H$ rankings and does not estimate a real bypass rate, correlate account failures, or model CI compromise. Its values are assumptions, not incident-derived estimates.
+Hypothetical uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$ and preserves the $H$ ranking. At $\eta=0.90$, the hybrid's scenario exposure reduction is $28.07\%$.
 
 \subsection{Heterogeneous Weight Sensitivities}
 Table~\ref{tab:q1_heterogeneous_weights} reports the weight sensitivities.
-\input{tables/q1_heterogeneous_weights_compact}
+\input{tables/q1_heterogeneous_weights_table}
 
-The account-sole weight increases an account's contribution according to its number of sole-maintained packages; it does not restrict its reachable endpoints to those packages. Ranking by that weighted reach captures 88.04\% of the stipulated account-sole mass. This is concentration under an assumed weighting, not nine-tenths of measured ecosystem risk.
+The account-sole weight scales the full account portfolio by its number of sole-maintained packages. Ranking by weighted reach captures 88.04\% of the stipulated account-sole mass.
 
-The separate package-sole quantity unions reach only from each account's sole-maintained packages. Under that definition, unweighted greedy captures 23.40\%, unweighted exact union 27.32\%, and package-sole-aware ranking 67.37\%. The latter gain is 40.05 percentage points relative to unweighted exact union. Its uniform coverage is 4,718 repositories and $P=642$. These results distinguish account weighting from package-restricted reach.
+The package-sole quantity restricts reach to each account's sole-maintained packages. The package-sole-aware ranking captures 67.37\% of that mass, 40.05 percentage points more than unweighted exact union. It covers 4,718 repositories with $P=642$.
+\endgroup

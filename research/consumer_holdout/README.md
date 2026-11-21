@@ -49,12 +49,23 @@ The audit checks the sealed queue and result hashes, the order of source and reg
 
 The [YunoHost protocol](runs/yunohost-v2/protocol.json) freezes the same portfolios and a different root-importer extraction procedure on 215 commit-pinned applications. Keep the [verified root evidence](../consumer_parser_development/README.md) and both acquisition receipts to replay this run. The registry receipt includes observed account associations and belongs in the ignored local evidence directory.
 
-For a new collection on a fresh frame, the protocol precedes the workspace and registry queues. The CLI for this run uses a fixed output directory, so use the saved protocol for offline replay. Review the collected public sources against the recorded queue before scoring. Live registry retrieval at another date changes the observations.
+The protocol precedes both acquisition queues. The CLI uses a fixed output directory. For path reconstruction, run the `paths` stage in a separate copy containing the saved acquisition files and check that the reconstructed trace and queue hashes match the completed run. Live registry retrieval at another date changes the observations.
 
 Replay the completed analysis from the repository root:
 
 ```sh
-python scripts/study_yunohost_holdout.py paths
 python scripts/study_yunohost_holdout.py score
 python scripts/verify_yunohost_holdout.py
+python scripts/compare_yunohost_npm_extractors.py
+```
+
+## Yarn Classic follow-up
+
+The [follow-up protocol](runs/yunohost-yarn-classic/protocol.json) adds positive evidence in the same 215-project frame. It retains the original npm and pnpm pairs, selected portfolios, and observation dates. The [follow-up results](runs/yunohost-yarn-classic/results.json) retain both documented and feasible paired states.
+
+Offline scoring uses the saved Classic-parser bundle and separate registry receipt in `runs/yunohost-yarn-classic/private/`. The [parser origin record](runs/yunohost-yarn-classic/parser_origin.json) specifies the versioned tarball and its SHA-512. The required parser is the archive member `package/index.js`; the protocol verifies the extracted file's SHA-256. The following commands replay scoring and check the displayed results from the retained inputs.
+
+```sh
+python scripts/study_yunohost_yarn_classic.py score
+python scripts/verify_yunohost_yarn_classic.py
 ```

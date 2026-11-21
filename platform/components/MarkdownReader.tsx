@@ -21,5 +21,10 @@ export function MarkdownReader({ markdown }: { markdown: string }) {
     h2: ({ children }) => { const text = String(children); return <h2 id={nextHeadingId(text)}>{children}</h2>; },
     h3: ({ children }) => <h3>{children}</h3>,
     a: ({ href, children }) => <a href={href} target="_blank" rel="noreferrer">{children}</a>,
+    table: ({ children }) => (
+      <div className="markdown-table-scroll" role="region" aria-label="Research table" tabIndex={0}>
+        <table>{children}</table>
+      </div>
+    ),
   }}>{markdown}</ReactMarkdown></article><aside className="contents"><p>On this page</p>{headings.map((heading, index) => <a key={`${heading}-${index}`} href={`#${slugify(heading)}`}>{String(index + 1).padStart(2, "0")} / {heading}</a>)}</aside></div>;
 }

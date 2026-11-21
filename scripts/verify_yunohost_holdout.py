@@ -2,14 +2,74 @@
 """Audit the YunoHost collection and recompute the paired evidence bounds."""
 from collections import Counter
 from datetime import datetime
+from functools import lru_cache
 import gzip
 import json
 
-from study_yunohost_holdout import RUN, PRIVATE, hashes, read, read_collection, sha
+from compare_yunohost_npm_extractors import previous_reader
+from study_yunohost_holdout import (
+    ROOT, RUN, PRIVATE, frozen_portfolios, hashes, inputs, read, read_collection, sha, sha512_values,
+)
 
 
 def time(value):
     return datetime.fromisoformat(value)
+
+
+def verify_manuscript_table(comparisons):
+    versions = [comparisons[f"version_{index}"] for index in (1, 2, 3)]
+    table = (ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex").read_text()
+    measures = {
+        "Documented under both": [r["documented_cells"]["11"] for r in versions],
+        "Documented name only": [r["documented_cells"]["10"] for r in versions],
+        "Documented version only": [r["documented_cells"]["01"] for r in versions],
+        "Documented under neither": [r["documented_cells"]["00"] for r in versions],
+        "Fully resolved pairs": [r["resolved_pairs"] for r in versions],
+        "Fully resolved differences": [
+            sum(len(p["feasible"]) == 1 and sum(p["documented"]) == 1 for p in r["projects"])
+            for r in versions
+        ],
+    }
+    for label, key in (("Turnover bounds (\\%)", "turnover_bounds"), ("Net change bounds (pp)", "net_bounds")):
+        measures[label] = [f"$[{100 * lo:.1f},{100 * hi:.1f}]$" for lo, hi in (r[key] for r in versions)]
+    for label, values in measures.items():
+        assert " & ".join([label, *map(str, values)]) + r"\\" in table, label
+
+
+def verify_confirmed_positive_paths(comparisons, traces, registry_receipts):
+    """Post-outcome cross-check of positive locations in fully resolved discordant pairs."""
+    maintainers, slots = frozen_portfolios()
+    portfolios = {key: {maintainers[i] for i in ids} for key, ids in slots.items()}
+    projects = {row["frame_id"]: row for row, _ in inputs()}
+    registry = {(r["package"], r["version"]): r for r in registry_receipts if r["status"] == "observed"}
+    by_id = {trace["sample_id"]: trace for trace in traces}
+
+    @lru_cache(maxsize=None)
+    def earlier_locations(sample_id):
+        return previous_reader(projects[sample_id])[1]
+
+    counts = {}
+    for variant in ("version_1", "version_2", "version_3"):
+        checked = 0
+        for row in comparisons[variant]["projects"]:
+            if len(row["feasible"]) != 1 or sum(row["documented"]) != 1:
+                continue
+            sample_id = row["sample_id"]
+            selected = portfolios["name" if row["documented"][0] else variant]
+            corroborated = earlier_locations(sample_id)
+            positive = set()
+            for w in by_id[sample_id]["witnesses"]:
+                key = w["package"], w["version"]
+                record = registry.get(key)
+                if not record or selected.isdisjoint(record["accounts"]):
+                    continue
+                integrity = sha512_values(w.get("registry_integrity_candidate")) & sha512_values(record.get("integrity"))
+                if w["public_npm_tarball"] or integrity:
+                    positive.add((w["location"], *key))
+            assert positive & corroborated, (variant, sample_id)
+            checked += 1
+        counts[variant] = checked
+    return counts
 
 
 def verify():
@@ -61,8 +121,11 @@ def verify():
             sum(delta != {0} for delta in deltas) / len(ids),
         ]
 
+    verify_manuscript_table(results["comparisons"])
+    earlier_positive_counts = verify_confirmed_positive_paths(results["comparisons"], traces, rows)
     print(json.dumps({"checks": "passed", "projects": len(ids), "receipts": receipt_counts,
-                      "paired_comparisons": len(results["comparisons"])}, indent=2))
+                      "paired_comparisons": len(results["comparisons"]),
+                      "discordant_positive_paths_corroborated_by_earlier_reader": earlier_positive_counts}, indent=2))
 
 
 if __name__ == "__main__":
