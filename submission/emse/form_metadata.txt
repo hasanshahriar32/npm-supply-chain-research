@@ -2,15 +2,15 @@ TITLE
 Maintainer Prioritization in npm Supply Chains: Objectives, Representation Sensitivity, and Metadata Limits
 
 ABSTRACT
-\textbf{Context.} Software supply-chain review teams have limited account budgets. Dependency graph representations can affect which applications are covered by the selected accounts.
+\textbf{Context.} Teams can use npm dependency graphs to decide which maintainer accounts to review. Grouping dependencies by package name can join edges that refer to different versions, changing which accounts a ranking selects.
 
-\textbf{Objective.} We measure whether name-based and version-continuous rankings change documented application coverage at equal account budgets.
+\textbf{Objective.} We test whether preserving exact-version paths changes which downstream applications fall within a fixed account review budget.
 
-\textbf{Method.} We freeze two five-account portfolios on an npm training graph and check committed dependency paths in two held-out application frames. We link those paths to selected accounts through exact-version registry observations. We bound turnover, the share of applications covered by exactly one portfolio, while retaining unresolved cases. We also compare graph objectives and examine other budgets.
+\textbf{Method.} We selected five accounts from each graph representation before examining two held-out catalogs of self-hosted applications. For each application, we traced declared production dependencies in committed lockfiles and linked locked package versions to observed npm maintainer records. We bounded turnover, the share of applications with a documented path to exactly one account selection, by keeping unresolved comparisons in the denominator.
 
-\textbf{Results.} The YunoHost comparison confirms five switches. The name portfolio alone reaches three applications and the version portfolio alone reaches two. With follow-up checks, 164 of 215 pairs are resolved and turnover lies between 2.3% and 26.0%. In Awesome-Selfhosted, 88 of 155 pairs are resolved, with no confirmed switches and turnover bounded at 0–43.2%. The net direction remains unresolved in both frames. An exploratory YunoHost check finds a separate switch at 50 accounts. On the original graph at budget 100, greedy coverage reaches 5,538 repositories and exact union reaches 4,407, with modeled exposure reductions of 11.48% and 33.79%, respectively.
+\textbf{Results.} In YunoHost, 164 of 215 comparisons were resolved. Three applications had documented coverage only under the name-based selection and two only under the version-based selection. Turnover was bounded at 2.3–26.0%. In Awesome-Selfhosted, 88 of 155 comparisons were resolved. We found no confirmed coverage changes, with turnover bounded at 0–43.2%. In both catalogs, the evidence allowed either selection to cover more applications overall.
 
-\textbf{Conclusion.} Graph representation can change which applications enter review scope at the same budget. Pinned consumer evidence identifies changes and quantifies the uncertainty in aggregate coverage.
+\textbf{Conclusion.} Changing the graph representation can bring some applications into review scope and drop others at the same budget. Comparing the application lists reveals changes that a total coverage count can hide.
 
 KEYWORDS
 Software supply chain security; npm ecosystem; maintainer prioritization; multi-objective optimization; dependency graphs; release authority
