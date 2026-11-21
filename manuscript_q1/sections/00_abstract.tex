@@ -1,11 +1,11 @@
 \begin{abstract}
-\textbf{Context.} Software supply-chain review teams have limited account budgets. Dependency graph representations can affect which applications are covered by the selected accounts.
+\textbf{Context.} Teams that can review only a fixed number of npm maintainer accounts need to know which downstream applications those accounts cover.
 
-\textbf{Objective.} We measure whether name-based and version-continuous rankings change documented application coverage at equal account budgets.
+\textbf{Objective.} We ask whether preserving dependency paths across exact package versions changes which applications a fixed-size selection covers.
 
-\textbf{Method.} We freeze two five-account portfolios on an npm training graph and check committed dependency paths in two held-out application frames. We link those paths to selected accounts through exact-version registry observations. We bound turnover, the share of applications covered by exactly one portfolio, while retaining unresolved cases. We also compare graph objectives and examine other budgets.
+\textbf{Method.} Before gathering consumer evidence, we select five accounts using each of two npm graph representations. In two held-out application catalogs, we trace paths in committed lockfiles and use registry records for the locked versions to check for selected accounts. We count confirmed changes in coverage and use the unresolved cases to bound turnover, the share of applications reached by exactly one selection.
 
 \textbf{Results.} The YunoHost comparison confirms five switches. The name portfolio alone reaches three applications and the version portfolio alone reaches two. With follow-up checks, 164 of 215 pairs are resolved and turnover lies between 2.3\% and 26.0\%. In Awesome-Selfhosted, 88 of 155 pairs are resolved, with no confirmed switches and turnover bounded at 0--43.2\%. The net direction remains unresolved in both frames. An exploratory YunoHost check finds a separate switch at 50 accounts. On the original graph at budget 100, greedy coverage reaches 5,538 repositories and exact union reaches 4,407, with modeled exposure reductions of 11.48\% and 33.79\%, respectively.
 
-\textbf{Conclusion.} Graph representation can change which applications enter review scope at the same budget. Pinned consumer evidence identifies changes and quantifies the uncertainty in aggregate coverage.
+\textbf{Conclusion.} At a fixed account budget, keeping track of which applications enter or leave review scope reveals changes that a net coverage count can miss.
 \end{abstract}
