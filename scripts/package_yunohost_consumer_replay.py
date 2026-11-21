@@ -7,16 +7,20 @@ from tempfile import TemporaryDirectory
 import zipfile
 
 from replay_yunohost_consumer_results import CASES, REPLAY
+from check_yunohost_bun_direct import RESULTS as BUN_RESULTS
+from check_yunohost_npm_unresolved import RESULTS as NPM_RESULTS
+from study_yunohost_empty_declared_roots import PROTOCOL as ROOT_PROTOCOL, RESULTS as ROOT_RESULTS
 from study_yunohost_empty_pnpm_roots import PROTOCOL as EMPTY_PROTOCOL, RESULTS as EMPTY_RESULTS
 from study_yunohost_holdout import ROOT, RUN
 from study_yunohost_yarn_classic import RUN as YARN
 
 MODULES = (
-    "collect_consumer_pilot", "collect_yunohost_observations", "collect_yunohost_root_evidence",
+    "check_yunohost_bun_direct", "check_yunohost_npm_unresolved", "collect_consumer_pilot",
+    "collect_yunohost_observations", "collect_yunohost_root_evidence",
     "compare_yunohost_npm_extractors", "consumer_holdout", "evaluate_consumer_pilot",
     "replay_yunohost_consumer_results", "study_npm_parser_development",
     "study_pnpm_parser_development", "study_yunohost_holdout", "study_yunohost_yarn_classic",
-    "study_yunohost_empty_pnpm_roots", "verify_yunohost_empty_pnpm_roots",
+    "study_yunohost_empty_declared_roots", "study_yunohost_empty_pnpm_roots", "verify_yunohost_empty_pnpm_roots",
     "verify_pnpm_registry_integrity", "verify_yunohost_holdout", "verify_yunohost_root_evidence",
     "verify_yunohost_yarn_classic",
 )
@@ -26,6 +30,9 @@ From the extracted directory, run with Python 3.10 or newer:
 
     python scripts/replay_yunohost_consumer_results.py
     python scripts/verify_yunohost_empty_pnpm_roots.py
+    python scripts/study_yunohost_empty_declared_roots.py verify
+    python scripts/check_yunohost_bun_direct.py verify
+    python scripts/check_yunohost_npm_unresolved.py verify
 
 The command starts from retained dependency paths and registry observations.
 It recomputes exact-version joins, project classifications, and the paired
@@ -33,8 +40,10 @@ bounds before and after the Yarn Classic follow-up. It checks the primary
 comparison, both cutoff alternatives, and the identical-portfolio control
 against every retained project row and the manuscript table.
 The second command reproduces the post hoc pnpm sensitivity from the
-root declaration counts in the companion. Pinned hashes identify the
-source files checked for those counts.
+root declaration counts in the companion. The third checks the combined
+empty-root analysis. The fourth recomputes the Bun direct joins. The last
+checks the npm evidence and the final bounds. Pinned hashes identify the
+source files checked for these records.
 
 The included registry projection keeps exact package and version keys, receipt
 status, SHA-512 tokens and membership in the frozen portfolios as numeric
@@ -48,7 +57,8 @@ counts for the five confirmed primary differences are in:
 
     research/consumer_holdout/runs/yunohost-yarn-classic/confirmed_cases.md
 
-The archive covers the 215-project comparison and its Yarn Classic follow-up.
+The archive covers the 215-project comparison and the follow-up analyses
+reported in the manuscript table.
 """
 
 
@@ -58,7 +68,7 @@ def main():
     sources = [
         *(ROOT / f"scripts/{name}.py" for name in MODULES),
         *(folder / name for folder in (RUN, YARN) for name in filenames),
-        REPLAY, CASES, EMPTY_PROTOCOL, EMPTY_RESULTS,
+        REPLAY, CASES, EMPTY_PROTOCOL, EMPTY_RESULTS, ROOT_PROTOCOL, ROOT_RESULTS, BUN_RESULTS, NPM_RESULTS,
         ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex",
     ]
     with TemporaryDirectory(prefix="consumer-replay-") as directory:
@@ -71,9 +81,13 @@ def main():
         extracted = scratch / "extracted"
         with zipfile.ZipFile(candidate) as archive:
             archive.extractall(extracted)
-        for script in ("replay_yunohost_consumer_results", "verify_yunohost_empty_pnpm_roots"):
+        checks = (("replay_yunohost_consumer_results",), ("verify_yunohost_empty_pnpm_roots",),
+                  ("study_yunohost_empty_declared_roots", "verify"), ("check_yunohost_bun_direct", "verify"),
+                  ("check_yunohost_npm_unresolved", "verify"))
+        for script, *arguments in checks:
             subprocess.run([sys.executable, "-I", "-c", "import runpy, sys; sys.path.insert(0, 'scripts'); "
-                            "runpy.run_path(sys.argv.pop(1), run_name='__main__')", f"scripts/{script}.py"],
+                            "runpy.run_path(sys.argv.pop(1), run_name='__main__')", f"scripts/{script}.py",
+                            *arguments],
                            cwd=extracted, check=True)
         output.write_bytes(candidate.read_bytes())
     print(f"Verified standalone companion: {output}")

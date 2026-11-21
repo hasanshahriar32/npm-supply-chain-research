@@ -205,7 +205,7 @@ def main() -> None:
     content_checks = all(term in normalized for term in required)
     held_out_checks = all(term in normalized for term in (
         "Held-Out Consumer Coverage (RQ5)", "215", "Y017", "1,571",
-        "2.3–42.3", "2.3–34.9", "replication companion",
+        "2.3–42.3", "2.3–34.9", "2.3–27.4", "2.3–26.0", "Y473", "replication companion",
     ))
     forbidden = ["initially blank", "review sheets", "remain pending", "await independent",
                  "No reviewer role", "authors must review", "human audit pending"]

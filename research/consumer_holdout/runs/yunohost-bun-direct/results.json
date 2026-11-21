@@ -1,0 +1,470 @@
+{
+  "design": "Post hoc, positive-only Bun direct paths in the six unresolved Bun projects. Use text lockfiles v1 or v2, regular root declarations, no overrides or patches, matching same-name versions, and matching SHA-512 in retained npm receipts. Require agreement of portfolio membership across matching receipts.",
+  "input_sha256": {
+    "research/consumer_holdout/runs/yunohost-v2/paths.json.gz": "f48cd97f8ac3f95d37a1fd118757182db03b5faf9772927a6463b6f0590b5294",
+    "research/consumer_holdout/runs/yunohost-yarn-classic/results.json": "ffe305902a9a3d82e7a3c2f7c1560428810aec23447d70d51150db4e49c2b6d4",
+    "research/consumer_holdout/runs/yunohost-yarn-classic/registry_replay.json.gz": "9e8ac5383624e06e2390f5164d4565627d3ed71f9b31656a2604c4a44a563b37",
+    "research/consumer_holdout/runs/yunohost-empty-declared-roots/results.json": "e69d308243db01ebc596654d6a7e9a490f5d302a6d39fd6950bec88c80e9008b",
+    "research/consumer_holdout/runs/yunohost-empty-pnpm-roots/results.json": "f3379746e30e263c1b8509366c03f2a88f6cb54793b3a2c32577d0a1aa6f9fdc",
+    "scripts/check_yunohost_bun_direct.py": "81579dfd2b7b6253e77d1ceb269e23cb6dcec372c57da2e53eb8c1aaf56b0773"
+  },
+  "observations": [
+    {
+      "sample_id": "Y098",
+      "repository": "dmarcguardhq/dmarcguard",
+      "commit_sha": "c264d8e664bc023fdbb8c63bc88636b0408f3338",
+      "manifest_sha256": "ce80411dbbd1508ed8040a372909852c190e09cf7c82bee01ce96fe6cf4bf0fc",
+      "witnesses": [
+        {
+          "package": "@vue/devtools-api",
+          "version": "8.2.1",
+          "range": "^8.1.5",
+          "integrity": "sha512-6u4vXBlIBAC1wMplIZgpyPn7uh/s4Bf6F5bMzvLv+EdJ0aHs/+4B7Ygv864EStQSjRbsRzTko/kUG1A1IejQ3A=="
+        },
+        {
+          "package": "ky",
+          "version": "2.2.0",
+          "range": "^2.1.0",
+          "integrity": "sha512-4+B63kyZt+Y8snQiUGydK1vgY9xYQJZEh9K/nIAIEts+gYJzy1EiAw3BbK8xpWRuWUpN70SNCMjqRGTm75xxIA=="
+        },
+        {
+          "package": "pinia",
+          "version": "4.1.0",
+          "range": "^4.0.3",
+          "integrity": "sha512-+5/HMuVjYQfKlCD5xQ7zfXn1xUzYFEa7pd0DQK5SaMfZCaFRTHlaH/c02N1FoGOdlzSiwf5EOPgJx//1QDw6gw=="
+        },
+        {
+          "package": "vue",
+          "version": "3.5.45",
+          "range": "^3.5.42",
+          "integrity": "sha512-3cvsib8m9c0vB24+MDKsgcW4+Da4xaBl9Z/5Tbm2pmSIsRPxcil4cdXjXlVsmJ2g64XJo5h+IRd7rsdGT9pZaw=="
+        },
+        {
+          "package": "zod",
+          "version": "4.6.7",
+          "range": "^4.5.4",
+          "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
+        }
+      ],
+      "lockfile_sha256": "229a27de8a30095a210e1150c4809704bd4f922d241660779fe7b950dd11c4b4",
+      "status": "direct_checked",
+      "regular_declarations": 5
+    },
+    {
+      "sample_id": "Y163",
+      "repository": "go-shiori/shiori",
+      "commit_sha": "aebb4021a56048eed4c8feb325399be5f46e5470",
+      "manifest_sha256": "c44ffce18c03eecc1695e6fca5b476a05f3000c5d717b984aed16300aa4ad6c9",
+      "witnesses": [],
+      "status": "text_lockfile_unavailable"
+    },
+    {
+      "sample_id": "Y248",
+      "repository": "libredb/libredb-studio",
+      "commit_sha": "b6b64116d6616d9ea3d2450ec069468d79e1fdf3",
+      "manifest_sha256": "12a439655571e71430ef505448f93cbdfbe5632452ca772a1ea8158156f633aa",
+      "witnesses": [],
+      "lockfile_sha256": "28daa7736a2f73c2073ab63bc733e3a21130e8a072f0dd44b52eae74534d878c",
+      "status": "override_or_patch_present"
+    },
+    {
+      "sample_id": "Y288",
+      "repository": "metabase/metabase",
+      "commit_sha": "b02100714f856a31555eb31675a7068fda12690d",
+      "manifest_sha256": "87dfcb2ba0abda67579022801818fdc6ad808be46b5f2c1e096d9246d0e05f79",
+      "witnesses": [],
+      "lockfile_sha256": "b0ca5779c41d8e3188aede99afcc3b926998c5ac7c2d122dbdfbca68361de016",
+      "status": "override_or_patch_present"
+    },
+    {
+      "sample_id": "Y385",
+      "repository": "raylabshq/gitea-mirror",
+      "commit_sha": "4db2b55db8aef0965c68de1b28944b47424807e7",
+      "manifest_sha256": "8a7aafc0abc9e896b42f8d75caf2293f562aa546c248e26feb414fc5eca554d2",
+      "witnesses": [],
+      "lockfile_sha256": "10e0ae2794979f2ae03924c2002e50d9c534b4e651149ec07bc75c33acd19ee2",
+      "status": "override_or_patch_present"
+    },
+    {
+      "sample_id": "Y473",
+      "repository": "vert-sh/vert",
+      "commit_sha": "35ebeb1679eb0b1af3f099c03060cb89f72e70f8",
+      "manifest_sha256": "f133ce38ea75b4a687179079403465a3b182a0e35910a5bfaa3e1a5862026eee",
+      "witnesses": [
+        {
+          "package": "@ffmpeg/core",
+          "version": "0.12.10",
+          "range": "0.12.10",
+          "integrity": "sha512-dzNplnn2Nxle2c2i2rrDhqcB19q9cglCkWnoMTDN9Q9l3PvdjZWd1HfSPjCNWc/p8Q3CT+Es9fWOR0UhAeYQZA=="
+        },
+        {
+          "package": "@ffmpeg/core-mt",
+          "version": "0.12.10",
+          "range": "0.12.10",
+          "integrity": "sha512-atyRTOpa58bLCIgd6GXBZAXWyWD3AUoQyzxqjvGhp9MuSzdILtOTI62ffLswBsCnLq15lQ8IETHUpm1oe4V9FQ=="
+        },
+        {
+          "package": "@ffmpeg/ffmpeg",
+          "version": "0.12.15",
+          "range": "^0.12.15",
+          "integrity": "sha512-1C8Obr4GsN3xw+/1Ww6PFM84wSQAGsdoTuTWPOj2OizsRDLT4CXTaVjPhkw6ARyDus1B9X/L2LiXHqYYsGnRFw=="
+        },
+        {
+          "package": "@ffmpeg/util",
+          "version": "0.12.2",
+          "range": "^0.12.2",
+          "integrity": "sha512-ouyoW+4JB7WxjeZ2y6KpRvB+dLp7Cp4ro8z0HIVpZVCM7AwFlHa0c4R8Y/a4M3wMqATpYKhC7lSFHQ0T11MEDw=="
+        },
+        {
+          "package": "@fontsource/azeret-mono",
+          "version": "5.3.0",
+          "range": "^5.3.0",
+          "integrity": "sha512-Ag/+gN67fUry7i1yLlTnk16Rr1nnTQI2YefA/G7tYcCSr/+TC/ayMrE8Km7O0OKRgI/B5Mfel46Gq9IGY50Uaw=="
+        },
+        {
+          "package": "@fontsource/lexend",
+          "version": "5.3.0",
+          "range": "^5.3.0",
+          "integrity": "sha512-4igbsooynC6xwfagkAW6eo9JMrw8ALFGkWn1YChYmYchufMJSPgWihD+cy5ruX5YX/gDk/gllcl1Oj7q6KUZmw=="
+        },
+        {
+          "package": "@fontsource/radio-canada-big",
+          "version": "5.3.0",
+          "range": "^5.3.0",
+          "integrity": "sha512-430NJzaW63rCaAbjQPRNG5z19PehjlKk+UyEzSfFjsw6HgzzkCBzlyPW9R0+gjwwY3Puo5uazRuM4P+BY9b6FA=="
+        },
+        {
+          "package": "@imagemagick/magick-wasm",
+          "version": "0.0.46",
+          "range": "^0.0.46",
+          "integrity": "sha512-0HKJmmqUTFwXm6Z/1lGtOx7JE/FpZiJg8sXBnAho1NgzunEOkgUILU7rskUnYbtdG/hJiFe9viVatWuWDZ9S0g=="
+        },
+        {
+          "package": "@lucide/svelte",
+          "version": "1.72.0",
+          "range": "^1.72.0",
+          "integrity": "sha512-DRwtZ5p/m5ZRsNlfCzELJRDzd2z19mc76eMs8rwllx/JWfvykmLoTFs3RyzFN519ldQxHt8Jxum/LKukgzuTLQ=="
+        },
+        {
+          "package": "@mediabunny/aac-encoder",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-46RM06RQGIqC+HQI30e2HR2JTgk6dzyD/ybD23E6zuc7R22/x1XIQHghJDkfKnHF72ztJBZxNbt/NncH7SrvYQ=="
+        },
+        {
+          "package": "@mediabunny/ac3",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-Van5Qp1Nip9+iGI2DVje1dNmRdFJ2+Y/lcD31G3+e6iYr6Nl45MvPRcKCtbbEIiIZwA0+9CNFE/rHh3iTajjSw=="
+        },
+        {
+          "package": "@mediabunny/dts",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-p39ateA6+SB2E6QVJmU8l0o6KwBLtvgVAz5uierMmxG1GcfgbzbsTXl6njDE0F74vfi9kP2Ae6GRXE0PRzajLw=="
+        },
+        {
+          "package": "@mediabunny/flac-encoder",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-LbGOF9zz1u4uAsqV9v3RTbTKmfcGHVNKofqCPuJRrCU2PZcQtVd+M0GyZs5bPptauxcGUvWUaZIbUB0mMAa+Mw=="
+        },
+        {
+          "package": "@mediabunny/mp3-encoder",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-Co1ChvNYWdjCAVCbbWRVu1PdpY8A7M85wVypc2rpKV3IFWzc/Y2C211BeAgMrk6rTi9DvluI0KuwxIEfAtFSlg=="
+        },
+        {
+          "package": "@mediabunny/prores",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-+NIJsOGhZiqTTNkqdrrTDQIkIadYL8ue/dfWmZwYmZ/GDTyHPl9jThjYDV97QyBeQj6+kZRm88LD7Gi0O9dreQ=="
+        },
+        {
+          "package": "@neplex/vectorizer",
+          "version": "0.1.0",
+          "range": "^0.1.0",
+          "integrity": "sha512-J2cfkJG0hmOsC+QiPfkNSe8U68vW5SdaM8PjLMVgacmKfOtZKbU5syz3BqlfYoMlPjJlfzYdxwfH4GiAz5vLUQ=="
+        },
+        {
+          "package": "@stripe/stripe-js",
+          "version": "10.3.0",
+          "range": "^10.3.0",
+          "integrity": "sha512-/C+qwO7bkDIYbIHypxppg8qGnWXdqQEOM855lJ8wTkd2VPoRAYLTGDOFTpJ8B7kso3o9cjMy2r1KPw8WQregNA=="
+        },
+        {
+          "package": "byte-data",
+          "version": "19.0.1",
+          "range": "^19.0.1",
+          "integrity": "sha512-xRvkTvO28wr0+0rErSETHD8Cw+P444Az3/jkTezaMw5R+TTW8ZNXuvPZf9/ZhnSRRvlMnJsVhc+ecYvOMy/MQQ=="
+        },
+        {
+          "package": "client-zip",
+          "version": "2.5.1",
+          "range": "^2.5.1",
+          "integrity": "sha512-yOvNSBsQX1B7wtdvIVXJEIIShrlPiX+adhli7sWvQhsx3nX1DjvpSt+AwOxaX+3DCsT/Yx0nRy5hIjRLIYfebw=="
+        },
+        {
+          "package": "clsx",
+          "version": "2.1.1",
+          "range": "^2.1.1",
+          "integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="
+        },
+        {
+          "package": "dicom.ts",
+          "version": "1.3.0",
+          "range": "^1.3.0",
+          "integrity": "sha512-BmUlKUQlk1nWg5viBOl2PDBSdr5qh/2JBov3+akKhlwSzLZ/Xz8G9SLxUG3TJHVYGWn7vJVNou7EIY+S1vRDmQ=="
+        },
+        {
+          "package": "fflate",
+          "version": "0.8.3",
+          "range": "^0.8.3",
+          "integrity": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA=="
+        },
+        {
+          "package": "file-type",
+          "version": "22.3.0",
+          "range": "^22.3.0",
+          "integrity": "sha512-PrPedgnnWl5bWz3JHgar0QSzRvzeyFh7dZ9JpYOgcPZu4KALS9zw4MMa6qXRYyjeBsAlpaWB2boLuG991+0HIQ=="
+        },
+        {
+          "package": "mediabunny",
+          "version": "1.66.0",
+          "range": "^1.66.0",
+          "integrity": "sha512-0Zff/qLkY1ZRyjBEt2vQjLeMigmU/dFKwJLpiPyCiskIel2f2R2kqMxaLYbeHN+rmyz4PVwwLSnU9anjUHHeJQ=="
+        },
+        {
+          "package": "music-metadata",
+          "version": "12.5.0",
+          "range": "^12.5.0",
+          "integrity": "sha512-+o2irTJVlskl1JuNp8/3MxtZ4DUstfkvOo5eYBYKzcm7L8IK9oTTO/GTpJxqky7IEJctN1/CjzGGPDYXC3Kewg=="
+        },
+        {
+          "package": "overlayscrollbars",
+          "version": "2.17.0",
+          "range": "^2.17.0",
+          "integrity": "sha512-tyFSxFVJ2FcTTiEkwMthAb+Ogs8vgpW31Sy5z2TL1Q6Kw7579zrcd4xDm38lmdD934LjiTHyrzR90KMDrbCXoA=="
+        },
+        {
+          "package": "overlayscrollbars-svelte",
+          "version": "0.5.5",
+          "range": "^0.5.5",
+          "integrity": "sha512-+dRW3YZSvFbKi5vDCpnUOHuoPLLSdu0BUVVMYZdmfVghu7XkafDRebG2y91/ImPqj6YDAUsz1rcWVYhCJSS/pQ=="
+        },
+        {
+          "package": "p-queue",
+          "version": "10.0.0",
+          "range": "^10.0.0",
+          "integrity": "sha512-P2wrCri3bhGLPo3kX7qYVXbo/5GvaVATU0DpO24CbeT53Y4z35t8JUWku04ERpXHUYB5rPMi3TkWE3fmJgx5rA=="
+        },
+        {
+          "package": "pandoc-wasm",
+          "version": "1.1.0",
+          "range": "^1.1.0",
+          "integrity": "sha512-IoWBsC/cbSZe71rcRtxXUxG+Auf8aGDHKYOQZA6OdwmUL2xdpQaqrSGhPa+6zfLdSar7cnyAmTWt6KU9n5kBjQ=="
+        },
+        {
+          "package": "qoa-format",
+          "version": "1.0.1",
+          "range": "^1.0.1",
+          "integrity": "sha512-dMB0Z6XQjdpz/Cw4Rf6RiBpQvUSPCfYlQMWvmuWlWkAT7nDQD29cVZ1SwDUB6DYJSitHENwbt90lqfI+7bvMcw=="
+        },
+        {
+          "package": "riff-file",
+          "version": "1.0.3",
+          "range": "^1.0.3",
+          "integrity": "sha512-Vv8wwGr0BCks7VMI3Lv0houZee4DaHFjjTT0LMhMJKio2YmLncLeIVpK63ydSverngNk8XQPU3fbeP3bWgSIig=="
+        },
+        {
+          "package": "sanitize-html",
+          "version": "2.18.2",
+          "range": "^2.18.2",
+          "integrity": "sha512-LTQVNHBeKB5qIae9x2J2Fw68ORnES++8vzYaG7DFT8P4GVCJFeHffHnRUzf5Mrxfx+4GweIvMRqkBPHHodaVNg=="
+        },
+        {
+          "package": "spessasynth_core",
+          "version": "4.4.10",
+          "range": "^4.4.10",
+          "integrity": "sha512-v5PjNvBiqfHsXriDQJraeVwVXThgy0Ll60NaTsUwp2NNClUR0a3fgiRRZtJDm3WJv+a2wi19w9ZTzboBQ0V7sw=="
+        },
+        {
+          "package": "svelte-stripe",
+          "version": "2.0.0",
+          "range": "^2.0.0",
+          "integrity": "sha512-fKIufgE7Gd40j9PJh3RcQnL15XrKpJ544nWiv8CJmIzZwoF5lJjVRC0MJg6RVqJd1BEz+N9Ip731O12x2Y0PJg=="
+        },
+        {
+          "package": "vert-wasm",
+          "version": "0.0.2",
+          "range": "^0.0.2",
+          "integrity": "sha512-QCkhkATZkWp3OPpIrlcLVd5S4DQXeDEWIPI1eV+Ku+sUVoCM4s9DQbNKtnJ8s4leMW3AD4E7cY/gXB/9TsI3WA=="
+        },
+        {
+          "package": "wasm-feature-detect",
+          "version": "1.10.1",
+          "range": "^1.10.1",
+          "integrity": "sha512-+wz9+WpMKgQ7H1tm41nJbFwAvwX4DqY0jNY8Blw5Qe6hHg1yhCJ+AqU0R4lgX7p3pyo8irYIl1+mMNoBwSj2Zg=="
+        },
+        {
+          "package": "wasm-vips",
+          "version": "0.0.19",
+          "range": "^0.0.19",
+          "integrity": "sha512-KeejYs8oNqPUd2C/XPRhQtRabydqOSkUyCdWhFf2ucL8rVKqHvtp5ZYuYLyeDG/4y45tvROST3mQWla+1uotSA=="
+        }
+      ],
+      "lockfile_sha256": "82291eff14c15e3426b52f8f8b2f95040f91efe707ad98d2e1e6b49dd6ba949c",
+      "status": "direct_checked",
+      "regular_declarations": 38
+    }
+  ],
+  "registry_join": [
+    {
+      "sample_id": "Y098",
+      "matched_versions": [
+        [
+          "@vue/devtools-api",
+          "8.2.1"
+        ],
+        [
+          "pinia",
+          "4.1.0"
+        ],
+        [
+          "vue",
+          "3.5.45"
+        ],
+        [
+          "zod",
+          "4.6.7"
+        ]
+      ],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y163",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y248",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y288",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y385",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y473",
+      "matched_versions": [
+        [
+          "@ffmpeg/core",
+          "0.12.10"
+        ],
+        [
+          "@ffmpeg/ffmpeg",
+          "0.12.15"
+        ],
+        [
+          "@mediabunny/aac-encoder",
+          "1.66.0"
+        ],
+        [
+          "@stripe/stripe-js",
+          "10.3.0"
+        ],
+        [
+          "byte-data",
+          "19.0.1"
+        ],
+        [
+          "clsx",
+          "2.1.1"
+        ],
+        [
+          "fflate",
+          "0.8.3"
+        ],
+        [
+          "mediabunny",
+          "1.66.0"
+        ],
+        [
+          "p-queue",
+          "10.0.0"
+        ],
+        [
+          "pandoc-wasm",
+          "1.1.0"
+        ]
+      ],
+      "conflicting_membership": 0,
+      "covered_by": [
+        "name",
+        "version_1",
+        "version_2",
+        "version_3",
+        "control"
+      ]
+    }
+  ],
+  "comparisons": {
+    "version_1": {
+      "resolved_pairs": 161,
+      "turnover_bounds": [
+        0.023255813953488372,
+        0.2744186046511628
+      ],
+      "net_bounds": [
+        -0.25116279069767444,
+        0.2372093023255814
+      ]
+    },
+    "version_2": {
+      "resolved_pairs": 159,
+      "turnover_bounds": [
+        0.023255813953488372,
+        0.2837209302325581
+      ],
+      "net_bounds": [
+        -0.26976744186046514,
+        0.22790697674418606
+      ]
+    },
+    "version_3": {
+      "resolved_pairs": 161,
+      "turnover_bounds": [
+        0.018604651162790697,
+        0.26976744186046514
+      ],
+      "net_bounds": [
+        -0.24651162790697675,
+        0.24186046511627907
+      ]
+    },
+    "identical_control": {
+      "resolved_pairs": 166,
+      "turnover_bounds": [
+        0.0,
+        0.0
+      ],
+      "net_bounds": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

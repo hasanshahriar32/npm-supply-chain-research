@@ -88,7 +88,7 @@ Random (mean) & 1,680.6 & 23.4 & 0.80 & 12.8 \\%
 \author[2]{\fnm{Md. Ashikul} \sur{Islam}}\email{ashikulislamcf2000@gmail.com}
 \affil[1]{\orgdiv{Department of ECE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
 \affil[2]{\orgdiv{Department of CSE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
-\abstract{Maintainer-review programs can prioritize distinct repositories, account-origin exposure, or exclusion of every observed source. We compare frozen five-account portfolios on two held-out application frames using paths corroborated against committed lockfiles. In the 155-project self-hosted frame, both portfolios have documented paths to the same 23 applications. In the 215-project YunoHost frame, five fully resolved pairs differ, with three reached only by the name-based selection and two only by the version-based selection. A Yarn Classic follow-up resolves 17 more pairs. A separate sensitivity analysis confirms 16 empty pnpm roots and narrows primary turnover bounds to 2.3--34.9\%. The direction of net coverage change remains unresolved. We also compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 observed accounts. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories and exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion heuristic selects every observed source for 1,022 repositories, and a simpler variant yields 1,024. The original heuristic attains the optimum in 86 of 96 candidate-restricted settings, with a worst deficit of 66 endpoints. Version continuity decreases account--repository pair mass by 42.44\% in the original graph and 3.33\% in a newly acquired cohort. These results quantify how objective and representation choices affect observed coverage and where dependency metadata limits the comparison.}
+\abstract{Maintainer-review programs can prioritize distinct repositories, account-origin exposure, or exclusion of every observed source. We compare frozen five-account portfolios on two held-out application frames using paths corroborated against committed lockfiles. In the 155-project self-hosted frame, both portfolios have documented paths to the same 23 applications. In the 215-project YunoHost frame, five fully resolved pairs differ, with three reached only by the name-based selection and two only by the version-based selection. A Yarn Classic follow-up resolves 17 more pairs. Further checks of empty roots and direct Bun dependencies resolve 164 of 215 pairs and narrow the turnover bounds to 2.3--26.0\%. The direction of net coverage change remains unresolved. We also compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 observed accounts. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories and exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion heuristic selects every observed source for 1,022 repositories, and a simpler variant yields 1,024. The original heuristic attains the optimum in 86 of 96 candidate-restricted settings, with a worst deficit of 66 endpoints. Version continuity decreases account--repository pair mass by 42.44\% in the original graph and 3.33\% in a newly acquired cohort. These results quantify how objective and representation choices affect observed coverage and where dependency metadata limits the comparison.}
 \keywords{Software supply chain security, npm ecosystem, maintainer prioritization, multi-objective optimization, dependency graphs, release authority}
 \maketitle
 
@@ -733,7 +733,7 @@ The workspace collection returned all 15 requested manifests. The registry colle
 
 
 % Shared source: manuscript_q1/tables/yunohost_consumer_holdout_table.tex
-% Values from yunohost-v2, yunohost-yarn-classic and yunohost-empty-pnpm-roots results.json.
+% Values from the frozen comparisons and follow-up sensitivity ledgers.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -764,6 +764,21 @@ Follow-up net change (pp) & $[-40.0,38.6]$ & $[-41.9,37.7]$ & $[-39.5,39.1]$\\
 Sensitivity resolved pairs & 145 & 143 & 145\\
 Sensitivity turnover (\%) & $[2.3,34.9]$ & $[2.3,35.8]$ & $[1.9,34.4]$\\
 Sensitivity net change (pp) & $[-32.6,31.2]$ & $[-34.4,30.2]$ & $[-32.1,31.6]$\\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{After checking newer Yarn and missing lockfiles}}\\
+Combined resolved pairs & 160 & 158 & 160\\
+Combined turnover (\%) & $[2.3,27.9]$ & $[2.3,28.8]$ & $[1.9,27.4]$\\
+Combined net change (pp) & $[-25.6,24.2]$ & $[-27.4,23.3]$ & $[-25.1,24.7]$\\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{After adding Bun direct evidence}}\\
+Bun follow-up resolved pairs & 161 & 159 & 161\\
+Bun follow-up turnover (\%) & $[2.3,27.4]$ & $[2.3,28.4]$ & $[1.9,27.0]$\\
+Bun follow-up net change (pp) & $[-25.1,23.7]$ & $[-27.0,22.8]$ & $[-24.7,24.2]$\\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{After checking unresolved npm roots}}\\
+npm follow-up resolved pairs & 164 & 162 & 164\\
+npm follow-up turnover (\%) & $[2.3,26.0]$ & $[2.3,27.0]$ & $[1.9,25.6]$\\
+npm follow-up net change (pp) & $[-23.7,22.3]$ & $[-25.6,21.4]$ & $[-23.3,22.8]$\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -794,6 +809,53 @@ reports the two alternative cutoff choices. The sensitivity covers
 regular dependencies declared at the pinned root importer. Development
 dependencies, other importers and release contents are outside this check.
 
+\subsection{Newer Yarn, missing lockfiles and Bun}
+We ran two further post hoc checks on unresolved projects. For all 14
+newer Yarn candidates, we compared root declarations with the
+\texttt{workspace:.} entry. Six roots had zero regular, optional,
+peer or bundled dependencies. Their lock entries contain exactly the
+development declarations from the pinned manifests. For all 18
+projects without an available root lockfile, we checked the manifests
+and lockfile receipts. Nine had empty production manifests, no declared
+workspaces, and HTTP 404 receipts for all tested root lockfile names and
+the pnpm workspace file. An empty declaration establishes a zero for
+the root-scope estimand even when the capture has no lockfile. Taken
+together, these checks add 15 common negatives and increase the number
+of resolved primary pairs to 160 (Table~\ref{tab:yunohost_consumer_holdout}).
+
+We also screened all six unresolved Bun projects for direct evidence.
+Two had supported text lockfiles and matching root declarations
+without overrides or patches. Across these two projects, 14 exact
+versions matched the SHA-512 values in retained npm registry receipts.
+The locked \texttt{p-queue} 10.0.0 at project Y473 supplies a
+shared hit for the name selection and all three version alternatives.
+This positive-only check resolves one more project. The combined
+sensitivity resolves 161 of 215 primary pairs. Feasible turnover is
+2.3--27.4\%, and net change is $-25.1$ to $+23.7$ percentage points.
+The five confirmed coverage changes persist. The results concern
+declared paths from a pinned root. Other workspace roots and
+dependencies introduced during packaging are outside this comparison.
+
+\subsection{Checks on unresolved npm roots}
+We examined all 17 unresolved npm projects for empty production
+roots or additional verifiable identities. Three root manifests had no
+regular, optional, peer or bundled dependencies and corroborating
+lockfile evidence. Two had matching root declarations in v3 lockfiles.
+The third had a v1 lockfile with all 806 entries marked
+development-only and locked root development versions satisfying the
+manifest ranges. We left two other empty manifests unresolved because
+their version labels disagree with the lockfiles.
+
+Two projects had complete path extraction but incomplete registry
+identity. We found 62 locations across them with neither a tarball URL
+nor usable SHA-512. Checking direct v1 dependencies against retained
+registry receipts supplied no additional hits. Adding the three
+corroborated zeros resolves 164 primary pairs and leaves 51 unresolved.
+The turnover bounds narrow to 2.3--26.0\%, and net change remains
+compatible with either direction ($-23.7$ to $+22.3$ percentage points).
+This is a post hoc sensitivity within the same declared root scope.
+
+\subsection{Worked example and packaging checks}
 In one of the five cases, project Y017 reaches a version-selected account via
 \texttt{fullcalendar} 6.1.21, \texttt{@fullcalendar/core} 6.1.21, and
 \texttt{preact} 10.12.1. Both readers corroborated the positive location.
@@ -870,7 +932,7 @@ Maintainer selection depends on the quantity a review program seeks to improve. 
 
 A fresh 100-root acquisition supplies 66 workflow-associated repository endpoints and repeats the coverage--exposure tradeoff. Greedy reaches 65 and exact union 42, while the direct heuristic excludes all sources for 34 endpoints. Version continuity decreases pair mass by 3.33\% in this cohort, compared with 42.44\% in the original union. The shared direction and differing magnitude support explicit population, representation and denominator choices rather than a universal numeric correction or preferred account list.
 
-The automated endpoint audit acquires 115 pinned commits and characterizes the retained mapping evidence. The distinct five-account portfolios have documented paths to the same 23 applications in the 155-project self-hosted frame. In the 215-project YunoHost frame, five fully resolved primary pairs differ. A Yarn Classic follow-up adds 17 shared hits. A separate check of 16 empty pnpm roots adds common negatives and yields a sensitivity interval for turnover of 2.3--34.9\%. Differences persist under both alternative cutoff ties, while the net change remains unresolved. These results distinguish which consumers are reached from how many are reached. Evaluating control effectiveness requires observed authorization, deployment and intervention evidence.
+The automated endpoint audit acquires 115 pinned commits and characterizes the retained mapping evidence. The distinct five-account portfolios have documented paths to the same 23 applications in the 155-project self-hosted frame. In the 215-project YunoHost frame, five fully resolved primary pairs differ. A Yarn Classic follow-up adds 17 shared hits. Additional checks of empty roots and direct Bun dependencies resolve 164 pairs in total and yield a sensitivity interval for turnover of 2.3--26.0\%. Differences persist under both alternative cutoff ties, while the net change remains unresolved. These results distinguish which consumers are reached from how many are reached. Evaluating control effectiveness requires observed authorization, deployment and intervention evidence.
 
 
 % Shared source: manuscript_q1/sections/10_declarations.tex
@@ -891,7 +953,8 @@ companion. It includes frozen dependency paths, reduced registry observations,
 pinned source references for the five confirmed cases, and a script that
 reconstructs the paired outcomes and uncertainty bounds offline. It also
 includes the pinned source hashes, declaration counts and bounds for the
-empty pnpm root sensitivity. It uses
+empty-root checks, alongside the exact-version joins for the direct Bun
+paths. It uses
 numeric portfolio indices in place of registry account names. The companion
 starts from retained extraction outputs. Full acquisition replay uses
 the original source files and registry receipts.

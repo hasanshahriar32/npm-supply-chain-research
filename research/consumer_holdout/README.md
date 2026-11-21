@@ -99,6 +99,23 @@ python scripts/verify_yunohost_empty_pnpm_roots.py
 Run `python scripts/study_yunohost_empty_pnpm_roots.py score` with the retained
 pinned capture and Ruby to repeat the declaration check.
 
+The [newer Yarn and missing-lockfile checks](runs/yunohost-empty-declared-roots/results.json)
+add 15 common negatives within the pinned root scope. The
+[Bun direct-path check](runs/yunohost-bun-direct/results.json) adds one
+common positive using earlier registry observations. The standalone
+companion reproduces these results and the manuscript table.
+
+```sh
+python scripts/study_yunohost_empty_declared_roots.py verify
+python scripts/check_yunohost_bun_direct.py verify
+python scripts/check_yunohost_npm_unresolved.py verify
+```
+
+Use `score` with the retained capture to repeat the source checks. Source
+scoring requires Ruby for the YAML and text-lockfile inputs. Bun and npm
+scoring also use Node.js with npm SemVer. The [unresolved npm audit](runs/yunohost-npm-unresolved/results.json)
+adds three common negatives and documents missing artifact identifiers.
+
 ## YunoHost packaging and named importers
 
 The [audit queue](runs/yunohost-packaging/queue.json) records two unresolved strata from the 215-project frame. The [recipe classifications](runs/yunohost-packaging/classification.json) cite file locations at the pinned catalog revisions. The [source intake](runs/yunohost-packaging/source_intake.json) records resolved source references. Archive checks bind the three eligible recipes to the declared checksums and the manifest and lockfile hashes.

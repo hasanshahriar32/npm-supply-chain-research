@@ -1,0 +1,540 @@
+{
+  "design": "Post hoc diagnostic of all unresolved npm projects. Compare empty root manifests with pinned npm lock declarations and dev-only v1 lock entries. Audit absent artifact identity and check v1 direct dependencies against retained exact-version receipts.",
+  "input_sha256": {
+    "research/consumer_holdout/runs/yunohost-v2/paths.json.gz": "f48cd97f8ac3f95d37a1fd118757182db03b5faf9772927a6463b6f0590b5294",
+    "research/consumer_holdout/runs/yunohost-yarn-classic/results.json": "ffe305902a9a3d82e7a3c2f7c1560428810aec23447d70d51150db4e49c2b6d4",
+    "research/consumer_holdout/runs/yunohost-yarn-classic/registry_replay.json.gz": "9e8ac5383624e06e2390f5164d4565627d3ed71f9b31656a2604c4a44a563b37",
+    "research/consumer_holdout/runs/yunohost-bun-direct/results.json": "05abd4b42df7d2525290e79c054f3b37da0699baa79ee21742a6ef86a5bfaf4a",
+    "research/consumer_holdout/runs/yunohost-empty-declared-roots/results.json": "e69d308243db01ebc596654d6a7e9a490f5d302a6d39fd6950bec88c80e9008b",
+    "research/consumer_holdout/runs/yunohost-empty-pnpm-roots/results.json": "f3379746e30e263c1b8509366c03f2a88f6cb54793b3a2c32577d0a1aa6f9fdc",
+    "scripts/check_yunohost_npm_unresolved.py": "bcac9cc7a735ac2d94c14dd662730612e7abfa5766d721841f8537568f1225e2"
+  },
+  "observations": [
+    {
+      "sample_id": "Y002",
+      "repository": "11ty/buildawesome",
+      "commit_sha": "7c4465157465ed78a319d1d5ad478dcb0a3726bd",
+      "file_sha256": {
+        "package.json": "8df26ee41623197ade7342ea6bc58975f88fc7bb7a72462a94b517b307f81cb1",
+        "package-lock.json": "18b42d1d08e9092d43d8b2d85c8f5ec496a14f9f338880910e1de43836c3d945"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": true,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 26,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 33
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y014",
+      "repository": "agendav/agendav",
+      "commit_sha": "9b446df07c44a223693212c153e61edd46367980",
+      "file_sha256": {
+        "package.json": "5c6a36c851a424a095c02f30b94f0b296af9de1952570215f83c8eca851b881e",
+        "package-lock.json": "4c319281a9d0e188ba6640c81b65f45fb57b5346e1f58cf1c1c387ef6bb98b92"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 18
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y031",
+      "repository": "ashledombos/mlmmj-simple-web-interface",
+      "commit_sha": "64811f916b3b541d29e68a10c934fa5d8547f27c",
+      "file_sha256": {
+        "package.json": "1921f3978714a260bf941e7b5e8f8b5dba99a1c2a36ca9323cb8fa0f0414acb6",
+        "package-lock.json": "f6425d750f8dd999163e811caae5101ff15e358f16a22df7af54ff965338321c"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 1,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 9,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 0
+      },
+      "v1_entries": {
+        "total": 89,
+        "dev": 0
+      },
+      "v1_dev_agrees": false
+    },
+    {
+      "sample_id": "Y056",
+      "repository": "bubka/2fauth",
+      "commit_sha": "84eb0e00847b043d0a245427dda2216127046660",
+      "file_sha256": {
+        "package.json": "0920d4adbc1336202ef8e2e301d7b2ea34f98853930a3f357a83a7a49526c40e",
+        "package-lock.json": "9b39b7f9c8da638f2741731087a6fe0c08cdea32de57f50352a7627e74d87d92"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 28
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y095",
+      "repository": "dimitrigilbert/litechat",
+      "commit_sha": "bd3e2ee442e9ddce31a26e97214eac1a8d332b9f",
+      "file_sha256": {
+        "package.json": "8ceed1dcd11bbb956089891b957d6b65be19e19d6896d7d226bb63baeb354f2c",
+        "package-lock.json": "363ba2d5361cbf83985511afcd94dc3d7678423cf7245fb7de8cfc73a0e0bac6"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 78,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 24
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y106",
+      "repository": "duartesantos8/opengym",
+      "commit_sha": "e4a68a94c42a3c17cbd560d66ce2e46a7048ab99",
+      "file_sha256": {
+        "package.json": "a1666f2836a01341d269227cdb7d4d5d68c2a002f0f22e9e69a04aa6397986d7",
+        "package-lock.json": "775bebd1f2fe70a66c83508e15fe2f30e395216c265f039a71b1bc100ebe4ebe"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 1
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y109",
+      "repository": "dumbwareio/dumbdrop",
+      "commit_sha": "ff8f813f493e89c7da056e7a3101ce2ef48e3960",
+      "file_sha256": {
+        "package.json": "9570cfe0e3b6350c0e0cdc9731422181977ab99263d723dee7c1821449de86a7",
+        "package-lock.json": "7b5f15bf8e50efc38fa485387908e9781fc5b104486cc24bfe810573c31780a3"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 9,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 5
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y111",
+      "repository": "dumbwareio/dumbpad",
+      "commit_sha": "23a644fa141d08c244e7cd4db33aa409b56927a5",
+      "file_sha256": {
+        "package.json": "bee374894784df0efe833dad0e3580ab4b1d9dd8c434fd8e3da8303d41d3939e",
+        "package-lock.json": "18b88d53950f3de30ad10598763fb41f2a7cb858322cbd52046067c80e6343e0"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 12,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 2
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y150",
+      "repository": "gcollin/cookie-aware-cors-proxy",
+      "commit_sha": "3b2b129e1a61f19bd5baba52783e3dfbd4d7d5da",
+      "file_sha256": {
+        "package.json": "5c51604b0a8af715ca3ccbe60528c856c3bc3a7e5b1915a2883dbc65baa6c7f5",
+        "package-lock.json": "a8018d5149c5fea9f15472da354bebe2bb129613670fc7f85df8302e0a0385bf"
+      },
+      "earlier_status": "npm_partial",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": true,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 8,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 17
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y260",
+      "repository": "lrsjng/h5ai",
+      "commit_sha": "aa94de4945e69ff742525cd4d648c91e5c9d8cd2",
+      "file_sha256": {
+        "package.json": "6fc186c3bd788d97326926da6faff31df019deb9274d3514f993d2ede25f0915",
+        "package-lock.json": "b27031fade0b7b4f3905882903713a3922604c78ab7c5ada6301e383392e2428"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 1,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 11
+      },
+      "v1_entries": {
+        "total": 806,
+        "dev": 806
+      },
+      "v1_dev_agrees": true
+    },
+    {
+      "sample_id": "Y272",
+      "repository": "marcantondahmen/automad",
+      "commit_sha": "ee86ff295cff1b9ddb2a789f585c27cf383a0851",
+      "file_sha256": {
+        "package.json": "ecaedfb0bb7e77f53b4a35b30264db355f85f08b43f40f6cf4b69b1186280caa",
+        "package-lock.json": "34e1fd7f9c8eaa9fe13041329bead4e1e8cdb4d4fd1d21839b0bdb15b1e5b2cb"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 2,
+      "root_labels_agree": false,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 0,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 48
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y300",
+      "repository": "moodle/moodle",
+      "commit_sha": "2d4bafe8548a6d6c01494c862ec3d9749ba6ea84",
+      "file_sha256": {
+        "package.json": "bf08edf4592947b834f96f28445e752d7cadc03ef48ebdc4acbd16c70b745c11",
+        "npm-shrinkwrap.json": "4a30a61a4ce6d4e69fac12acb029948b8302edb5590f71b28828e824c7c6d845"
+      },
+      "earlier_status": "npm_ok",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 8,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 65
+      },
+      "root_declarations_agree": true,
+      "locations_with_no_url_or_sha512": 3
+    },
+    {
+      "sample_id": "Y343",
+      "repository": "paymenter/paymenter",
+      "commit_sha": "42aacebdacfdca52fc376d928a18ebfd54b58900",
+      "file_sha256": {
+        "package.json": "2e860c85b93f793425efb5b0eae91bef60d18a890f90242f58c0278f28109184",
+        "package-lock.json": "c2f5b0c1d55f52533a3ea6bd9a1c26ab61956d549311974eb963e79144c18446"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 2,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 7
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y371",
+      "repository": "projectsend/projectsend",
+      "commit_sha": "83daaaa69a307c8ab21ca3f36b1fba5bccae7df3",
+      "file_sha256": {
+        "package.json": "8a940734de23378e8f75b46b2d39b86271daa2d731863c2d188b605254fb213c",
+        "package-lock.json": "f6c9526c91b2ceb11d9f61bb1ed6285684e4110d2d951aeab019c8ec9c1a21dc"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 48,
+        "optionalDependencies": 3,
+        "peerDependencies": 0,
+        "devDependencies": 11
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y440",
+      "repository": "svg-edit/svgedit",
+      "commit_sha": "c44f061d2f9a626d2771cc931298af5a45522d87",
+      "file_sha256": {
+        "package.json": "3132356d81533460240c20de6f981d2af239c04c8e1a505e28c9f8b8806c63f2",
+        "package-lock.json": "52690dcb4ab191aa3e4b19c0befa1f18fced040efc04a7f6723d062fcb596b60"
+      },
+      "earlier_status": "npm_partial",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": true,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 7,
+        "optionalDependencies": 1,
+        "peerDependencies": 0,
+        "devDependencies": 17
+      },
+      "root_declarations_agree": true
+    },
+    {
+      "sample_id": "Y451",
+      "repository": "terraforming-mars/terraforming-mars",
+      "commit_sha": "fdc1cc5ffdff4ef12b00350734dd68e50a61aa2e",
+      "file_sha256": {
+        "package.json": "d381220d80c69fbb7b735b95cc7f9fd9fceaa31ca3c9cd3c1060bf12ff2514b1",
+        "package-lock.json": "80b0b553056dd94a688cd535350e9ee0476a7c095d2700f4e7827191748622d4"
+      },
+      "earlier_status": "npm_ok",
+      "lockfile_version": 3,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 12,
+        "optionalDependencies": 2,
+        "peerDependencies": 0,
+        "devDependencies": 36
+      },
+      "root_declarations_agree": true,
+      "locations_with_no_url_or_sha512": 59
+    },
+    {
+      "sample_id": "Y455",
+      "repository": "timeoff-management/timeoff-management-application",
+      "commit_sha": "5b1c1be08038e606bdd6ac5337c937847af1aa11",
+      "file_sha256": {
+        "package.json": "f02c2dcf9553da31e70a70316c110b32e9584a8240f786900017f5a58ee247a2",
+        "package-lock.json": "f04be5e8a0840734652184920f2ec92956ba1a5aeaa2bc82bfa99fa5bee61596"
+      },
+      "earlier_status": "npm_unavailable",
+      "lockfile_version": 1,
+      "root_labels_agree": true,
+      "workspace_or_bundle": false,
+      "witnesses": [],
+      "counts": {
+        "dependencies": 35,
+        "optionalDependencies": 0,
+        "peerDependencies": 0,
+        "devDependencies": 5
+      },
+      "v1_entries": {
+        "total": 855,
+        "dev": 186
+      },
+      "v1_dev_agrees": false
+    }
+  ],
+  "registry_join": [
+    {
+      "sample_id": "Y002",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y014",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y031",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y056",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y095",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y106",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y109",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y111",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y150",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y260",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y272",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y300",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y343",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y371",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y440",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y451",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    },
+    {
+      "sample_id": "Y455",
+      "matched_versions": [],
+      "conflicting_membership": 0,
+      "covered_by": []
+    }
+  ],
+  "additional_common_negatives": [
+    "Y056",
+    "Y106",
+    "Y260"
+  ],
+  "comparisons": {
+    "version_1": {
+      "resolved_pairs": 164,
+      "turnover_bounds": [
+        0.023255813953488372,
+        0.26046511627906976
+      ],
+      "net_bounds": [
+        -0.2372093023255814,
+        0.22325581395348837
+      ]
+    },
+    "version_2": {
+      "resolved_pairs": 162,
+      "turnover_bounds": [
+        0.023255813953488372,
+        0.26976744186046514
+      ],
+      "net_bounds": [
+        -0.2558139534883721,
+        0.21395348837209302
+      ]
+    },
+    "version_3": {
+      "resolved_pairs": 164,
+      "turnover_bounds": [
+        0.018604651162790697,
+        0.2558139534883721
+      ],
+      "net_bounds": [
+        -0.23255813953488372,
+        0.22790697674418606
+      ]
+    },
+    "identical_control": {
+      "resolved_pairs": 169,
+      "turnover_bounds": [
+        0.0,
+        0.0
+      ],
+      "net_bounds": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}
