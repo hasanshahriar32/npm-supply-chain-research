@@ -24,7 +24,7 @@ C(S) = \Bigl\lvert \bigcup_{m \in S} E_m \Bigr\rvert .
 \begin{equation}
 C(A \cup \{m\}) - C(A) \ge C(B \cup \{m\}) - C(B)
 \end{equation}
-The classic result of Nemhauser, Wolsey, and Fisher~\cite{nemhauser1978} establishes that the greedy algorithm selecting $m^* = \arg\max_{m \notin S} |E_m \setminus \bigcup_{u \in S} E_u|$ achieves a $(1 - 1/e) \approx 63.2\%$ approximation of the optimal coverage.
+The classical Nemhauser--Wolsey--Fisher bound gives greedy coverage a $(1-1/e)\approx63.2\%$ approximation. For a normalized, monotone submodular objective $F$ and budget $k\ge1$, let $O$ be an optimal set. The sum of the marginal gains of $O\setminus S_i$ at the current greedy set $S_i$ is at least $F(O)-F(S_i)$. Greedy therefore removes at least $1/k$ of the remaining gap each step. After $k$ steps, the achieved value is at least $[1-(1-1/k)^k]F(O)\ge(1-1/e)F(O)$.
 
 \subsubsection{Modular Scenario Exposure Reduction ($H(S)$)}
 Suppose exactly one account is the hypothetical origin and has a fixed nonnegative weight $w_m$. A perfect control removes that origin when selected while leaving all other paths unchanged. We measure its share of weighted exposure as:
@@ -87,7 +87,7 @@ The second term is constant with respect to $S$ (modular), so its marginal diffe
 \begin{equation}
 |E_m \setminus \bigcup_{u \in A} E_u| \ge |E_m \setminus \bigcup_{u \in B} E_u|
 \end{equation}
-Because the sum of a submodular set function and a modular set function is submodular, $J_\alpha(S)$ is submodular for all $\alpha \in [0, 1]$. By the Nemhauser bound~\cite{nemhauser1978}, accelerated lazy greedy optimization achieves at least a $(1 - 1/e)$ approximation of the optimum scalarized objective.
+The sum of a submodular function and a modular function is submodular, so $J_\alpha$ is submodular for all $\alpha\in[0,1]$. Lazy evaluation preserves the greedy marginal choice. The gap argument for $C$ therefore also gives the $(1-1/e)$ guarantee for $J_\alpha$.
 \end{IEEEproof}
 
 \subsection{Supermodular Minimum-Remaining-Source Heuristic for $P(S)$}

@@ -1,17 +1,15 @@
 \section{Related Work}
 \label{sec:related_work}
 
-We position the study against work on maintainer allocation, dependency structure and consumer-side measurement.
+\subsection{Upstream Prioritization}
+Schueller and Wachs model how developer departures and failure propagation jointly affect Rust libraries, then compare allocations of developer support~\cite{schueller2024}. Hamer et al. combine contributor network measures with survey evidence to study contributor reputation in dependency review~\cite{hamer2025trust}. In npm, Samaana et al. find that dependency depth affects measured technical leverage~\cite{samaana2025}. He et al. use simulated dependency resolution to study local pinning and coordinated changes at selected upstream packages~\cite{he2025}. We hold the account budget fixed, compare coverage and exclusion objectives, and evaluate whether representation changes which consumers have documented paths to selected accounts.
 
-\subsection{Ecosystem Structure and Centrality-Based Prioritization}
-Decan et al. measured how dependency concentration evolved across seven package ecosystems~\cite{decan2019}. In the present study, concentration motivates examining the distribution of reachable repositories across maintainer accounts. We compare three objectives at identical account budgets and measure the cost of optimizing one objective in units of another.
+\subsection{Consumer and Release Evidence}
+Zerouali et al. examine release gaps, maintainer activities, and outdated dependencies in dormant npm packages~\cite{zerouali2026dormant}. Mohayeji et al. measure developers' responses to Dependabot security updates~\cite{mohayeji2025}. Jayasuriya et al. examine breaking changes associated with transitive dependencies~\cite{jayasuriya2024}. These studies motivate retaining dependency versions and observation dates. Our outcome concerns a documented dependency path at a pinned commit. Developer response and adoption require separate observations.
 
-\subsection{Developer allocation and consumer evidence}
-Schueller and Wachs model how developer departures and dependency relationships jointly affect libraries in the Rust ecosystem and compare allocations of limited developer support~\cite{schueller2024}. Hamer et al. study contributor reputation as a signal for prioritizing dependency reviews in Rust~\cite{hamer2025trust}. Our empirical question measures which consumer projects gain or lose documented coverage when dependency representations change the fixed-budget selection of accounts. Zerouali et al. distinguish dependents distributed through registries from external GitHub consumers~\cite{zerouali2022}. We draw a separate application sample because a package's development repository and an application that consumes the package supply evidence about different relationships.
+Bifolco et al. measure discrepancies in GitHub dependency and dependent records for Java and Python projects~\cite{bifolco2025accuracy}. Wang et al. characterize resolution across ten package managers and reconstruct registry dependencies over time with OpenDep~\cite{wang2026opendep}. Gamage et al. compare lockfile design and maintenance across seven package managers~\cite{gamage2026lockfiles}. Our paired analysis joins registry account associations to version-resolved paths from a specified application importer.
 
-Samaana et al. vary dependency depth in an npm replication and find changes in the magnitude of measured technical leverage~\cite{samaana2025}. Chinthanet et al. distinguish upstream fixing releases from downstream adoption~\cite{chinthanet2021}, and Alfadel et al. investigate what vulnerability information was discoverable at different points in time~\cite{alfadel2023}. These studies motivate preserving dependency versions, consumer identity and observation dates in each comparison. Mohayeji et al. measure how developers respond to dependency updates~\cite{mohayeji2025}. Our outcome is the presence of a documented dependency path at a pinned commit. Observing how developers act on a review recommendation would require a separate study.
-
-Bifolco et al. measure discrepancies in dependency and dependent records in the GitHub dependency graph~\cite{bifolco2025accuracy}. Gamage et al. compare lockfile semantics and maintenance across seven package managers~\cite{gamage2026lockfiles}. Wang et al. characterize dependency semantics across package managers and reconstruct registry dependencies over time with OpenDep~\cite{wang2026opendep}. We evaluate a paired portfolio decision against paths committed by external consumers. That outcome requires identifying the consumer importer, following its version-resolved dependency paths, and observing registry account associations for the resulting versions.
+Bi et al. document recurring challenges from SBOM generation through consumption~\cite{bi2024sboms}. Xiao et al. find dependency omissions in developer-published Java SBOMs~\cite{xiao2025sbom}. This motivates checking the exact recipe asset, the metadata's subject, and the dependency information it contains. A source revision can support a comparison of declared dependencies. Evidence of bundled components requires inspecting the delivered artifact or an inventory linked to its bytes.
 
 Table~\ref{tab:lit_positioning} compares the closest empirical studies and their observation units.
 
@@ -25,8 +23,9 @@ Table~\ref{tab:lit_positioning} compares the closest empirical studies and their
 Study & Population & Main observations & Validation basis & Additional question here\\
 \midrule
 \cite{schueller2024} & Rust ecosystem & Risks shared across developers and libraries & Modeled developer departure and dependency failures & Account selections under different dependency representations\\
-\cite{zerouali2022} & npm and RubyGems & Dependency exposure & Registry packages and external consumer projects & Which account associations reach a pinned consumer importer\\
 \cite{samaana2025} & npm library releases & Technical leverage & Replication across dependency depths & Sensitivity of fixed-budget selection\\
+\cite{he2025} & npm projects and registry & Local pinning and coordinated version constraints & Historical resolution simulations & Account selection evaluated against committed consumer paths\\
+\cite{wang2026opendep} & Ten package managers & Ecosystem-scale dependency resolution & Policy characterization and resolution checks & Importer and artifact evidence for paired application outcomes\\
 This study & Retained graph, bounded training cohort and separate application frame & Objective tradeoffs and reassignment under equal budgets & Pinned consumer paths and independently collected registry records & Projects uniquely reached by either selection and limits from unresolved evidence\\
 \bottomrule
 \end{tabularx}

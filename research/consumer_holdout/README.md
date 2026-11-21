@@ -99,3 +99,12 @@ The main comparison does not use these as coverage outcomes. For audit replay fr
 python scripts/study_yunohost_release_delivery.py score
 python scripts/verify_yunohost_release_delivery.py
 ```
+
+The [matched release and source diagnostic](runs/yunohost-release-lock/results.json) follows the one scanned archive containing an application manifest and a Yarn Classic lockfile. Both files match the release tag's Git tree. Replay the shared registry join with `python scripts/study_yunohost_release_lock_pair.py score` and the saved private source and registry receipts.
+
+The [shipped file diagnostic](../../reports/40_yunohost_shipped_module_evidence.md) parses the panel's shipped JavaScript as data and compares the regular direct dependency files in the Mongo Express release against verified npm tarballs. Replay with the saved private archive and registry receipts, Python, and Node.js v24.22.0.
+
+```bash
+python scripts/check_release_source_maps.py
+python scripts/study_release_module_evidence.py compare
+```
