@@ -69,3 +69,14 @@ Offline scoring uses the saved Classic-parser bundle and separate registry recei
 python scripts/study_yunohost_yarn_classic.py score
 python scripts/verify_yunohost_yarn_classic.py
 ```
+
+## YunoHost packaging and named importers
+
+The [audit queue](runs/yunohost-packaging/queue.json) records two unresolved strata from the 215-project frame. The [recipe classifications](runs/yunohost-packaging/classification.json) cite file locations at the pinned catalog revisions. The [source intake](runs/yunohost-packaging/source_intake.json) records resolved source references. Archive checks bind the three eligible recipes to the declared checksums and the manifest and lockfile hashes.
+
+The [importer protocol](runs/yunohost-packaging/importer_protocol.json) and [paired diagnostic](runs/yunohost-packaging/importer_results.json) evaluate the three recipes separately. Locally retained packaging, source and registry receipts are in the ignored `private/` directory.
+
+```sh
+python scripts/study_yunohost_recipe_importers.py score
+python scripts/verify_yunohost_recipe_study.py
+```
