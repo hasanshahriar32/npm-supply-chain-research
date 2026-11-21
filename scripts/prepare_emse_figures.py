@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import xml.etree.ElementTree as ET
 
+from render_journal_diagrams import DESIGNS, render as render_journal_diagrams
+
 ROOT = Path(__file__).resolve().parents[1]
 Q = ROOT / 'manuscript_q1'
 FIG = Q / 'figures'
@@ -54,8 +56,15 @@ def main():
                 '#28618a': '1.5,1.5', '#b57720': '6,2,1,2', '#a56b16': '6,2,1,2',
                 '#8660a8': '3,1,1,1', '#8054a3': '3,1,1,1'}
     record = {'renderer_sha256': sha(Path(__file__)), 'inputs': {}, 'figures': {}}
+    updated = render_journal_diagrams()
+    record['journal_diagrams_sha256'] = sha(Q / 'results/journal_diagrams.json')
     for pdf in manifest['active_figures']:
         stem = Path(pdf).stem
+        if stem in DESIGNS:
+            record['figures'][stem] = updated['figures'][stem]
+            if (INPUT / f'{stem}.svg').exists():
+                record['inputs'][stem] = {ext: sha(INPUT / f'{stem}.{ext}') for ext in ('svg', 'pdf', 'png')}
+            continue
         for ext in ('svg', 'pdf', 'png'):
             source = INPUT / f'{stem}.{ext}'
             if not source.exists():

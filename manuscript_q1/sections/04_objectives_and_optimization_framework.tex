@@ -1,14 +1,14 @@
 \section{Objectives and Optimization Framework}
 \label{sec:objectives}
 
-Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages associated with $m$, and let $\text{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
+Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages associated with $m$, and let $\operatorname{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
 
 Figure~\ref{fig:q1_methodology} summarizes the analysis and consistency checks.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{study_methodology.pdf}
-\caption{Analysis methodology and correctness checks. All evaluation quantities share the same observed graph; additional sensitivities do not constitute independent outcome samples.}
+\caption{The observed graph yields exact reach sets through strongly connected component condensation and bitset unions. The sets supply both fixed-budget scoring and reachability checks. Comparisons use the same graph within each representation.}
 \label{fig:q1_methodology}
 \end{figure}
 
@@ -18,7 +18,7 @@ We formalize three fundamental defensive quantities:
 \subsubsection{Submodular Distinct Coverage ($C(S)$)}
 Defenders seeking broad ecosystem review prioritize distinct downstream client repositories:
 \begin{equation}
-C(S) = \left| \bigcup_{m \in S} E_m \right|
+C(S) = \Bigl\lvert \bigcup_{m \in S} E_m \Bigr\rvert .
 \end{equation}
 \textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
 \begin{equation}
@@ -36,7 +36,8 @@ H(S) = \frac{\sum_{m \in S} w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
 \subsubsection{Supermodular All-Source Exclusion ($P(S)$)}
 Under the same idealized model, an endpoint has no remaining observed source when every member of its nonempty source set is selected:
 \begin{equation}
-P(S) = \sum_{r \in R_{\text{wf}}} \mathbb{I}[\varnothing\ne\text{Sources}(r) \subseteq S]
+P(S) = \sum_{r \in R_{\text{wf}}}
+  \ind\bigl[\varnothing \ne \operatorname{Sources}(r) \subseteq S\bigr].
 \end{equation}
 \textbf{Property:} $P(S)$ is \textit{supermodular}. Selecting maintainer $m$ contributes zero gain to $r$ until its final unselected source is selected. For $A\subseteq B$ and $m\notin B$,
 \begin{equation}
@@ -44,9 +45,17 @@ P(A \cup \{m\}) - P(A) \le P(B \cup \{m\}) - P(B).
 \end{equation}
 
 \subsubsection{Strict Zero-Anchored Threshold Exclusion ($P_k$)}
-Let $R_+=\{r\in R_{\text{wf}}:\mathrm{Sources}(r)\ne\varnothing\}$, $n_r=|\mathrm{Sources}(r)|$, and $t_r(S)=|\mathrm{Sources}(r)\setminus S|$. We define the hypothetical strict threshold count
+Let $n_r=\lvert\operatorname{Sources}(r)\rvert$ and
+$t_r(S)=\lvert\operatorname{Sources}(r)\setminus S\rvert$. We define the hypothetical strict threshold count over $R_+=\{r\in R_{\text{wf}}\mid n_r>0\}$ as
 \begin{equation}
-P_k(S)=\sum_{r\in R_+}\mathbb{I}\left[t_r(S)=0\ \lor\ (n_r\ge k\ \land\ t_r(S)<k)\right].
+\begin{aligned}
+P_k(S) &= \sum_{r\in R_+} \ind\bigl[t_r(S)<q_k(r)\bigr],\\
+q_k(r) &=
+  \begin{cases}
+    1, & n_r<k,\\
+    k, & n_r\ge k .
+  \end{cases}
+\end{aligned}
 \label{eq:strict_quorum}
 \end{equation}
 For $n_r<k$, only complete source exclusion is credited. For $n_r\ge k$, fewer than $k$ remaining sources suffice under the hypothetical threshold rule. Thus $P_k(\varnothing)=0$, $P_1(S)=P(S)$, and every counted endpoint has a hardened source. The function is monotone in $S$ for fixed $k$, but need not be monotone in $k$: an endpoint with $n_r=2$ and $t_r(S)=1$ is counted at $k=2$ and not at $k=3$. The superficially compact condition $t_r(S)<\min(k,n_r)$ is not equivalent to Eq.~\ref{eq:strict_quorum}. No claim about the submodularity or supermodularity of $P_1$ is extended to general $P_k$.
@@ -66,7 +75,13 @@ For any $\alpha \in [0, 1]$, the objective $J_\alpha(S)$ is monotone non-decreas
 \begin{IEEEproof}
 Let $A \subseteq B \subseteq M$ and $m \notin B$. The marginal gain is:
 \begin{equation}
-\Delta J_\alpha(m \mid S) = \alpha \frac{|E_m \setminus \bigcup_{u \in S} E_u|}{|R_{\text{wf}}|} + (1 - \alpha) \frac{w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
+\begin{aligned}
+\Delta J_\alpha(m \mid S)
+  &= \alpha \frac{\bigl\lvert E_m \setminus \bigcup_{u\in S} E_u\bigr\rvert}
+                  {\lvert R_{\text{wf}}\rvert} \\
+  &\quad + (1-\alpha)\frac{w_m\lvert E_m\rvert}
+                           {\sum_{v\in M} w_v\lvert E_v\rvert} .
+\end{aligned}
 \end{equation}
 The second term is constant with respect to $S$ (modular), so its marginal difference across $A$ and $B$ is exactly zero. The first term satisfies submodularity by set-theoretic inclusion:
 \begin{equation}
@@ -89,7 +104,9 @@ We evaluate three structural models of non-uniform maintainer risk:
 \subsection{Analytic Expectations and Empirical Standard Errors}
 Under a finite population of $|M| = 12,217$ maintainers, random selection of budget $k$ yields exact expected coverage and exposure under the hypergeometric distribution:
 \begin{align}
-E[H_{\text{rand}}(k)] &= \frac{k}{|M|}, \\
-E[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}} \left( 1 - \frac{\binom{|M| - |\text{Sources}(r)|}{k}}{\binom{|M|}{k}} \right).
+\mathbb{E}[H_{\text{rand}}(k)] &= \frac{k}{\lvert M\rvert}, \\
+\mathbb{E}[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}}
+  \left( 1 - \frac{\binom{\lvert M\rvert-n_r}{k}}
+                  {\binom{\lvert M\rvert}{k}} \right).
 \end{align}
-For $k = 100$, exact finite-population expectations are $E[C] = 1,716.8$ and $E[H] = 0.819\%$. Across 200 simulation seeds, the sample mean coverage is 1,680.6 (sample standard deviation $\text{SD}_C = 530.7$, Monte Carlo Standard Error $\text{MCSE}_C = 37.5$), and sample mean exposure reduction is $0.80\%$ ($\text{SD}_H = 0.373\text{ pp}$, $\text{MCSE}_H = 0.026\text{ pp}$). Replicated offline execution across 3 independent runs averaged $39.50\text{ s}$ wall-clock time with $1,038.43\text{ MiB}$ peak RSS.
+For $k = 100$, exact finite-population expectations are $\mathbb{E}[C] = 1{,}716.8$ and $\mathbb{E}[H] = 0.819\%$. Across 200 simulation seeds, the sample mean coverage is 1,680.6 (sample standard deviation $\text{SD}_C = 530.7$, Monte Carlo Standard Error $\text{MCSE}_C = 37.5$), and sample mean exposure reduction is $0.80\%$ ($\text{SD}_H = 0.373\text{ pp}$, $\text{MCSE}_H = 0.026\text{ pp}$). Replicated offline execution across 3 independent runs averaged $39.50\text{ s}$ wall-clock time with $1{,}038.43\text{ MiB}$ peak RSS.

@@ -45,8 +45,9 @@ puts JSON.generate({project: documents.last, boot_document: documents.length == 
 """
 
 
-def root_record(row, pm):
-    folder = PILOT / "projects" / row["sample_id"]
+def root_record(row, pm, *, folder=None):
+    if folder is None:
+        folder = PILOT / "projects" / row["sample_id"]
     evidence = row["files"]
     status = {"sample_id": row["sample_id"], "commit_sha": row.get("commit_sha")}
     if evidence.get("pnpm-lock.yaml", {}).get("status") != "retained":

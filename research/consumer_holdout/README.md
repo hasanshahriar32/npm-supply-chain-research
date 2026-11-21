@@ -44,3 +44,17 @@ node --test scripts/tests/test_consumer_lock_evidence.cjs scripts/tests/test_con
 ```
 
 The audit checks the sealed queue and result hashes, the order of source and registry acquisition, every paired cell, and the aggregate bounds. The override fixture uses an inert local dependency tree to distinguish a valid ancestor-scoped override from the same locked version in the wrong scope. It does not alter support in the frozen study.
+
+## Second frame
+
+The [YunoHost protocol](runs/yunohost-v2/protocol.json) freezes the same portfolios and a different root-importer extraction procedure on 215 commit-pinned applications. Keep the [verified root evidence](../consumer_parser_development/README.md) and both acquisition receipts to replay this run. The registry receipt includes observed account associations and belongs in the ignored local evidence directory.
+
+For a new collection on a fresh frame, the protocol precedes the workspace and registry queues. The CLI for this run uses a fixed output directory, so use the saved protocol for offline replay. Review the collected public sources against the recorded queue before scoring. Live registry retrieval at another date changes the observations.
+
+Replay the completed analysis from the repository root:
+
+```sh
+python scripts/study_yunohost_holdout.py paths
+python scripts/study_yunohost_holdout.py score
+python scripts/verify_yunohost_holdout.py
+```
