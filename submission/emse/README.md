@@ -1,18 +1,19 @@
 # EMSE submission draft
 
-The journal validation revision includes heuristic component/exact benchmarks, a fresh bounded cohort and automated endpoint evidence. It has four focused research questions and 13 active figures; extended sensitivities and historical reconstruction/acquisition feasibility are appendices. Required declarations and methods assistance disclosure are included. The named manuscript/title page provide the verified public artifact link and author contacts; the anonymous working PDF omits the author-identifying release URL.
+The November revision asks five research questions. The held-out consumer comparison is RQ5, and the appendix records the packaging and release diagnostics. The separate consumer replication companion recomputes the 215-project comparison and its uncertainty bounds from retained evidence.
 
 ## Files for Editorial Manager
 
 | File | Intended upload |
 | --- | --- |
 | `EMSE_Manuscript.pdf` | Local manuscript preview; use the TeX file as the primary Manuscript item when uploading full LaTeX source |
-| `EMSE_LaTeX_Source.zip` | Upload the regenerated flat contents, with 13 active figure PDFs named `Fig1.pdf` through `Fig13.pdf`; assign types as below |
+| `EMSE_LaTeX_Source.zip` | Upload the regenerated flat contents, with 14 active figure PDFs named `Fig1.pdf` through `Fig14.pdf`; assign types as below |
 | `EMSE_Reference_Copy.pdf` | Supplementary/reference PDF copy, with a different base filename from the primary TeX file |
+| `EMSE_Consumer_Replication.zip` | Research supplement with an offline replay and pinned source references for the five confirmed cases |
 | `EMSE_Title_Page.pdf` | Title Page containing ALL Author Contact Info. |
 | `EMSE_Title_Page.tex` | Local editable source for the separate title page; keep out of the article's LaTeX upload |
 
-For the full-source upload, select **Manuscript** and upload `EMSE_LaTeX_Source.zip`. Once it is extracted, put `EMSE_Manuscript.tex` first among the LaTeX files and classify it as **Manuscript**. Classify `references_q1.bib`, `EMSE_Manuscript.bbl`, `sn-basic.bst` and `sn-jnl.cls` as **LaTeX Supporting Files** (use the journal's equivalent label). Classify the 13 figure PDFs as **Figure**. Keep `EMSE_Title_Page.pdf` under **Title Page containing ALL Author Contact Info.** Upload `EMSE_Reference_Copy.pdf` as supplementary material for reference as instructed on the journal's screen. Replace the previous attachment set so unused old figures and stale sources are not retained. Update the form abstract to match this revised manuscript. Confirm the per-file types after ZIP extraction, then proceed and inspect Editorial Manager's generated PDF before approving.
+For the full-source upload, select **Manuscript** and upload `EMSE_LaTeX_Source.zip`. Once it is extracted, put `EMSE_Manuscript.tex` first among the LaTeX files and classify it as **Manuscript**. Classify `references_q1.bib`, `EMSE_Manuscript.bbl`, `sn-basic.bst` and `sn-jnl.cls` as **LaTeX Supporting Files** (use the journal's equivalent label). Classify the 14 figure PDFs as **Figure**. Keep `EMSE_Title_Page.pdf` under **Title Page containing ALL Author Contact Info.** Upload `EMSE_Reference_Copy.pdf` as supplementary material for reference as instructed on the journal's screen. Attach `EMSE_Consumer_Replication.zip` separately as supplementary material. Replace the previous attachment set so unused old figures and stale sources are not retained. Update the form abstract to match this revised manuscript. Confirm the per-file types after ZIP extraction, then proceed and inspect Editorial Manager's generated PDF before approving.
 
 The reference copy is byte-identical to the current manuscript preview. The distinct filename avoids the TeX/PDF basename collision described in the [Editorial Manager LaTeX guide](https://www.ariessys.com/wp-content/uploads/EM_PM_LaTeX_Guide.pdf), pp. 2–8. The journal's on-screen **LaTeX Supporting Files** type takes precedence over the guide's generic **Manuscript** example for supporting files.
 
@@ -33,7 +34,9 @@ The user confirmed no external funding or competing interests for either author,
 From the repository root:
 
 ```sh
+python3 scripts/package_yunohost_consumer_replay.py
 python3 submission/emse/build_emse.py
+python3 submission/emse/check_guidelines.py
 ```
 
 Requires Python, Tectonic, `pdfinfo`, `pdffonts` and `pdftotext`. The script expands shared LaTeX inputs and appendices, adapts formatting, compiles both attachments, packages the flat source ZIP, then compiles a clean extraction. `validation.json` records page counts, fonts, overflow/citation/glyph checks, required content, public-release status and source hashes. Technical success does not assert completed human annotation or author approval. The source ZIP is a typesetting package, not the research dataset. Run `python3 submission/emse/check_guidelines.py` for caption/citation-order, internal-note, archive and metadata checks. Journal figure presentation is prepared by `python3 scripts/prepare_emse_figures.py`; its original inputs are frozen under `manuscript_q1/figures/editorial_inputs/` and must be deliberately refreshed when underlying measurements change.

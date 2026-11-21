@@ -247,10 +247,12 @@ def check_numerical_consistency() -> dict:
     try:
         presentation=json.loads((Q1_DIR/'results/emse_figure_presentation.json').read_text())
         assert presentation['renderer_sha256']==hashlib.sha256((ROOT/'scripts/prepare_emse_figures.py').read_bytes()).hexdigest()
+        assert presentation['inputs'].keys() <= presentation['figures'].keys()
         for stem, outputs in presentation['figures'].items():
             for ext, expected in outputs.items():
                 assert hashlib.sha256((Q1_DIR/f'figures/{stem}.{ext}').read_bytes()).hexdigest()==expected
-                assert hashlib.sha256((Q1_DIR/f'figures/editorial_inputs/{stem}.{ext}').read_bytes()).hexdigest()==presentation['inputs'][stem][ext]
+                if stem in presentation['inputs']:
+                    assert hashlib.sha256((Q1_DIR/f'figures/editorial_inputs/{stem}.{ext}').read_bytes()).hexdigest()==presentation['inputs'][stem][ext]
         def original_figure_hash(stem, ext):
             folder='figures/editorial_inputs' if stem in presentation['inputs'] else 'figures'
             return hashlib.sha256((Q1_DIR/f'{folder}/{stem}.{ext}').read_bytes()).hexdigest()

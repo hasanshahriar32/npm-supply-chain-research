@@ -88,61 +88,45 @@ Random (mean) & 1,680.6 & 23.4 & 0.80 & 12.8 \\%
 \author[2]{\fnm{Md. Ashikul} \sur{Islam}}\email{ashikulislamcf2000@gmail.com}
 \affil[1]{\orgdiv{Department of ECE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
 \affil[2]{\orgdiv{Department of CSE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
-\abstract{Maintainer-review programs must choose between reaching distinct repositories, reducing account-origin exposure, and selecting every observed source of an endpoint. We compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 usernames, then test representation choices, heuristic components, and transport to a newly acquired cohort. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories, whereas exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion-oriented heuristic selects every observed source for 1,022 repositories; a simpler variant yields 1,024. Across 96 candidate-restricted exact benchmark settings, the original heuristic attains the optimum in 86, with a worst deficit of 66 endpoints. A fresh acquisition from 100 sampled roots supplies 66 workflow-associated repository endpoints: greedy reaches 65 and exact union 42, with exposure shares of 11.19\% and 44.95\%. Version continuity decreases account--repository pair mass by 3.33\% in that cohort, compared with 42.44\% in the original graph. A separate automated evidence audit of 120 endpoints acquires 115 pinned repository commits. The results show objective-dependent decisions and population-dependent effect sizes, without establishing compromise probabilities, historical installations, or deployed-control efficacy.}
+\abstract{Maintainer-review programs can prioritize distinct repositories, account-origin exposure, or exclusion of every observed source. We compare frozen five-account portfolios on two held-out application frames using paths corroborated against committed lockfiles. In the 155-project self-hosted frame, both portfolios have documented paths to the same 23 applications. In the 215-project YunoHost frame, five fully resolved pairs differ, with three reached only by the name-based selection and two only by the version-based selection. A Yarn Classic follow-up resolves 17 more pairs and narrows primary turnover bounds from 2.3--50.2\% to 2.3--42.3\%. The direction of net coverage change remains unresolved. We also compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 observed accounts. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories and exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion heuristic selects every observed source for 1,022 repositories, and a simpler variant yields 1,024. The original heuristic attains the optimum in 86 of 96 candidate-restricted settings, with a worst deficit of 66 endpoints. Version continuity decreases account--repository pair mass by 42.44\% in the original graph and 3.33\% in a newly acquired cohort. These results quantify how objective and representation choices affect observed coverage and where dependency metadata limits the comparison.}
 \keywords{Software supply chain security, npm ecosystem, maintainer prioritization, multi-objective optimization, dependency graphs, release authority}
 \maketitle
 
 % Shared source: manuscript_q1/sections/01_introduction.tex
 \section{Introduction}
-npm dependency and maintainer relations can concentrate downstream reach in a small set of accounts. Existing work establishes maintainer influence, combined reach and the potential value of vetting influential maintainers~\citep{zimmermann2019,zahan2022}. A review program must also specify what a limited account budget should accomplish. Reaching many distinct repositories, removing account-origin exposure, and selecting every observed source are different objectives.
+npm dependency and maintainer relations can concentrate downstream reach in a small set of accounts. Recent studies measure the leverage of upstream npm packages and investigate contributor reputation as a signal for reviewing Rust dependencies~\citep{samaana2025,hamer2025trust}. An account review program must also specify what its budget should accomplish. Reaching many distinct repositories, removing account-origin exposure, and selecting every observed source are different objectives.
 
 Consider two accounts whose portfolios reach many of the same repositories. After selecting the first, the second may add little distinct coverage while remaining a possible origin in a structural exposure model. An endpoint can therefore be covered while retaining many unselected sources. Mathematical definitions establish that these quantities differ; an empirical study must measure how consequential the distinction is and how observation choices affect the comparison.
 
-We compare the objectives on a retained, high-impact-seeded npm graph containing 25,228 identifiers, including bundled contexts, and 12,217 observed usernames. The main endpoint universe contains 7,171 normalized workflow-associated repository keys. These units are neither a registry-wide sample nor observations of installed-code execution. We evaluate established ranking and greedy-coverage baselines~\citep{zimmermann2019,nemhauser1978}, exploratory scalarization, and an exclusion-oriented heuristic.
+We compare the objectives on a retained, high-impact-seeded npm graph containing 25,228 identifiers, including bundled contexts, and 12,217 observed usernames. The main endpoint universe contains 7,171 normalized workflow-associated repository keys. The sample represents observed graph reach. We evaluate ranking and greedy-coverage baselines, exploratory scalarization, and an exclusion-oriented heuristic.
 
 We assess the comparison through component benchmarks, a new acquisition and an automated endpoint-evidence audit. Component ablations and small exact benchmarks test whether the exclusion heuristic's additional scoring is useful. A new acquisition from 100 frozen, sampled roots tests transport to a bounded cohort with fresh dependency, maintainer and workflow observations. A stratified probability sample of 120 endpoints supplies commit-pinned evidence about repository mappings and workflow files. Automated indicators characterize this evidence; their accuracy was not manually validated.
 
-We ask four questions:
+We ask five questions:
 \begin{itemize}
 \item \textbf{RQ1:} How large are the observed coverage, additive-exposure and all-source-exclusion tradeoffs at equal budgets?
 \item \textbf{RQ2:} How do representation choices affect evaluation, and what evidence supports the workflow-associated endpoint observations?
 \item \textbf{RQ3:} How sensitive is the exclusion-oriented heuristic to its components, candidate cap and ties, and where does it miss candidate-restricted optima?
 \item \textbf{RQ4:} Which tradeoffs persist in a new bounded acquisition and a common-population comparison?
+\item \textbf{RQ5:} At the same account budget, which held-out applications change documented coverage with the graph representation, and how much uncertainty remains?
 \end{itemize}
 
-Our contribution is measured evidence about these decision and observation choices. The additive optimum and standard submodular guarantee are theoretical foundations, not new coverage algorithms. The heuristic is evaluated without a global-optimality claim; its simpler variant slightly improves exclusion on the original graph but underperforms it in the new cohort. The additional acquisition repeats the coverage--exposure tradeoff while substantially changing the size of representation effects. Extended objective sensitivities and historical reconstruction and metadata-acquisition diagnostics are retained in the appendices rather than presented as operational or forecasting validation.
+Our contribution is measured evidence about these decision and observation choices. The additive optimum and standard submodular guarantee supply the theoretical foundations. The simpler exclusion heuristic slightly improves exclusion on the original graph but underperforms the original heuristic in the new cohort. The additional acquisition repeats the coverage--exposure tradeoff while substantially changing the size of representation effects. A separate application pilot measures the feasibility of tracing selections through committed consumer dependencies. Two held-out frames test whether distinct five-account portfolios reach different applications. The YunoHost frame confirms five changes and bounds the possible turnover across all 215 projects. This is a comparison of documented dependency paths under a fixed review budget.
 
 
 % Shared source: manuscript_q1/sections/02_related_work.tex
 \section{Related Work}
 \label{sec:related_work}
 
-Our research intersects five areas of empirical software engineering and software supply-chain security: structural ecosystem measurement, malicious package detection, continuous-integration workflow analysis, registry governance and provenance, and temporal dependency reconstruction.
+\subsection{Upstream Prioritization}
+Schueller and Wachs model how developer departures and failure propagation jointly affect Rust libraries, then compare allocations of developer support~\citep{schueller2024}. Hamer et al. combine contributor network measures with survey evidence to study contributor reputation in dependency review~\citep{hamer2025trust}. In npm, Samaana et al. find that dependency depth affects measured technical leverage~\citep{samaana2025}. He et al. use simulated dependency resolution to study local pinning and coordinated changes at selected upstream packages~\citep{he2025}. We hold the account budget fixed, compare coverage and exclusion objectives, and evaluate whether representation changes which consumers have documented paths to selected accounts.
 
-\subsection{Ecosystem Structure and Centrality-Based Prioritization}
-Prior studies document concentrated dependency reach in open-source package registries. Zimmermann et al.~\citep{zimmermann2019} analyzed npm's dependency topology, revealing that a tiny core of central packages and maintainers transitively affects a vast majority of the ecosystem. Zahan et al.~\citep{zahan2022} study metadata weak-link signals, while Liu et al.~\citep{liu2022} examine dependency-tree vulnerability propagation.
+\subsection{Consumer and Release Evidence}
+Zerouali et al. examine release gaps, maintainer activities, and outdated dependencies in dormant npm packages~\citep{zerouali2026dormant}. Mohayeji et al. measure developers' responses to Dependabot security updates~\citep{mohayeji2025}. Jayasuriya et al. examine breaking changes associated with transitive dependencies~\citep{jayasuriya2024}. These studies motivate retaining dependency versions and observation dates. Our outcome concerns a documented dependency path at a pinned commit. Developer response and adoption require separate observations.
 
-Zimmermann et al.~\citep{zimmermann2019} already studied maintainer-union reach, greedy coverage, and vetting. Wang~\citep{wang2026} evaluates package-node protection in cascade simulations. Our contribution is an empirical comparison of coverage, account-origin exposure, and all-source exclusion at workflow-associated repository endpoints. We evaluate established baselines and a stated heuristic, without claiming a new coverage algorithm or demonstrating that PageRank fails in an experiment where it was not evaluated.
+Bifolco et al. measure discrepancies in GitHub dependency and dependent records for Java and Python projects~\citep{bifolco2025accuracy}. Wang et al. characterize resolution across ten package managers and reconstruct registry dependencies over time with OpenDep~\citep{wang2026opendep}. Gamage et al. compare lockfile design and maintenance across seven package managers~\citep{gamage2026lockfiles}. Our paired analysis joins registry account associations to version-resolved paths from a specified application importer.
 
-\subsection{Malicious Package Benchmarks and Detection Limits}
-A parallel line of security research focuses on detecting malicious packages published via typosquatting, dependency confusion, and account takeovers~\citep{ohm2020,sejfia2022}. Benchmark evaluations, such as Guo et al.'s extensive study of npm malware detectors~\citep{guo2026}, show that static analysis tools have limitations due to obfuscation, dynamic runtime execution, and environment-keyed payloads.
-
-Because reactive post-publication malware detection suffers from non-trivial evasion rates, proactive hardening of legitimate, high-leverage maintainer accounts is a complementary research direction~\citep{schorlemmer2024,okafor2025}. Our comparison concerns a hypothetical account-review budget; it does not evaluate a deployed prevention program.
-
-\subsection{Continuous-Integration Workflows and Reachability Limits}
-Software supply-chain risks manifest concretely in downstream CI/CD pipelines. Koishybayev et al.~\citep{koishybayev2022} and Muralee et al.~\citep{muralee2023} demonstrated that GitHub Actions workflows frequently execute third-party build scripts with access to repository secrets, cloud deployment credentials, and package publish tokens. Incident reports motivate inspecting actual artifacts and authorization evidence; they do not validate the workflow-associated endpoints in our graph.
-
-Recent empirical studies have emphasized that package-level dependency relationships do not equal actual code execution. Weeraddana, Alfadel, and McIntosh~\citep{weeraddana2024} studied CI time spent updating unused npm dependencies. Shen et al.~\citep{gao2025emse} reported that 99\% of client vulnerabilities in their studied corpus arose from dependencies and 81.26\% of package-level findings were false positives under finer analysis. These corpus-specific results do not establish registry-wide false-positive rates. Jayasuriya et al.~\citep{jayasuriya2024} observed similar granularity effects when analyzing syntactic breaking changes across versions. We measure sensitivity to package-name and exact-version edge unions, while explicitly retaining the gap between topological reach and installed-code evidence.
-
-\subsection{Registry Governance, Cryptographic Provenance, and Signing}
-In response to account compromises, registries and standards bodies have introduced cryptographic signing and provenance attestations. Schorlemmer et al.~\citep{schorlemmer2024} audited signing across Maven, PyPI, Docker Hub, and Hugging Face, finding that adoption remains minimal and unevenly distributed. Kalu et al.~\citep{okafor2025} interviewed industry practitioners, revealing significant operational friction in managing cryptographic keys and configuring automated pipeline attestations. Bloom Security's SlugFest disclosure concerns mutable repository-name bindings before a first trusted publish, rather than a break of OIDC cryptography~\citep{npmtrustedpub2026}. GitHub announced expiry of unvalidated bindings on October 2~\citep{npmexpiry2026}; reported exposure is not evidence that all affected packages were maliciously published. Pillar's October 19 OpenCode report describes a September 28 dependency fix without a CVE~\citep{opencode2026}, illustrating a coverage gap for CVE-indexed detection.
-
-Simultaneously, He, Vasilescu, and K{\"a}stner~\citep{he2025} demonstrated that local dependency version pinning is insufficient to protect clients against upstream attacks, as adversaries exploit unpinned sub-dependencies and registry-level re-resolutions. These findings motivate examining account controls alongside version and artifact evidence; they do not establish control efficacy in our graph.
-
-\subsection{Temporal Reconstruction and Empirical Standards}
-A critical methodological vulnerability in supply-chain studies is future-leakage bias---evaluating historical attacks using contemporary registry graphs. Pinckney et al.~\citep{pinckney2023} introduced \texttt{npm-follower} to mirror registry event streams, while Rahman et al.~\citep{rahman2026} released \texttt{CHRONO-RESOLUTION} to reconstruct exact dependency trees at release points. Shafin and Ahmed~\citep{shafin2026} highlighted the necessity of time-indexed forecasting.
-
-Our reporting is informed by the ACM SIGSOFT Empirical Standards~\citep{ralph2020}. We report fixed-graph budget comparisons and repeated random orders as descriptive analyses, rather than treating them as independent ecosystem samples.
+Bi et al. document recurring challenges from SBOM generation through consumption~\citep{bi2024sboms}. Xiao et al. find dependency omissions in developer-published Java SBOMs~\citep{xiao2025sbom}. This motivates checking the exact recipe asset, the metadata's subject, and the dependency information it contains. A source revision can support a comparison of declared dependencies. Evidence of bundled components requires inspecting the delivered artifact or an inventory linked to its bytes.
 
 Table~\ref{tab:lit_positioning} compares the closest empirical studies and their observation units.
 
@@ -155,10 +139,11 @@ Table~\ref{tab:lit_positioning} compares the closest empirical studies and their
 \toprule
 Study & Population & Main observations & Validation basis & Additional question here\\
 \midrule
-\citep{zimmermann2019} & npm dependency and maintainer ecosystem & Maintainer influence, combined reach and vetting simulations & Ecosystem-scale longitudinal dependency analysis & Joint C/H/P costs, endpoint definitions and representation-sensitive selection\\
-\citep{zahan2022} & 1.63 million npm packages & Metadata weak-link signals & Metadata analyses and survey of 470 developers & Explicit structural objectives rather than fitted compromise signals\\
-\citep{weeraddana2024} & 1,487 projects and 20,743 dependency-update commits & Unused dependencies and CI resource waste & Dependency-use analysis and measured CI builds & Evidence limits of workflow-presence proxies; this study does not measure job execution\\
-This study & Retained seeded graph; new 100-root cohort; 120-endpoint audit & C/H/P tradeoffs, heuristic ablations and representation effects & Graph consistency checks, restricted exact benchmarks and fresh acquisition & Transport of decision tradeoffs and explicit limitations of observations\\
+\citep{schueller2024} & Rust ecosystem & Risks shared across developers and libraries & Modeled developer departure and dependency failures & Account selections under different dependency representations\\
+\citep{samaana2025} & npm library releases & Technical leverage & Replication across dependency depths & Sensitivity of fixed-budget selection\\
+\citep{he2025} & npm projects and registry & Local pinning and coordinated version constraints & Historical resolution simulations & Account selection evaluated against committed consumer paths\\
+\citep{wang2026opendep} & Ten package managers & Ecosystem-scale dependency resolution & Policy characterization and resolution checks & Importer and artifact evidence for paired application outcomes\\
+This study & Retained graph, bounded training cohort and separate application frame & Objective tradeoffs and reassignment under equal budgets & Pinned consumer paths and independently collected registry records & Projects uniquely reached by either selection and limits from unresolved evidence\\
 \bottomrule
 \end{tabularx}
 \end{sidewaystable}
@@ -168,9 +153,9 @@ This study & Retained seeded graph; new 100-root cohort; 120-endpoint audit & C/
 \section{Data Corpus and Graph Construction}
 \label{sec:data_construction}
 \subsection{Collection and Units}
-The collector seeds a high-impact npm list, expands dependencies through deps.dev~\citep{depsdevapi}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
+The collector seeds a high-impact npm list, expands dependencies through deps.dev\footnote{\url{https://docs.deps.dev/api/v3/}}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
 
-Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges~\citep{depsdevapi}. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
+Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
 
 Figure~\ref{fig:q1_observation_workflow} summarizes the collection and analysis architecture.
 
@@ -240,7 +225,7 @@ Figure~\ref{fig:q1_version_semantics} illustrates how version merging can introd
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{Fig4.pdf}
-\caption{Illustrative version splicing. Collapsing intermediate versions creates a name-level path without an exact-version counterpart. Reverse-reach arrows do not describe a measured installation}
+\caption{Illustrative version splicing. The name graph merges d@1 and d@2 into d, creating apparent reach from p to r. Dashed amber arrows show projected reverse reach. Solid teal arrows show the two exact-version paths}
 \label{fig:q1_version_semantics}
 \end{figure}
 
@@ -256,14 +241,14 @@ Figures were generated programmatically with Matplotlib and editable vector artw
 \section{Objectives and Optimization Framework}
 \label{sec:objectives}
 
-Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages associated with $m$, and let $\text{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
+Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages associated with $m$, and let $\operatorname{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
 
 Figure~\ref{fig:q1_methodology} summarizes the analysis and consistency checks.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{Fig5.pdf}
-\caption{Analysis methodology and correctness checks. All evaluation quantities share the same observed graph; additional sensitivities do not constitute independent outcome samples}
+\caption{The observed graph yields exact reach sets through strongly connected component condensation and bitset unions. The sets supply both fixed-budget scoring and reachability checks. Comparisons use the same graph within each representation}
 \label{fig:q1_methodology}
 \end{figure}
 
@@ -273,13 +258,13 @@ We formalize three fundamental defensive quantities:
 \subsubsection{Submodular Distinct Coverage ($C(S)$)}
 Defenders seeking broad ecosystem review prioritize distinct downstream client repositories:
 \begin{equation}
-C(S) = \left| \bigcup_{m \in S} E_m \right|
+C(S) = \Bigl\lvert \bigcup_{m \in S} E_m \Bigr\rvert .
 \end{equation}
 \textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
 \begin{equation}
 C(A \cup \{m\}) - C(A) \ge C(B \cup \{m\}) - C(B)
 \end{equation}
-The classic result of Nemhauser, Wolsey, and Fisher~\citep{nemhauser1978} establishes that the greedy algorithm selecting $m^* = \arg\max_{m \notin S} |E_m \setminus \bigcup_{u \in S} E_u|$ achieves a $(1 - 1/e) \approx 63.2\%$ approximation of the optimal coverage.
+The classical Nemhauser--Wolsey--Fisher bound gives greedy coverage a $(1-1/e)\approx63.2\%$ approximation. For a normalized, monotone submodular objective $F$ and budget $k\ge1$, let $O$ be an optimal set. The sum of the marginal gains of $O\setminus S_i$ at the current greedy set $S_i$ is at least $F(O)-F(S_i)$. Greedy therefore removes at least $1/k$ of the remaining gap each step. After $k$ steps, the achieved value is at least $[1-(1-1/k)^k]F(O)\ge(1-1/e)F(O)$.
 
 \subsubsection{Modular Scenario Exposure Reduction ($H(S)$)}
 Suppose exactly one account is the hypothetical origin and has a fixed nonnegative weight $w_m$. A perfect control removes that origin when selected while leaving all other paths unchanged. We measure its share of weighted exposure as:
@@ -291,7 +276,8 @@ H(S) = \frac{\sum_{m \in S} w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
 \subsubsection{Supermodular All-Source Exclusion ($P(S)$)}
 Under the same idealized model, an endpoint has no remaining observed source when every member of its nonempty source set is selected:
 \begin{equation}
-P(S) = \sum_{r \in R_{\text{wf}}} \mathbb{I}[\varnothing\ne\text{Sources}(r) \subseteq S]
+P(S) = \sum_{r \in R_{\text{wf}}}
+  \ind\bigl[\varnothing \ne \operatorname{Sources}(r) \subseteq S\bigr].
 \end{equation}
 \textbf{Property:} $P(S)$ is \textit{supermodular}. Selecting maintainer $m$ contributes zero gain to $r$ until its final unselected source is selected. For $A\subseteq B$ and $m\notin B$,
 \begin{equation}
@@ -299,9 +285,17 @@ P(A \cup \{m\}) - P(A) \le P(B \cup \{m\}) - P(B).
 \end{equation}
 
 \subsubsection{Strict Zero-Anchored Threshold Exclusion ($P_k$)}
-Let $R_+=\{r\in R_{\text{wf}}:\mathrm{Sources}(r)\ne\varnothing\}$, $n_r=|\mathrm{Sources}(r)|$, and $t_r(S)=|\mathrm{Sources}(r)\setminus S|$. We define the hypothetical strict threshold count
+Let $n_r=\lvert\operatorname{Sources}(r)\rvert$ and
+$t_r(S)=\lvert\operatorname{Sources}(r)\setminus S\rvert$. We define the hypothetical strict threshold count over $R_+=\{r\in R_{\text{wf}}\mid n_r>0\}$ as
 \begin{equation}
-P_k(S)=\sum_{r\in R_+}\mathbb{I}\left[t_r(S)=0\ \lor\ (n_r\ge k\ \land\ t_r(S)<k)\right].
+\begin{aligned}
+P_k(S) &= \sum_{r\in R_+} \ind\bigl[t_r(S)<q_k(r)\bigr],\\
+q_k(r) &=
+  \begin{cases}
+    1, & n_r<k,\\
+    k, & n_r\ge k .
+  \end{cases}
+\end{aligned}
 \label{eq:strict_quorum}
 \end{equation}
 For $n_r<k$, only complete source exclusion is credited. For $n_r\ge k$, fewer than $k$ remaining sources suffice under the hypothetical threshold rule. Thus $P_k(\varnothing)=0$, $P_1(S)=P(S)$, and every counted endpoint has a hardened source. The function is monotone in $S$ for fixed $k$, but need not be monotone in $k$: an endpoint with $n_r=2$ and $t_r(S)=1$ is counted at $k=2$ and not at $k=3$. The superficially compact condition $t_r(S)<\min(k,n_r)$ is not equivalent to Eq.~\ref{eq:strict_quorum}. No claim about the submodularity or supermodularity of $P_1$ is extended to general $P_k$.
@@ -321,13 +315,19 @@ For any $\alpha \in [0, 1]$, the objective $J_\alpha(S)$ is monotone non-decreas
 \begin{proof}
 Let $A \subseteq B \subseteq M$ and $m \notin B$. The marginal gain is:
 \begin{equation}
-\Delta J_\alpha(m \mid S) = \alpha \frac{|E_m \setminus \bigcup_{u \in S} E_u|}{|R_{\text{wf}}|} + (1 - \alpha) \frac{w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
+\begin{aligned}
+\Delta J_\alpha(m \mid S)
+  &= \alpha \frac{\bigl\lvert E_m \setminus \bigcup_{u\in S} E_u\bigr\rvert}
+                  {\lvert R_{\text{wf}}\rvert} \\
+  &\quad + (1-\alpha)\frac{w_m\lvert E_m\rvert}
+                           {\sum_{v\in M} w_v\lvert E_v\rvert} .
+\end{aligned}
 \end{equation}
 The second term is constant with respect to $S$ (modular), so its marginal difference across $A$ and $B$ is exactly zero. The first term satisfies submodularity by set-theoretic inclusion:
 \begin{equation}
 |E_m \setminus \bigcup_{u \in A} E_u| \ge |E_m \setminus \bigcup_{u \in B} E_u|
 \end{equation}
-Because the sum of a submodular set function and a modular set function is submodular, $J_\alpha(S)$ is submodular for all $\alpha \in [0, 1]$. By the Nemhauser bound~\citep{nemhauser1978}, accelerated lazy greedy optimization achieves at least a $(1 - 1/e)$ approximation of the optimum scalarized objective.
+The sum of a submodular function and a modular function is submodular, so $J_\alpha$ is submodular for all $\alpha\in[0,1]$. Lazy evaluation preserves the greedy marginal choice. The gap argument for $C$ therefore also gives the $(1-1/e)$ guarantee for $J_\alpha$.
 \end{proof}
 
 \subsection{Supermodular Minimum-Remaining-Source Heuristic for $P(S)$}
@@ -344,10 +344,12 @@ We evaluate three structural models of non-uniform maintainer risk:
 \subsection{Analytic Expectations and Empirical Standard Errors}
 Under a finite population of $|M| = 12,217$ maintainers, random selection of budget $k$ yields exact expected coverage and exposure under the hypergeometric distribution:
 \begin{align}
-E[H_{\text{rand}}(k)] &= \frac{k}{|M|}, \\
-E[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}} \left( 1 - \frac{\binom{|M| - |\text{Sources}(r)|}{k}}{\binom{|M|}{k}} \right).
+\mathbb{E}[H_{\text{rand}}(k)] &= \frac{k}{\lvert M\rvert}, \\
+\mathbb{E}[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}}
+  \left( 1 - \frac{\binom{\lvert M\rvert-n_r}{k}}
+                  {\binom{\lvert M\rvert}{k}} \right).
 \end{align}
-For $k = 100$, exact finite-population expectations are $E[C] = 1,716.8$ and $E[H] = 0.819\%$. Across 200 simulation seeds, the sample mean coverage is 1,680.6 (sample standard deviation $\text{SD}_C = 530.7$, Monte Carlo Standard Error $\text{MCSE}_C = 37.5$), and sample mean exposure reduction is $0.80\%$ ($\text{SD}_H = 0.373\text{ pp}$, $\text{MCSE}_H = 0.026\text{ pp}$). Replicated offline execution across 3 independent runs averaged $39.50\text{ s}$ wall-clock time with $1,038.43\text{ MiB}$ peak RSS.
+For $k = 100$, exact finite-population expectations are $\mathbb{E}[C] = 1{,}716.8$ and $\mathbb{E}[H] = 0.819\%$. Across 200 simulation seeds, the sample mean coverage is 1,680.6 (sample standard deviation $\text{SD}_C = 530.7$, Monte Carlo Standard Error $\text{MCSE}_C = 37.5$), and sample mean exposure reduction is $0.80\%$ ($\text{SD}_H = 0.373\text{ pp}$, $\text{MCSE}_H = 0.026\text{ pp}$). Replicated offline execution across 3 independent runs averaged $39.50\text{ s}$ wall-clock time with $1{,}038.43\text{ MiB}$ peak RSS.
 
 
 % Shared source: manuscript_q1/sections/04a_ai_assistance.tex
@@ -460,14 +462,12 @@ Table~\ref{tab:q1_incident_case_study} details reach metrics and maintainer prio
 
 % Shared source: manuscript_q1/tables/q1_incident_case_study_table.tex
 % Generated by scripts/reconcile_full_manuscript.py
-\begin{table*}[t]
+\begin{sidewaystable}[p]
 \centering
 \footnotesize
 \caption{Observed workflow-repository reach and account rankings for 16 incident-associated records (15 package names). Reach and ranks use the retained cross-sectional graph, not pre-event installations}
 \label{tab:q1_incident_case_study}
-\resizebox{\textwidth}{!}{%
-\begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{llrrrrrr}
+\begin{tabularx}{\linewidth}{@{}Ylrrrrrr@{}}
 \toprule
 Package / record & Account (count) & Name reach & Version reach & Portfolio & Greedy & Union & Hybrid\\
 \midrule
@@ -488,11 +488,9 @@ Package / record & Account (count) & Name reach & Version reach & Portfolio & Gr
 \texttt{@mastra/core} & \texttt{tylerbarnes} (9) & 0 & 0 & \#416 & \#>100 & \#6,314 & \#6,697\\
 \texttt{echarts-for-react} & \texttt{atool} (1) & 0 & 0 & \#398 & \#>100 & \#1,945 & \#747\\
 \bottomrule
-\end{tabular}
-\end{adjustbox}
-}
-\par\smallskip\begin{minipage}{0.98\textwidth}\footnotesize Every account rank uses workflow-associated repository endpoints. The parenthesized value counts observed maintainers of that package. Membership is not evidence of historical publishing authority. Version labels and dependency counts are retained in the companion CSV. Package reach excludes the root; account portfolios include eligible seeds.\end{minipage}
-\end{table*}
+\end{tabularx}
+\par\smallskip\begin{minipage}{0.98\linewidth}\footnotesize Every account rank uses workflow-associated repository endpoints. The parenthesized value counts observed maintainers of that package. Membership is not evidence of historical publishing authority. Version labels and dependency counts are retained in the companion CSV. Package reach excludes the root; account portfolios include eligible seeds.\end{minipage}
+\end{sidewaystable}
 
 
 The individual-package comparison shows representation-dependent reach: \texttt{simple-swizzle} has 120 name-projected and 31 exact-version-continuous workflow endpoints; \texttt{chalk} has 1,125 and 587; \texttt{ansi-styles} has 1,376 and 740; \texttt{debug} has 1,462 and 1,162. These differences do not prove which paths an actual installation could execute.
@@ -691,12 +689,117 @@ New cohort & Original direct P & 62 & 17.25 & 34 & 2,487\\
 We also reoptimize on 65 common repository keys with 1,036 accounts eligible in both datasets. Each dataset retains its full observed source sets, including origins outside the common candidate pool. H retains the relevant dataset's pair denominator. At budget 100, coverage remains greater for greedy than exact union in both graphs; the direct heuristic gives the largest P among these three compared rules. Top-100 Jaccard overlaps between reoptimized selections are 0.667 for exact union, 0.835 for greedy and 0.587 for direct exclusion. Shared observations and graph-bounding differences preclude treating these as independent ecosystem samples or a causal stability estimate.
 
 
+% Shared source: manuscript_q1/sections/07a_consumer_pilot.tex
+\subsection{Consumer-side feasibility study}
+A registry graph assigns downstream reach through observed dependency edges. To check how much of that reach can be traced in application-owned artifacts, we drew 40 repositories without replacement from 199 distinct GitHub repositories in the Awesome-Selfhosted index tagged JavaScript, TypeScript or Nodejs. We froze the index revision (\code{2a8926e0}), deterministic draw and midnight UTC cutoff on November 20, 2026 before inspecting consumer evidence. Each repository was pinned to a default-branch commit at or before the cutoff. None of the 40 appeared among the 7,171 original endpoint keys or the 66 endpoints used to train the October cohort rankings. The frame represents curated public self-hosted software.
+
+Of 40 repositories, 34 supplied a root manifest and 17 a root npm lockfile. We evaluated eight with sufficiently supported inputs. Across the full draw, six lacked a root manifest, ten declared another manager, seven additional cases lacked a root npm lockfile, eight had unsupported inputs, and one contained an ambiguous or external path. These categories are mutually exclusive. For npm lockfile versions 2 and 3 we traced mandatory production dependencies from the root importer and checked declared ranges against locked versions. We compared each complete path with edges in npm Arborist's offline virtual tree. Both parsers use npm SemVer. This is a software cross-check of committed metadata. No packages were installed and no authors supplied manual labels.
+
+Seven of eight compared projects yielded paths. The two parsers agreed on all 1,147 observed installation locations across those projects. Counting distinct package/version pairs separately per consumer yielded 1,110 observations. Of those, 278 could be linked through a public npm tarball identity to exact package/version maintainer metadata captured in the October cohort. Six projects supplied at least one such link. That metadata describes the earlier registry observation and cannot identify who controlled publication at a later date.
+
+We evaluated the two greedy coverage portfolios frozen on the October cohort against these consumer paths. At budget 100, the name-based and version-based methods selected exactly the same 100 accounts. Both portfolios had a documented path in the same five projects. Three compared projects had no documented hit, and 32 drawn projects were unevaluable. The identical selections force the coverage contrast to zero for any common reference. The pilot therefore measures feasibility and attrition, while providing no empirical test of whether distinct portfolios achieve equivalent consumer coverage.
+
+
+% Shared source: manuscript_q1/sections/07aa_consumer_holdout.tex
+\section{Held-Out Consumer Coverage (RQ5)}
+\label{sec:consumer_holdout}
+The feasibility pilot produced identical 100-account greedy selections, so it could not assess how distinct selections change application coverage. For RQ5 we chose a five-account contrast on the October training graph and froze it before collecting either held-out frame. The estimand is conditional on this budget and the frozen selection rule. The name and version representations each use additive ranking. They share three of five accounts. We retain the original deterministic cutoff policy and score both alternative additive-optimal version portfolios separately. On the training repositories, the two deterministic portfolios each reach 30 repositories, including 25 shared and five exclusive to each. This training result motivates reporting changes in which consumers are covered alongside the change in total coverage.
+
+The held-out frame comprises the remaining entries in the pinned Awesome-Selfhosted list after excluding all 40 pilot projects and repository keys that appear among earlier training endpoints. Each project is pinned to its public default HEAD when observed. We trace mandatory production dependencies from the root npm importer using committed lockfile formats 2 and 3. We corroborate the paths with npm Arborist's offline virtual tree. Workspaces, unsupported managers, unresolved paths and unavailable inputs contribute to the attrition ledger. The verification queue enumerates all distinct public package/version pairs corroborated by both implementations. We collect exact-version registry responses for this queue before matching any accounts to the portfolios. The registry fields describe observed maintainer-list associations during collection.
+
+For each project and portfolio, a documented hit requires a corroborated path ending in an exact-version package with an observed selected account. A documented zero represents lack of a witness under the procedure. For full-reference coverage, we assign the set of paired statuses compatible with the evidence. A positive under both portfolios is fixed at $(1,1)$. A fully checked tree and registry join can justify an observed negative under the supported scope. When the unresolved evidence could change either outcome, we retain its feasible states. We compute the minimum and maximum of $|V-N|$ and $V-N$ within each project's feasible set and average those limits over the finite frame. The resulting bounds reflect incomplete evidence.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{Fig13.pdf}
+\caption{Paired consumer coverage evidence. The hatched segment shows unresolved pairs in the 155-application frame. The interval represents coverage reassignment compatible with the available evidence. All five-account tie choices give the same counts and bounds}
+\label{fig:consumer_holdout_evidence}
+\end{figure}
+
+We recorded all 155 projects and pinned 154 commits. Thirty projects entered the paired parser comparison and 25 yielded at least one corroborated path. The implementations agreed on 6,388 package locations in the compared projects. Arborist returned a virtual tree for 18 additional projects declined by the custom parser. Across the agreed paths, exact-version registry observations produced a usable maintainer list for 3,287 of 3,299 requested versions.
+
+Figure~\ref{fig:consumer_holdout_evidence} shows the 23 documented common hits and six confirmed common negatives. Neither portfolio had an exclusive documented hit in any of the three comparisons. Each of the common hits had a witness from an account present in both portfolios. Twenty-nine outcomes were fully resolved, consisting of 23 common positives and six confirmed common negatives. The other 126 projects leave a full-reference turnover interval from 0 to 81.3\% and a net coverage interval from $-81.3$ to $+81.3$ percentage points. The identical-portfolio control gives zero turnover under all feasible assignments. The held-out study therefore cannot establish practical equivalence between the distinct portfolios. Access to applicable consumer trees is the primary measurement bottleneck in this frame.
+
+\subsection{YunoHost comparison with broader lockfile support}
+The second frame comprises 215 upstream YunoHost projects with pinned root package manifests. We excluded earlier repository keys and duplicate pinned commits. Lockfile intake yielded 108 npm and 44 pnpm candidates. All 215 projects contribute to the paired comparison.
+
+For npm, we compare effective ranges from Arborist's virtual tree with checks against the committed dependency declarations, lockfile locations and pinned workspace manifests. The root walk follows verified links to local workspaces when those links are on a mandatory production path. Separate workspace importers are diagnostic because the catalog does not establish which importer is deployed. For pnpm lockfile format 9, we compare paths of up to three mandatory edges against the native offline listing. The depth limit lets those paths establish positive witnesses. A negative requires complete npm evidence within the supported root scope and an observed registry join for every retained witness.
+
+We froze the comparison and the verification scope before acquiring the workspace manifests and observing the exact-version registry metadata used for scoring. A path's registry identity requires a canonical public npm tarball URL or an exact match between the lockfile's SHA-512 identifier and the registry response. We join maintainer associations after collection. Both frames measure committed dependency declarations and registry associations at the time of observation. The different intake and extraction rules limit direct comparisons between frames.
+
+On the same 108 npm candidates, the earlier reader returned corroborated locations for 50 projects and the expanded reader for 67. The readings share 8,158 package locations. The expanded procedure adds 5,463 locations in 19 projects, including three with root workspaces. It also leaves 316 previously corroborated locations unresolved in two projects. This comparison measures where the two procedures produce evidence on the same inputs.
+
+The workspace collection returned all 15 requested manifests. The registry collection returned usable maintainer lists for 9,968 of 9,987 exact versions. Ninety projects have at least one registry-linked path. Seventy-two have complete path and registry evidence under the supported root scope. Positive witnesses under both portfolios also resolve pairs in projects with incomplete trees.
+
+
+% Shared source: manuscript_q1/tables/yunohost_consumer_holdout_table.tex
+% Values from yunohost-v2 and yunohost-yarn-classic results.json.
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Paired coverage in the 215-project YunoHost frame. Each column compares the name portfolio against a different additive-optimal version portfolio. Bounds account for unresolved pairs}
+\label{tab:yunohost_consumer_holdout}
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\linewidth}{@{}Yrrr@{}}
+\toprule
+Measure & Primary & Alt.~1 & Alt.~2\\
+\midrule
+\multicolumn{4}{@{}l}{\textit{Initial npm and pnpm analysis}}\\
+Documented under both & 70 & 67 & 71\\
+Documented name only & 4 & 7 & 3\\
+Documented version only & 2 & 1 & 2\\
+Documented under neither & 139 & 140 & 139\\
+\addlinespace
+Fully resolved pairs & 112 & 110 & 112\\
+Fully resolved differences & 5 & 5 & 4\\
+Turnover bounds (\%) & $[2.3,50.2]$ & $[2.3,51.2]$ & $[1.9,49.8]$\\
+Net change bounds (pp) & $[-48.4,47.0]$ & $[-50.2,46.0]$ & $[-47.9,47.4]$\\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{After adding Yarn Classic evidence}}\\
+Follow-up resolved pairs & 129 & 127 & 129\\
+Follow-up turnover (\%) & $[2.3,42.3]$ & $[2.3,43.3]$ & $[1.9,41.9]$\\
+Follow-up net change (pp) & $[-40.0,38.6]$ & $[-41.9,37.7]$ & $[-39.5,39.1]$\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+In the primary comparison, 70 applications have documented hits under both portfolios and six have hits under just one. Five of those six are confirmed differences from fully checked roots (three name-only and two version-only). At least four pairs differ under each alternative cutoff tie, and three projects differ under all three choices. A post hoc check found a positive witness location corroborated by the earlier npm reader for every confirmed difference. The identical-portfolio control has zero turnover. The 103 unresolved primary pairs leave the total net coverage change compatible with either direction (Table~\ref{tab:yunohost_consumer_holdout}).
+
+\subsection{Yarn Classic follow-up}
+After the initial YunoHost analysis, we froze a follow-up protocol for its 35 Yarn candidates before collecting new registry evidence. Two lockfile readers checked the declared SemVer paths from each root. We excluded newer Yarn formats, workspace importers and edges affected by selective resolutions. Paths require canonical registry identifiers, SHA-512 agreement for Yarn mirror artifacts, and corroboration of transitive declarations against exact-version registry records. Yarn contributes positive witnesses only.
+
+The readers agreed on 20 eligible lockfiles. Of 3,557 exact-version requests, 3,555 yielded usable maintainer lists. Nineteen applications have a registry-linked path. The added evidence resolves 17 further common hits in the primary comparison, raising the resolved count from 112 to 129. Two more applications have one documented portfolio hit and an unresolved counterpart. The turnover interval narrows to 2.3--42.3\% and the net interval to $-40.0$ to $+38.6$ percentage points. Both alternative cutoff choices show the same 17-pair increase (Table~\ref{tab:yunohost_consumer_holdout}). The follow-up retains the original observations for all other projects. Its bounds quantify the change from adding Yarn evidence collected separately.
+
+In one of the five cases, project Y017 reaches a version-selected account via
+\texttt{fullcalendar} 6.1.21, \texttt{@fullcalendar/core} 6.1.21, and
+\texttt{preact} 10.12.1. Both readers corroborated the positive location.
+All 21 locations in its supported root tree joined to registry records,
+and no joined record contains a name-selected account. The replication
+companion includes the five pinned source pairs and recomputes the
+classification of each project from its retained paths and registry joins.
+
+The packaging diagnostics examine whether root manifests capture the
+dependencies that a recipe uses (Appendix~\ref{sec:consumer_packaging}).
+A same-commit comparison confirmed one case where using the
+recipe-selected importer supplies a documented path absent from the
+root. In one checksum-matched Mongo Express release, all 39 regular
+direct dependencies matched their npm tarballs across 1,571 file paths.
+Both portfolio approaches had documented hits among these packaged
+dependencies. The Pterodactyl archive preserves the source lockfile, while
+its compiled JavaScript leaves bundled module membership unresolved.
+
+
 % Shared source: manuscript_q1/sections/07b_discussion.tex
 \section{Discussion}
 \label{sec:discussion}
 The practical choice begins with an objective. Coverage is suitable for distributing a review surface across distinct observed endpoints; additive H allocates selection toward account-origin pair mass under the stipulated weights; P requires selecting every observed source of a nonempty endpoint. The measured tradeoffs show that a defender cannot substitute one objective's score for another's. None of these quantities estimates how many incidents a real control prevents.
 
 The additional experiments also distinguish useful evidence from mathematical expectation. Exact-union ranking's additive optimality follows from the objective; the empirical contribution is the associated coverage and exclusion cost. The new cohort repeats that direction while changing effect sizes. A representation effect of 42.44\% in one union and 3.33\% in the other warrants reporting population and version context whenever reach is compared.
+
+The YunoHost frame shows why evaluation should track which applications each portfolio reaches. The five confirmed primary differences include both name-only and version-only outcomes. A net coverage statistic can hide these changes. The turnover lower bound is positive for every cutoff choice. Missing dependency evidence leaves the size and direction of the aggregate net change uncertain.
+
+The recipe audit shows a separate measurement choice. The repository key, selected source revision, and package importer each matter for application reach. Even at the same commit, using the recipe's named frontend can change whether a dependency path is documented. For review programs that start with shipped components, the artifact itself determines what can be confirmed. A preserved dependency directory allowed us to verify file inclusion in the Mongo Express release. An identical lockfile in the Pterodactyl source and release established continuity of the dependency declarations, while the compiled assets left module membership unresolved.
 
 The exclusion heuristic illustrates why added complexity needs empirical justification. Reciprocal scoring is unnecessary for its original-graph P improvement, yet helps relative to the immediate variant in the new cohort. Candidate-restricted exact instances expose large empirical gaps despite frequent optimum matches. The present results support a transparent heuristic comparison, without a universal recommended cap or algorithmic guarantee.
 
@@ -706,15 +809,15 @@ The endpoint audit provides reproducible, commit-pinned evidence collection. Its
 % Shared source: manuscript_q1/sections/08_threats_to_validity_and_ethics.tex
 \section{Threats to Validity and Research Ethics}
 \label{sec:threats_to_validity}
-We organize limitations around construct, internal, external, and conclusion validity, informed by empirical reporting guidance~\citep{ralph2020}.
+We organize limitations around construct, internal, external, and conclusion validity.
 
 \subsection{Construct Validity}
 Registry maintainer arrays supply username associations, not historical publication authority, token scope, account independence, or a peer-review policy. One maintainer does not prove absence of human review; several do not prove enforced review. Uniform and heterogeneous source weights are modeling assumptions. The perfect hardening model removes selected account origins, not package nodes or paths from other origins.
 
-The workflow observation is a directory lookup at HEAD. The original acquisition did not retain workflow YAML, job execution, permission scopes, historical release links, or consumer lockfiles. Dependency and workflow association therefore establishes neither installation nor vulnerable-code execution or secret access. CI dependency studies~\citep{weeraddana2024} and finer-grained vulnerability analysis~\citep{gao2025emse} motivate those distinctions without supplying execution evidence for our endpoints.
+The workflow observation is a directory lookup at HEAD. The original acquisition lacks workflow YAML, job execution, permission scopes, historical release links, and consumer lockfiles. Fine-grained analyses of vulnerability propagation and localization use evidence from client code and dependent libraries~\citep{gao2025emse}. The workflow association measures a directory observed at collection time.
 The new endpoint audit separately retains current commit-pinned workflows and selected manifests/lockfiles. It does not recover the missing original evidence. The automated indicators were not manually validated. Regular-expression and YAML-based extraction may miss reusable actions, infer the wrong working directory, or flag shell text that does not execute an install. These errors can affect the evidence-subset diagnostics.
 
-The main exact-version graph is an observed deps.dev edge union, while the temporal companion is a bounded highest-satisfying SemVer approximation. They are different representations. Neither reconstructs npm hoisting, installed versions, overrides, or complete historical dependency trees. Runtime vulnerabilities such as the Node.js Brotli disclosure~\citep{nodejsbrotli2026} are outside the package graph. Residual thresholds are hypothetical source-count rules, without signer groups, role constraints, or measured enforcement.
+The main exact-version graph is an observed deps.dev edge union, while the temporal companion is a bounded highest-satisfying SemVer approximation. They are different representations. Neither reconstructs npm hoisting, installed versions, overrides, or complete historical dependency trees. Runtime vulnerabilities are outside the package graph. Residual thresholds are hypothetical source-count rules, without signer groups, role constraints, or measured enforcement.
 
 \subsection{Internal and Observational Validity}
 Independent traversals, transposed source incidence, small-graph cases, and generated result checks validate computations on retained evidence. They cannot recover omitted observations. SCC condensation preserves reach; it is not a source of measured cycle-removal benefit. Ties use ascending username order, not portfolio size, except where portfolio size defines the selection rule itself.
@@ -727,6 +830,12 @@ The new 100-root acquisition inherits the original ordinary-name sampling frame 
 
 Random orders quantify selection variability. Orders are reused across nested budgets and endpoint definitions, so the resulting 6,000 rows are not independent ecosystem samples. Monte Carlo errors describe simulation means, not npm-wide uncertainty. The seven scalarization settings are exploratory tradeoff points, without a certified global Pareto frontier or an empirically estimated stakeholder preference. Heterogeneous weights are structural sensitivities, not fitted risk priors. Claims about efficacy require a separate intervention study.
 
+The held-out comparisons draw from two curated application catalogs. The 155-project self-hosted frame retains projects with missing root manifests. The 215-project YunoHost frame requires a pinned root manifest and omits applications whose manifests are exclusively nested. Cross-tool agreement can miss shared errors. For pnpm, the depth limit restricts corroboration. The Yarn follow-up covers only the Classic subset and adds evidence from a separate registry collection. The bounds retain unresolved projects. Registry metadata records maintainer associations at observation time. Historical release authority requires separate evidence.
+
+The recipe audits describe conditional samples. The fresh sample oversamples projects with observed workspace markers. Only two recipes permit matched path extraction under the archive, patch and parser checks. The single confirmed importer-sensitive case uses a post hoc closure check. Its verified sources support a dependency-declaration comparison. Packaging options and build steps can change what reaches a deployed application.
+
+The release audit observes current public API responses and a bounded set of small archives. The checksum join tests consistency with the pinned recipe. Public endpoint responses delimit available evidence. Signed provenance and the completeness of an inventory require separate validation.
+
 \subsection{Ethics and Reporting}
 The analyses read retained public metadata and execute no package payloads, credential probes, or exploitation. Prospective captures omit email addresses and package bodies. Public usernames illustrate structural overlap without implying present-day insecurity, negligence, or historical publishing authority. Incident associations do not validate prediction. Artifact checksums identify retained bytes rather than certify authenticity.
 
@@ -738,7 +847,7 @@ Maintainer selection depends on the quantity a review program seeks to improve. 
 
 A fresh 100-root acquisition supplies 66 workflow-associated repository endpoints and repeats the coverage--exposure tradeoff. Greedy reaches 65 and exact union 42, while the direct heuristic excludes all sources for 34 endpoints. Version continuity decreases pair mass by 3.33\% in this cohort, compared with 42.44\% in the original union. The shared direction and differing magnitude support explicit population, representation and denominator choices rather than a universal numeric correction or preferred account list.
 
-The automated 120-endpoint evidence audit acquires 115 pinned commits. Its indicators were not manually validated and establish neither executed dependencies nor historical mapping precision. The appendices report historical metadata reconstruction and metadata-acquisition feasibility; no forecasting model is evaluated. The completed computations support structural prioritization comparisons and documented failure cases; evaluating actual control effectiveness requires additional authority, installation and intervention evidence.
+The automated endpoint audit acquires 115 pinned commits and characterizes the retained mapping evidence. The distinct five-account portfolios have documented paths to the same 23 applications in the 155-project self-hosted frame. In the 215-project YunoHost frame, five fully resolved primary pairs differ. A Yarn Classic follow-up adds 17 fully resolved pairs with shared hits. Differences persist under both alternative cutoff ties, while the net change remains unresolved. These results distinguish which consumers are reached from how many are reached. Evaluating control effectiveness requires observed authorization, deployment and intervention evidence.
 
 
 % Shared source: manuscript_q1/sections/10_declarations.tex
@@ -751,11 +860,19 @@ This research received no external funding.
 Both authors declare that they have no financial or non-financial competing interests relevant to this work.
 
 \subsection*{Data Availability}
-\providecommand{\ArtifactAccessStatement}{The retained input archive, new observation records, derived analysis tables, protocols and checksums~\citep{researchartifact2026} are available in the versioned research prerelease \texttt{research-validation-2026-10-28}: \url{https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28}. The companion archive and its checksum-verified original input are linked at a fixed repository commit. Third-party workflow, manifest and lockfile bodies are referenced by pinned source URLs and hashes; the release contains derived audit observations.}
+\providecommand{\ArtifactAccessStatement}{The retained input archive, new observation records, derived analysis tables, protocols and checksums are available in the versioned research prerelease \texttt{research-validation-2026-10-28}: \url{https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28}. The companion archive and its checksum-verified original input are linked at a fixed repository commit. Third-party workflow, manifest and lockfile bodies are referenced by pinned source URLs and hashes; the release contains derived audit observations.}
 \ArtifactAccessStatement
 
+The November consumer comparison is supplied with a separate replication
+companion. It includes frozen dependency paths, reduced registry observations,
+pinned source references for the five confirmed cases, and a script that
+reconstructs the paired outcomes and uncertainty bounds offline. It uses
+numeric portfolio indices in place of registry account names. The companion
+starts from retained extraction outputs. Full acquisition replay uses
+the original source files and registry receipts.
+
 \subsection*{Code Availability}
-The same versioned artifact provides collection and analysis scripts, exact benchmark inputs, numerical consistency checks and figure-generation code. Its README describes checksum verification and offline numerical reproduction after downloading the original input. The numerical path uses captured observations and does not repeat live API requests. Repeating acquisition may return different metadata. Third-party source bodies can be inspected through the pinned URLs; offline numerical reproduction uses the released derived observations.
+The October artifact provides collection and analysis scripts, exact benchmark inputs, numerical consistency checks and figure-generation code. Its README describes checksum verification and offline numerical reproduction after downloading the original input. The numerical path uses captured observations and does not repeat live API requests. Repeating acquisition may return different metadata. Third-party source bodies can be inspected through the pinned URLs; offline numerical reproduction uses the released derived observations.
 
 \subsection*{Ethics and Consent}
 The study analyzes public software-ecosystem metadata and does not involve recruited human participants, interventions on individuals, or execution of package payloads. No participant consent was collected. Usernames are used as observed graph identifiers, without inferring misconduct or present-day account security.
@@ -767,6 +884,15 @@ The study analyzes public software-ecosystem metadata and does not involve recru
 
 
 % Shared source: manuscript_q1/sections/appendix_objective_sensitivities.tex
+\onecolumn
+\begingroup
+% Keep the generated tables in reading order with their appendix subsections.
+\newenvironment{appendixresult}[1]{%
+  \par\medskip\noindent\begin{minipage}{\linewidth}\captionsetup{type=#1}%
+}{\end{minipage}\par\medskip}
+\renewenvironment{table*}[1][]{\begin{appendixresult}{table}}{\end{appendixresult}}
+\renewenvironment{table}[1][]{\begin{appendixresult}{table}}{\end{appendixresult}}
+
 \section{Extended Objective Sensitivities}
 \label{sec:objective_supplement}
 \subsection{Exploratory Scalarization}
@@ -801,25 +927,20 @@ Scalarization $\alpha$ & $C$ & $C$ (\%) & $H$ (\%) & $P$ & $C$ & $C$ (\%) & $H$ 
 \end{table*}
 
 
-\begin{figure}[t]
+\begin{appendixresult}{figure}
 \centering
-\includegraphics[width=\columnwidth]{Fig13.pdf}
+\includegraphics[width=0.58\linewidth]{Fig14.pdf}
 \caption{Observed greedy scalarization results at budget 100. Connecting seven evaluated settings guides the eye; the curve is not a certified global Pareto frontier. Equal weighting is a sensitivity choice}
 \label{fig:q1_pareto_frontier}
-\end{figure}
+\end{appendixresult}
 
 At $\alpha=0.50$, the name graph gives $C=5{,}020$, $H=31.19\%$, and $P=626$; the version graph gives $C=5{,}000$, $H=38.65\%$, and $P=648$. The name result retains 90.65\% of greedy's baseline coverage and 92.31\% of exact union's H. Relative to greedy, it loses 518 covered repositories and gains 19.71 percentage points of H. Relative to exact union, it gains 613 repositories and loses 2.60 points of H. A preferred operating point requires review costs and stakeholder preferences that were not measured here.
 
+\clearpage
 \subsection{Strict Zero-Anchored Threshold Sensitivity}
 \label{sec:quorum_exclusion}
 
-Multi-token incidents motivate asking how many unhardened source identities remain, but token count is not a measured release quorum. In LiteLLM's final account, credentials served different roles, including deletion of records after publication~\citep{litellm2026}. We evaluate the explicit strict rule in Eq.~\ref{eq:strict_quorum}, retaining only the 7,158 endpoints with observed sources and excluding all 13 source-free endpoints:
-\begin{equation}
-P_k(S)=\left|\left\{r\in R_+:t_r(S)=0\ \lor\ (n_r\ge k\ \land\ t_r(S)<k)\right\}\right|.
-\end{equation}
-The unguarded condition $t_r(S)<k$ credits every endpoint with $n_r<k$ even at zero hardening. In the strict model, a single-source endpoint must have its sole maintainer hardened at every threshold, and any endpoint with $n_r<k$ requires complete exclusion. This ensures a zero baseline for each tested $k$; it is not equivalent to subtracting the old zero-budget count.
-
-A protection interpretation still requires a measured policy in which every successful attack needs the designated number of distinct upstream identities with no bypass. Our graph lacks package-level signer groups, role constraints, and bypass privileges. Two unrelated single-maintainer dependencies can each poison a consumer even if their combined source cardinality is two. Table~\ref{tab:q1_quorum_exclusion} is therefore a structural sensitivity analysis, not a count of empirically protected repositories.
+Equation~\ref{eq:strict_quorum} gives zero credit at budget zero. An endpoint with $n_r<k$ requires complete source exclusion. Table~\ref{tab:q1_quorum_exclusion} applies the rule to the 7,158 endpoints with observed sources. A protection interpretation would require measured signer groups, authorization rules, and bypass privileges.
 
 
 % Shared source: manuscript_q1/tables/q1_quorum_exclusion_table.tex
@@ -865,14 +986,12 @@ Direct Supermodular $P(S)$     & 10 & 3,976 & 55.45\% & 2.58\% & 479 & 614 & 609
 \end{table*}
 
 
-At budget 100, Pareto Hybrid has $P_1=626$, $P_2=961$, $P_3=1{,}018$, $P_5=1{,}063$. Greedy Coverage has $P_1=800$, $P_2=1{,}145$, $P_3=1{,}125$, $P_5=1{,}105$. Exact Union has $P_1=534$, $P_2=793$, $P_3=901$, $P_5=1{,}022$. Direct $P$ has $P_1=1{,}022$, $P_2=1{,}169$, $P_3=1{,}286$, $P_5=1{,}383$. The source-cardinality distribution is $n_r=0$: 13; $n_r=1$: 1,716; $n_r=2$: 546; $n_r=3$: 354; $n_r=4$: 347; and $n_r\ge5$: 4,195. All strict zero-budget counts are zero.
+There are 13 source-free endpoints. Endpoint counts for $n_r=1,2,3,4$ are 1,716, 546, 354, and 347, respectively. The remaining 4,195 have $n_r\ge5$. All thresholds use the same maintainer orders. Direct $P$ uses the original $k=1$ heuristic. Counts are nondecreasing in budget for a fixed $k$.
 
-The same ordered maintainer selections are reused at all thresholds, and the Direct $P$ strategy continues to optimize its original $k=1$ heuristic. Counts are nondecreasing with nested hardening budgets for a fixed $k$. Comparisons across $k$ represent different hypothetical policies and need not be monotone, because endpoints with $n_r<k$ revert to complete-exclusion requirements.
-
-For an additional hypothetical sensitivity, uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$. At $\eta=0.90$, Pareto Hybrid yields $28.07\%$ effective scenario exposure reduction. This uniform multiplier preserves all $H$ rankings and does not estimate a real bypass rate, correlate account failures, or model CI compromise. Its values are assumptions, not incident-derived estimates.
+Hypothetical uniform control efficacy $\eta$ gives $H_\eta(S)=\eta H(S)$ and preserves the $H$ ranking. At $\eta=0.90$, the hybrid's scenario exposure reduction is $28.07\%$.
 
 \subsection{Heterogeneous Weight Sensitivities}
-Table~\ref{tab:q1_heterogeneous_weights} compares the assumed weightings.
+Table~\ref{tab:q1_heterogeneous_weights} reports the weight sensitivities.
 
 % Shared source: manuscript_q1/tables/q1_heterogeneous_weights_table.tex
 % Generated by scripts/reconcile_full_manuscript.py
@@ -899,89 +1018,40 @@ Package-sole aware & 4,718 & 19.39 & 80.03 & 23.61 & 67.37 & 642\\
 \end{table*}
 
 
-The account-sole weight increases an account's contribution according to its number of sole-maintained packages; it does not restrict its reachable endpoints to those packages. Ranking by that weighted reach captures 88.04\% of the stipulated account-sole mass. This is concentration under an assumed weighting, not nine-tenths of measured ecosystem risk.
+The account-sole weight scales the full account portfolio by its number of sole-maintained packages. Ranking by weighted reach captures 88.04\% of the stipulated account-sole mass.
 
-The separate package-sole quantity unions reach only from each account's sole-maintained packages. Under that definition, unweighted greedy captures 23.40\%, unweighted exact union 27.32\%, and package-sole-aware ranking 67.37\%. The latter gain is 40.05 percentage points relative to unweighted exact union. Its uniform coverage is 4,718 repositories and $P=642$. These results distinguish account weighting from package-restricted reach. A single observed maintainer is not evidence about review quality or an empirically fitted probability of compromise.
-
-
-% Shared source: manuscript_q1/sections/07_temporal_authority_and_prospective_design_rq5.tex
-\section{Historical Metadata and Acquisition Feasibility}
-\label{sec:temporal_authority}
-The historical companion asks what retained registry metadata can support before an event cutoff. It is separate from the cross-sectional reverse-reach experiment. It does not test whether the primary rankings would have predicted historical compromise.
-
-\subsection{Bounded Cutoff-SemVer Reconstruction}
-For each retained root record, the reconstruction chooses the highest currently retained, non-prerelease version satisfying a runtime dependency range and published by the root cutoff. Expansion stops at depth three or 250 nodes per root. Peer, optional, development, bundled, workspace, override, git, and tarball dependency behavior is excluded. Deleted historical versions may be unavailable; present-day retention cannot recreate every past registry state.
-
-Table~\ref{tab:q1_temporal_reconstruction} summarizes the bounded reconstruction.
-
-% Shared source: manuscript_q1/tables/q1_temporal_reconstruction_table.tex
-% Generated by scripts/reconcile_full_manuscript.py
-\begin{table*}[t]
-\centering
-\footnotesize
-\caption{Retained bounded registry-SemVer reconstruction manifest. The recorded resolution share is conditional on attempted expansions within the bounds}
-\label{tab:q1_temporal_reconstruction}
-\begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{lr}
-\toprule
-Recorded dimension & Value\\
-\midrule
-Retained root records & 45\\
-Distinct event/root/cutoff tuples & 44\\
-Recorded edge attempts & 1,848\\
-Resolved recorded edges & 1,841\\
-Node counts summed over roots & 1,272\\
-Unresolved expansions & 7\\
-Resolved share of recorded attempts & 99.62\%\\
-Maximum expansion depth & 3\\
-Node cap per root & 250\\
-Roots reaching cap & 1\\
-\bottomrule
-\end{tabular}
-\end{adjustbox}
-\par\smallskip\begin{minipage}{0.98\textwidth}\footnotesize Only regular dependencies are included; depth is capped at three and nodes at 250 per root. Highest retained cutoff-valid satisfying versions are used. These are bounded approximations, not lockfile reconstructions or completeness guarantees. Raw-response checksums establish retained-object identity, not publisher authenticity.\end{minipage}
-\end{table*}
+The package-sole quantity restricts reach to each account's sole-maintained packages. The package-sole-aware ranking captures 67.37\% of that mass, 40.05 percentage points more than unweighted exact union. It covers 4,718 repositories with $P=642$.
+\endgroup
 
 
-The source contains 45 root records but 44 distinct event/root/cutoff tuples: one \texttt{node-ipc} tuple is repeated. We report retained-record counts without treating them as independent incidents. Of 1,848 recorded edge attempts, 1,841 resolve and seven have unavailable target registries, yielding 99.62\% among recorded attempts. This percentage excludes unvisited expansions beyond the bounds. The 1,272 node count is summed across roots, not globally deduplicated. One record reaches the node cap. These measurements do not establish full-tree completeness, downstream population reconstruction, or unbiased historical rankings.
+% Shared source: manuscript_q1/sections/appendix_consumer_packaging.tex
+\section{Consumer Packaging and Release Diagnostics}
+\label{sec:consumer_packaging}
+\subsection{Packaging recipe and importer check}
+The upstream repository root can differ from the directory selected for packaging. We examined the catalog-pinned YunoHost recipes for 15 unresolved projects with empty pnpm workspace roots and 16 without a conventional root lockfile. We checked source declarations, install and upgrade instructions, and available service templates. Twelve of the 15 workspace recipes install a release artifact or distribution package. Of the remaining three, one delegates asset compilation without selecting a named importer in the observed recipe, one builds a named frontend workspace, and one builds a workspace and copies a named client into a named server. Three of the 16 missing-root-lockfile recipes contain explicit npm dependency commands. One uses a nested server lockfile. The other two lack a committed npm lockfile at the recipe-selected root.
 
-\subsection{Release-Field Availability and Authority Limits}
-Table~\ref{tab:q1_release_authority} reports the availability of release fields.
+We resolved the source references for all six recipes with explicit JavaScript package commands. Four select commits different from the upstream commits observed in the root study. The three recipes with named importers and lockfiles yield four importer paths across three applications. We verified each declared source archive checksum and checked that the selected manifest and lockfile bytes match the pinned Git files. These three packaging trees contain no source patches in the checked locations. The comparison traces mandatory dependency declarations from the selected importers, using the same three portfolios and tie policy. It describes the packaging recipe's inputs. Runtime inclusion and installed versions would require separate evidence.
 
-% Shared source: manuscript_q1/tables/q1_release_authority_table.tex
-% Generated by scripts/reconcile_full_manuscript.py
-\begin{table*}[t]
-\centering
-\footnotesize
-\caption{Field availability in 45 retained pre-event version-object records. Comparison availability is not continuity, equality, or authenticated release authority}
-\label{tab:q1_release_authority}
-\begin{adjustbox}{max width=\linewidth}
-\begin{tabular}{lrr}
-\toprule
-Metadata availability & Count & Share\\
-\midrule
-Retained selected-version objects & 45 & 100.0\%\\
-Immediate predecessor available & 44 & 97.8\%\\
-Repository-field comparison available & 42 & 93.3\%\\
-gitHead-field comparison available & 34 & 75.6\%\\
-publishConfig comparison available & 11 & 24.4\%\\
-Selected dist.integrity present & 45 & 100.0\%\\
-Selected embedded maintainers present & 45 & 100.0\%\\
-\bottomrule
-\end{tabular}
-\end{adjustbox}
-\par\smallskip\begin{minipage}{0.98\textwidth}\footnotesize The 45 records include a repeated event/root/cutoff tuple; they are not independent incidents. Embedded maintainer metadata is not a signature. No version-specific provenance endpoint requests, bundle retrievals, signature verifications, or attestation-state classifications were performed. Historical attestation presence/absence is unknown, not 0/45 absent.\end{minipage}
-\end{table*}
+We corroborated 425 paths across the four importers and obtained usable maintainer lists for all 401 requested versions. All three applications had documented hits under both portfolios for every version cutoff choice. In the same-commit case, the recipe-selected frontend supplies paths that the empty upstream root cannot provide. The other two recipes use different commits from the root study. This diagnostic uses a separate three-application denominator. The 215-project comparison retains its root-importer scope and bounds.
 
+\subsection{Same-commit comparison on a fresh recipe sample}
+We froze 99 previously unaudited recipes from the catalog frame. The sample includes all 39 remaining repositories with an observed workspace marker and a seeded draw of 60 from the other 430. Seven recipes name a non-root importer involved in a build or service (six in the workspace stratum and one in the other stratum). Six of the seven select Git commits different from the screened upstream HEADs. Four source archives and their corresponding Git files could be checked by hash. One of the four has packaging patches and another uses an unsupported Yarn workspace. The remaining two permit a comparison at a fixed recipe-selected commit, using the same 772 exact-version requests across both views of the application. We obtained 771 usable maintainer lists.
 
-The availability audit finds predecessor metadata for 44 of 45 retained records, repository-field comparison availability for 42, and \texttt{gitHead}-field comparison availability for 34. Availability does not show that URLs stayed equal, commits were valid or available, or a publisher retained authority. The audit classified no field deltas, built no authority scores, and evaluated no release-gating control.
+In one application, the root yielded 83 joined paths and the selected backend lockfile lacked registry artifact identifiers for its corroborated paths. The second yielded one joined root path and 725 joined paths across its selected workspaces. Under the prespecified completeness rule, both root-to-importer coverage changes remained unresolved. A post hoc check found that the second root had exactly one mandatory dependency, no mandatory children in the lock or exact-version metadata, and consistent artifact and maintainership records. With this confirmed root zero, selecting the recipe's importers produces a documented gain for the name portfolio and all three version alternatives. This establishes one importer-sensitive case under the declared dependency scope. Six named candidates remain unresolved, and the 99-recipe sample supplies no population-wide effect estimate.
 
-All 45 records contain \texttt{dist.integrity} and embedded maintainer metadata. A distribution hash identifies expected artifact bytes; an embedded maintainer array is not a cryptographic signature. Neither proves a benign or reproducible build. The attestation access assessment made no version-specific requests, retrieved no bundles, ran no signature verification, and classified no attestation states. Historical attestation presence is therefore \emph{unknown}; zero retrievals cannot be reported as zero attestations. Signing studies motivate the need for stronger evidence~\citep{okafor2025,schorlemmer2024}, without supplying the missing measurements for this cohort.
+\subsection{Release-delivered dependency evidence}
+We followed the 39 recipes in the fresh sample that declared a release asset and had no matched JavaScript package command. Literal setup instructions identify 38 GitHub assets across 37 recipes, using amd64 resource fields where specified. The release API identifies 37 assets. Thirty reported SHA-256 values agree with the recipe pins, six lack an API digest, and one differs. Public attestation lookups for the 30 agreeing digests return subject-matching statements for six assets. Three SLSA provenance statements declare source commits for their release repositories. We parse the statements without verifying signatures. A separate CycloneDX document identifies the selected Java runtime by filename and exact digest. That inventory contains no npm package URLs.
 
-The LiteLLM source-tag/artifact discrepancy~\citep{litellmincident2026} illustrates why artifact identity, intended source, and release authority must be evaluated separately. Contextual reports do not add observations to the 45-record companion.
+We downloaded the 15 identified assets within a 12\,MiB cap. Fourteen matched their recipe checksum, including five with no API digest. The mismatching download agreed with the API digest. Eleven matching ZIP or gzip TAR archives could be inspected. One contained 198 bundled npm manifests whose metadata lacked the registry artifact identifiers required for the metadata join. Another contained an application manifest and a Yarn Classic lockfile. These two releases support separate checks on declared dependencies and on packaged files.
 
-\subsection{Metadata-Acquisition Pilot}
-A separate metadata pilot sampled 100 identifiers uniformly without replacement from the original 25,228-identifier frame (seed 20261020). Of 92 ordinary-shaped names, 90 yielded metadata and two returned HTTP 404; all eight bundled-context identifiers returned HTTP 405. No identifier was replaced. The acquisition cutoff was October 20, 2026, 00:48:38 Asia/Dhaka. The pilot characterizes retrieval feasibility and sampling-frame defects; it includes no measured incident outcomes or forecasting evaluation.
+\subsection{Declared dependencies in a pinned release}
+The Pterodactyl panel archive is the one inspected artifact with both a Node manifest and a Yarn Classic lockfile. Its checksum agrees with the recipe, and both dependency files match the commit resolved from its source release tag byte for byte. We processed both views with the same reader and registry snapshot. Of 252 exact-version requests, all returned usable maintainer lists. The path checks corroborate 224 package versions in each view and document hits under the name portfolio and all three version alternatives. The equal results reflect the identical metadata inputs. The archive also includes 17 JavaScript files under its public assets directory. The lockfile evidence does not trace which of its declared dependencies are present in those files.
+
+\subsection{Evidence in shipped JavaScript and dependency files}
+We statically parsed all 17 public JavaScript assets in the Pterodactyl archive. The assets directory contains no source-map files, and the JavaScript contains no source-map directive comments. The sole \texttt{sourceMappingURL} occurrence is inside a string literal. The tagged Webpack configuration disables source maps by default in production, with an environment setting that can override the default. The archive and configuration thus delimit the available evidence for tracing bundled modules in this release.
+
+The Mongo Express archive preserves a \texttt{node\_modules} tree. The packaged versions of all 39 regular direct dependencies satisfy the application's declared ranges. For each of these versions, we checked the npm tarball against the registry's SHA-512 integrity value. We then compared the relative paths and SHA-256 hashes of regular files within each dependency directory, excluding nested \texttt{node\_modules} in both archives. All 39 dependencies matched across 1,571 file paths. Using maintainer lists observed for those versions, the name portfolio and all three version alternatives reached the application through a dependency whose files were present in the release. This diagnostic measures file inclusion for direct dependencies in one archive. Runtime loading and transitive completeness remain outside its scope.
+
 
 
 

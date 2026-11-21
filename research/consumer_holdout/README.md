@@ -63,7 +63,23 @@ python scripts/compare_yunohost_npm_extractors.py
 
 The [follow-up protocol](runs/yunohost-yarn-classic/protocol.json) adds positive evidence in the same 215-project frame. It retains the original npm and pnpm pairs, selected portfolios, and observation dates. The [follow-up results](runs/yunohost-yarn-classic/results.json) retain both documented and feasible paired states.
 
-Offline scoring uses the saved Classic-parser bundle and separate registry receipt in `runs/yunohost-yarn-classic/private/`. The [parser origin record](runs/yunohost-yarn-classic/parser_origin.json) specifies the versioned tarball and its SHA-512. The required parser is the archive member `package/index.js`; the protocol verifies the extracted file's SHA-256. The following commands replay scoring and check the displayed results from the retained inputs.
+The standalone [replication companion](../../submission/emse/EMSE_Consumer_Replication.zip)
+recomputes the initial and follow-up comparisons from the retained paths and
+reduced registry observations, using numeric portfolio indices. The
+[five confirmed cases](runs/yunohost-yarn-classic/confirmed_cases.md) give the
+pinned manifest, lockfile, corroborated positive path, and location count for each
+discordant project. The replay checks the opposing zero across every joined
+location in the supported root tree. From the repository root or the extracted
+companion:
+
+```sh
+python scripts/replay_yunohost_consumer_results.py
+```
+
+The replay covers scoring from captured dependency paths. Full path
+re-extraction uses the original pinned inputs.
+
+The original scoring pipeline uses the saved Classic-parser bundle and separate registry receipt in `runs/yunohost-yarn-classic/private/`. The [parser origin record](runs/yunohost-yarn-classic/parser_origin.json) specifies the versioned tarball and its SHA-512. The required parser is the archive member `package/index.js`; the protocol verifies the extracted file's SHA-256. The following commands replay scoring and check the displayed results from the retained inputs.
 
 ```sh
 python scripts/study_yunohost_yarn_classic.py score

@@ -7,12 +7,13 @@ We compare the objectives on a retained, high-impact-seeded npm graph containing
 
 We assess the comparison through component benchmarks, a new acquisition and an automated endpoint-evidence audit. Component ablations and small exact benchmarks test whether the exclusion heuristic's additional scoring is useful. A new acquisition from 100 frozen, sampled roots tests transport to a bounded cohort with fresh dependency, maintainer and workflow observations. A stratified probability sample of 120 endpoints supplies commit-pinned evidence about repository mappings and workflow files. Automated indicators characterize this evidence; their accuracy was not manually validated.
 
-We ask four questions:
+We ask five questions:
 \begin{itemize}
 \item \textbf{RQ1:} How large are the observed coverage, additive-exposure and all-source-exclusion tradeoffs at equal budgets?
 \item \textbf{RQ2:} How do representation choices affect evaluation, and what evidence supports the workflow-associated endpoint observations?
 \item \textbf{RQ3:} How sensitive is the exclusion-oriented heuristic to its components, candidate cap and ties, and where does it miss candidate-restricted optima?
 \item \textbf{RQ4:} Which tradeoffs persist in a new bounded acquisition and a common-population comparison?
+\item \textbf{RQ5:} At the same account budget, which held-out applications change documented coverage with the graph representation, and how much uncertainty remains?
 \end{itemize}
 
-Our contribution is measured evidence about these decision and observation choices. The additive optimum and standard submodular guarantee supply the theoretical foundations. The simpler exclusion heuristic slightly improves exclusion on the original graph but underperforms the original heuristic in the new cohort. The additional acquisition repeats the coverage--exposure tradeoff while substantially changing the size of representation effects. A separate application pilot measures the feasibility of tracing selections through committed consumer dependencies. Two held-out frames measure which consumers have documented paths to distinct five-account portfolios and quantify the uncertainty from unresolved evidence.
+Our contribution is measured evidence about these decision and observation choices. The additive optimum and standard submodular guarantee supply the theoretical foundations. The simpler exclusion heuristic slightly improves exclusion on the original graph but underperforms the original heuristic in the new cohort. The additional acquisition repeats the coverage--exposure tradeoff while substantially changing the size of representation effects. A separate application pilot measures the feasibility of tracing selections through committed consumer dependencies. Two held-out frames test whether distinct five-account portfolios reach different applications. The YunoHost frame confirms five changes and bounds the possible turnover across all 215 projects. This is a comparison of documented dependency paths under a fixed review budget.

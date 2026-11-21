@@ -96,6 +96,15 @@ def main() -> None:
                             r"\begin{tabularx}{\linewidth}{p{0.16\linewidth}YYYY}")
     matrix = matrix.replace("This Study (Q1 Journal Expansion)", "This Study")
     body = body[:matrix_start] + matrix + body[matrix_end:]
+    # Keep the eight-column incident table legible at Springer's narrower width.
+    incident_label = body.index(r"\label{tab:q1_incident_case_study}")
+    incident_start = body.rfind(r"\begin{table*}", 0, incident_label)
+    incident_end = body.index(r"\end{table*}", incident_label) + len(r"\end{table*}")
+    incident = body[incident_start:incident_end]
+    incident = incident.replace(r"\begin{table*}[t]", r"\begin{sidewaystable}[p]")
+    incident = incident.replace(r"\end{table*}", r"\end{sidewaystable}")
+    incident = incident.replace(r"0.98\textwidth", r"0.98\linewidth")
+    body = body[:incident_start] + incident + body[incident_end:]
     # Preserve shared table values while fitting the narrower Springer text block.
     body = re.sub(r"(\\begin\{tabular\})", r"\\begin{adjustbox}{max width=\\linewidth}\n\1", body)
     body = body.replace(r"\end{tabular}", r"\end{tabular}" + "\n" + r"\end{adjustbox}")
@@ -187,6 +196,10 @@ def main() -> None:
     normalized = " ".join(extracted_text.split())
     required = ["Statements and Declarations", "Data Availability", "Code Availability", "Funding", "Competing Interests", "Use of AI Assistance", "hasanshahriar32@gmail.com"]
     content_checks = all(term in normalized for term in required)
+    held_out_checks = all(term in normalized for term in (
+        "Held-Out Consumer Coverage (RQ5)", "215", "Y017", "1,571",
+        "2.3–42.3", "replication companion",
+    ))
     forbidden = ["initially blank", "review sheets", "remain pending", "await independent",
                  "No reviewer role", "authors must review", "human audit pending"]
     absent_internal_notes = all(term.casefold() not in normalized.casefold() for term in forbidden)
@@ -196,6 +209,7 @@ def main() -> None:
                         for author in authors["authors_in_supplied_order"])
     report = {"date": datetime.now(ZoneInfo('Asia/Dhaka')).date().isoformat(), "manuscript": manuscript, "title_page": title_checks,
               "standalone_archive_build": standalone, "required_content_present": content_checks,
+              "current_consumer_evidence_present": held_out_checks,
               "abstract_words": len(abstract.split()), "keywords": len(keywords.split(",")), "figures": len(figures),
               "figure_upload_names": figure_map, "internal_workflow_notes_absent": absent_internal_notes,
               "title_page_author_details_match": author_checks,
@@ -203,7 +217,7 @@ def main() -> None:
               "coauthor_submission_approval_confirmed": authors["submission_approval_confirmed"],
               "sha256": {name: hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() for name in source_files}}
     report["passed"] = (all(x["passed"] for x in [manuscript, title_checks, standalone])
-                        and content_checks and absent_internal_notes and author_checks
+                        and content_checks and held_out_checks and absent_internal_notes and author_checks
                         and 150 <= len(abstract.split()) <= 250 and 4 <= len(keywords.split(',')) <= 6)
     (HERE / "validation.json").write_text(json.dumps(report, indent=2) + "\n")
     (HERE / "title_page_validation.json").write_text(json.dumps(title_checks, indent=2) + "\n")

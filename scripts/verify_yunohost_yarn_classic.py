@@ -9,6 +9,16 @@ from study_yunohost_yarn_classic import (
 )
 
 
+def verify_followup_table(contrasts):
+    table = (ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex").read_text()
+    versions = [contrasts[f"version_{i}"] for i in range(1, 4)]
+    resolved = " & ".join(str(r["resolved_pairs"]) for r in versions)
+    assert "Follow-up resolved pairs & " + resolved + r"\\" in table
+    for label, field in ((r"Follow-up turnover (\%)", "turnover_bounds"), ("Follow-up net change (pp)", "net_bounds")):
+        values = [f"$[{100 * lo:.1f},{100 * hi:.1f}]$" for lo, hi in (r[field] for r in versions)]
+        assert " & ".join([label, *values]) + r"\\" in table
+
+
 def verify():
     records = read_ledger(verify_protocol())
     followup = read(RUN / "results.json")
@@ -26,7 +36,6 @@ def verify():
 
     resolved_deltas = {}
     contrasts = followup["comparisons"]
-    table = (ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex").read_text()
     for key, comparison in contrasts.items():
         prior = original["comparisons"][key]
         project_deltas, cells = [], Counter()
@@ -51,12 +60,7 @@ def verify():
         resolved_deltas[key] = comparison["resolved_pairs"] - prior["resolved_pairs"]
 
     assert contrasts["identical_control"]["turnover_bounds"] == contrasts["identical_control"]["net_bounds"] == [0, 0]
-    versions = [contrasts[f"version_{i}"] for i in range(1, 4)]
-    resolved = " & ".join(str(r["resolved_pairs"]) for r in versions)
-    assert "Follow-up resolved pairs & " + resolved + r"\\" in table
-    for label, field in ((r"Follow-up turnover (\%)", "turnover_bounds"), ("Follow-up net change (pp)", "net_bounds")):
-        values = [f"$[{100 * lo:.1f},{100 * hi:.1f}]$" for lo, hi in (r[field] for r in versions)]
-        assert " & ".join([label, *values]) + r"\\" in table
+    verify_followup_table(contrasts)
 
     print(json.dumps({"checks": "passed", "rows": followup["denominator"], "additional_resolved": resolved_deltas}, indent=2))
 
