@@ -1,11 +1,11 @@
-# Journal research draft
+# Journal manuscript source
 
-The November working draft includes the [consumer pilot](../research/consumer_evaluation/README.md) and a [held-out comparison](../research/consumer_holdout/README.md). The journal PDFs here are the revised working copies. The October EMSE submission files and October source archive are historical snapshots.
+The named and anonymous PDFs in this directory build from the shared journal source. Use the [IST package](../submission/ist/README.md) for the current submission preparation. The [EMSE export](../submission/emse/README.md) is a separate venue format. It builds from the same source. The original EMSE submission is historical.
 
 
-For the current EMSE submission, use [`../submission/emse/EMSE_Manuscript.pdf`](../submission/emse/EMSE_Manuscript.pdf), the updated title page and flat source archive described in [`../submission/emse/README.md`](../submission/emse/README.md). The journal manuscript has 13 active figures, four focused research questions and appended exploratory material. Its data/code [prerelease](https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28) is publicly accessible and was reproduced offline after downloading the checksum-verified original input. The endpoint indicators were not manually validated. Individual contribution roles and author approval have not been inferred. See [Report 23](../reports/23_journal_validation_implementation.md) for the executed evidence and [Report 25](../reports/25_emse_guideline_correction.md) for the current manuscript and guideline correction.
+The manuscript addresses five research questions and uses 14 figures across the article and appendices. The [held-out consumer study](../research/consumer_holdout/README.md) documents both application frames and the evidence checks. The [October graph-validation release](https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28) provides the earlier data and scripts. The [November replication archive](../submission/ist/IST_Consumer_Replication.zip) reproduces the paired consumer results offline.
 
-The named and anonymous PDFs are research drafts. Their compilation checks do not certify acceptance, submission, author approval, venue compliance, or complete bibliography verification. Author names, order and departments follow `manuscript/submission_files/authors.json`; contact details now follow the user-supplied record, with Shahriar Hasan as first and corresponding author. The separate title-page attachment is `../submission/emse/EMSE_Title_Page.pdf`. No IEEE memberships were supplied.
+The author record is `manuscript/submission_files/authors.json`. Shahriar Hasan is the first and corresponding author, followed by Md. Ashikul Islam. See the IST package for final author checks and the editor-only title page.
 
 ## Build
 
@@ -15,7 +15,9 @@ From the workspace root:
 bash manuscript_q1/compile_q1.sh
 bash manuscript_q1/compile_q1.sh main_q1_anonymous.tex
 python3 manuscript_q1/scripts/verify_manuscript_q1.py
+python3 manuscript_q1/scripts/verify_bibliography_window.py
 python3 manuscript_q1/scripts/package_q1.py
+python3 submission/ist/build_ist.py
 python3 submission/emse/build_emse.py
 ```
 
@@ -45,6 +47,6 @@ Task 17 restores the original icon-based architecture in the journal and confere
 
 ## Evidence reconciliation (27 October 2026)
 
-The current named and anonymous journal PDFs have **15 pages and 12 figures**. Corrected tables, workflow-only account ranks, temporal attempt resolution and unassessed provenance status are documented in [Report 20](../reports/20_evidence_reconciliation_and_figures.md). New source distributions, representation matrices and observation-unit diagrams complement the restored architecture. Exclusion and weighting plots are separate readable figures. Earlier page counts and audit assertions are historical.
+The October revision had 15 pages and 12 figures. Corrected tables, workflow-only account ranks, temporal attempt resolution and unassessed provenance status are documented in [Report 20](../reports/20_evidence_reconciliation_and_figures.md).
 
 Regenerate tables with `python3 scripts/reconcile_full_manuscript.py`, shared figures with `python3 manuscript/scripts/render_research_figures.py`, and journal plots with `python3 manuscript_q1/scripts/render_q1_figures.py` from the repository root. `python3 scripts/verify_reconciled_papers.py` checks active numerical sources and units. The current conference lock binds the rebuilt Task 20 artifacts; numerical verification requires the surrounding repository data.

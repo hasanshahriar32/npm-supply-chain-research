@@ -1,7 +1,7 @@
 \section{Core Tradeoffs and Representation: RQ1 and RQ2}
 \label{sec:empirical_results}
 
-We first report our empirical findings for Research Questions 1 and 2 on the retained 25,228-identifier graph, spanning multi-budget trade-offs, multi-homing mechanics, and representation fidelity.
+We report the tradeoffs across budgets, the effect of multiple upstream sources, and the changes introduced by preserving package versions on the original graph.
 
 Figure~\ref{fig:q1_source_partition} partitions covered endpoints by whether any unselected source remains.
 
@@ -13,7 +13,7 @@ Figure~\ref{fig:q1_source_partition} partitions covered endpoints by whether any
 \end{figure}
 
 \subsection{RQ1: Coverage vs. Additive Exposure Trade-Off}
-Figure~\ref{fig:objective_tradeoff} shows the coverage and exposure trajectories. Table~\ref{tab:multi_budget_comparison} reports empirical prioritization outcomes across maintainer budgets $|S| \in \{1, 5, 10, 25, 50, 100\}$. The top 100 maintainers represent only $0.819\%$ of the 12,217 unique maintainers in our ecosystem, yet their prioritization commands vast reach over downstream workflow repositories.
+Figure~\ref{fig:objective_tradeoff} shows how coverage and exposure vary with budget. Table~\ref{tab:multi_budget_comparison} reports outcomes at $|S|\in\{1,5,10,25,50,100\}$. Selecting 100 accounts uses $0.819\%$ of the 12,217 observed accounts.
 
 \input{tables/q1_multi_budget_table}
 
@@ -25,7 +25,7 @@ Figure~\ref{fig:objective_tradeoff} shows the coverage and exposure trajectories
 \label{fig:objective_tradeoff}
 \end{figure*}
 
-At budget $|S|=100$, \textbf{Greedy Coverage} achieves $C(S) = 5{,}538$ repositories ($77.23\%$), establishing a descriptive lead of $+1{,}131$ repositories ($+15.77$ percentage points) over \textbf{Exact Union} ($C(S) = 4{,}407$, $61.46\%$). However, when evaluated under scenario-weighted additive exposure reduction $H(S)$, Exact Union achieves $33.79\%$, outpacing Greedy Coverage ($11.48\%$) by \textbf{$+22.30$ percentage points} ($2.94\times$ relative advantage).
+At budget 100, greedy coverage reaches 5,538 repositories (77.23\%) and exact union reaches 4,407 (61.46\%). The difference is 1,131 repositories, or 15.77 percentage points. Exact union attains $H=33.79\%$ and greedy coverage attains $H=11.48\%$. The exposure difference from unrounded values is 22.30 percentage points.
 
 Exact union's H advantage follows from its additive objective under equal costs. The experiment measures the accompanying loss in distinct coverage. Greedy offers the largest measured coverage among the compared baseline selections; it is an approximation to maximum coverage, not a proved global optimum. Portfolio size gives 63.85\% coverage and 7.96\% H at this budget, showing that portfolio count and measured downstream reach need not agree.
 
@@ -59,7 +59,7 @@ Comparing the package-projected name graph against the observed exact-version ed
 \end{enumerate}
 
 \subsubsection{The Cross-Representation Selection Penalty}
-When maintainers are selected based on name-projected heuristics but evaluated on the observed version-continuous graph, measured exposure changes. For the \texttt{sum\_package\_reach} heuristic at budget 100, ranking directly on version-continuous topologies captures \textbf{$34.34\%$} of version exposure, compared to only \textbf{$20.91\%$} when using name-projected rankings---an improvement of \textbf{$+13.43$ percentage points} ($+64.2\%$ relative gain).
+For the \texttt{sum\_package\_reach} heuristic at budget 100, the version-based ranking covers $34.34\%$ of version-based exposure. The name-based ranking covers $20.91\%$ on that same evaluation graph. Evaluating both selections on the version graph gives a difference of 13.43 percentage points.
 
 \subsubsection{Cross-Sectional Incident-Associated Illustrations}
 Table~\ref{tab:q1_incident_case_study} details reach metrics and maintainer prioritization ranks across the 16 incident-associated records whose package names occur in the retained graph.

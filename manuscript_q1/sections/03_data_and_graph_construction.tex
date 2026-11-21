@@ -1,7 +1,7 @@
 \section{Data Corpus and Graph Construction}
 \label{sec:data_construction}
 \subsection{Collection and Units}
-The collector seeds a high-impact npm list, expands dependencies through deps.dev\footnote{\url{https://docs.deps.dev/api/v3/}}, requests registry metadata, and checks linked GitHub repositories for a \code{.github/workflows} directory at HEAD. Queue dates span June 13--16, 2026, but individual fields lack a common acquisition cutoff. The retained archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Maintainer membership is not a historical publisher log.
+The collector starts with high-impact npm packages and expands their dependency graphs through deps.dev\footnote{\url{https://docs.deps.dev/api/v3/}}. It requests registry metadata and checks linked repositories for a \code{.github/workflows} directory at GitHub HEAD. Queue dates span June 13--16, 2026. Individual fields lack a common acquisition cutoff. The archive analyzed on October 20 contains 25,228 graph identifiers, 22,340 version-metadata rows, 12,217 maintainer usernames, and 79,405 package--maintainer relations. Registry membership records observed associations at collection time.
 
 Among these identifiers, 2,745 encode bundled contexts rather than independently registered packages. The 121,885 retained version-edge rows project to 88,113 distinct name adjacencies. Stored \code{DIRECT}/\code{INDIRECT} labels describe a target node relative to an extraction root; their 48,705/73,180 row counts do not partition global direct and transitive edges. We reverse every explicit declaring-to-dependency adjacency to measure downstream reach.
 
@@ -14,7 +14,7 @@ Figure~\ref{fig:q1_observation_workflow} summarizes the collection and analysis 
 \label{fig:q1_observation_workflow}
 \end{figure*}
 
-The 15,233 workflow-positive package names map to 7,171 normalized repository keys. Owner/name pairs are case-folded and trailing transport \code{.git} is removed. This is lexical deduplication, without redirect or commit verification. There are 3,081 identifiers without maintainer mappings and 3,772 without completed workflow flags. Zero flags conflate directory absence with repository unavailability. Workflow endpoints require a positive observation; missing and zero flags are not evidence of safety. Coverage uses all 7,171 repository endpoints. Only 7,158 have an observed source identity; the other 13 are excluded from source-exclusion counts.
+The 15,233 package names with a positive workflow-directory observation map to 7,171 repository keys. We case-fold owner and repository names and remove trailing \code{.git} using lexical rules. The archive has 3,081 identifiers without maintainer mappings and 3,772 without completed workflow flags. A zero flag can mean directory absence or repository unavailability. Coverage uses all 7,171 repository endpoints with a positive observation. Exclusion counts use the 7,158 endpoints with an observed source.
 
 \begin{figure*}[t]
 \centering

@@ -1,7 +1,7 @@
 \section{Objectives and Optimization Framework}
 \label{sec:objectives}
 
-Maintainer prioritization in package registries represents a multi-objective decision problem under a fixed hardening budget $k = |S|$. Let $M$ denote the universe of maintainers ($|M| = 12,217$) and $R_{\text{wf}}$ denote the universe of downstream workflow repositories ($|R_{\text{wf}}| = 7,171$). For each maintainer $m \in M$, let $E_m \subseteq R_{\text{wf}}$ denote the set of repositories reachable from packages associated with $m$, and let $\operatorname{Sources}(r) = \{m \in M : r \in E_m\}$ denote the upstream maintainer set of repository $r$.
+The account budget is the size of the selection $S$. The original graph has $|M|=12{,}217$ accounts and $|R_{\text{wf}}|=7{,}171$ workflow-associated repository keys. For each account $m\in M$, $E_m\subseteq R_{\text{wf}}$ contains the repositories reachable from packages associated with $m$. For repository $r$, $\operatorname{Sources}(r)=\{m\in M:r\in E_m\}$ is its set of observed upstream sources.
 
 Figure~\ref{fig:q1_methodology} summarizes the analysis and consistency checks.
 
@@ -12,26 +12,25 @@ Figure~\ref{fig:q1_methodology} summarizes the analysis and consistency checks.
 \label{fig:q1_methodology}
 \end{figure}
 
-\subsection{Formal Objective Definitions}
-We formalize three fundamental defensive quantities:
+\subsection{Graph Objectives}
 
 \subsubsection{Submodular Distinct Coverage ($C(S)$)}
-Defenders seeking broad ecosystem review prioritize distinct downstream client repositories:
+Distinct coverage counts each reachable repository once.
 \begin{equation}
 C(S) = \Bigl\lvert \bigcup_{m \in S} E_m \Bigr\rvert .
 \end{equation}
-\textbf{Property:} $C(S)$ is normalized, monotone non-decreasing, and submodular. For any subsets $A \subseteq B \subseteq M$ and element $m \notin B$:
+$C(\varnothing)=0$, and coverage is monotone and submodular. For $A\subseteq B\subseteq M$ and $m\notin B$,
 \begin{equation}
 C(A \cup \{m\}) - C(A) \ge C(B \cup \{m\}) - C(B)
 \end{equation}
 The classical Nemhauser--Wolsey--Fisher bound gives greedy coverage a $(1-1/e)\approx63.2\%$ approximation. For a normalized, monotone submodular objective $F$ and budget $k\ge1$, let $O$ be an optimal set. The sum of the marginal gains of $O\setminus S_i$ at the current greedy set $S_i$ is at least $F(O)-F(S_i)$. Greedy therefore removes at least $1/k$ of the remaining gap each step. After $k$ steps, the achieved value is at least $[1-(1-1/k)^k]F(O)\ge(1-1/e)F(O)$.
 
 \subsubsection{Modular Scenario Exposure Reduction ($H(S)$)}
-Suppose exactly one account is the hypothetical origin and has a fixed nonnegative weight $w_m$. A perfect control removes that origin when selected while leaving all other paths unchanged. We measure its share of weighted exposure as:
+Assign each hypothetical origin $m$ a fixed nonnegative weight $w_m$. Under ideal selected-origin removal, all $|E_m|$ account--repository pairs from a selected origin are removed. When total weighted pair mass is positive, its removed share is
 \begin{equation}
 H(S) = \frac{\sum_{m \in S} w_m |E_m|}{\sum_{v \in M} w_v |E_v|}
 \end{equation}
-\textbf{Property:} $H(S)$ is normalized, monotone, and strictly \textit{modular} (additive linear). For any disjoint sets $A, B \subseteq M$, $H(A \cup B) = H(A) + H(B)$. Consequently, exact-union ranking (sorting maintainers in descending order of weighted reach $w_m |E_m|$) is mathematically guaranteed to achieve the exact global optimum for $H(S)$ at any budget $k$.
+$H(\varnothing)=0$, and $H$ is monotone and modular. For disjoint $A$ and $B$, $H(A\cup B)=H(A)+H(B)$. Sorting in descending order of $w_m|E_m|$ therefore maximizes $H$ at each budget. We call this rule exact union. Unit weights give the unweighted pair-mass comparison.
 
 \subsubsection{Supermodular All-Source Exclusion ($P(S)$)}
 Under the same idealized model, an endpoint has no remaining observed source when every member of its nonempty source set is selected:
@@ -46,7 +45,7 @@ P(A \cup \{m\}) - P(A) \le P(B \cup \{m\}) - P(B).
 
 \subsubsection{Strict Zero-Anchored Threshold Exclusion ($P_k$)}
 Let $n_r=\lvert\operatorname{Sources}(r)\rvert$ and
-$t_r(S)=\lvert\operatorname{Sources}(r)\setminus S\rvert$. We define the hypothetical strict threshold count over $R_+=\{r\in R_{\text{wf}}\mid n_r>0\}$ as
+$t_r(S)=\lvert\operatorname{Sources}(r)\setminus S\rvert$. In this definition, the positive integer threshold $k$ is independent of the budget $|S|$. For $R_+=\{r\in R_{\text{wf}}\mid n_r>0\}$,
 \begin{equation}
 \begin{aligned}
 P_k(S) &= \sum_{r\in R_+} \ind\bigl[t_r(S)<q_k(r)\bigr],\\
@@ -58,7 +57,7 @@ q_k(r) &=
 \end{aligned}
 \label{eq:strict_quorum}
 \end{equation}
-For $n_r<k$, only complete source exclusion is credited. For $n_r\ge k$, fewer than $k$ remaining sources suffice under the hypothetical threshold rule. Thus $P_k(\varnothing)=0$, $P_1(S)=P(S)$, and every counted endpoint has a hardened source. The function is monotone in $S$ for fixed $k$, but need not be monotone in $k$: an endpoint with $n_r=2$ and $t_r(S)=1$ is counted at $k=2$ and not at $k=3$. The superficially compact condition $t_r(S)<\min(k,n_r)$ is not equivalent to Eq.~\ref{eq:strict_quorum}. No claim about the submodularity or supermodularity of $P_1$ is extended to general $P_k$.
+For $n_r<k$, the rule credits complete source exclusion. For $n_r\ge k$, it credits fewer than $k$ remaining sources. Thus $P_k(\varnothing)=0$, $P_1(S)=P(S)$, and every counted endpoint has a selected source. The count is monotone in $S$ for a fixed threshold. An endpoint with $n_r=2$ and $t_r(S)=1$ qualifies at $k=2$ and ceases to qualify at $k=3$, so counts can decrease as the threshold increases.
 
 The cardinality guard removes zero-budget credit but does not supply missing authorization semantics. It is an explicit modeling convention, not evidence that a repository actually implements a $k$-person approval policy; upstream source sets may span independently compromised packages.
 
@@ -102,7 +101,7 @@ We evaluate three structural models of non-uniform maintainer risk:
 \end{enumerate}
 
 \subsection{Analytic Expectations and Empirical Standard Errors}
-Under a finite population of $|M| = 12,217$ maintainers, random selection of budget $k$ yields exact expected coverage and exposure under the hypergeometric distribution:
+A uniform sample of $k$ accounts without replacement gives each account inclusion probability $k/|M|$. This yields the expected exposure by linearity. The expected coverage uses the hypergeometric probability of selecting at least one source per repository.
 \begin{align}
 \mathbb{E}[H_{\text{rand}}(k)] &= \frac{k}{\lvert M\rvert}, \\
 \mathbb{E}[C_{\text{rand}}(k)] &= \sum_{r \in R_{\text{wf}}}

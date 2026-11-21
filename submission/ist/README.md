@@ -1,17 +1,22 @@
 # Information and Software Technology submission package
 
-The manuscript leads with the held-out fixed-budget comparison. The supporting PDF preserves the full evidence-stage table, parser and packaging details, and graph-objective sensitivity analyses.
+Open `IST_Submission_Package.zip` locally. Use the individual files for Editorial Manager. Both manuscript PDFs use the same results and structured abstract. The anonymous copy is available if the portal requests it.
 
 | File | Contents |
 | --- | --- |
 | `IST_Manuscript.pdf` | Named manuscript with a structured abstract, funding and competing interests, data availability, contribution wording, and AI disclosure |
-| `IST_LaTeX_Source.zip` | Editable manuscript and supplement, numbered bibliography style, figures, and the Elsevier class |
+| `IST_LaTeX_Source.zip` | Editable named manuscript with a single LaTeX entry point, bibliography, figures and Elsevier class |
+| `IST_Anonymous_Manuscript.pdf` | Reviewer copy for a double-anonymized workflow |
+| `IST_Anonymous_LaTeX_Source.zip` | Editable anonymous manuscript for a portal that requests source |
+| `IST_Title_Page.pdf` | Author names, contact details, ORCIDs and contributions for the editorial office |
 | `IST_Supplement.pdf` | Detailed consumer extraction methods, sensitivity results, and packaging diagnostics |
+| `IST_Supplement_Source.zip` | Editable supplement with its own LaTeX entry point |
 | `IST_Consumer_Replication.zip` | Offline verification of the five-account outcomes, additional evidence checks, and the exploratory six-budget comparison |
 | `IST_Highlights.txt` | Four editable research highlights |
 | `IST_Cover_Letter.txt` | Draft cover letter for the corresponding author |
+| `IST_Form_Metadata.txt` | Copy-ready title, structured abstract, keywords, author details and data information |
 
-The export uses the Elsevier LaTeX class, a structured abstract, and a separate supplement. The live IST author guide returned HTTP 403 during preparation. The submission package follows the verified general publisher guidance and the structured-abstract convention used by published IST articles. Journal-specific upload fields and review settings remain unverified. [IST author guide](https://www.sciencedirect.com/journal/information-and-software-technology/publish/guide-for-authors) · [Elsevier LaTeX instructions](https://www.elsevier.com/en-in/researcher/author/policies-and-guidelines/latex-instructions)
+The live IST author guide returned HTTP 403 during preparation. The package follows the publisher's general instructions and the structured-abstract convention of published IST articles. Choose one manuscript version according to the live portal. Use the matching source ZIP where source is requested. For an anonymous workflow, choose the designated title-page field for the editor-only PDF and check that the cover letter and author-only metadata remain outside the review PDF. [IST author guide](https://www.sciencedirect.com/journal/information-and-software-technology/publish/guide-for-authors) · [Elsevier file preparation](https://www.elsevier.support/publishing/answer/how-do-i-prepare-my-files-for-submission-in-editorial-manager)
 
 ## Before submitting
 
@@ -27,4 +32,4 @@ python scripts/package_yunohost_consumer_replay.py
 python submission/ist/build_ist.py
 ```
 
-The builder compiles both LaTeX entries from a clean extraction of the ZIP. It checks the PDFs, key results and author names, records file hashes in `validation.json`, and runs `python submission/ist/check_readiness.py`. That check compares the archive with the current manuscript source and replays both application frames from a clean extraction. Template files come from the Elsevier package distributed by CTAN. [Template source](https://ctan.org/pkg/elsarticle)
+The builder compiles the named manuscript, anonymous manuscript and supplement from separate clean source ZIPs. It builds the title page from the author record, checks the rendered PDFs and exports the submission bundle. The readiness check compares the source archives with the manuscript, checks direct author identifiers in anonymous files and replays both application frames. `validation.json` records the hashes of the individual submission files. [Template source](https://ctan.org/pkg/elsarticle)

@@ -1,6 +1,6 @@
-# EMSE submission draft
+# EMSE-format journal export
 
-The November revision asks five research questions. The held-out consumer comparison is RQ5, and the appendix records the packaging and release diagnostics. The separate consumer replication companion recomputes the 215-project comparison and its uncertainty bounds from retained evidence.
+The revised article and appendix build from the current shared journal source. The replication companion recomputes the paired outcomes and bounds in both the 215-project YunoHost and 155-project Awesome-Selfhosted frames. The [IST package](../ist/README.md) is the current submission preparation. This export preserves the Springer-format version.
 
 ## Files for Editorial Manager
 

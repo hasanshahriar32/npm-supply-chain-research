@@ -153,11 +153,14 @@ def outputs():
                              preamble, r"\begin{document}",
                              r"\title{Supplementary material for \PaperTitle}", r"\author{}", r"\date{}", r"\maketitle",
                              appendix, r"\end{document}", ""])
-    contacts = "\n\n".join(r"\\".join([name, department, university, address,
+    contacts = "\n\n".join(r"\\".join([rf"\textbf{{{name}}}", department, university, address,
                                        rf"\nolinkurl{{{email}}}", rf"\url{{{orcid}}}"])
                            for name, department, university, address, email, orcid in contact_block(data))
-    title_page = "\n".join([r"\documentclass[11pt,a4paper]{article}", preamble, r"\begin{document}",
-                            r"\section*{\PaperTitle}", contacts, named_back, r"\end{document}", ""])
+    title_page = "\n".join([r"\documentclass[11pt,a4paper]{article}", r"\usepackage[margin=24mm]{geometry}",
+                            preamble, r"\begin{document}", r"\raggedright",
+                            r"\section*{\PaperTitle}", contacts, named_back,
+                            r"\section*{Earlier graph validation archive}",
+                            r"\url{" + status["public_release_url"] + "}", r"\end{document}", ""])
     return {"IST_Manuscript.tex": manuscript, "IST_Anonymous_Manuscript.tex": anonymous,
             "IST_Supplement.tex": supplement, "IST_Title_Page.tex": title_page}, data, status
 
@@ -178,6 +181,7 @@ def source_archive(path, entry, source):
         if r"\bibliography{" in source:
             for name in ("elsarticle.cls", "elsarticle-num.bst"):
                 archive.write(HERE / "template" / name, name)
+            archive.write(HERE / "template/README", "elsarticle-README.txt")
             archive.writestr("references_q1.bib", bibliography(source))
         figures = re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}", source)
         for figure in sorted(set(figures)):
