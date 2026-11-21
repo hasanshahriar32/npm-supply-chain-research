@@ -22,6 +22,7 @@ def main():
     text = ' '.join(subprocess.check_output(['pdftotext', str(pdf), '-'], text=True).split())
     title_text = ' '.join(subprocess.check_output(['pdftotext', str(HERE / 'EMSE_Title_Page.pdf'), '-'], text=True).split())
     build = json.loads((HERE / 'validation.json').read_text())
+    status = json.loads((HERE / 'submission_status.json').read_text())
     checks = {'clean_build_and_pdf_checks': build['passed'],
               'abstract_150_to_250_words': 150 <= build['abstract_words'] <= 250,
               'four_to_six_keywords': 4 <= build['keywords'] <= 6,
@@ -34,6 +35,9 @@ def main():
               'declarations_and_acknowledgments_on_title_page': all(x in title_text for x in
                   ['Statements and Declarations', 'Funding', 'Competing Interests', 'Data Availability', 'Acknowledgments']),
               'title_page_no_stale_review_status': 'is under review elsewhere' not in title_text,
+              'title_page_contributions_match': all(
+                  f"{name} {role}." in title_text
+                  for name, role in (status.get('individual_contribution_roles') or {}).items()),
               'figure_caption_style': r'\captionsetup[figure]{name=Fig.,labelfont=bf,labelsep=space}' in tex,
               'doi_links_are_full_urls': r'\url{https://doi.org/#1}' in (HERE / 'build/EMSE_Manuscript.bbl').read_text(),
               'internal_workflow_notes_removed': all(x.casefold() not in text.casefold() for x in
@@ -64,9 +68,9 @@ def main():
               'guidelines_url': 'https://link.springer.com/journal/10664/submission-guidelines',
               'status': 'PASS' if all(checks.values()) else 'FAIL', 'checks': checks,
               'author_controlled_items': {
-                  'actual_contribution_roles_confirmed': False,
+                  'actual_contribution_roles_confirmed': build['author_contributions_confirmed'],
                   'both_authors_approval_confirmed': False,
-                  'note': 'The optional contribution statement is omitted. No author approval or manual review was invented.'},
+                  'note': 'The title-page contribution statement is a draft for author confirmation.'},
               'scientific_validation': 'Automated endpoint indicators were not manually validated; this limitation is retained.',
               'sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in
                   [pdf, HERE / 'EMSE_Title_Page.pdf', HERE / 'EMSE_LaTeX_Source.zip', HERE / 'form_metadata.txt']}}

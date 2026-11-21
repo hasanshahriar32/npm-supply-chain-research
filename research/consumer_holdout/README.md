@@ -86,6 +86,19 @@ python scripts/study_yunohost_yarn_classic.py score
 python scripts/verify_yunohost_yarn_classic.py
 ```
 
+The [empty pnpm root sensitivity](runs/yunohost-empty-pnpm-roots/results.json)
+checks 16 unresolved applications with successful pnpm comparisons and zero
+witnesses. Each pinned manifest and root importer has zero regular dependency
+declarations. This post hoc check identifies common negatives under the mandatory
+root scope. The companion verifies the revised bounds using the recorded counts.
+
+```sh
+python scripts/verify_yunohost_empty_pnpm_roots.py
+```
+
+Run `python scripts/study_yunohost_empty_pnpm_roots.py score` with the retained
+pinned capture and Ruby to repeat the declaration check.
+
 ## YunoHost packaging and named importers
 
 The [audit queue](runs/yunohost-packaging/queue.json) records two unresolved strata from the 215-project frame. The [recipe classifications](runs/yunohost-packaging/classification.json) cite file locations at the pinned catalog revisions. The [source intake](runs/yunohost-packaging/source_intake.json) records resolved source references. Archive checks bind the three eligible recipes to the declared checksums and the manifest and lockfile hashes.

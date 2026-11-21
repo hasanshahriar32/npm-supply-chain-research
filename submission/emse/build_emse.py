@@ -68,6 +68,7 @@ def pdf_checks(pdf: Path, log: Path) -> dict:
 def main() -> None:
     SOURCE.mkdir(exist_ok=True)
     BUILD.mkdir(exist_ok=True)
+    status = json.loads((HERE / "submission_status.json").read_text())
     canonical = (Q1 / "main_q1.tex").read_text()
     preamble = expand((Q1 / "config/preamble_q1.tex").read_text())
     preamble = preamble.replace(r"\usepackage{cite}", "")
@@ -167,7 +168,12 @@ def main() -> None:
     declarations = (Q1 / "sections/10_declarations.tex").read_text()
     # The separate title page has no bibliography; its data URL is self-contained.
     declarations = re.sub(r"~?\\cite\{[^}]+\}", "", declarations)
-    title += "\n% BEGIN GENERATED DECLARATIONS\n" + r"\newpage" + "\n" + declarations
+    roles = status.get("individual_contribution_roles") or {}
+    if roles:
+        assert list(roles) == [author["name"] for author in authors["authors_in_supplied_order"]]
+        declarations += "\n" + r"\subsection*{Author Contributions}" + "\n"
+        declarations += " ".join(f"{name} {role}." for name, role in roles.items()) + "\n"
+    title += "\n% BEGIN GENERATED DECLARATIONS\n" + r"\newpage\small" + "\n" + declarations
     title += ("\n" + r"\subsection*{Acknowledgments}" + "\n"
               + "The authors thank npm package maintainers and the open-source community for the studied public artifacts, and deps.dev and GitHub for data interfaces.\n"
               + r"\end{document}" + "\n")
@@ -194,11 +200,12 @@ def main() -> None:
     title_checks = pdf_checks(HERE / "EMSE_Title_Page.pdf", BUILD / "EMSE_Title_Page.log")
     extracted_text = subprocess.check_output(["pdftotext", str(HERE / "EMSE_Manuscript.pdf"), "-"], text=True)
     normalized = " ".join(extracted_text.split())
+    normalized = re.sub(r"(?<=\d)\s*–\s*(?=\d)", "–", normalized)
     required = ["Statements and Declarations", "Data Availability", "Code Availability", "Funding", "Competing Interests", "Use of AI Assistance", "hasanshahriar32@gmail.com"]
     content_checks = all(term in normalized for term in required)
     held_out_checks = all(term in normalized for term in (
         "Held-Out Consumer Coverage (RQ5)", "215", "Y017", "1,571",
-        "2.3–42.3", "replication companion",
+        "2.3–42.3", "2.3–34.9", "replication companion",
     ))
     forbidden = ["initially blank", "review sheets", "remain pending", "await independent",
                  "No reviewer role", "authors must review", "human audit pending"]
@@ -213,7 +220,9 @@ def main() -> None:
               "abstract_words": len(abstract.split()), "keywords": len(keywords.split(",")), "figures": len(figures),
               "figure_upload_names": figure_map, "internal_workflow_notes_absent": absent_internal_notes,
               "title_page_author_details_match": author_checks,
-              "data_release_public": json.loads((HERE / "submission_status.json").read_text()).get("public_release_verified", False), "author_contributions_confirmed": False,
+              "data_release_public": status.get("public_release_verified", False),
+              "author_contributions_included": bool(roles),
+              "author_contributions_confirmed": status.get("contribution_roles_confirmed_by_both_authors", False),
               "coauthor_submission_approval_confirmed": authors["submission_approval_confirmed"],
               "sha256": {name: hashlib.sha256((SOURCE / name).read_bytes()).hexdigest() for name in source_files}}
     report["passed"] = (all(x["passed"] for x in [manuscript, title_checks, standalone])
@@ -225,7 +234,7 @@ def main() -> None:
                 + "\n\nABSTRACT\n" + abstract.replace(r"\%", "%").replace("--", "–")
                 + "\n\nKEYWORDS\n" + keywords.replace(", ", "; ")
                 + "\n\nDATA REPOSITORY\n"
-                + json.loads((HERE / "submission_status.json").read_text())["public_release_url"]
+                + status["public_release_url"]
                 + "\n\nFUNDING\nThis research received no external funding.\n")
     (HERE / "form_metadata.txt").write_text(metadata)
     print(json.dumps({k: v for k, v in report.items() if k != "sha256"}, indent=2))

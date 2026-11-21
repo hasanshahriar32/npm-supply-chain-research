@@ -3,7 +3,7 @@
   "inputs": {
     "research/consumer_holdout/runs/yunohost-yarn-classic/results.json": "ffe305902a9a3d82e7a3c2f7c1560428810aec23447d70d51150db4e49c2b6d4",
     "research/consumer_holdout/runs/yunohost-v2/paths.json.gz": "f48cd97f8ac3f95d37a1fd118757182db03b5faf9772927a6463b6f0590b5294",
-    "scripts/study_yunohost_empty_pnpm_roots.py": "34debce6e0158662f5cb8f80170f79f8894665095c206df7f0077691a219b9ed"
+    "scripts/study_yunohost_empty_pnpm_roots.py": "b9b5792e7535fe3d83f1cfebd2248b0cc0c419e0591da2ab4746d1fcaaaa4978"
   },
   "projects": [
     "Y038",
@@ -23,5 +23,9 @@
     "Y363",
     "Y486"
   ],
-  "design": "Post hoc diagnostic. Inspect every unresolved primary pair with pnpm_ok and zero witnesses. Require no regular dependency declarations in both the pinned root manifest and the pnpm v9 root importer. Preserve the original production root scope and exclude optional and dev dependencies. Recompute information bounds with strict empty roots as common negatives."
+  "design": "Post hoc diagnostic. Inspect every unresolved primary pair with pnpm_ok and zero witnesses. Require no regular dependency declarations in both the pinned root manifest and the pnpm v9 root importer. Preserve the original production root scope and exclude optional and dev dependencies. Recompute information bounds with strict empty roots as common negatives.",
+  "implementation_correction": {
+    "previous_sha256": "34debce6e0158662f5cb8f80170f79f8894665095c206df7f0077691a219b9ed",
+    "reason": "The first scoring attempt stopped before writing results. Count singleton paired states for resolution, since the identical control can have two feasible states with the same net change. The candidate list and closure rule are unchanged."
+  }
 }

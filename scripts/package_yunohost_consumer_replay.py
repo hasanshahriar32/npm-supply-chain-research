@@ -7,6 +7,7 @@ from tempfile import TemporaryDirectory
 import zipfile
 
 from replay_yunohost_consumer_results import CASES, REPLAY
+from study_yunohost_empty_pnpm_roots import PROTOCOL as EMPTY_PROTOCOL, RESULTS as EMPTY_RESULTS
 from study_yunohost_holdout import ROOT, RUN
 from study_yunohost_yarn_classic import RUN as YARN
 
@@ -15,6 +16,7 @@ MODULES = (
     "compare_yunohost_npm_extractors", "consumer_holdout", "evaluate_consumer_pilot",
     "replay_yunohost_consumer_results", "study_npm_parser_development",
     "study_pnpm_parser_development", "study_yunohost_holdout", "study_yunohost_yarn_classic",
+    "study_yunohost_empty_pnpm_roots", "verify_yunohost_empty_pnpm_roots",
     "verify_pnpm_registry_integrity", "verify_yunohost_holdout", "verify_yunohost_root_evidence",
     "verify_yunohost_yarn_classic",
 )
@@ -23,12 +25,16 @@ README = """# Replication companion for the paired YunoHost consumer comparison
 From the extracted directory, run with Python 3.10 or newer:
 
     python scripts/replay_yunohost_consumer_results.py
+    python scripts/verify_yunohost_empty_pnpm_roots.py
 
 The command starts from retained dependency paths and registry observations.
 It recomputes exact-version joins, project classifications, and the paired
 bounds before and after the Yarn Classic follow-up. It checks the primary
 comparison, both cutoff alternatives, and the identical-portfolio control
 against every retained project row and the manuscript table.
+The second command reproduces the post hoc pnpm sensitivity from the
+root declaration counts in the companion. Pinned hashes identify the
+source files checked for those counts.
 
 The included registry projection keeps exact package and version keys, receipt
 status, SHA-512 tokens and membership in the frozen portfolios as numeric
@@ -52,7 +58,8 @@ def main():
     sources = [
         *(ROOT / f"scripts/{name}.py" for name in MODULES),
         *(folder / name for folder in (RUN, YARN) for name in filenames),
-        REPLAY, CASES, ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex",
+        REPLAY, CASES, EMPTY_PROTOCOL, EMPTY_RESULTS,
+        ROOT / "manuscript_q1/tables/yunohost_consumer_holdout_table.tex",
     ]
     with TemporaryDirectory(prefix="consumer-replay-") as directory:
         scratch = Path(directory)
@@ -64,9 +71,10 @@ def main():
         extracted = scratch / "extracted"
         with zipfile.ZipFile(candidate) as archive:
             archive.extractall(extracted)
-        subprocess.run([sys.executable, "-I", "-c", "import runpy, sys; sys.path.insert(0, 'scripts'); "
-                        "runpy.run_path('scripts/replay_yunohost_consumer_results.py', run_name='__main__')"],
-                       cwd=extracted, check=True)
+        for script in ("replay_yunohost_consumer_results", "verify_yunohost_empty_pnpm_roots"):
+            subprocess.run([sys.executable, "-I", "-c", "import runpy, sys; sys.path.insert(0, 'scripts'); "
+                            "runpy.run_path(sys.argv.pop(1), run_name='__main__')", f"scripts/{script}.py"],
+                           cwd=extracted, check=True)
         output.write_bytes(candidate.read_bytes())
     print(f"Verified standalone companion: {output}")
 

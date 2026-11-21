@@ -88,7 +88,7 @@ Random (mean) & 1,680.6 & 23.4 & 0.80 & 12.8 \\%
 \author[2]{\fnm{Md. Ashikul} \sur{Islam}}\email{ashikulislamcf2000@gmail.com}
 \affil[1]{\orgdiv{Department of ECE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
 \affil[2]{\orgdiv{Department of CSE}, \orgname{Hajee Mohammad Danesh Science and Technology University}, \orgaddress{\street{Basherhat, HSTU}, \city{Dinajpur}, \postcode{5200}, \country{Bangladesh}}}
-\abstract{Maintainer-review programs can prioritize distinct repositories, account-origin exposure, or exclusion of every observed source. We compare frozen five-account portfolios on two held-out application frames using paths corroborated against committed lockfiles. In the 155-project self-hosted frame, both portfolios have documented paths to the same 23 applications. In the 215-project YunoHost frame, five fully resolved pairs differ, with three reached only by the name-based selection and two only by the version-based selection. A Yarn Classic follow-up resolves 17 more pairs and narrows primary turnover bounds from 2.3--50.2\% to 2.3--42.3\%. The direction of net coverage change remains unresolved. We also compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 observed accounts. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories and exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion heuristic selects every observed source for 1,022 repositories, and a simpler variant yields 1,024. The original heuristic attains the optimum in 86 of 96 candidate-restricted settings, with a worst deficit of 66 endpoints. Version continuity decreases account--repository pair mass by 42.44\% in the original graph and 3.33\% in a newly acquired cohort. These results quantify how objective and representation choices affect observed coverage and where dependency metadata limits the comparison.}
+\abstract{Maintainer-review programs can prioritize distinct repositories, account-origin exposure, or exclusion of every observed source. We compare frozen five-account portfolios on two held-out application frames using paths corroborated against committed lockfiles. In the 155-project self-hosted frame, both portfolios have documented paths to the same 23 applications. In the 215-project YunoHost frame, five fully resolved pairs differ, with three reached only by the name-based selection and two only by the version-based selection. A Yarn Classic follow-up resolves 17 more pairs. A separate sensitivity analysis confirms 16 empty pnpm roots and narrows primary turnover bounds to 2.3--34.9\%. The direction of net coverage change remains unresolved. We also compare these objectives in a retained npm graph of 25,228 identifiers and 12,217 observed accounts. At budget 100, greedy coverage reaches 5,538 of 7,171 workflow-associated repositories and exact-union ranking reaches 4,407. Their exposure reductions under a uniform single-account-origin model are 11.48\% and 33.79\%. An exclusion heuristic selects every observed source for 1,022 repositories, and a simpler variant yields 1,024. The original heuristic attains the optimum in 86 of 96 candidate-restricted settings, with a worst deficit of 66 endpoints. Version continuity decreases account--repository pair mass by 42.44\% in the original graph and 3.33\% in a newly acquired cohort. These results quantify how objective and representation choices affect observed coverage and where dependency metadata limits the comparison.}
 \keywords{Software supply chain security, npm ecosystem, maintainer prioritization, multi-objective optimization, dependency graphs, release authority}
 \maketitle
 
@@ -733,7 +733,7 @@ The workspace collection returned all 15 requested manifests. The registry colle
 
 
 % Shared source: manuscript_q1/tables/yunohost_consumer_holdout_table.tex
-% Values from yunohost-v2 and yunohost-yarn-classic results.json.
+% Values from yunohost-v2, yunohost-yarn-classic and yunohost-empty-pnpm-roots results.json.
 \begin{table}[t]
 \centering
 \footnotesize
@@ -759,6 +759,11 @@ Net change bounds (pp) & $[-48.4,47.0]$ & $[-50.2,46.0]$ & $[-47.9,47.4]$\\
 Follow-up resolved pairs & 129 & 127 & 129\\
 Follow-up turnover (\%) & $[2.3,42.3]$ & $[2.3,43.3]$ & $[1.9,41.9]$\\
 Follow-up net change (pp) & $[-40.0,38.6]$ & $[-41.9,37.7]$ & $[-39.5,39.1]$\\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{Empty pnpm root sensitivity}}\\
+Sensitivity resolved pairs & 145 & 143 & 145\\
+Sensitivity turnover (\%) & $[2.3,34.9]$ & $[2.3,35.8]$ & $[1.9,34.4]$\\
+Sensitivity net change (pp) & $[-32.6,31.2]$ & $[-34.4,30.2]$ & $[-32.1,31.6]$\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -770,6 +775,24 @@ In the primary comparison, 70 applications have documented hits under both portf
 After the initial YunoHost analysis, we froze a follow-up protocol for its 35 Yarn candidates before collecting new registry evidence. Two lockfile readers checked the declared SemVer paths from each root. We excluded newer Yarn formats, workspace importers and edges affected by selective resolutions. Paths require canonical registry identifiers, SHA-512 agreement for Yarn mirror artifacts, and corroboration of transitive declarations against exact-version registry records. Yarn contributes positive witnesses only.
 
 The readers agreed on 20 eligible lockfiles. Of 3,557 exact-version requests, 3,555 yielded usable maintainer lists. Nineteen applications have a registry-linked path. The added evidence resolves 17 further common hits in the primary comparison, raising the resolved count from 112 to 129. Two more applications have one documented portfolio hit and an unresolved counterpart. The turnover interval narrows to 2.3--42.3\% and the net interval to $-40.0$ to $+38.6$ percentage points. Both alternative cutoff choices show the same 17-pair increase (Table~\ref{tab:yunohost_consumer_holdout}). The follow-up retains the original observations for all other projects. Its bounds quantify the change from adding Yarn evidence collected separately.
+
+\subsection{Sensitivity to empty pnpm roots}
+The primary protocol uses pnpm paths to establish positive witnesses.
+Among the 86 unresolved primary pairs after the Yarn follow-up, 23 had pnpm lockfile evidence. Sixteen of these had zero witnesses in a successful root comparison.
+In a post hoc sensitivity analysis, we checked each of those 16 pinned
+manifests and pnpm v9 root importers for regular dependency declarations.
+All 16 had empty mandatory roots in both files. Thirteen declared
+development dependencies. The other three had no development
+declarations in the manifest. Under the mandatory root scope, these 16
+applications are common negatives.
+
+Adding these common negatives resolves 145 of 215 primary pairs and
+leaves 70 unresolved. The turnover interval is 2.3--34.9\% and the net
+interval is $-32.6$ to $+31.2$ percentage points. The five confirmed
+differences persist. Table~\ref{tab:yunohost_consumer_holdout} also
+reports the two alternative cutoff choices. The sensitivity covers
+regular dependencies declared at the pinned root importer. Development
+dependencies, other importers and release contents are outside this check.
 
 In one of the five cases, project Y017 reaches a version-selected account via
 \texttt{fullcalendar} 6.1.21, \texttt{@fullcalendar/core} 6.1.21, and
@@ -847,7 +870,7 @@ Maintainer selection depends on the quantity a review program seeks to improve. 
 
 A fresh 100-root acquisition supplies 66 workflow-associated repository endpoints and repeats the coverage--exposure tradeoff. Greedy reaches 65 and exact union 42, while the direct heuristic excludes all sources for 34 endpoints. Version continuity decreases pair mass by 3.33\% in this cohort, compared with 42.44\% in the original union. The shared direction and differing magnitude support explicit population, representation and denominator choices rather than a universal numeric correction or preferred account list.
 
-The automated endpoint audit acquires 115 pinned commits and characterizes the retained mapping evidence. The distinct five-account portfolios have documented paths to the same 23 applications in the 155-project self-hosted frame. In the 215-project YunoHost frame, five fully resolved primary pairs differ. A Yarn Classic follow-up adds 17 fully resolved pairs with shared hits. Differences persist under both alternative cutoff ties, while the net change remains unresolved. These results distinguish which consumers are reached from how many are reached. Evaluating control effectiveness requires observed authorization, deployment and intervention evidence.
+The automated endpoint audit acquires 115 pinned commits and characterizes the retained mapping evidence. The distinct five-account portfolios have documented paths to the same 23 applications in the 155-project self-hosted frame. In the 215-project YunoHost frame, five fully resolved primary pairs differ. A Yarn Classic follow-up adds 17 shared hits. A separate check of 16 empty pnpm roots adds common negatives and yields a sensitivity interval for turnover of 2.3--34.9\%. Differences persist under both alternative cutoff ties, while the net change remains unresolved. These results distinguish which consumers are reached from how many are reached. Evaluating control effectiveness requires observed authorization, deployment and intervention evidence.
 
 
 % Shared source: manuscript_q1/sections/10_declarations.tex
@@ -866,7 +889,9 @@ Both authors declare that they have no financial or non-financial competing inte
 The November consumer comparison is supplied with a separate replication
 companion. It includes frozen dependency paths, reduced registry observations,
 pinned source references for the five confirmed cases, and a script that
-reconstructs the paired outcomes and uncertainty bounds offline. It uses
+reconstructs the paired outcomes and uncertainty bounds offline. It also
+includes the pinned source hashes, declaration counts and bounds for the
+empty pnpm root sensitivity. It uses
 numeric portfolio indices in place of registry account names. The companion
 starts from retained extraction outputs. Full acquisition replay uses
 the original source files and registry receipts.

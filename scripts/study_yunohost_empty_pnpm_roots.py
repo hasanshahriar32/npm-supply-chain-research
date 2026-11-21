@@ -89,15 +89,17 @@ def check_bounds(verified):
     followup = {}
     for key, comparison in source["comparisons"].items():
         states = []
+        resolved = 0
         for row in comparison["projects"]:
             feasible = row["feasible"]
             if row["sample_id"] in verified:
                 assert row["documented"] == [0, 0] and [0, 0] in feasible and len(feasible) > 1
                 feasible = [[0, 0]]
+            resolved += len(feasible) == 1
             states.append({v - n for n, v in feasible})
         n = len(states)
         assert n == source["denominator"]
-        record = {"resolved_pairs": sum(len(delta) == 1 for delta in states),
+        record = {"resolved_pairs": resolved,
                   "turnover_bounds": [sum(0 not in d for d in states) / n,
                                       sum(d != {0} for d in states) / n],
                   "net_bounds": [sum(min(d) for d in states) / n, sum(max(d) for d in states) / n]}

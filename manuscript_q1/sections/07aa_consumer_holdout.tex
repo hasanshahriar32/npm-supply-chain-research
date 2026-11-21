@@ -37,6 +37,24 @@ After the initial YunoHost analysis, we froze a follow-up protocol for its 35 Ya
 
 The readers agreed on 20 eligible lockfiles. Of 3,557 exact-version requests, 3,555 yielded usable maintainer lists. Nineteen applications have a registry-linked path. The added evidence resolves 17 further common hits in the primary comparison, raising the resolved count from 112 to 129. Two more applications have one documented portfolio hit and an unresolved counterpart. The turnover interval narrows to 2.3--42.3\% and the net interval to $-40.0$ to $+38.6$ percentage points. Both alternative cutoff choices show the same 17-pair increase (Table~\ref{tab:yunohost_consumer_holdout}). The follow-up retains the original observations for all other projects. Its bounds quantify the change from adding Yarn evidence collected separately.
 
+\subsection{Sensitivity to empty pnpm roots}
+The primary protocol uses pnpm paths to establish positive witnesses.
+Among the 86 unresolved primary pairs after the Yarn follow-up, 23 had pnpm lockfile evidence. Sixteen of these had zero witnesses in a successful root comparison.
+In a post hoc sensitivity analysis, we checked each of those 16 pinned
+manifests and pnpm v9 root importers for regular dependency declarations.
+All 16 had empty mandatory roots in both files. Thirteen declared
+development dependencies. The other three had no development
+declarations in the manifest. Under the mandatory root scope, these 16
+applications are common negatives.
+
+Adding these common negatives resolves 145 of 215 primary pairs and
+leaves 70 unresolved. The turnover interval is 2.3--34.9\% and the net
+interval is $-32.6$ to $+31.2$ percentage points. The five confirmed
+differences persist. Table~\ref{tab:yunohost_consumer_holdout} also
+reports the two alternative cutoff choices. The sensitivity covers
+regular dependencies declared at the pinned root importer. Development
+dependencies, other importers and release contents are outside this check.
+
 In one of the five cases, project Y017 reaches a version-selected account via
 \texttt{fullcalendar} 6.1.21, \texttt{@fullcalendar/core} 6.1.21, and
 \texttt{preact} 10.12.1. Both readers corroborated the positive location.
