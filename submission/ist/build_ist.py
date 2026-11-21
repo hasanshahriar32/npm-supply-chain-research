@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import zipfile
@@ -141,6 +142,7 @@ def main():
         "sha256": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(HERE.glob("IST_*")) if p.is_file()},
     }
     (HERE / "validation.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    subprocess.run([sys.executable, str(HERE / "check_readiness.py")], check=True)
     print(json.dumps(checks, indent=2))
 
 

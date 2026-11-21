@@ -94,7 +94,7 @@ Random (mean) & 1,680.6 & 23.4 & 0.80 & 12.8 \\%
 
 \textbf{Method.} We freeze two five-account portfolios on an npm training graph and check committed dependency paths in two held-out application frames. We use exact-version registry observations to link the paths to selected accounts and bound turnover from unresolved evidence. We also compare graph objectives and conduct an exploratory budget check.
 
-\textbf{Results.} The 215-project YunoHost frame contains five confirmed coverage changes, with three applications reached only by name selection and two only by version selection. Follow-up checks resolve 164 pairs. Turnover lies between 2.3\% and 26.0\%, and the net direction remains unresolved. In the 155-project self-hosted frame, the portfolios share 23 documented hits. At 50 accounts, the exploratory YunoHost check finds one confirmed difference. In the training graph at budget 100, greedy reaches 5,538 repositories and exact-union ranking reaches 4,407. Their modeled exposure reductions are 11.48\% and 33.79\%, respectively.
+\textbf{Results.} The 215-project YunoHost frame contains five confirmed coverage changes, with three applications reached only by name selection and two only by version selection. Follow-up checks resolve 164 pairs. Turnover lies between 2.3\% and 26.0\%, and the net direction remains unresolved. In the self-hosted frame, follow-up resolves 88 of 155 pairs with no confirmed change. At 50 accounts, the exploratory YunoHost check finds one confirmed difference. In the training graph at budget 100, greedy reaches 5,538 repositories and exact-union ranking reaches 4,407. Their modeled exposure reductions are 11.48\% and 33.79\%, respectively.
 
 \textbf{Conclusion.} Graph representation can change which applications enter review scope at the same budget. Pinned consumer evidence identifies changes and quantifies the uncertainty in aggregate coverage.}
 \keywords{Software supply chain security, npm ecosystem, maintainer prioritization, multi-objective optimization, dependency graphs, release authority}
@@ -134,7 +134,7 @@ Zerouali et al. examine release gaps, maintainer activities, and outdated depend
 
 Bifolco et al. measure discrepancies in GitHub dependency and dependent records for Java and Python projects~\citep{bifolco2025accuracy}. Wang et al. characterize resolution across ten package managers and reconstruct registry dependencies over time with OpenDep~\citep{wang2026opendep}. Gamage et al. compare lockfile design and maintenance across seven package managers~\citep{gamage2026lockfiles}. Our paired analysis joins registry account associations to version-resolved paths from a specified application importer.
 
-Bi et al. document recurring challenges from SBOM generation through consumption~\citep{bi2024sboms}. Xiao et al. find dependency omissions in developer-published Java SBOMs~\citep{xiao2025sbom}. This motivates checking the exact recipe asset, the metadata's subject, and the dependency information it contains. A source revision can support a comparison of declared dependencies. Evidence of bundled components requires inspecting the delivered artifact or an inventory linked to its bytes.
+Bi et al. document recurring challenges from SBOM generation through consumption~\citep{bi2024sboms}. Xiao et al. find dependency omissions in developer-published Java SBOMs~\citep{xiao2025sbom}. Liu et al. distinguish resolved dependencies from those accessed under test workloads for 91 CommonJS packages~\citep{liu2025depprune}. These results motivate identifying the exact recipe asset, verifying the subject of its inventory, and distinguishing declared paths, delivered files, and workload-dependent use. Our consumer outcome measures the first of these quantities. The archive audit checks file inclusion for a bounded example.
 
 Table~\ref{tab:lit_positioning} compares the closest empirical studies and their observation units.
 
@@ -242,7 +242,7 @@ The name graph has 82 nontrivial strongly connected components (SCCs) containing
 
 The URL audit finds 658 identifier-level parser disagreements. Excluding 60 inconsistent positive observations reduces the workflow repository universe to 7,147; greedy at budget 100 gives $C=5{,}524$ and $P=799$. We discard ambiguous flags rather than transferring them to a corrected URL without reacquisition. Removing bundled-context nodes preserves all 462,170 primary account--repository incidences for fixed selections, although workflow-package incidence changes. That invariance does not apply automatically to every endpoint definition or individual-package ranking.
 
-Figures were generated programmatically with Matplotlib and editable vector artwork; numerical plot data are included in the replication artifact.
+OpenAI Codex assisted with development and checking of the analysis scripts. The scripts apply the stated extraction and scoring rules directly to the retained inputs. Recomputing the reported outcomes uses the scripts and captured records without calling a language model. Figures were generated with Matplotlib and editable vector artwork. Numerical plot data are included in the replication artifact.
 
 
 % Shared source: manuscript_q1/sections/04_objectives_and_optimization_framework.tex
@@ -362,7 +362,7 @@ For $k = 100$, exact finite-population expectations are $\mathbb{E}[C] = 1{,}716
 
 % Shared source: manuscript_q1/sections/04a_ai_assistance.tex
 \subsection{Use of AI Assistance}
-OpenAI Codex was used to assist with manuscript drafting and revision, analysis-code development and checking, and literature-source checks. The authors are responsible for the manuscript and its interpretation, code, and references.
+OpenAI Codex was used to assist with manuscript drafting, revision, and checking literature sources. The authors are responsible for the manuscript, its interpretation, and its references.
 
 
 % Shared source: manuscript_q1/sections/05_empirical_results_rq1_to_rq3.tex
@@ -714,12 +714,12 @@ We evaluated the two greedy coverage portfolios frozen on the October cohort aga
 A team reviewing a fixed number of accounts needs to know which applications enter its review scope. We compare the applications with documented dependency paths to two account portfolios of the same size. We freeze the five-account name and version additive rankings on the October graph before collecting either held-out frame. The feasibility pilot found identical 100-account greedy selections, so we use a contrast with distinct selections. The primary five-account portfolios share three accounts. We also score both alternative additive-optimal version portfolios at the cutoff.
 
 \subsection{Design and inference}
-The first frame consists of 155 projects from the pinned Awesome-Selfhosted catalog after excluding pilot projects and known training repository keys. The second contains 215 upstream YunoHost projects with pinned root manifests, after removing earlier keys and duplicate pinned commits. We trace regular production paths starting at the root importer. We corroborate npm paths with Arborist's offline virtual tree and pnpm v9 paths up to three edges with pnpm's offline listing. An exact-version join requires a canonical public npm tarball path or matching SHA-512. A hit means that a corroborated path reached a package associated with a selected account in the retained registry data. A negative requires a checked scope and complete joins or separately corroborated empty root declarations.
+Project-owned files provide evidence for which dependency paths a specific application declares. Two catalogs give distinct collection contexts. Awesome-Selfhosted lists applications for self-hosting, and YunoHost links installable catalog entries to upstream projects. The unit is one upstream repository at its observed commit. The first frame consists of 155 projects from the pinned Awesome-Selfhosted catalog after excluding pilot projects and known training repository keys. The second contains 215 upstream YunoHost projects with pinned root manifests, after removing earlier keys and duplicate pinned commits. We trace regular production paths starting at the root importer. We corroborate npm paths with Arborist's offline virtual tree and pnpm v9 paths up to three edges with pnpm's offline listing. An exact-version join requires a canonical public npm tarball path or matching SHA-512. A hit means that a corroborated path reached a package associated with a selected account in the retained registry data. A negative requires a checked scope and complete joins or separately corroborated empty root declarations.
 
 We retain every sampled application in the denominator. Let $N$ and $V$ represent the two portfolio outcomes for one application. For each pair we compute the feasible values of $|V-N|$ (turnover) and $V-N$ (net change). We average the minimum and maximum over all projects to bound the two outcomes in the frame. The bounds reflect uncertainty from missing evidence. Appendix~\ref{sec:consumer_evidence_details} gives the extraction rules, exclusions, registry checks and results at each evidence stage.
 
 \subsection{Which applications change coverage}
-Table~\ref{tab:consumer_paired_summary} gives the paired YunoHost results. Five applications switch coverage in the frozen primary contrast. Name selection alone reaches Y213, Y276 and Y417, while version selection alone reaches Y017 and Y208. At least four applications switch under each alternative cutoff tie, and three switch under all three version choices. The identical-portfolio control yields zero turnover. In the 155-project frame, the portfolios have 23 shared hits and six shared negatives. The remaining 126 yield turnover bounds from 0 to 81.3\%.
+Table~\ref{tab:consumer_paired_summary} gives the paired YunoHost results. Five applications switch coverage in the frozen primary contrast. Name selection alone reaches Y213, Y276 and Y417, while version selection alone reaches Y017 and Y208. At least four applications switch under each alternative cutoff tie, and three switch under all three version choices. The identical-portfolio control yields zero turnover.
 
 
 % Shared source: manuscript_q1/tables/yunohost_paired_summary.tex
@@ -746,8 +746,10 @@ Initially, 112 YunoHost pairs were resolved. A separately frozen Yarn Classic fo
 
 In Y017, the version portfolio reaches a package through \texttt{fullcalendar} 6.1.21, \texttt{@fullcalendar/core} 6.1.21 and \texttt{preact} 10.12.1. Both readers corroborate the positive location. All 21 locations in the supported root tree join to registry records, and none lists a name-selected account. The replication companion supplies pinned manifests, lockfile links and analogous evidence for all five cases.
 
+In the 155-project Awesome-Selfhosted frame, the original comparison finds 23 shared hits and six shared negatives, giving turnover bounds of 0--81.3\%. A post hoc check confirms 13 empty production roots and narrows turnover to 0--72.9\%. Checking 53 retained npm and pnpm lockfiles and the corresponding registry records brings the resolved count to 74 and narrows turnover to 0--52.3\%. Applying the Yarn Classic path check adds 12 shared hits, and inspecting modern Yarn root declarations adds two shared negatives. The combined sensitivity resolves 88 of 155 pairs, with 63 shared hits and 25 shared negatives. Its turnover bounds are 0--43.2\% for every five-account cutoff choice.
+
 \subsection{Exploratory budget check}
-Table~\ref{tab:consumer_budget_check} applies the original additive rankings at six budgets. This retrospective check uses a common evidence base from the initial run, Yarn Classic follow-up and corroborated empty roots across all budgets. The Bun join in the frozen comparison uses account evidence restricted to the original portfolios, so the comparison across budgets leaves it outside this check. At budgets 1, 10 and 25, the portfolios are identical and turnover is zero. At five accounts, the five confirmed differences remain. At 50 accounts there is one name-only hit, Y051, with 45 joined locations in the supported root tree. At 100 accounts, the three substituted accounts produce no confirmed difference in this frame, with a positive upper bound on turnover. The observed change depends on which accounts the budget brings into the selection.
+Table~\ref{tab:consumer_budget_check} applies the original additive rankings at six budgets. This retrospective check uses a common evidence base from the initial run, Yarn Classic follow-up and corroborated empty roots across all budgets. The Bun join in the frozen comparison uses account evidence restricted to the original portfolios, so the comparison across budgets leaves it outside this check. At budgets 1, 10 and 25, the portfolios are identical and turnover is zero. At five accounts, the five confirmed differences remain. At 50 accounts there is one name-only hit, Y051, with 45 joined locations in the supported root tree. At 100 accounts, the three substituted accounts produce no confirmed difference in this frame, with a positive upper bound on turnover. The observed change depends on which accounts the budget brings into the selection. The Awesome-Selfhosted six-budget check uses the original traces and empty-root checks and finds no confirmed changes. The newer registry projection covers only the frozen five-account portfolios. The two frames have different lockfile support and cannot establish an inter-frame difference in turnover.
 
 
 % Shared source: manuscript_q1/tables/yunohost_budget_sensitivity.tex
@@ -781,7 +783,9 @@ The practical choice begins with an objective. Coverage is suitable for distribu
 
 The additional experiments also distinguish useful evidence from mathematical expectation. Exact-union ranking's additive optimality follows from the objective; the empirical contribution is the associated coverage and exclusion cost. The new cohort repeats that direction while changing effect sizes. A representation effect of 42.44\% in one union and 3.33\% in the other warrants reporting population and version context whenever reach is compared.
 
-The YunoHost frame shows why evaluation should track which applications each portfolio reaches. The five confirmed primary differences include both name-only and version-only outcomes. A net coverage statistic can hide these changes. The turnover lower bound is positive for every cutoff choice. Missing dependency evidence leaves the size and direction of the aggregate net change uncertain.
+The YunoHost frame shows why evaluation should track which applications each portfolio reaches. The five confirmed primary differences include both name-only and version-only outcomes. A net coverage statistic can hide these changes. The turnover lower bound is positive for every cutoff choice. At budget 50 a different application switches coverage. The Awesome-Selfhosted follow-ups leave 67 of 155 pairs unresolved, including 28 projects without a retained root manifest. The frames have different evidence support, and their turnover bounds overlap even within the groups analyzed with npm files. Missing dependency evidence leaves the direction of aggregate net change uncertain.
+
+For a fixed-size account review, a team can compare the applications reached by each proposed portfolio before replacing the current selection. The comparison can retain one-sided hits with an unresolved counterpart and link confirmed changes to the pinned dependency paths. For example, switching from the name to the version portfolio brings Y017 into documented scope and removes Y213 from it. Both applications warrant attention when planning the change, even if the goal is to keep the number of covered applications stable.
 
 The recipe audit shows a separate measurement choice. The repository key, selected source revision, and package importer each matter for application reach. Even at the same commit, using the recipe's named frontend can change whether a dependency path is documented. For review programs that start with shipped components, the artifact itself determines what can be confirmed. A preserved dependency directory allowed us to verify file inclusion in the Mongo Express release. An identical lockfile in the Pterodactyl source and release established continuity of the dependency declarations, while the compiled assets left module membership unresolved.
 
@@ -847,16 +851,17 @@ Both authors declare that they have no financial or non-financial competing inte
 \providecommand{\ArtifactAccessStatement}{The retained input archive, new observation records, derived analysis tables, protocols and checksums are available in the versioned research prerelease \texttt{research-validation-2026-10-28}: \url{https://github.com/hasanshahriar32/npm-supply-chain-research/releases/tag/research-validation-2026-10-28}. The companion archive and its checksum-verified original input are linked at a fixed repository commit. Third-party workflow, manifest and lockfile bodies are referenced by pinned source URLs and hashes; the release contains derived audit observations.}
 \ArtifactAccessStatement
 
-The November consumer comparison is supplied with a separate replication
-companion. It includes frozen dependency paths, reduced registry observations,
-pinned source references for the five confirmed cases, and a script that
-reconstructs the paired outcomes and uncertainty bounds offline. It also
-includes the pinned source hashes, declaration counts and bounds for the
-empty-root checks, alongside the exact-version joins for the direct Bun
-paths. It uses
-numeric portfolio indices in place of registry account names. The companion
-starts from retained extraction outputs. Full acquisition replay uses
-the original source files and registry receipts.
+The November consumer comparison is supplied as a separate replication
+archive with the submission. It includes frozen dependency paths, reduced registry observations,
+pinned source references for the five confirmed cases, and scripts that
+reconstruct the paired outcomes and uncertainty bounds offline for both
+application frames. It also reproduces the exploratory six-budget check,
+the empty-root and Bun sensitivities, the dated Awesome-Selfhosted
+lockfile and registry follow-ups, and the count of resolved pairs by
+root file support. Registry observations use numeric
+portfolio indices in place of account names. The companion starts from
+retained extraction outputs. Full acquisition replay uses the original
+source files and registry receipts.
 
 \subsection*{Code Availability}
 The October artifact provides collection and analysis scripts, exact benchmark inputs, numerical consistency checks and figure-generation code. Its README describes checksum verification and offline numerical reproduction after downloading the original input. The numerical path uses captured observations and does not repeat live API requests. Repeating acquisition may return different metadata. Third-party source bodies can be inspected through the pinned URLs; offline numerical reproduction uses the released derived observations.
@@ -1027,10 +1032,98 @@ We recorded all 155 projects and pinned 154 commits. Thirty projects entered the
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{Fig14.pdf}
-\caption{Paired consumer coverage evidence. The hatched segment shows unresolved pairs in the 155-application frame. The interval represents coverage reassignment compatible with the available evidence. All five-account tie choices give the same counts and bounds}
+\caption{Original paired consumer coverage evidence before the follow-ups. The hatched segment shows unresolved pairs in the 155-application frame. The interval represents coverage reassignment compatible with that evidence. All five-account tie choices give the same counts and bounds}
 \label{fig:consumer_holdout_evidence}
 \end{figure}
 \par Figure~\ref{fig:consumer_holdout_evidence} records the original evidence categories in this frame.
+
+\subsection{Awesome-Selfhosted root and budget sensitivity}
+We inspected retained manifests for the 126 original unresolved pairs.
+Fifteen projects had an observed root manifest with no regular, optional,
+peer, or bundled dependency declarations and no manifest workspace declarations.
+Thirteen had corroborating evidence. Eight pnpm v9 lockfiles had empty
+production declarations in the root importer and development specifiers
+matching the manifest. Child importers were outside the root check.
+One npm lockfile had a matching empty production root. The four remaining
+manifest-only zeros had HTTP 404 receipts for every tested root lockfile.
+These checks add 13 shared negatives under the declared root scope.
+
+All six exploratory budgets resolve 42 pairs under the expanded evidence.
+At budgets 1, 10, and 25 the rankings select identical sets, so turnover
+is zero. At budgets 5, 50, and 100 turnover is bounded by 0--72.9\%,
+with no confirmed difference. The replication companion retains all 155
+trace rows and reconstructs the original and post hoc comparisons.
+
+\subsection{Awesome-Selfhosted lockfile follow-up}
+Among the remaining unresolved projects, 53 retained a pinned manifest
+and exactly one supported root lockfile, with HTTP 404 receipts for the
+other tested root lockfile names. This post hoc check uses the 27 npm and
+26 pnpm lockfiles and the root readers described below. The npm check uses
+Arborist and the committed declarations and lockfile locations. The pnpm
+check compares paths of up to three edges to the native offline listing.
+The check routes each project by its observed lockfile and uses only the
+root scope with the retained files. It corroborates at least one package
+location in 37 projects.
+
+The original Awesome-Selfhosted registry records link 1,928 locations by
+canonical public npm paths. Retained YunoHost registry records link another
+3,519 locations by canonical paths or matching SHA-512 values. These
+observations resolve 31 further pairs. Among projects still unresolved for
+the primary portfolios, we then froze a queue for versions with an eligible
+artifact identifier and no usable retained registry record for the same key.
+On 21 November 2026, all 63 requests from six projects returned usable
+maintainer lists. The new joins confirm one further shared negative.
+The final sensitivity resolves 74 pairs and bounds turnover at 0--52.3\%
+and net change at $-52.3$ to $+51.0$ percentage points for each five-account
+cutoff choice. The identical control has zero turnover. Registry membership
+is observed at the respective capture dates, so the pooled sensitivity
+describes the recorded evidence across those dates.
+
+For 777 canonical package/version keys in the follow-up with observations
+in both earlier captures, the records list the same accounts from the
+frozen five-account portfolios. For 90 of those keys the records disagree
+when the comparison includes the accounts in the 100-account control.
+
+\subsection{Awesome-Selfhosted Yarn Classic follow-up}
+We applied the same two-reader Yarn Classic check described below to all
+23 unresolved projects with a pinned manifest and a single Yarn lockfile.
+The other recorded root lockfile probes returned HTTP 404. Six files
+yielded readable traces and six partial traces. Nine used a newer format
+and two declared workspaces outside the supported check. The 12 usable
+traces contribute positive witnesses along retained regular dependency
+paths. Transitive declarations and artifact identities are checked
+against exact-version registry records.
+
+Reusing the earlier YunoHost Yarn observations supplies registry-linked
+paths for ten projects and resolves three shared hits. We froze a queue
+for 1,828 keys missing from that capture. Requests on 21 November 2026
+yielded 1,728 usable maintainer lists. Seven replies lacked a usable list,
+and 93 requests ended with a transport error. The combined observations
+provide shared hits for all 12 projects with usable traces. The results
+resolve 86 of 155 pairs and bound turnover at 0--44.5\%, with net change
+between $-44.5$ and $+43.2$ percentage points under every cutoff choice.
+
+We checked the nine newer-format roots against the same manifest and
+importer rules used for YunoHost. Two declared Yarn 4 and had a matching
+version 8 lock entry for the root. Both manifests had only development
+dependencies and the entries agreed on their declarations. This adds
+two shared negatives under the declared root scope. In the combined
+sensitivity, turnover is 0--43.2\% and net change is $-43.2$ to $+41.9$
+percentage points. Other importers and the shipped application remain
+outside the empty-root check.
+
+\subsection{Evidence support across frames}
+The original intake and the follow-ups classify pairs with different
+completeness across file types. With the final observations, the npm
+groups resolve 48 of 57 pairs in Awesome-Selfhosted and 94 of 108 in
+YunoHost. They contain zero and five confirmed changes, respectively.
+The corresponding turnover bounds are 0--15.8\% and 4.6--17.6\%.
+The pnpm groups resolve 22 of 34 and 37 of 44, while the Yarn groups
+resolve 14 of 23 and 23 of 35. These are conditional descriptions of
+groups identified from retained files and, in YunoHost, the manager
+selected at intake. The frames differ in capture eligibility and reader
+scope. All 28 Awesome-Selfhosted projects without a retained root
+manifest remain in the denominator with unresolved outcomes.
 
 \subsection{YunoHost comparison with broader lockfile support}
 The second frame comprises 215 upstream YunoHost projects with pinned root package manifests. We excluded earlier repository keys and duplicate pinned commits. Lockfile intake yielded 108 npm and 44 pnpm candidates. All 215 projects contribute to the paired comparison.
@@ -1166,6 +1259,13 @@ corroborated zeros resolves 164 primary pairs and leaves 51 unresolved.
 The turnover bounds narrow to 2.3--26.0\%, and net change remains
 compatible with either direction ($-23.7$ to $+22.3$ percentage points).
 This is a post hoc sensitivity within the same declared root scope.
+
+\subsection{YunoHost budget witness}
+At budget 50, Y051 has a path from \texttt{markdown-it} 15.0.3 to
+\texttt{punycode.js} 2.3.1. The earlier reader returns the same positive
+location. All 45 locations in the supported root tree join to retained
+registry records. The records document a name portfolio hit and a
+version portfolio zero.
 
 
 

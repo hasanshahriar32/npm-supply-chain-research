@@ -1,0 +1,15 @@
+# Empirical quality review, 21 November 2026
+
+**Assessment.** The rebuilt study is suitable to send to a Q1 empirical software engineering venue as a finite-frame measurement paper. The empirical bar is assessed against the repository-mining method and the claims under review. Journal quartile describes a venue. The final editorial judgment remains with the journal. [ACM SIGSOFT Repository Mining Standard](https://github.com/acmsigsoft/EmpiricalStandards/blob/master/docs/standards/RepositoryMining.md)
+
+| Criterion | Initial gap | Repair and recheck |
+| --- | --- | --- |
+| Corpus selection and observation unit | The two catalog descriptions lacked a concise justification near the main comparison. | The article explains why project-owned lockfiles can corroborate observed paths, why the catalogs differ, and why a pinned upstream repository is the unit. |
+| Coverage across collection contexts | Awesome-Selfhosted had 126 unexplained pairs after the frozen result. | A pinned source audit inspected the unresolved cases with retained manifests. Thirteen empty production roots were corroborated, raising the count from 29 to 42 of 155. Bounds narrow from 0–81.3% to 0–72.9% at budget five. Identical portfolios at budgets 1, 10 and 25 imply zero turnover. The unresolved cases prevent a comparative turnover conclusion across the two catalogs. |
+| Evidence behind the exploratory case | The 50-account result had a project identifier and a joined-location count. | The earlier reader independently confirms the positive `markdown-it` → `punycode.js` location. All 45 supported locations join to retained registry records. [Pinned case](https://github.com/bookstackapp/bookstack/blob/99701156ac01b411855398df797c64111eb99732/package-lock.json) |
+| Portability and source consistency | The standalone companion covered YunoHost. | It now verifies every frozen pair and all six budgets in both frames. The IST builder automatically checks an extracted archive, manuscript source freshness, PDF content, artifact hashes, and author metadata. |
+| Interpretation | The second frame had weaker coverage. | The main paper reports its uncertainty and retains the five confirmed YunoHost coverage changes as evidence within the pinned frame. Both directions of aggregate net change remain feasible in YunoHost. |
+
+The Awesome-Selfhosted check is post hoc. Eight of the new common negatives come from empty pnpm root importers, one from an empty npm root and four from empty declared roots with HTTP 404 for every tested root lockfile. Child importers and deployed artifacts are outside this root sensitivity. The original evidence and comparisons remain separately reproducible. [Results](../research/consumer_holdout/runs/selfhosted-sensitivity/results.json)
+
+The remaining scientific limitations are the low resolution rate in Awesome-Selfhosted, unmeasured practitioner costs, and the scope of release and authorization evidence. These constrain claims about generalizability and intervention outcomes. The IST guide still returned HTTP 403 and approval by both authors is unrecorded. [IST package notes](../submission/ist/README.md)

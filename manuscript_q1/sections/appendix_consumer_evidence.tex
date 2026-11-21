@@ -9,10 +9,98 @@ We recorded all 155 projects and pinned 154 commits. Thirty projects entered the
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{consumer_holdout_evidence.pdf}
-\caption{Paired consumer coverage evidence. The hatched segment shows unresolved pairs in the 155-application frame. The interval represents coverage reassignment compatible with the available evidence. All five-account tie choices give the same counts and bounds.}
+\caption{Original paired consumer coverage evidence before the follow-ups. The hatched segment shows unresolved pairs in the 155-application frame. The interval represents coverage reassignment compatible with that evidence. All five-account tie choices give the same counts and bounds.}
 \label{fig:consumer_holdout_evidence}
 \end{figure}
 \par Figure~\ref{fig:consumer_holdout_evidence} records the original evidence categories in this frame.
+
+\subsection{Awesome-Selfhosted root and budget sensitivity}
+We inspected retained manifests for the 126 original unresolved pairs.
+Fifteen projects had an observed root manifest with no regular, optional,
+peer, or bundled dependency declarations and no manifest workspace declarations.
+Thirteen had corroborating evidence. Eight pnpm v9 lockfiles had empty
+production declarations in the root importer and development specifiers
+matching the manifest. Child importers were outside the root check.
+One npm lockfile had a matching empty production root. The four remaining
+manifest-only zeros had HTTP 404 receipts for every tested root lockfile.
+These checks add 13 shared negatives under the declared root scope.
+
+All six exploratory budgets resolve 42 pairs under the expanded evidence.
+At budgets 1, 10, and 25 the rankings select identical sets, so turnover
+is zero. At budgets 5, 50, and 100 turnover is bounded by 0--72.9\%,
+with no confirmed difference. The replication companion retains all 155
+trace rows and reconstructs the original and post hoc comparisons.
+
+\subsection{Awesome-Selfhosted lockfile follow-up}
+Among the remaining unresolved projects, 53 retained a pinned manifest
+and exactly one supported root lockfile, with HTTP 404 receipts for the
+other tested root lockfile names. This post hoc check uses the 27 npm and
+26 pnpm lockfiles and the root readers described below. The npm check uses
+Arborist and the committed declarations and lockfile locations. The pnpm
+check compares paths of up to three edges to the native offline listing.
+The check routes each project by its observed lockfile and uses only the
+root scope with the retained files. It corroborates at least one package
+location in 37 projects.
+
+The original Awesome-Selfhosted registry records link 1,928 locations by
+canonical public npm paths. Retained YunoHost registry records link another
+3,519 locations by canonical paths or matching SHA-512 values. These
+observations resolve 31 further pairs. Among projects still unresolved for
+the primary portfolios, we then froze a queue for versions with an eligible
+artifact identifier and no usable retained registry record for the same key.
+On 21 November 2026, all 63 requests from six projects returned usable
+maintainer lists. The new joins confirm one further shared negative.
+The final sensitivity resolves 74 pairs and bounds turnover at 0--52.3\%
+and net change at $-52.3$ to $+51.0$ percentage points for each five-account
+cutoff choice. The identical control has zero turnover. Registry membership
+is observed at the respective capture dates, so the pooled sensitivity
+describes the recorded evidence across those dates.
+
+For 777 canonical package/version keys in the follow-up with observations
+in both earlier captures, the records list the same accounts from the
+frozen five-account portfolios. For 90 of those keys the records disagree
+when the comparison includes the accounts in the 100-account control.
+
+\subsection{Awesome-Selfhosted Yarn Classic follow-up}
+We applied the same two-reader Yarn Classic check described below to all
+23 unresolved projects with a pinned manifest and a single Yarn lockfile.
+The other recorded root lockfile probes returned HTTP 404. Six files
+yielded readable traces and six partial traces. Nine used a newer format
+and two declared workspaces outside the supported check. The 12 usable
+traces contribute positive witnesses along retained regular dependency
+paths. Transitive declarations and artifact identities are checked
+against exact-version registry records.
+
+Reusing the earlier YunoHost Yarn observations supplies registry-linked
+paths for ten projects and resolves three shared hits. We froze a queue
+for 1,828 keys missing from that capture. Requests on 21 November 2026
+yielded 1,728 usable maintainer lists. Seven replies lacked a usable list,
+and 93 requests ended with a transport error. The combined observations
+provide shared hits for all 12 projects with usable traces. The results
+resolve 86 of 155 pairs and bound turnover at 0--44.5\%, with net change
+between $-44.5$ and $+43.2$ percentage points under every cutoff choice.
+
+We checked the nine newer-format roots against the same manifest and
+importer rules used for YunoHost. Two declared Yarn 4 and had a matching
+version 8 lock entry for the root. Both manifests had only development
+dependencies and the entries agreed on their declarations. This adds
+two shared negatives under the declared root scope. In the combined
+sensitivity, turnover is 0--43.2\% and net change is $-43.2$ to $+41.9$
+percentage points. Other importers and the shipped application remain
+outside the empty-root check.
+
+\subsection{Evidence support across frames}
+The original intake and the follow-ups classify pairs with different
+completeness across file types. With the final observations, the npm
+groups resolve 48 of 57 pairs in Awesome-Selfhosted and 94 of 108 in
+YunoHost. They contain zero and five confirmed changes, respectively.
+The corresponding turnover bounds are 0--15.8\% and 4.6--17.6\%.
+The pnpm groups resolve 22 of 34 and 37 of 44, while the Yarn groups
+resolve 14 of 23 and 23 of 35. These are conditional descriptions of
+groups identified from retained files and, in YunoHost, the manager
+selected at intake. The frames differ in capture eligibility and reader
+scope. All 28 Awesome-Selfhosted projects without a retained root
+manifest remain in the denominator with unresolved outcomes.
 
 \subsection{YunoHost comparison with broader lockfile support}
 The second frame comprises 215 upstream YunoHost projects with pinned root package manifests. We excluded earlier repository keys and duplicate pinned commits. Lockfile intake yielded 108 npm and 44 pnpm candidates. All 215 projects contribute to the paired comparison.
@@ -97,4 +185,11 @@ corroborated zeros resolves 164 primary pairs and leaves 51 unresolved.
 The turnover bounds narrow to 2.3--26.0\%, and net change remains
 compatible with either direction ($-23.7$ to $+22.3$ percentage points).
 This is a post hoc sensitivity within the same declared root scope.
+
+\subsection{YunoHost budget witness}
+At budget 50, Y051 has a path from \texttt{markdown-it} 15.0.3 to
+\texttt{punycode.js} 2.3.1. The earlier reader returns the same positive
+location. All 45 locations in the supported root tree join to retained
+registry records. The records document a name portfolio hit and a
+version portfolio zero.
 

@@ -125,6 +125,49 @@ companion carries a projection of the relevant registry memberships as
 numeric indices and verifies the budget table and frozen five-account
 summary from that projection.
 
+The [portable Awesome-Selfhosted replay](runs/selfhosted-sensitivity/results.json)
+checks every original pair and reproduces the six exploratory budgets.
+It keeps the original 155 trace rows, their protocol and projected
+membership records. The source audit separately checks empty production
+roots against the pinned capture. Run `python scripts/replay_selfhosted_comparison.py`
+from the repository or the extracted companion.
+
+The [lockfile follow-up](runs/selfhosted-lockfile-followup/results.json)
+checks 53 unresolved projects with one supported root lockfile and a
+pinned manifest. It joins corroborated paths to retained exact-version
+registry data from the two collections. A
+[frozen queue](runs/selfhosted-lockfile-followup/registry_queue.json)
+records 63 additional exact versions checked on 21 November 2026 across
+six projects. The [final results](runs/selfhosted-lockfile-followup/extension_results.json)
+combine the dated observations for the frozen five-account comparisons.
+The two commands below replay the reported results from the retained path
+traces and registry projections without network access. Source extraction
+uses the original captured files and the offline npm and pnpm readers.
+
+```sh
+python scripts/study_selfhosted_lockfile_followup.py verify
+python scripts/study_selfhosted_registry_extension.py verify
+```
+
+The [Yarn Classic follow-up](runs/selfhosted-yarn-evidence/results.json)
+uses the same two-reader checks as YunoHost. It records 23 candidate roots,
+their eligibility, and the contributions of retained and new exact-version
+metadata. The [support ledger](runs/selfhosted-yarn-evidence/support.json)
+counts all primary comparison pairs by the root evidence used at intake,
+including projects without a retained root manifest. Replay both from
+the companion with these commands.
+
+```sh
+python scripts/study_selfhosted_yarn_evidence.py verify
+python scripts/check_consumer_pair_support.py verify
+```
+
+The [modern Yarn root check](runs/selfhosted-modern-yarn-roots/results.json)
+applies the same manifest and lockfile rule as YunoHost to all nine
+newer-format projects left by the Yarn Classic stage. It records only
+structural zeros in the declared root scope. Reproduce the final paired
+comparison with `python scripts/check_selfhosted_modern_yarn_roots.py verify`.
+
 ## YunoHost packaging and named importers
 
 The [audit queue](runs/yunohost-packaging/queue.json) records two unresolved strata from the 215-project frame. The [recipe classifications](runs/yunohost-packaging/classification.json) cite file locations at the pinned catalog revisions. The [source intake](runs/yunohost-packaging/source_intake.json) records resolved source references. Archive checks bind the three eligible recipes to the declared checksums and the manifest and lockfile hashes.
