@@ -80,3 +80,22 @@ The [importer protocol](runs/yunohost-packaging/importer_protocol.json) and [pai
 python scripts/study_yunohost_recipe_importers.py score
 python scripts/verify_yunohost_recipe_study.py
 ```
+
+The expanded [99-recipe sample](runs/yunohost-importer-frame/sample.json) and [recipe ledger](runs/yunohost-importer-frame/recipes.json) are in `runs/yunohost-importer-frame`. The [prespecified completeness analysis](runs/yunohost-importer-frame/results.json) and [post hoc single-edge check](runs/yunohost-importer-frame/single_edge_sensitivity.json) share the same source commits, portfolios and registry observations for scoring. Raw source and registry receipts remain in the ignored local evidence directories.
+
+```sh
+python scripts/study_yunohost_same_commit_spans.py score
+python scripts/check_yunohost_single_edge.py score
+python scripts/verify_yunohost_importer_frame.py
+```
+
+## YunoHost release-delivery evidence
+
+The [release queue](runs/yunohost-release-delivery/release_queue.json) enumerates exact GitHub release assets referenced by literal setup commands in the 39 recipes with release declarations and no matched JavaScript command. The [release results](runs/yunohost-release-delivery/results.json) link API digests and parsed subject statements. The separate [archive receipts](runs/yunohost-release-delivery/archive_results.json) and [evidence summary](runs/yunohost-release-delivery/evidence_summary.json) record the bounded byte checks, declared commits, embedded metadata, and Java runtime inventory.
+
+The main comparison does not use these as coverage outcomes. For audit replay from the saved receipts:
+
+```sh
+python scripts/study_yunohost_release_delivery.py score
+python scripts/verify_yunohost_release_delivery.py
+```
